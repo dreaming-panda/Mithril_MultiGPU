@@ -23,10 +23,10 @@
 
 # Sets the possible install locations
 set(CUBLAS_HINTS
-  /home/a100/cu111
+  /home/p100/cuda112
 )
 set(CUBLAS_PATHS
-  /home/a100/cu111
+  /home/p100/cuda112
 )
 
 # Finds the include directories
