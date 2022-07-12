@@ -911,6 +911,7 @@ VertexChunksManager::VertexChunksManager(
     // to simply the pipeline design
     // otherwise, the vertices belonging to the same chunk may
     // be processed by different pipelines
+
     std::vector<VertexId> boundaries;
     boundaries.clear();
     boundaries.resize(num_nodes * 2);
@@ -3031,8 +3032,8 @@ double DistributedPIPHybridParallelExecutionEngineCPU::execute_application(Abstr
     chunk_manager_ = new VertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-            graph_structure_->get_num_global_vertices() / 16
-            //graph_structure_->get_num_global_vertices() / 64 
+            //graph_structure_->get_num_global_vertices() / 16
+            graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new DataDependenciesTracker(
             op_ten_manager_, chunk_manager_, graph_structure_, partitioning

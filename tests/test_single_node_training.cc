@@ -82,8 +82,8 @@ int main(int argc, char ** argv) {
     });*/
 
     std::string graph_path = "./storage/gnn_datasets/Cora";
-    int num_layers = 2;
-    int num_hidden_units = 16;
+    int num_layers = 4;
+    int num_hidden_units = 32;
     int num_epoch = 50;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());

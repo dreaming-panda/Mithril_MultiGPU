@@ -25,6 +25,7 @@ limitations under the License.
 
 class SingleNodeExecutionEngineCPU;
 class SingleNodeExecutionEngineGPU;
+//class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
 class AbstractApplication {
     private:
         // storing all created operators so that dead-code operators will not 
@@ -54,7 +55,8 @@ class AbstractApplication {
         friend class DistributedModelParallelExecutionEngineGPU;
         friend class DistributedPipelinedLinearModelParallelExecutionEngineGPU;
         friend class DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
-
+        //friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
+        friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU;
     protected:
         Tensor * relu(Tensor * t);
         Tensor * weight(int length);

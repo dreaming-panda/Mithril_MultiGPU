@@ -110,7 +110,7 @@ int main(int argc, char ** argv) {
         }
     });*/
 
-    std::string graph_path = "./storage/gnn_datasets/arxiv";
+    std::string graph_path = "/home/a100/storage/gnn_datasets/arxiv";
     int num_layers = 3;
     int num_hidden_units = 256;
     int num_epoch = 3000;

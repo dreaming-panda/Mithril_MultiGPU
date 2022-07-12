@@ -235,7 +235,102 @@ class DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU
         double execute_application(AbstractApplication * application, int num_epoch);
 
 };
+class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU: public DistributedModelParallelExecutionEngineCPU  {
+    private:
 
+        struct ForwardingTask {
+            int epoch_id;
+            int chunk_id;
+        } __attribute__((packed));
+
+        struct BackwardingTask {
+            int epoch_id;
+            int chunk_id;
+        } __attribute__((packed));
+
+        std::vector<std::thread*> communication_threads_;
+        std::map<Operator*, DataType*> ** stashed_weight_data_;
+        int * weight_version_to_epoch_id_;
+        int * weight_version_to_chunk_id_;
+        int window_size_;
+     //   int num_chunks_;
+        int warmups_;
+      //  VertexId * chunk_begin_; 
+      //  VertexId * chunk_end_;
+
+        // two task queues for forwarding / backwarding steps
+        LockFreeQueue<ForwardingTask> * pending_forwarding_task_queue_;
+        LockFreeQueue<BackwardingTask> * pending_backwarding_task_queue_;
+        LockFreeQueue<ForwardingTask> * finished_forwarding_task_queue_;
+        LockFreeQueue<BackwardingTask> * finished_backwarding_task_queue_;
+        std::vector<ForwardingTask> fwd_tasks;
+        void forwarding_tasks_generator_thread_main(
+                int num_epoch,
+                const std::vector<std::pair<int, Tensor*>> &prev_tensors
+                );
+        void forwarding_task_finalizer_thread_main(
+                int num_epoch,
+                const std::vector<std::pair<int, Tensor*>> &suff_tensors
+                );
+        void backwarding_task_generator_thread_main(
+                int num_epoch, 
+                const std::vector<std::pair<int, Tensor*>> &suff_tensors
+                );
+        void backwarding_task_finalizer_thread_main(
+                int num_epoch, 
+                const std::vector<std::pair<int, Tensor*>> &prev_tensors
+                );
+        // returned: accuracy
+        double start_training(
+                const std::vector<Operator*>& operators,
+                const std::map<Operator*, int>& op_to_idx,
+                const std::map<Operator*, int>& op_to_partition,
+                Tensor * input_tensor,
+                Tensor * output_tensor,
+                Tensor * std_tensor,
+                const std::vector<bool>& operator_mask,
+                const std::vector<bool>& operator_mask_optimizer,
+                const std::vector<Operator*>& weight_ops,
+                const std::vector<std::pair<int, Tensor*>>& prev_tensors,
+                const std::vector<std::pair<int, Tensor*>>& suff_tensors,
+                int num_epoch
+                );
+        void print_weights(
+                const std::vector<Operator*>& weight_ops,
+                const std::map<Operator*, int>& op_to_idx
+                ) {
+            for (Operator * weight_op: weight_ops) {
+                Tensor * tensor = weight_op->get_output_tensor(0);
+                TensorResourceCPU * resource = (TensorResourceCPU*) tensor->resource;
+                size_t num_elements = resource->get_num_elements();
+                DataType * data = resource->get_data();
+                double sum = 0.;
+                for (size_t i = 0; i < num_elements; ++ i) {
+                    sum += data[i];
+                }
+
+                printf("WeightOp %d:", op_to_idx.at(weight_op));
+                for (int i = 0; i < 3; ++ i) {
+                    printf(" %.10f", data[i]);
+                }
+                printf(" ...");
+                for (int i = num_elements - 3; i < num_elements; ++ i) {
+                    printf(" %.10f", data[i]);
+                }
+                printf(", sum: %.10f, num_elements: %lu\n", sum, num_elements);
+            }
+        }
+
+    public:
+
+        MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU() {}
+        ~MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU() {}
+        double execute_application(AbstractApplication * application, int num_epoch);
+        void set_warmup(int warmups){
+            warmups_ = warmups;
+        }
+
+};
 #endif
 
 

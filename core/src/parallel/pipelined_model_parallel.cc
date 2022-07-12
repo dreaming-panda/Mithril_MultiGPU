@@ -1808,8 +1808,10 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCP
         for (Operator * op: weight_ops) {
             TensorResourceCPU * resource = (TensorResourceCPU*) op->get_output_tensor(0)->resource;
             assert(resource != NULL);
+            int N = op->get_output_tensor(0)->dims[0];
             size_t num_elements = resource->get_num_elements();
             DataType * stashed_data = new DataType [num_elements];
+            init_weight_tensor_data(stashed_data, num_elements, N);
             assert(stashed_data != NULL);
             (*stashed_weight_data_[i])[op] = stashed_data;
         }
@@ -1843,7 +1845,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCP
     }
 
     // partition the graph into fine-grained chunks
-    num_chunks_ = 64;  // FIXME
+    num_chunks_ = 4;  // FIXME
     VertexId num_vertices = graph_structure_->get_num_global_vertices();
     VertexId num_vertice_per_chunk = num_vertices / num_chunks_;
     chunk_begin_ = new VertexId [num_chunks_];
