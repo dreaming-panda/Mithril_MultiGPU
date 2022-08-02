@@ -22,6 +22,9 @@ limitations under the License.
 #include "dataflow.h"
 #include "graph.h"
 #include<float.h>
+#include<fstream>
+#include"distributed_sys.h"
+using namespace std;
 class AbstractTensorResource {
     protected:
         Tensor * tensor_; // the corresponding tensor object
@@ -90,9 +93,14 @@ struct GPUCsr{
     int MatrixSize;
     int nnz;
 };
+struct CPUCsr{
+    int * host_rowoffsets_in;
+    int * host_rowoffsets_out;
+};
 class AbstractOperatorExecutor {
     protected:
         GPUCsr csr_;
+        CPUCsr cpu_csr_;
     public:
         AbstractOperatorExecutor() {
             csr_.number_matrix = 0;
@@ -136,6 +144,14 @@ class AbstractOperatorExecutor {
                         csr_.MatrixSize = MatrixSize;
                         csr_.nnz = nnz;
                      }
+        void set_cpu_csr(
+            int * row_in,
+            int * row_out
+        ){
+            cpu_csr_.host_rowoffsets_in = row_in;
+            cpu_csr_.host_rowoffsets_out = row_out;
+        }
+        
         // the forwarding phases
         virtual void relu_forward(ReluOperator * op) = 0;
         virtual void matmul_forward(MatmulOperator * op) = 0;

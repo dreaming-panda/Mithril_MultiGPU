@@ -148,20 +148,20 @@ int main(int argc, char* argv[])
      NCCLCHECK(ncclAllReduce((const void*)sendbuff[i], (void*)recvbuff[i], size, ncclFloat, ncclSum,
            comms[i], s[i]));
       NCCLCHECK(ncclAllReduce((const void*)sendbuffx[i], (void*)recvbuffx[i], size, ncclFloat, ncclSum,
-           comms[i], s[i]));
+           commsx[i], t[i]));
   }
   }else {
     for (int i=0; i<nDev; i++)
   {  
      NCCLCHECK(ncclAllReduce((const void*)sendbuffx[i], (void*)recvbuffx[i], size, ncclFloat, ncclSum,
-           comms[i], s[i]));
+           commsx[i], t[i]));
      NCCLCHECK(ncclAllReduce((const void*)sendbuff[i], (void*)recvbuff[i], size, ncclFloat, ncclSum,
            comms[i], s[i]));
   }
   }
   NCCLCHECK(ncclGroupEnd());
 
-  MPI_Bcast(sendbuff[0], sizeof(float) * size, MPI_BYTE, 0, MPI_COMM_WORLD);
+  //MPI_Bcast(sendbuff[0], sizeof(float) * size, MPI_BYTE, 0, MPI_COMM_WORLD);
   //synchronizing on CUDA stream to complete NCCL communication
   for (int i=0; i<nDev; i++)
   {

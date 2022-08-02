@@ -22,8 +22,8 @@ class TensorResourceGPU:public AbstractTensorResource{
             gpu_grad_ = nullptr;
         }
         ~TensorResourceGPU(){
-            assert(cpu_grad_ == nullptr);
-            assert(cpu_data_ == nullptr);
+//            assert(cpu_grad_ == nullptr);
+//            assert(cpu_data_ == nullptr);
             assert(gpu_data_ == nullptr);
             assert(gpu_grad_ == nullptr);
         }

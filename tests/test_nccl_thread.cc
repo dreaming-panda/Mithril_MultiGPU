@@ -11,7 +11,11 @@
 using namespace std;
 const int size_ = 512;
 ncclComm_t  comm;
-cudaStream_t  stream;
+ncclComm_t  commx;
+ncclComm_t  commy;
+cudaStream_t  s0,s1,s2,r0,r1,r2;
+//cudaStream_t ss;
+int myRank, nRanks;
 static uint64_t getHostHash(const char* string) {
   // Based on DJB2a, result = result * 33 ^ char
   uint64_t result = 5381;
@@ -33,8 +37,7 @@ static void getHostName(char* hostname, int maxlen) {
 }
 
 void SendThread(){
-    cudaStream_t ss;
-    cudaStreamCreate(&ss);
+  cudaSetDevice(myRank);
     int * sendbuff = new int[size_];
     for(int i = 0; i < size_; ++i){
         sendbuff[i] = i;
@@ -42,19 +45,20 @@ void SendThread(){
     int * d_send;
     AllocateCUDAMemory<int>(&d_send, size_, __FILE__, __LINE__);
     CopyFromHostToCUDADevice<int>(d_send, sendbuff, size_, __FILE__, __LINE__);
-    ncclGroupStart();
+    
     for(int i = 0; i < size_; ++i){
-        ncclSend(d_send, size_, ncclInt32, 1, comm, ss);
+        cudaSetDevice(myRank);
+        ncclSend(d_send, size_, ncclInt32, 1, comm, s0);
+        cudaStreamSynchronize(s0);
     }
-    ncclGroupEnd();
+    
     DeallocateCUDAMemory<int>(&d_send, __FILE__, __LINE__);
     delete[] sendbuff;
-    cudaStreamDestroy(ss);
+   
 }
 
 void SendThread2(){
-    cudaStream_t ss;
-    cudaStreamCreate(&ss);
+   cudaSetDevice(myRank);
     int * sendbuff = new int[size_];
     for(int i = 0; i < size_; ++i){
         sendbuff[i] = 2*i;
@@ -62,23 +66,89 @@ void SendThread2(){
     int * d_send;
     AllocateCUDAMemory<int>(&d_send, size_, __FILE__, __LINE__);
     CopyFromHostToCUDADevice<int>(d_send, sendbuff, size_, __FILE__, __LINE__);
-    ncclGroupStart();
+    
     for(int i = 0; i < size_; ++i){
-        ncclSend(d_send, size_, ncclInt32, 1, comm, ss);
+        cudaSetDevice(myRank);
+        ncclSend(d_send, size_, ncclInt32, 1, commx, s1);
+        cudaStreamSynchronize(s1);
+        
     }
-    ncclGroupEnd();
+    
     DeallocateCUDAMemory<int>(&d_send, __FILE__, __LINE__);
     delete[] sendbuff;
-    cudaStreamDestroy(ss);
+    
+}
+void SendThread3(){
+  cudaSetDevice(myRank);
+    int * sendbuff = new int[size_];
+    for(int i = 0; i < size_; ++i){
+        sendbuff[i] = 3 * i;
+    }
+    int * d_send;
+    AllocateCUDAMemory<int>(&d_send, size_, __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(d_send, sendbuff, size_, __FILE__, __LINE__);
+    
+    for(int i = 0; i < size_; ++i){
+        cudaSetDevice(myRank);
+        ncclSend(d_send, size_, ncclInt32, 0, commy, s2);
+        cudaStreamSynchronize(s2);
+    }
+    
+    DeallocateCUDAMemory<int>(&d_send, __FILE__, __LINE__);
+    delete[] sendbuff;
+   
 }
 void RecvThread(){
+  cudaSetDevice(myRank);
     int * recvbuff;
     AllocateCUDAMemory<int>(&recvbuff, size_, __FILE__, __LINE__);
     int * cpubuff = new int[size_];
-     ncclGroupStart();
+   
     for(int i = 0; i < size_ ; ++i){
-        ncclRecv(recvbuff, size_, ncclInt32, 0, comm, stream);
-        cudaStreamSynchronize(stream);
+        cudaSetDevice(myRank);
+        ncclRecv(recvbuff, size_, ncclInt32, 0, comm, r0);
+        cudaStreamSynchronize(r0);
+        CopyFromCUDADeviceToHost<int>(cpubuff, recvbuff, size_, __FILE__, __LINE__);
+        // for (int j = 0; j < 10; ++j)
+        // {
+        //     printf(" %d ", cpubuff[j]);
+        //     }
+        //     printf("%d\n",i);
+    }
+    DeallocateCUDAMemory<int>(&recvbuff, __FILE__, __LINE__);
+    delete[] cpubuff;
+}
+void RecvThread2(){
+    cudaSetDevice(myRank);
+    int * recvbuff;
+    AllocateCUDAMemory<int>(&recvbuff, size_, __FILE__, __LINE__);
+    int * cpubuff = new int[size_];
+    
+    for(int i = 0; i < size_ ; ++i){
+        cudaSetDevice(myRank);
+        ncclRecv(recvbuff, size_, ncclInt32, 0, commx, r1);
+        cudaStreamSynchronize(r1);
+        CopyFromCUDADeviceToHost<int>(cpubuff, recvbuff, size_, __FILE__, __LINE__);
+        // for (int j = 0; j < 10; ++j)
+        // {
+        //     printf(" %d ", cpubuff[j]);
+        //     }
+        //      printf("%d\n",i);
+    }
+    DeallocateCUDAMemory<int>(&recvbuff, __FILE__, __LINE__);
+    delete[] cpubuff;
+    
+}
+void RecvThread3(){
+    cudaSetDevice(myRank);
+    int * recvbuff;
+    AllocateCUDAMemory<int>(&recvbuff, size_, __FILE__, __LINE__);
+    int * cpubuff = new int[size_];
+    
+    for(int i = 0; i < size_ ; ++i){
+        cudaSetDevice(myRank);
+        ncclRecv(recvbuff, size_, ncclInt32, 1, commy, r2);
+        cudaStreamSynchronize(r2);
         CopyFromCUDADeviceToHost<int>(cpubuff, recvbuff, size_, __FILE__, __LINE__);
         for (int j = 0; j < 10; ++j)
         {
@@ -86,25 +156,38 @@ void RecvThread(){
             }
             printf("%d\n",i);
     }
-     ncclGroupEnd();
     DeallocateCUDAMemory<int>(&recvbuff, __FILE__, __LINE__);
     delete[] cpubuff;
+    
 }
 int main(int argc, char* argv[])
 {   
-    int myRank, nRanks;
+    
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &nRanks);
 
     cudaSetDevice(myRank);
     
-    cudaStreamCreate(&stream);
-    ncclUniqueId id;
+    cudaStreamCreate(&s1);
+    cudaStreamCreate(&s0);
+    cudaStreamCreate(&r1);
+    cudaStreamCreate(&r0);
+    cudaStreamCreate(&s2);
+    cudaStreamCreate(&r2);
+    ncclUniqueId id,idx,idy;
     if (myRank == 0) ncclGetUniqueId(&id);
+    if (myRank == 0) ncclGetUniqueId(&idx);
+    if (myRank == 0) ncclGetUniqueId(&idy);
     MPI_Bcast((void *)&id, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast((void *)&idx, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast((void *)&idy, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD);
     ncclCommInitRank(&comm, nRanks, id, myRank);
+    ncclCommInitRank(&commx, nRanks, idx, myRank);
+    ncclCommInitRank(&commy, nRanks, idy, myRank);
     thread t;
+    thread t1;
+    thread t2;
     if(myRank == 0){
         /*
             int x = 19;
@@ -127,7 +210,8 @@ int main(int argc, char* argv[])
          ncclSend(gpu_b, 5, ncclInt32, 1, comm, s);
         */
     t = thread(SendThread);
-
+    t1 = thread(SendThread2);
+    t2 = thread(RecvThread3);
     }
     if(myRank == 1){
   //      int * y_;
@@ -153,8 +237,12 @@ int main(int argc, char* argv[])
     CopyFromCUDADeviceToHost<int>(cpu_b, gpu_b, 5, __FILE__, __LINE__);
     cout << cpu_b[0] << " "<<cpu_b[1] << " "<<cpu_b[2] << " "<<cpu_b[3] << " "<<cpu_b[4]<<endl;*/
       t = thread(RecvThread);
+      t1 = thread(RecvThread2);
+      t2 = thread(SendThread3);
     }
     t.join();
+    t1.join();
+    t2.join();
     MPI_Finalize();
     return 0;
 }

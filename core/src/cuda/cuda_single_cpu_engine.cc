@@ -169,6 +169,8 @@ void SingleNodeExecutionEngineGPU::init_weight_tensor_data(
     }
 }
 void SingleNodeExecutionEngineGPU::init_weight_tensor(Tensor * weight_tensor) {
+
+   
     assert(weight_tensor != nullptr);
     TensorResourceGPU * resource = (TensorResourceGPU*) weight_tensor->resource;
     DataType * data = resource->get_cpu_data();
@@ -177,6 +179,8 @@ void SingleNodeExecutionEngineGPU::init_weight_tensor(Tensor * weight_tensor) {
     assert(cuda_data != nullptr);
     size_t num_elements = resource->get_num_elements();
     // Xavier Initialization
+
+    
     int N = weight_tensor->dims[0];
     init_weight_tensor_data(data, num_elements, N);
     CopyFromHostToCUDADevice<DataType>(cuda_data, data, num_elements, __FILE__, __LINE__);
@@ -192,10 +196,10 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy(Tensor * output_tensor, 
     TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor->resource;
     TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor->resource;
 
-    DataType * output_data = output_resource->get_cpu_data();
-    DataType * std_data = std_resource->get_cpu_data();
-    assert(output_data != nullptr);
-    assert(std_data != nullptr);
+//   DataType * output_data = output_resource->get_cpu_data();
+//   DataType * std_data = std_resource->get_cpu_data();
+//   assert(output_data != nullptr);
+//   assert(std_data != nullptr);
     DataType * cuda_output_data = output_resource->get_gpu_data();
     DataType * cuda_std_data = std_resource->get_gpu_data();
     assert(cuda_output_data != nullptr);
@@ -204,37 +208,37 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy(Tensor * output_tensor, 
     int output_size = output_tensor->dims[1];
     //DataType * cuda_acc;
     //AllocateCUDAMemory<DataType>(&cuda_acc, num_vertices, __FILE__, __LINE__);
-    double acc = LaunchCalculate_Accuracy(cuda_acc, cuda_output_data, cuda_std_data, num_vertices, output_size);
-    //DeallocateCUDAMemory<DataType>(&cuda_acc, __FILE__, __LINE__);
-    return acc;
-/*
-    CopyFromCUDADeviceToHost<DataType>(output_data, cuda_output_data, output_size * num_vertices, __FILE__,__LINE__);
-    CopyFromCUDADeviceToHost<DataType>(std_data, cuda_std_data, output_size * num_vertices, __FILE__,__LINE__);
-    VertexId num_hits = 0;
+      double acc = LaunchCalculate_Accuracy(cuda_acc, cuda_output_data, cuda_std_data, num_vertices, output_size);
+    // // //DeallocateCUDAMemory<DataType>(&cuda_acc, __FILE__, __LINE__);
+     return acc;
 
-#pragma omp parallel for reduction(+:num_hits) 
-    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
-        DataType * o = &output_data[v_i * output_size];
-        DataType * s = &std_data[v_i * output_size];
-        int predicted_class = 0;
-        double sum_o = 0;
-        double sum_s = 0;
-        for (int i = 0; i < output_size; ++ i) {
-            if (o[i] > o[predicted_class]) {
-                predicted_class = i;
-            }
-            sum_s += s[i];
-            sum_o += o[i];
-        }
-        num_hits += (s[predicted_class] > 0.99);
-        //printf("Node %d, Vertex %u, sum_o/sum_s: %.3f/%.3f\n", 
-        //        DistributedSys::get_instance()->get_node_id(), v_i, sum_o, sum_s);
-        assert(abs(sum_o - 1.) < 1e-6);
-        assert(abs(sum_s - 1.) < 1e-6);
-    }
+//     CopyFromCUDADeviceToHost<DataType>(output_data, cuda_output_data, output_size * num_vertices, __FILE__,__LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(std_data, cuda_std_data, output_size * num_vertices, __FILE__,__LINE__);
+//     VertexId num_hits = 0;
 
-    return 1. * num_hits / num_vertices;
-    */
+// #pragma omp parallel for reduction(+:num_hits) 
+//     for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
+//         DataType * o = &output_data[v_i * output_size];
+//         DataType * s = &std_data[v_i * output_size];
+//         int predicted_class = 0;
+//         double sum_o = 0;
+//         double sum_s = 0;
+//         for (int i = 0; i < output_size; ++ i) {
+//             if (o[i] > o[predicted_class]) {
+//                 predicted_class = i;
+//             }
+//             sum_s += s[i];
+//             sum_o += o[i];
+//         }
+//         num_hits += (s[predicted_class] > 0.99);
+//         //printf("Node %d, Vertex %u, sum_o/sum_s: %.3f/%.3f\n", 
+//         //        DistributedSys::get_instance()->get_node_id(), v_i, sum_o, sum_s);
+//         assert(abs(sum_o - 1.) < 1e-6);
+//         assert(abs(sum_s - 1.) < 1e-6);
+//     }
+
+//     return 1. * num_hits / num_vertices;
+    
 }
 double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
     assert(application != NULL);

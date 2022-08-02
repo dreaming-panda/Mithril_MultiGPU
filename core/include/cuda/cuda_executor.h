@@ -13,6 +13,9 @@
 #include"graph.h"
 #include <iostream>
 #include "utilities.h"
+#include "distributed_sys.h"
+#include"fstream"
+using namespace std;
 class OperatorExecutorGPU:public AbstractOperatorExecutor
 {
     private: 
@@ -126,7 +129,11 @@ class OperatorExecutorGPU:public AbstractOperatorExecutor
 
 
 };
-
+struct LocalGraphInfo{
+    VertexId left;
+    VertexId right;
+    LocalGraphBasic lg;
+};
 class OperatorExecutorGPUV2:public AbstractOperatorExecutor
 {
     private: 
@@ -161,6 +168,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         double matmulbackward_time;
         double aggforward_time;
         double aggbackward_time;
+        std::vector<LocalGraphInfo>lginfo_forward;
+        std::vector<LocalGraphInfo>lginfo_backward;
     public:
         OperatorExecutorGPUV2(){
             graph_ = nullptr;
@@ -178,6 +187,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             matmulbackward_time = 0;
             aggforward_time = 0;
             aggbackward_time = 0;
+            lginfo_forward.resize(0);
+            lginfo_backward.resize(0);
           //  d_input_relu_forward = nullptr;
           //  d_output_relu_forward = nullptr;
           //  d_input_relu_forward_grad = nullptr;
@@ -204,6 +215,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             matmulbackward_time = 0;
             aggforward_time = 0;
             aggbackward_time = 0;
+            lginfo_forward.resize(0);
+            lginfo_backward.resize(0);
          //   d_input_relu_forward = nullptr;
          //   d_output_relu_forward = nullptr;
          //   d_input_relu_forward_grad = nullptr;
@@ -226,6 +239,14 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
          //    DeallocateCUDAMemory<DataType>(&d_output_softmax_forward_grad,__FILE__,__LINE__);
          if(has_Spcsr_ == true)cusparseDestroySpMat(SpCsr_);
          if(has_dbuffer_ == true)cudaFree(dbuffer_);
+        for(int i = 0; i < lginfo_forward.size(); ++i){
+            DeallocateCUDAMemory<int>(&lginfo_forward[i].lg.cuda_local_rowoffsets,__FILE__, __LINE__);
+          }
+          for(int i = 0; i < lginfo_backward.size(); ++i){
+            DeallocateCUDAMemory<int>(&lginfo_backward[i].lg.cuda_local_rowoffsets,__FILE__, __LINE__);
+          }
+        lginfo_forward.clear();
+        lginfo_backward.clear();
          };
         void set_graph(CUDAFullyStructualGraph * graph) {graph_ = graph;}
         void set_activation_size(int ac_s , int n_class){
@@ -303,6 +324,91 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             std::cout << "matmul backward :"<<matmulbackward_time<<std::endl;
             std::cout << "agg forward :"<<aggforward_time<<std::endl;
             std::cout << "agg backward :"<<aggbackward_time<<std::endl;
+        }
+        LocalGraphBasic get_localgraph_In(VertexId left, VertexId right){
+            for(int i = 0; i < lginfo_forward.size(); ++i){
+                if(lginfo_forward[i].right == right && lginfo_forward[i].left == left){
+                    return lginfo_forward[i].lg;
+                }
+            }
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int num_master_vertices_ = csr_.num_master_vertices;
+            int * row_offsets_in = new int[num_master_vertices_ + 1];
+            memset(row_offsets_in, 0, sizeof(int) * (num_master_vertices_ + 1));
+            for(VertexId i = left + 1; i < right + 1; ++i){
+                    row_offsets_in[i] = cpu_csr_.host_rowoffsets_in[i] - cpu_csr_.host_rowoffsets_in[left];
+            }
+            for(VertexId i = right + 1; i < num_master_vertices_ + 1; ++i){
+                    row_offsets_in[i] = row_offsets_in[right];
+            }
+            int * cuda_rows = nullptr;
+            int local_nnz = cpu_csr_.host_rowoffsets_in[right] - cpu_csr_.host_rowoffsets_in[left];
+           
+           
+            assert(local_nnz == row_offsets_in[right]);
+            AllocateCUDAMemory<int>(&cuda_rows, num_master_vertices_ + 1, __FILE__, __LINE__);
+            CopyFromHostToCUDADevice<int>(cuda_rows, row_offsets_in, num_master_vertices_ + 1, __FILE__, __LINE__);
+            int skip = cpu_csr_.host_rowoffsets_in[left];
+            DataType * global_values = csr_.cuda_value_in;
+            DataType * local_values = global_values + skip;
+            int  * global_cols = csr_.cuda_col_in;
+            int * local_cols = global_cols + skip;
+            LocalGraphBasic lg;
+            lg.cuda_local_rowoffsets = cuda_rows;
+            lg.cuda_local_values = local_values;
+            lg.local_nnz = local_nnz;
+            lg.num_local_vertices = num_master_vertices_;
+            lg.cuda_local_cols = local_cols;
+            delete [] row_offsets_in;
+            LocalGraphInfo lginfo;
+            lginfo.left = left;
+            lginfo.right = right;
+            lginfo.lg = lg;
+            lginfo_forward.push_back(lginfo);
+            return lg;
+        }
+        LocalGraphBasic get_localgraph_Out(VertexId left, VertexId right){
+            for(int i = 0; i < lginfo_backward.size(); ++i){
+                if(lginfo_backward[i].right == right && lginfo_backward[i].left == left){
+                    return lginfo_backward[i].lg;
+                }
+            }
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int num_master_vertices_ = csr_.num_master_vertices;
+            int * row_offsets_out = new int[num_master_vertices_ + 1];
+            memset(row_offsets_out, 0, sizeof(int) * (num_master_vertices_ + 1));
+            for(VertexId i = left + 1; i < right + 1; ++i){
+                    row_offsets_out[i] = cpu_csr_.host_rowoffsets_out[i] - cpu_csr_.host_rowoffsets_out[left];
+            }
+            for(VertexId i = right + 1; i < num_master_vertices_ + 1; ++i){
+                    row_offsets_out[i] = row_offsets_out[right];
+            }
+            int * cuda_rows = nullptr;
+            int local_nnz = cpu_csr_.host_rowoffsets_out[right] - cpu_csr_.host_rowoffsets_out[left];
+           
+           
+            assert(local_nnz == row_offsets_out[right]);
+            AllocateCUDAMemory<int>(&cuda_rows, num_master_vertices_ + 1, __FILE__, __LINE__);
+            CopyFromHostToCUDADevice<int>(cuda_rows, row_offsets_out, num_master_vertices_ + 1, __FILE__, __LINE__);
+            int skip = cpu_csr_.host_rowoffsets_out[left];
+            DataType * global_values = csr_.cuda_value_out;
+            DataType * local_values = global_values + skip;
+            int  * global_cols = csr_.cuda_col_out;
+            int * local_cols = global_cols + skip;
+            LocalGraphBasic lg;
+            lg.cuda_local_rowoffsets = cuda_rows;
+            lg.cuda_local_values = local_values;
+            lg.local_nnz = local_nnz;
+            lg.num_local_vertices = num_master_vertices_;
+            lg.cuda_local_cols = local_cols;
+            delete [] row_offsets_out;
+            LocalGraphInfo lginfo;
+            lginfo.left = left;
+            lginfo.right = right;
+            lginfo.lg = lg;
+            lginfo_backward.push_back(lginfo);
+            return lg;
+            
         }
 
 

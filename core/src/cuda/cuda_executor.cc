@@ -1991,23 +1991,39 @@ void OperatorExecutorGPUV2::relu_forward(ReluOperator * op, VertexId left, Verte
 
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
-    DataType * input_data = new DataType[num_elements];
-    DataType * output_data = new DataType[num_elements];
-    CopyFromCUDADeviceToHost<DataType>(input_data +  start_idx, d_input_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data + start_idx, d_output_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    assert(input_data != NULL);
-    assert(output_data != NULL);
 
-#pragma omp parallel for 
-    for (size_t i = start_idx; i < end_idx; ++ i) {
-        output_data[i] = input_data[i] > 0 ? input_data[i]: 0;
+    
 
-        assert(!isnan(output_data[i]));
-    }
-    //CopyFromHostToCUDADevice<DataType>(d_input_data + start_idx, input_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<DataType>(d_output_data + start_idx, output_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    delete [] input_data;
-    delete [] output_data;
+    assert(d_input_data != NULL);
+    assert(d_output_data != NULL);
+    cudnnActivationDescriptor_t relu_descriptor;
+    cudnnCreateActivationDescriptor(&relu_descriptor);
+    cudnnSetActivationDescriptor(relu_descriptor,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,0);
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, end_idx - start_idx);
+    cudnnActivationForward(*cudnn_handle_, relu_descriptor,&alpha, data_descriptor, (const void*)(d_input_data + start_idx), &beta,data_descriptor,(void*)(d_output_data + start_idx));
+    cudnnDestroyActivationDescriptor(relu_descriptor);
+    cudnnDestroyTensorDescriptor(data_descriptor);
+//     DataType * input_data = new DataType[num_elements];
+//     DataType * output_data = new DataType[num_elements];
+//     CopyFromCUDADeviceToHost<DataType>(input_data +  start_idx, d_input_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data + start_idx, d_output_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     assert(input_data != NULL);
+//     assert(output_data != NULL);
+
+// #pragma omp parallel for 
+//     for (size_t i = start_idx; i < end_idx; ++ i) {
+//         output_data[i] = input_data[i] > 0 ? input_data[i]: 0;
+
+//         assert(!isnan(output_data[i]));
+//     }
+//     //CopyFromHostToCUDADevice<DataType>(d_input_data + start_idx, input_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     CopyFromHostToCUDADevice<DataType>(d_output_data + start_idx, output_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     delete [] input_data;
+//     delete [] output_data;
 }
 
 void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, VertexId right) {
@@ -2037,28 +2053,49 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, V
     size_t K = input_tensor_0->dims[1];
     assert(input_tensor_1->dims[0] == K);
     size_t M = input_tensor_1->dims[1];
-    DataType * input_data_0 = new DataType[right * K];
-    DataType * input_data_1 = new DataType[M * K];
-    DataType * output_data = new DataType[M * right];
-    CopyFromCUDADeviceToHost<DataType>(input_data_0, d_input_data_0, right * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_data_1, d_input_data_1, M * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * M, __FILE__, __LINE__);
-#pragma omp parallel for 
-    for (size_t i = left; i < right; ++ i) {
-        for (size_t j = 0; j < M; ++ j) {
-            DataType d = 0;
-            for (size_t k = 0; k < K; ++ k) {
-                d += input_data_0[i * K + k] * input_data_1[k * M + j];
-            }
-            output_data[i * M + j] = d;
+    size_t N = right - left;
+    int input_start_idx = left * K;
+    int output_start_idx = left * M;
+    float alpha = 1.0;
+    float beta = 0.0;
+    cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_N,
+        CUBLAS_OP_N,
+        M,
+        N,
+        K,
+        &alpha,
+        (const float *)d_input_data_1,
+        M,
+        (const float *)(d_input_data_0 + input_start_idx),
+        K,
+        &beta,
+        d_output_data + output_start_idx,
+        M
+    );
+//     DataType * input_data_0 = new DataType[right * K];
+//     DataType * input_data_1 = new DataType[M * K];
+//     DataType * output_data = new DataType[M * right];
+//     CopyFromCUDADeviceToHost<DataType>(input_data_0, d_input_data_0, right * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_data_1, d_input_data_1, M * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * M, __FILE__, __LINE__);
+// #pragma omp parallel for 
+//     for (size_t i = left; i < right; ++ i) {
+//         for (size_t j = 0; j < M; ++ j) {
+//             DataType d = 0;
+//             for (size_t k = 0; k < K; ++ k) {
+//                 d += input_data_0[i * K + k] * input_data_1[k * M + j];
+//             }
+//             output_data[i * M + j] = d;
 
-            assert(!isnan(output_data[i * M + j]));
-        }
-    }
-    CopyFromHostToCUDADevice<DataType>(d_output_data + left * M, output_data + left * M, right * M - left * M, __FILE__, __LINE__ );
-    delete[] input_data_0;
-    delete[] input_data_1;
-    delete[] output_data;
+//             assert(!isnan(output_data[i * M + j]));
+//         }
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_output_data + left * M, output_data + left * M, right * M - left * M, __FILE__, __LINE__ );
+//     delete[] input_data_0;
+//     delete[] input_data_1;
+//     delete[] output_data;
 }
 
 void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op, VertexId left, VertexId right) {
@@ -2083,40 +2120,60 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op, VertexId left,
     int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
 
-    DataType * input_data = new DataType[right * activation_size];
-    DataType * output_data = new DataType[right * activation_size];
-    CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, right * activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * activation_size, __FILE__, __LINE__);
+    int num_vertices = right - left;
 
-#pragma omp parallel for 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType * input_activation = &input_data[v_i * activation_size];
-        DataType * output_activation = &output_data[v_i * activation_size];
-        DataType sum = 0.;
-        int max_index = 0;
-        for (int i = 0; i < activation_size; ++ i) {
-           // input_activation[i] = std::min(float(20.0), input_activation[i]);
-            if(input_activation[i] > input_activation[max_index]){
-                max_index = i;
-            }
-        }
-        DataType M = input_activation[max_index];
-        for (int i = 0; i < activation_size; ++ i) {
-           // input_activation[i] = std::min(float(20.0), input_activation[i]);
-            sum += exp(input_activation[i] - M);
-        }
-        for (int i = 0; i < activation_size; ++ i) {
-            output_activation[i] = exp(input_activation[i] - M) / sum;
-            if(isnan(output_activation[i])){
-                printf("%d, %f, %f\n", 1, input_activation[i], sum);
-                assert(false);
-            }
-          //  assert(!isnan(output_activation[i]));
-        }
-    }
-   CopyFromHostToCUDADevice<DataType>(d_output_data + left * activation_size, output_data + left * activation_size, right * activation_size - left * activation_size, __FILE__, __LINE__);
-   delete [] input_data;
-   delete [] output_data;
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, activation_size);
+
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnSoftmaxForward(
+        *cudnn_handle_,
+        CUDNN_SOFTMAX_ACCURATE,
+        CUDNN_SOFTMAX_MODE_INSTANCE,
+        &alpha,
+        data_descriptor,
+        (const void *)(d_input_data + left * activation_size),
+        &beta,
+        data_descriptor,
+        (void *)(d_output_data + left * activation_size)
+    );
+    cudnnDestroyTensorDescriptor(data_descriptor);
+//     DataType * input_data = new DataType[right * activation_size];
+//     DataType * output_data = new DataType[right * activation_size];
+//     CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, right * activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * activation_size, __FILE__, __LINE__);
+
+// #pragma omp parallel for 
+//     for (VertexId v_i = left; v_i < right; ++ v_i) {
+//         DataType * input_activation = &input_data[v_i * activation_size];
+//         DataType * output_activation = &output_data[v_i * activation_size];
+//         DataType sum = 0.;
+//         int max_index = 0;
+//         for (int i = 0; i < activation_size; ++ i) {
+//            // input_activation[i] = std::min(float(20.0), input_activation[i]);
+//             if(input_activation[i] > input_activation[max_index]){
+//                 max_index = i;
+//             }
+//         }
+//         DataType M = input_activation[max_index];
+//         for (int i = 0; i < activation_size; ++ i) {
+//            // input_activation[i] = std::min(float(20.0), input_activation[i]);
+//             sum += exp(input_activation[i] - M);
+//         }
+//         for (int i = 0; i < activation_size; ++ i) {
+//             output_activation[i] = exp(input_activation[i] - M) / sum;
+//             if(isnan(output_activation[i])){
+//                 printf("%d, %f, %f\n", 1, input_activation[i], sum);
+//                 assert(false);
+//             }
+//           //  assert(!isnan(output_activation[i]));
+//         }
+//     }
+//    CopyFromHostToCUDADevice<DataType>(d_output_data + left * activation_size, output_data + left * activation_size, right * activation_size - left * activation_size, __FILE__, __LINE__);
+//    delete [] input_data;
+//    delete [] output_data;
 
 }
 
@@ -2145,37 +2202,82 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, Vertex
 
     int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
-    VertexId num_vertices = graph->get_num_global_vertices();
-    DataType * input_data = new DataType[num_vertices * activation_size];
-    DataType * output_data = new DataType[num_vertices * activation_size];
-    CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, num_vertices * activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, num_vertices * activation_size, __FILE__, __LINE__);
-#pragma omp parallel for schedule(dynamic) 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        InEdgeList in_edge_list = graph->get_in_edges(v_i);  
-        DataType * input_activation = &input_data[v_i * activation_size];
-        DataType * output_activation = &output_data[v_i * activation_size];
-        DataType norm_fact = 1. / double(in_edge_list.num_in_edges + 1);
-        for (int i = 0; i < activation_size; ++ i) {
-            output_activation[i] = input_activation[i] * norm_fact;
-            assert(!isnan(output_activation[i]));
-        }
-        for (EdgeId i = 0; i < in_edge_list.num_in_edges; ++ i) { 
-            InEdge e = in_edge_list.ptx[i];
-            VertexId src = e.src;
-            DataType * src_activation = &input_data[src * activation_size];
-            for (int j = 0; j < activation_size; ++ j) {
-                output_activation[j] += e.norm_factor * src_activation[j];
-
-                assert(!isnan(output_activation[j]));
-            }
-        }
+    //VertexId num_vertices = graph_->get_num_global_vertices();
+    // VertexId K = num_vertices;
+    // VertexId N = num_vertices;
+    assert(csr_.number_matrix > 0);
+    if(csr_.number_matrix == 2){
+    int N = right - left;
+    int K = csr_.inMatrixSize;
+    assert(K * activation_size > 0);
+    LocalGraphBasic lg = get_localgraph_In(left, right);
+    int nnz = lg.local_nnz;
+    int * cols = lg.cuda_local_cols;
+    int * rowoffsets = lg.cuda_local_rowoffsets;
+    DataType * values = lg.cuda_local_values;
+    cusparseSpMatDescr_t SpCsr;
+    cusparseCreateCsr(&SpCsr, N, K, nnz, (void *)(rowoffsets + left), (void *)cols,(void *)values, 
+    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+    cusparseDnMatDescr_t InputData, OutputData;
+    assert(d_input_data != nullptr);
+    assert(d_output_data != nullptr);
+    cusparseCreateDnMat(&InputData, K, activation_size, activation_size, (void*)d_input_data,CUDA_R_32F,CUSPARSE_ORDER_ROW);
+    cusparseCreateDnMat(&OutputData, N, activation_size, activation_size, (void*)(d_output_data + left * activation_size),CUDA_R_32F,CUSPARSE_ORDER_ROW);
+    float alpha = 1.0;
+    float beta = 0.0;
+    void* dbuffer = nullptr;
+    size_t buffer_size = 0;
+    cusparseSpMM_bufferSize(*cusparse_handle_,
+    CUSPARSE_OPERATION_NON_TRANSPOSE,
+    CUSPARSE_OPERATION_NON_TRANSPOSE,
+    &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+    CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size
+    );
+    cudaMalloc(&dbuffer, buffer_size);
+    cusparseSpMM(
+        *cusparse_handle_,
+        CUSPARSE_OPERATION_NON_TRANSPOSE,
+        CUSPARSE_OPERATION_NON_TRANSPOSE,
+        &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+        CUSPARSE_SPMM_ALG_DEFAULT, dbuffer
+    );
+   
+    cudaFree(dbuffer);
+    //DeallocateCUDAMemory<int>(&lg.cuda_local_rowoffsets, __FILE__, __LINE__);
     }
-    CopyFromHostToCUDADevice<DataType>(d_output_data + left * activation_size ,
-    output_data + left * activation_size , right * activation_size - left * activation_size, __FILE__, __LINE__);
+//     VertexId K = csr_.inMatrixSize;
+//     VertexId N = csr_.num_master_vertices;
+//     DataType * input_data = new DataType[K * activation_size];
+//     DataType * output_data = new DataType[N * activation_size];
+//     CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, K * activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, N * activation_size, __FILE__, __LINE__);
+// #pragma omp parallel for schedule(dynamic) 
+//     for (VertexId v_i = left; v_i < right; ++ v_i) {
+//         InEdgeList in_edge_list = graph->get_in_edges(v_i);  
+//         DataType * input_activation = &input_data[v_i * activation_size];
+//         DataType * output_activation = &output_data[v_i * activation_size];
+//         DataType norm_fact = 1. / double(in_edge_list.num_in_edges + 1);
+//         for (int i = 0; i < activation_size; ++ i) {
+//             output_activation[i] = input_activation[i] * norm_fact;
+//             assert(!isnan(output_activation[i]));
+//         }
+//         for (EdgeId i = 0; i < in_edge_list.num_in_edges; ++ i) { 
+//             InEdge e = in_edge_list.ptx[i];
+//             VertexId src = e.src;
+//             DataType * src_activation = &input_data[src * activation_size];
+//             for (int j = 0; j < activation_size; ++ j) {
+//                 output_activation[j] += e.norm_factor * src_activation[j];
 
-    delete[] output_data;
-    delete[] input_data;
+//                 assert(!isnan(output_activation[j]));
+//             }
+//         }
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_output_data + left * activation_size ,
+//     output_data + left * activation_size , right * activation_size - left * activation_size, __FILE__, __LINE__);
+
+//     delete[] output_data;
+//     delete[] input_data;
+
 }
 
 void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, VertexId right) {
@@ -2200,25 +2302,50 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, Vert
 
     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
-    DataType * input_grad = new DataType[end_idx];
-    DataType * input_data = new DataType[end_idx];
-    DataType * output_grad = new DataType[end_idx];
+    cudnnActivationDescriptor_t relu_descriptor;
+    cudnnCreateActivationDescriptor(&relu_descriptor);
+    cudnnSetActivationDescriptor(relu_descriptor,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,0);
+    cudnnTensorDescriptor_t data_descriptor;;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, end_idx - start_idx);
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnActivationBackward(
+        *cudnn_handle_,
+        relu_descriptor,
+        &alpha,
+        data_descriptor,
+        (const void *)(d_output_data + start_idx),
+        data_descriptor,
+        (const void *)(d_output_grad + start_idx),
+        data_descriptor,
+        (const void *)(d_input_data + start_idx),
+        &beta,
+        data_descriptor,
+        (void *)(d_input_grad + start_idx)
+    );
+    cudnnDestroyActivationDescriptor(relu_descriptor);
+    cudnnDestroyTensorDescriptor(data_descriptor);
+//     DataType * input_grad = new DataType[end_idx];
+//     DataType * input_data = new DataType[end_idx];
+//     DataType * output_grad = new DataType[end_idx];
 
-    CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, end_idx, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, end_idx, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, end_idx, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, end_idx, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, end_idx, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, end_idx, __FILE__, __LINE__);
 
-#pragma omp parallel for 
-    for (size_t i = start_idx; i < end_idx; ++ i) {
-        input_grad[i] += (input_data[i] > 0 ? output_grad[i]: 0);
+// #pragma omp parallel for 
+//     for (size_t i = start_idx; i < end_idx; ++ i) {
+//         input_grad[i] += (input_data[i] > 0 ? output_grad[i]: 0);
 
-        assert(!isnan(input_grad[i]));
-    }
-    CopyFromHostToCUDADevice<DataType>(d_input_grad + start_idx, input_grad + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    delete[] input_data;
-    delete[] input_grad;
-    delete[] output_grad;
+//         assert(!isnan(input_grad[i]));
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_input_grad + start_idx, input_grad + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     delete[] input_data;
+//     delete[] input_grad;
+//     delete[] output_grad;
 }
 
 void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, VertexId right) {
@@ -2247,57 +2374,93 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, 
     // C = A x B
     // A size: N x K, B size: K x M, C size: N x M
     //size_t N = input_tensor_resource->get_num_vertices();
+    size_t N = right - left;
     size_t K = input_tensor_0->dims[1];
     assert(input_tensor_1->dims[0] == K);
     size_t M = input_tensor_1->dims[1];
+    int input_start_idx = left * K;
+    int output_start_idx = left * M;
+    float alpha = 1.0;
+    float beta = 0.0;
+   cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_T,
+        CUBLAS_OP_N,
+        K,
+        N,
+        M,
+        &alpha,
+        d_input_data_1,
+        M,
+        d_output_grad + output_start_idx,
+        M,
+        &beta,
+        d_input_grad_0 + input_start_idx,
+        K
+    );
+    cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_N,
+        CUBLAS_OP_T,
+        M,
+        K,
+        N,
+        &alpha,
+        d_output_grad + output_start_idx,
+        M,
+        d_input_data_0 + input_start_idx,
+        K,
+        &beta,
+        d_input_grad_1,
+        M
+    );
+//     DataType * input_data_0 = new DataType[right * K];
+//     DataType * input_grad_0 = new DataType[right * K];
+//     DataType * input_data_1 = new DataType[M * K];
+//     DataType * input_grad_1 = new DataType[M * K];
+//     DataType * output_grad = new DataType[M * right];
 
-    DataType * input_data_0 = new DataType[right * K];
-    DataType * input_grad_0 = new DataType[right * K];
-    DataType * input_data_1 = new DataType[M * K];
-    DataType * input_grad_1 = new DataType[M * K];
-    DataType * output_grad = new DataType[M * right];
+//     CopyFromCUDADeviceToHost<DataType>(input_data_0, d_input_data_0, right * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_grad_0, d_input_grad_0, right * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_data_1, d_input_data_1, M * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_grad_1, d_input_grad_1, M * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, M * right, __FILE__, __LINE__);
+//     // D(A) = D(C) x B^T 
+// #pragma omp parallel for 
+//     for (size_t i = left; i < right; ++ i) {
+//         for (size_t k = 0; k < K; ++ k) {
+//             DataType d = 0.;
+//             for (size_t j = 0; j < M; ++ j) {
+//                 d += output_grad[i * M + j] * input_data_1[k * M + j]; // B^T[j][k] = B[k][j]
+//             }
+//             input_grad_0[i * K + k] += d;
 
-    CopyFromCUDADeviceToHost<DataType>(input_data_0, d_input_data_0, right * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_grad_0, d_input_grad_0, right * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_data_1, d_input_data_1, M * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_grad_1, d_input_grad_1, M * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, M * right, __FILE__, __LINE__);
-    // D(A) = D(C) x B^T 
-#pragma omp parallel for 
-    for (size_t i = left; i < right; ++ i) {
-        for (size_t k = 0; k < K; ++ k) {
-            DataType d = 0.;
-            for (size_t j = 0; j < M; ++ j) {
-                d += output_grad[i * M + j] * input_data_1[k * M + j]; // B^T[j][k] = B[k][j]
-            }
-            input_grad_0[i * K + k] += d;
+//             assert(!isnan(input_grad_0[i * K + k]));
+//         }
+//     }
 
-            assert(!isnan(input_grad_0[i * K + k]));
-        }
-    }
+//     // D(B) = A^T x D(C)
+// #pragma omp parallel for 
+//     for (size_t k = 0; k < K; ++ k) {
+//         for (size_t j = 0; j < M; ++ j) {
+//             DataType d = 0.;
+//             for (size_t i = left; i < right; ++ i) {
+//                 d += input_data_0[i * K + k] * output_grad[i * M + j]; // A^T[k][i] = A[i][k]
+//             }
+//             input_grad_1[k * M + j] += d;
+//             assert(!isnan(input_grad_1[k * M + j]));
+//         }
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_input_grad_0 + left * K , input_grad_0 + left * K,
+//     right * K - left * K , __FILE__, __LINE__);
+//     CopyFromHostToCUDADevice<DataType>(d_input_grad_1 , input_grad_1,
+//     M * K, __FILE__, __LINE__);
 
-    // D(B) = A^T x D(C)
-#pragma omp parallel for 
-    for (size_t k = 0; k < K; ++ k) {
-        for (size_t j = 0; j < M; ++ j) {
-            DataType d = 0.;
-            for (size_t i = left; i < right; ++ i) {
-                d += input_data_0[i * K + k] * output_grad[i * M + j]; // A^T[k][i] = A[i][k]
-            }
-            input_grad_1[k * M + j] += d;
-            assert(!isnan(input_grad_1[k * M + j]));
-        }
-    }
-    CopyFromHostToCUDADevice<DataType>(d_input_grad_0 + left * K , input_grad_0 + left * K,
-    right * K - left * K , __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<DataType>(d_input_grad_1 , input_grad_1,
-    M * K, __FILE__, __LINE__);
-
-    delete[] input_data_0;
-    delete[] input_data_1;
-    delete[] output_grad;
-    delete[] input_grad_0;
-    delete[] input_grad_1;
+//     delete[] input_data_0;
+//     delete[] input_data_1;
+//     delete[] output_grad;
+//     delete[] input_grad_0;
+//     delete[] input_grad_1;
 }
 
 void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right) {
@@ -2322,41 +2485,62 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
     
 
-    AbstractGraphStructure * graph = graph_;
-    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+    //AbstractGraphStructure * graph = graph_;
+    //VertexId num_vertices = input_tensor_resource->get_num_vertices();
     int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
-    DataType * input_grad = new DataType[right * activation_size];
-    DataType * output_grad = new DataType[right * activation_size];
-    DataType * output_data = new DataType[right * activation_size];
-    CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, right * activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, right * activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * activation_size, __FILE__, __LINE__);
-#pragma omp parallel for 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType * in = &input_grad[v_i * activation_size];
-        DataType * out = &output_grad[v_i * activation_size];
-        DataType * out_data = &output_data[v_i * activation_size];
-        for (int j = 0; j < activation_size; ++ j) {
-            DataType grad = 0.;
-            for (int i = 0; i < activation_size; ++ i) {
-                // to enable conditional movement (to avoid branches)
-                DataType diff_i_j = - out_data[i] * out_data[j];
-                DataType same_i_j = out_data[i] * (1. - out_data[i]);
-                DataType grad_inc = (i != j ? diff_i_j: same_i_j) * out[i];
-                grad += grad_inc;
-            }
-            in[j] += grad;
-            assert(!isnan(in[j]));
-        }
-    }
+    int len  = right - left;
+    int start_idx = left * activation_size;
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, len, 1, 1, activation_size);
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnSoftmaxBackward(
+        *cudnn_handle_,
+        CUDNN_SOFTMAX_FAST,
+        CUDNN_SOFTMAX_MODE_INSTANCE,
+        &alpha,
+        data_descriptor,
+        (const void *)(d_output_data + start_idx),
+        data_descriptor,
+        (const void *)(d_output_grad + start_idx),
+        &beta,
+        data_descriptor,
+        (void *)(d_input_grad + start_idx)
+    );
+     cudnnDestroyTensorDescriptor(data_descriptor);
+//     DataType * input_grad = new DataType[right * activation_size];
+//     DataType * output_grad = new DataType[right * activation_size];
+//     DataType * output_data = new DataType[right * activation_size];
+//     CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, right * activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, right * activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * activation_size, __FILE__, __LINE__);
+// #pragma omp parallel for 
+//     for (VertexId v_i = left; v_i < right; ++ v_i) {
+//         DataType * in = &input_grad[v_i * activation_size];
+//         DataType * out = &output_grad[v_i * activation_size];
+//         DataType * out_data = &output_data[v_i * activation_size];
+//         for (int j = 0; j < activation_size; ++ j) {
+//             DataType grad = 0.;
+//             for (int i = 0; i < activation_size; ++ i) {
+//                 // to enable conditional movement (to avoid branches)
+//                 DataType diff_i_j = - out_data[i] * out_data[j];
+//                 DataType same_i_j = out_data[i] * (1. - out_data[i]);
+//                 DataType grad_inc = (i != j ? diff_i_j: same_i_j) * out[i];
+//                 grad += grad_inc;
+//             }
+//             in[j] += grad;
+//             assert(!isnan(in[j]));
+//         }
+//     }
 
-    CopyFromHostToCUDADevice<DataType>(d_input_grad + left * activation_size, input_grad + left * activation_size,
-    right * activation_size - left * activation_size, __FILE__, __LINE__);
+//     CopyFromHostToCUDADevice<DataType>(d_input_grad + left * activation_size, input_grad + left * activation_size,
+//     right * activation_size - left * activation_size, __FILE__, __LINE__);
 
-    delete[] input_grad;
-    delete[] output_grad;
-    delete[] output_data;
+//     delete[] input_grad;
+//     delete[] output_grad;
+//     delete[] output_data;
 }
 
 void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, VertexId left, VertexId right) {
@@ -2378,14 +2562,65 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
 
     AbstractGraphStructure * graph = graph_;
-    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+    
+    //VertexId num_vertices = input_tensor_resource->get_num_vertices();
+   // VertexId num_vertices = graph_->get_num_global_vertices();
+    // VertexId K = num_vertices;
+    // VertexId N = num_vertices;
+    assert(csr_.number_matrix == 2);
+    if(csr_.number_matrix == 2){
+    int N = right - left;
+    int K = csr_.outMatrixSize;
     int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
-    DataType * input_grad = new DataType[num_vertices * activation_size];
-    DataType * output_grad = new DataType[num_vertices * activation_size];
+    LocalGraphBasic lg = get_localgraph_Out(left, right);
+    int nnz = lg.local_nnz;
+    int * cols = lg.cuda_local_cols;
+    int * rowoffsets = lg.cuda_local_rowoffsets;
+    DataType * values = lg.cuda_local_values;
+    
+    cusparseSpMatDescr_t SpCsr;
+    cusparseCreateCsr(&SpCsr, N, K, nnz, (void *)(rowoffsets + left), (void *)cols,(void *)values, 
+    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+    cusparseDnMatDescr_t InputData, OutputData;
+    assert(d_input_grad != nullptr);
+    assert(d_output_grad != nullptr);
+    cusparseCreateDnMat(&InputData, K, activation_size, activation_size, (void*)d_output_grad,CUDA_R_32F,CUSPARSE_ORDER_ROW);
+    cusparseCreateDnMat(&OutputData, N, activation_size, activation_size, (void*)(d_input_grad + left * activation_size),CUDA_R_32F,CUSPARSE_ORDER_ROW);
+    float alpha = 1.0;
+    float beta = 0.0;
+    void* dbuffer = nullptr;
+    size_t buffer_size = 0;
+    cusparseSpMM_bufferSize(*cusparse_handle_,
+    CUSPARSE_OPERATION_NON_TRANSPOSE,
+    CUSPARSE_OPERATION_NON_TRANSPOSE,
+    &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+    CUSPARSE_SPMM_ALG_DEFAULT, &buffer_size
+    );
+    cudaMalloc(&dbuffer, buffer_size);
+    cusparseSpMM(
+        *cusparse_handle_,
+        CUSPARSE_OPERATION_NON_TRANSPOSE,
+        CUSPARSE_OPERATION_NON_TRANSPOSE,
+        &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+        CUSPARSE_SPMM_ALG_DEFAULT, dbuffer
+    );
+    cudaFree(dbuffer);
+    cusparseDestroyDnMat(InputData);
+    cusparseDestroyDnMat(OutputData);
+    cusparseDestroySpMat(SpCsr);
+   // DeallocateCUDAMemory<int>(&lg.cuda_local_rowoffsets,__FILE__,__LINE__);
+    }
+#ifdef CPUAGG
+     VertexId K = csr_.outMatrixSize;
+     VertexId N = csr_.num_master_vertices;
+    int activation_size = input_tensor->dims[1];
+    assert(output_tensor->dims[1] == activation_size);
+    DataType * input_grad = new DataType[N * activation_size];
+    DataType * output_grad = new DataType[K * activation_size];
 
-    CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, num_vertices *activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, num_vertices *activation_size, __FILE__, __LINE__);
+    CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, N *activation_size, __FILE__, __LINE__);
+    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, K *activation_size, __FILE__, __LINE__);
 #pragma omp parallel for schedule(dynamic) 
     for (VertexId v_i = left; v_i < right; ++ v_i) {
         DataType vtx_norm_factor = 1. / double(graph->get_in_degree(v_i) + 1);
@@ -2410,5 +2645,6 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
   right * activation_size - left * activation_size, __FILE__, __LINE__);
   delete[] input_grad;
   delete[] output_grad;
+#endif
 }
 

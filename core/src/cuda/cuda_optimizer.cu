@@ -1,5 +1,7 @@
 #include<cuda_runtime.h>
 #include"cuda/cuda_optimizer.h"
+#include<assert.h>
+#include<math.h>
 void __global__ AdamOptimizeWeitghsKernel(
 const DataType * grad,
 DataType * weight_to_update,
@@ -41,16 +43,16 @@ size_t num_elements
     state.t ++;
     state.exp_beta1 *= beta1_;
     state.exp_beta2 *= beta2_;
-    /*
-    DataType * cpu_grad = new DataType[num_elements];
-    DataType * cpu_weight = new DataType[num_elements];
-    DataType * m_t = new DataType[num_elements];
-    DataType * v_t = new DataType[num_elements];
-    CopyFromCUDADeviceToHost<DataType>(cpu_grad, grad, num_elements, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(cpu_weight, weight_to_update, num_elements, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(m_t, state.m_t_gpu, num_elements, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(v_t, state.v_t_gpu, num_elements, __FILE__, __LINE__);
-    */
+    
+    // DataType * cpu_grad = new DataType[num_elements];
+    // DataType * cpu_weight = new DataType[num_elements];
+    // DataType * m_t = new DataType[num_elements];
+    // DataType * v_t = new DataType[num_elements];
+    // CopyFromCUDADeviceToHost<DataType>(cpu_grad, grad, num_elements, __FILE__, __LINE__);
+    // CopyFromCUDADeviceToHost<DataType>(cpu_weight, weight_to_update, num_elements, __FILE__, __LINE__);
+    // CopyFromCUDADeviceToHost<DataType>(m_t, state.m_t_gpu, num_elements, __FILE__, __LINE__);
+    // CopyFromCUDADeviceToHost<DataType>(v_t, state.v_t_gpu, num_elements, __FILE__, __LINE__);
+    
     
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_elements + ThreadNumber - 1)/ThreadNumber;
@@ -61,35 +63,42 @@ size_t num_elements
     DataType * v_t = state.v_t_gpu;
     AdamOptimizeWeitghsKernel<<<BlockNumber, ThreadNumber>>>(grad,weight_to_update,m_t,v_t,beta1_,state.exp_beta1,beta2_,state.exp_beta2,
     epsilon_, weight_decay_, learning_rate_,ThreadNumber,BlockNumber,per_thread_elements,num_elements);
+    cudaError_t err = cudaGetLastError();
+if (err != cudaSuccess) {
+    printf("CUDA Error: %s\n", cudaGetErrorString(err));
+    // Possibly: exit(-1) if program cannot continue....
+ }
     cudaDeviceSynchronize();
+  //  cudaDeviceSynchronize();
+
     
-   /*
-   #pragma omp parallel for 
-    for (size_t i = 0; i < num_elements; ++ i) {
-        // the algorithm is according to the ICLR paper 
-        // "ADAM : A METHOD FOR STOCHASTIC OPTIMIZATION"
-        assert(!isnan(cpu_weight[i]));
-        assert(!isnan(cpu_grad[i]));
-        DataType g = cpu_grad[i] + weight_decay_ * cpu_weight[i];
-        assert(!isnan(g));
-        m_t[i] = beta1_ * m_t[i] + (1. - beta1_) * g;
-        v_t[i] = beta2_ * v_t[i] + (1. - beta2_) * g * g;
-        DataType m_t_hat = m_t[i] / (1. - state.exp_beta1);
-        DataType v_t_hat = v_t[i] / (1. - state.exp_beta2);
-        assert(! isnan(m_t_hat));
-        assert(! isnan(v_t_hat));
-        // update the parameters
-        cpu_weight[i] = cpu_weight[i] - 
-            learning_rate_ * m_t_hat / (sqrt(v_t_hat) + epsilon_);
-        assert(!isnan(cpu_weight[i]));
-    }
-   CopyFromHostToCUDADevice<DataType>(grad, cpu_grad, num_elements, __FILE__, __LINE__);
-   CopyFromHostToCUDADevice<DataType>(weight_to_update, cpu_weight, num_elements, __FILE__, __LINE__);
-   CopyFromHostToCUDADevice<DataType>(state.v_t_gpu, v_t, num_elements, __FILE__, __LINE__);
-   CopyFromHostToCUDADevice<DataType>(state.m_t_gpu, m_t, num_elements, __FILE__, __LINE__);
-   delete [] cpu_grad;
-   delete [] cpu_weight;
-   delete [] m_t;
-   delete [] v_t;
-   */
+   
+//    #pragma omp parallel for 
+//     for (size_t i = 0; i < num_elements; ++ i) {
+//         // the algorithm is according to the ICLR paper 
+//         // "ADAM : A METHOD FOR STOCHASTIC OPTIMIZATION"
+//         assert(!isnan(cpu_weight[i]));
+//         assert(!isnan(cpu_grad[i]));
+//         DataType g = cpu_grad[i] + weight_decay_ * cpu_weight[i];
+//         assert(!isnan(g));
+//         m_t[i] = beta1_ * m_t[i] + (1. - beta1_) * g;
+//         v_t[i] = beta2_ * v_t[i] + (1. - beta2_) * g * g;
+//         DataType m_t_hat = m_t[i] / (1. - state.exp_beta1);
+//         DataType v_t_hat = v_t[i] / (1. - state.exp_beta2);
+//         assert(! isnan(m_t_hat));
+//         assert(! isnan(v_t_hat));
+//         // update the parameters
+//         cpu_weight[i] = cpu_weight[i] - 
+//             learning_rate_ * m_t_hat / (sqrt(v_t_hat) + epsilon_);
+//         assert(!isnan(cpu_weight[i]));
+//     }
+//    CopyFromHostToCUDADevice<DataType>(grad, cpu_grad, num_elements, __FILE__, __LINE__);
+//    CopyFromHostToCUDADevice<DataType>(weight_to_update, cpu_weight, num_elements, __FILE__, __LINE__);
+//    CopyFromHostToCUDADevice<DataType>(state.v_t_gpu, v_t, num_elements, __FILE__, __LINE__);
+//    CopyFromHostToCUDADevice<DataType>(state.m_t_gpu, m_t, num_elements, __FILE__, __LINE__);
+//    delete [] cpu_grad;
+//    delete [] cpu_weight;
+//    delete [] m_t;
+//    delete [] v_t;
+   
 }

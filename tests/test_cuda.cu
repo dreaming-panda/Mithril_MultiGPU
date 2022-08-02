@@ -1,5 +1,6 @@
 #include<cuda_runtime.h>
 #include<stdio.h>
+#include"cuda/cuda_hybrid_parallel.h"
 template <typename T>
 void AllocateCUDAMemory_(T** out_ptr, size_t size, const char* file, const int line) {
   void* tmp_ptr = nullptr;

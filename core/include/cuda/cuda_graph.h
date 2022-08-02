@@ -6,6 +6,13 @@
 #include "graph.h"
 #include <cusparse.h>
 //#include <parallel/hybrid_parallel.h>
+struct LocalGraphBasic{
+    int num_local_vertices;
+    int * cuda_local_rowoffsets;
+    int local_nnz;
+    DataType * cuda_local_values;
+    int * cuda_local_cols;
+};
 class CUDAFullyStructualGraph:public GraphStructureFullyReplicatedV2
 {
     public:
@@ -116,6 +123,16 @@ class CUDAFullyStructualGraph:public GraphStructureFullyReplicatedV2
         int get_nnz()
         {
             return csr_value_nnz_;
+        }
+        virtual LocalGraphBasic get_rowoffsets_in_(VertexId left, VertexId right){
+            assert(false);
+            LocalGraphBasic s = {0, nullptr, 0, nullptr, nullptr};
+            return s;
+        }
+        virtual LocalGraphBasic get_rowoffsets_out_(VertexId left, VertexId right){
+            assert(false);
+            LocalGraphBasic s = {0, nullptr, 0, nullptr, nullptr};
+            return s;
         }
     private:
         //host memory

@@ -32,7 +32,7 @@ limitations under the License.
 #include "engine.h"
 #include "parallel/pipelined_model_parallel.h"
 #include "distributed_sys.h"
-
+#include "cuda/cuda_utils.h"
 /* Two key insights:
  * Relaxation in (1) balanced graph partitioning that is the same for each layer;
  * (2) the same processing pipeline for each graph vertex;
@@ -901,7 +901,10 @@ class ShadowGradientsMasterVertices {
             VertexId num_master_vertices = vid_translation_->get_num_master_vertices();
             size_t num_elements = (size_t) num_elements_per_vertex * num_master_vertices;
             DataType * grad = new DataType [num_elements];
+            //DataType * d = nullptr;
+            //AllocateCUDAMemory<DataType>(&d, num_elements, __FILE__, __LINE__);
             assert(grad != NULL);
+            //assert(d != nullptr);
             memset(grad, 0, sizeof(DataType) * num_elements);
             shadow_gradients_[t] = grad;
         }

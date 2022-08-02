@@ -94,10 +94,10 @@ int main(int argc, char ** argv) {
     });*/
 
 
-    std::string graph_path = "/home/a100/storage/gnn_datasets/arxiv";
+    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/Cora";
     int num_layers = 3;
-    int num_hidden_units = 256;
-    int num_epoch = 5000;
+    int num_hidden_units = 16;
+    int num_epoch = 50;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -112,12 +112,12 @@ int main(int argc, char ** argv) {
     CUDAStructualGraphLoader graph_structure_loader;
     GraphNonStructualDataLoaderFullyReplicated graph_non_structural_data_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
-            graph_path + "/meta_data2.txt",
-            graph_path + "/edge_list2.txt",
+            graph_path + "/meta_data.txt",
+            graph_path + "/edge_list.txt",
             graph_path + "/vertex_structure_partition.txt"
             );
     graph_non_structural_data = graph_non_structural_data_loader.load_graph_non_structural_data(
-            graph_path + "/meta_data2.txt",
+            graph_path + "/meta_data.txt",
             graph_path + "/feature.txt",
             graph_path + "/label.txt",
             graph_path + "/vertex_data_partition.txt"

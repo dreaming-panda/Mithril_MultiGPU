@@ -9,8 +9,10 @@
 #include <map>
 #define NUM_CHUNK_MAX 4
 #define NUM_CHUNK_WARM_UP 1
-#define WARM_UP_STEPS 5
-
+#define WARM_UP_STEPS -1
+#define VERSIONWISE_S
+#define CLIP
+#define CLIP_NUMBER 2
 void MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU::forwarding_tasks_generator_thread_main(
         int num_epoch,
         const std::vector<std::pair<int, Tensor*>> &prev_tensors
@@ -445,7 +447,25 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
         if (chunk_id == num_chunks_ - 1) {
             chunk_end_[chunk_id] = num_vertices;
         }
-    }
+    }   
+
+        for (Tensor * t: tensors_need_init) {
+                    assert(t != NULL);
+                    TensorResourceCPU * resource = (TensorResourceCPU*) t->resource;
+                    assert(resource != NULL);
+                    if (t->type == VERTEX_TENSOR) {
+                       continue;
+                    } else {
+                        assert(t->op->get_type() == OPERATOR_WEIGHT ||
+                                t->op->get_type() == OPERATOR_INPUT);
+                        DataType * grad = resource->get_grad();
+                        assert(grad != NULL);
+                        size_t num_elements = resource->get_num_elements();
+                        memset(
+                                grad, 0, sizeof(DataType) * num_elements
+                              );
+                    }
+                }
         while (task_id < 2 * num_chunks_) {
             // round-robin between the forwarding and backwarding task queue
             // within each queue, FIFO scheduling is adopted
@@ -467,7 +487,7 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                 // weight stashing
                 assert(forwarding_task.epoch_id == epoch_id);
                 int chunk_id = forwarding_task.chunk_id;
-                int version = (epoch_id * (num_chunks_ % window_size_)
+                int version = (epoch_id * ( (num_chunks_ + 7)% window_size_)
                         + chunk_id) % window_size_;
                 weight_version_to_epoch_id_[version] = epoch_id;
                 weight_version_to_chunk_id_[version] = chunk_id;
@@ -482,9 +502,23 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                     assert(num_elements > 0);
                     DataType * stashed_data = stashed_weight_data_[version]->at(op);
                     assert(stashed_data != NULL);
+#ifndef VERSIONWISE
                     memcpy(
                             stashed_data, data, sizeof(DataType) * num_elements
                           );
+#endif
+#ifdef VERSIONWISE 
+                    if(epoch_id <= WARM_UP_STEPS){
+                        memcpy(
+                            stashed_data, data, sizeof(DataType) * num_elements
+                          );
+                    }
+                    else {
+                    memcpy(
+                            data, stashed_data, sizeof(DataType) * num_elements
+                          );
+                    }
+#endif
                 }
 
                 // forward the activation locally
@@ -590,7 +624,7 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                 
                 assert(backwarding_task.epoch_id == epoch_id);
                 int chunk_id = backwarding_task.chunk_id;
-                int version = (epoch_id * (num_chunks_ % window_size_)
+                int version = (epoch_id * ( (num_chunks_  + 7)% window_size_)
                         + chunk_id) % window_size_;
                 assert(weight_version_to_epoch_id_[version] == epoch_id);
                 assert(weight_version_to_chunk_id_[version] == chunk_id);
@@ -616,12 +650,17 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                     } else {
                         assert(t->op->get_type() == OPERATOR_WEIGHT ||
                                 t->op->get_type() == OPERATOR_INPUT);
+                        
+                        
+                        
                         DataType * grad = resource->get_grad();
                         assert(grad != NULL);
                         size_t num_elements = resource->get_num_elements();
                         memset(
                                 grad, 0, sizeof(DataType) * num_elements
                               );
+                        
+                    
                     }
                 }
 
@@ -683,6 +722,79 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                 }
                 
                 // update the weight by applying the gradients
+#ifndef VERSIONWISE
+                if(chunk_id == num_chunks_ -1)
+                {
+                AbstractLowerLevelOptimizer * lower_level_optimizer = 
+                    optimizer_->get_lower_level_optimizer();
+                for (Operator * op: weight_ops) {
+                    assert(op != NULL);
+                    Tensor * tensor = op->get_output_tensor(0);
+                    assert(tensor != NULL);
+                    TensorResourceCPU * resource = (TensorResourceCPU*) tensor->resource;
+                    assert(resource != NULL);
+                    DataType * stashed_data = resource->get_data();
+                    DataType * latest_data = stashed_weight_data_[version]->at(op);
+                    assert(stashed_data != NULL);
+                    assert(latest_data != NULL);
+                    (*stashed_weight_data_[version])[op] = stashed_data;
+                    resource->set_data(latest_data);
+                    size_t num_elements = resource->get_num_elements();
+                    DataType * g = resource->get_grad();
+#ifdef CLIP
+                    for(int i = 0; i < num_elements; ++i){
+                        g[i] = (g[i] > CLIP_NUMBER ? CLIP_NUMBER : g[i]);
+                        g[i] = (g[i] < (-CLIP_NUMBER) ? (-CLIP_NUMBER) : g[i]);
+                    }
+#endif
+                    lower_level_optimizer->optimize_weights(
+                            op, resource->get_grad(),
+                            resource->get_data(), num_elements
+                            );
+                }
+            }
+            else {
+                for (Operator * op: weight_ops) {
+                    assert(op != NULL);
+                    Tensor * tensor = op->get_output_tensor(0);
+                    assert(tensor != NULL);
+                    TensorResourceCPU * resource = (TensorResourceCPU*) tensor->resource;
+                    assert(resource != NULL);
+                    DataType * stashed_data = resource->get_data();
+                    DataType * latest_data = stashed_weight_data_[version]->at(op);
+                    assert(stashed_data != NULL);
+                    assert(latest_data != NULL);
+                    (*stashed_weight_data_[version])[op] = stashed_data;
+                    resource->set_data(latest_data);
+                    
+                }
+            }
+#endif
+#ifdef VERSIONWISE
+            if(epoch_id <= WARM_UP_STEPS){
+            AbstractLowerLevelOptimizer * lower_level_optimizer = 
+                    optimizer_->get_lower_level_optimizer();
+                for (Operator * op: weight_ops) {
+                    assert(op != NULL);
+                    Tensor * tensor = op->get_output_tensor(0);
+                    assert(tensor != NULL);
+                    TensorResourceCPU * resource = (TensorResourceCPU*) tensor->resource;
+                    assert(resource != NULL);
+                    DataType * stashed_data = resource->get_data();
+                    DataType * latest_data = stashed_weight_data_[version]->at(op);
+                    assert(stashed_data != NULL);
+                    assert(latest_data != NULL);
+                    (*stashed_weight_data_[version])[op] = stashed_data;
+                    resource->set_data(latest_data);
+                    size_t num_elements = resource->get_num_elements();
+                    lower_level_optimizer->optimize_weights(
+                            op, resource->get_grad(),
+                           resource->get_data(), num_elements
+                            );
+                }
+            }else{
+                if(chunk_id == num_chunks_ -1)
+                {
                 AbstractLowerLevelOptimizer * lower_level_optimizer = 
                     optimizer_->get_lower_level_optimizer();
                 for (Operator * op: weight_ops) {
@@ -700,10 +812,28 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                     size_t num_elements = resource->get_num_elements();
                     lower_level_optimizer->optimize_weights(
                             op, resource->get_grad(),
-                            resource->get_data(), num_elements
+                            stashed_data, num_elements
                             );
                 }
-
+            }
+            else {
+                for (Operator * op: weight_ops) {
+                    assert(op != NULL);
+                    Tensor * tensor = op->get_output_tensor(0);
+                    assert(tensor != NULL);
+                    TensorResourceCPU * resource = (TensorResourceCPU*) tensor->resource;
+                    assert(resource != NULL);
+                    DataType * stashed_data = resource->get_data();
+                    DataType * latest_data = stashed_weight_data_[version]->at(op);
+                    assert(stashed_data != NULL);
+                    assert(latest_data != NULL);
+                    (*stashed_weight_data_[version])[op] = stashed_data;
+                    resource->set_data(latest_data);
+                    
+                }
+            }
+            }
+#endif
                 finished_backwarding_task_queue_->push(backwarding_task);
                 num_finished_backwarding_tasks ++;
             }

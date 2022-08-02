@@ -115,10 +115,10 @@ int main(int argc, char ** argv) {
         }
     });*/
     cudaSetDevice(2);
-    std::string graph_path = "/home/a100/storage/gnn_datasets/arxiv";
-    int num_layers = 2;
-    int num_hidden_units = 64;
-    int num_epoch = 3000;
+    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/Cora";
+    int num_layers = 3;
+    int num_hidden_units = 128;
+    int num_epoch = 50;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);

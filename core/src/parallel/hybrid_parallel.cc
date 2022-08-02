@@ -30,7 +30,7 @@ limitations under the License.
 using namespace std;
 //#define SHOW_DISPATCH_DETAILS
 //#define SHOW_SCHEDULE_DETAILS
-
+#define FIXPART_C
 // PIPForwardTaskDispatcher
 
 PIPForwardTaskDispatcher::PIPForwardTaskDispatcher(
@@ -2953,7 +2953,7 @@ double DistributedPIPHybridParallelExecutionEngineCPU::execute_application(Abstr
     partitioning.partition_vid_end = new VertexId [num_nodes];
     partitioning.partition_op_begin = new int [num_nodes];
     partitioning.partition_op_end = new int [num_nodes];
-
+#ifndef FIXPART
     assert(num_nodes == 4);
     partitioning.partition_vid_begin[0] = 0;
     partitioning.partition_vid_end[0] = num_global_vertices / 4;
@@ -2968,7 +2968,28 @@ double DistributedPIPHybridParallelExecutionEngineCPU::execute_application(Abstr
         partitioning.partition_op_end[i] = i * (num_operators / 3);
     }
     partitioning.partition_op_end[3] = num_operators;
+#endif
 
+#ifdef FIXPART
+    assert(num_nodes == 4);
+    for (int i = 0; i < 4; ++ i) {
+        partitioning.partition_vid_begin[i] = 0;
+        partitioning.partition_vid_end[i] = num_global_vertices;
+    }
+    partitioning.partition_op_begin[0] = 0;
+    partitioning.partition_op_end[0] = 4;
+    partitioning.partition_op_begin[1] = 4;
+    partitioning.partition_op_end[1] = 7;
+    partitioning.partition_op_begin[2] = 7;
+    partitioning.partition_op_end[2] = 9;
+    partitioning.partition_op_begin[3] = 9;
+    partitioning.partition_op_end[3] = 13;
+    // for (int i = 1; i < 4; ++ i) {
+    //     partitioning.partition_op_begin[i] = (i - 1) * (num_operators / 3);
+    //     partitioning.partition_op_end[i] = i * (num_operators / 3);
+    // }
+    // partitioning.partition_op_end[3] = num_operators;
+#endif
     /*
     assert(num_nodes == 1);
     partitioning.partition_vid_begin[0] = 0;
@@ -3032,8 +3053,8 @@ double DistributedPIPHybridParallelExecutionEngineCPU::execute_application(Abstr
     chunk_manager_ = new VertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-            //graph_structure_->get_num_global_vertices() / 16
-            graph_structure_->get_num_global_vertices() / 4
+             graph_structure_->get_num_global_vertices() / 16
+            //graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new DataDependenciesTracker(
             op_ten_manager_, chunk_manager_, graph_structure_, partitioning

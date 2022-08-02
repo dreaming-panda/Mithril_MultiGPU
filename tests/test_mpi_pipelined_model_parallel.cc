@@ -88,9 +88,9 @@ int main(int argc, char ** argv) {
 
 
     std::string graph_path = "/home/a100/storage/gnn_datasets/arxiv";
-    int num_layers = 2;
-    int num_hidden_units = 128;
-    int num_epoch = 3000;
+    int num_layers = 3;
+    int num_hidden_units = 256;
+    int num_epoch = 5000;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -128,7 +128,7 @@ int main(int argc, char ** argv) {
     AbstractExecutionEngine * execution_engine = new MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU();
     //AbstractExecutionEngine * execution_engine = new DistributedPipelinedLinearModelParallelExecutionEngineCPU();
     AbstractOptimizer * optimizer = new AdamOptimizerCPU(learning_rate, weight_decay);
-    //AbstractOptimizer * optimizer = new SGDOptimizerCPU(learning_rate);
+   // AbstractOptimizer * optimizer = new SGDOptimizerCPU(0.5);
     AbstractOperatorExecutor * executor = new OperatorExecutorCPU(graph_structure);
     AbstractLoss * loss = new CrossEntropyLossCPU();
     //AbstractLoss * loss = new MSELossCPU();

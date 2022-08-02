@@ -36,6 +36,7 @@ limitations under the License.
 #include "cuda/cuda_loss.h"
 #include"cuda/cuda_executor.h"
 #include "cuda/cuda_pipeline_parallel.h"
+#include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_optimizer.h"
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
@@ -110,9 +111,9 @@ int main(int argc, char ** argv) {
         }
     });*/
 
-    std::string graph_path = "./storage/gnn_datasets/Cora";
-    int num_layers = 4;
-    int num_hidden_units = 32;
+    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/products_new";
+    int num_layers = 3;
+    int num_hidden_units = 128;
     int num_epoch = 50;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
@@ -122,28 +123,29 @@ int main(int argc, char ** argv) {
     Context::init_context();
 
     int node_id = DistributedSys::get_instance()->get_node_id();
-    int node_number = DistributedSys::get_instance()->get_num_nodes();
-    int localRank = 0;
-    uint64_t hostHashs[node_number];
-    char hostname[1024];
-    getHostName(hostname, 1024);
-    hostHashs[node_id] = getHostHash(hostname);
-    MPICHECK(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, hostHashs, sizeof(uint64_t), MPI_BYTE, MPI_COMM_WORLD));
-    for (int p=0; p<node_number; p++) {
-     if (p == node_id) break;
-     if (hostHashs[p] == hostHashs[node_id]) localRank++;
-    }
-    cudaSetDevice(localRank);
-    ncclUniqueId id;
-    ncclUniqueId idx;
-    ncclComm_t comms;
-    ncclComm_t commsx;
-    if (node_id == 0) ncclGetUniqueId(&id);
-    if (node_id == 0) ncclGetUniqueId(&idx);
-    MPICHECK(MPI_Bcast((void *)&id, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD));
-    MPICHECK(MPI_Bcast((void *)&idx, sizeof(idx), MPI_BYTE, 0, MPI_COMM_WORLD));
-    ncclCommInitRank(&comms, node_number, id, node_id);
-    ncclCommInitRank(&commsx,node_number, idx, node_id);
+    
+    // int node_number = DistributedSys::get_instance()->get_num_nodes();
+    // int localRank = 0;
+    // uint64_t hostHashs[node_number];
+    // char hostname[1024];
+    // getHostName(hostname, 1024);
+    // hostHashs[node_id] = getHostHash(hostname);
+    // MPICHECK(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, hostHashs, sizeof(uint64_t), MPI_BYTE, MPI_COMM_WORLD));
+    // for (int p=0; p<node_number; p++) {
+    //  if (p == node_id) break;
+    //  if (hostHashs[p] == hostHashs[node_id]) localRank++;
+    // }
+    // //cudaSetDevice(localRank);
+    // ncclUniqueId id;
+    // ncclUniqueId idx;
+    // ncclComm_t comms;
+    // ncclComm_t commsx;
+    // if (node_id == 0) ncclGetUniqueId(&id);
+    // if (node_id == 0) ncclGetUniqueId(&idx);
+    // MPICHECK(MPI_Bcast((void *)&id, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD));
+    // MPICHECK(MPI_Bcast((void *)&idx, sizeof(idx), MPI_BYTE, 0, MPI_COMM_WORLD));
+    // ncclCommInitRank(&comms, node_number, id, node_id);
+    // ncclCommInitRank(&commsx,node_number, idx, node_id);
     // load the graph dataset
     CUDAFullyStructualGraph * graph_structure;
     AbstractGraphNonStructualData * graph_non_structural_data;
@@ -173,9 +175,11 @@ int main(int argc, char ** argv) {
     // train the model
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
 
+
     // setup the execution engine
-    DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU* execution_engine = new DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU();
-    execution_engine->SetNCCL(&comms, &commsx,node_id);
+   //DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU* execution_engine = new DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU();
+    DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
+   // execution_engine->SetNCCL(&comms, &commsx,node_id);
     //AbstractOptimizer * optimizer = new SGDOptimizerCPU(learning_rate);
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(5e-3, 0);
     //AbstractOperatorExecutor * executor = new OperatorExecutorCPU(graph_structure);
@@ -216,8 +220,8 @@ int main(int argc, char ** argv) {
     cudnnDestroy(cudnn);
     cusparseDestroy(cusparse);
 
-    ncclCommDestroy(comms);
-    ncclCommDestroy(commsx);
+    // ncclCommDestroy(comms);
+    // ncclCommDestroy(commsx);
     Context::finalize_context();
     terminated = true;
     printf("[MPI Rank %d] Success \n", node_id);

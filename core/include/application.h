@@ -57,6 +57,7 @@ class AbstractApplication {
         friend class DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
         //friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
         friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU;
+        friend class DistributedPIPHybridParallelExecutionEngineGPU;
     protected:
         Tensor * relu(Tensor * t);
         Tensor * weight(int length);

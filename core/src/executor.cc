@@ -27,6 +27,8 @@ limitations under the License.
 #include<cudnn.h>
 #include"cuda/cuda_utils.h"
 #define DEBUG
+#define CLIP
+#define CLIP_NUMBER 2.0
 // AbstractTensorResource
 
 AbstractTensorResource::AbstractTensorResource(Tensor * tensor):
