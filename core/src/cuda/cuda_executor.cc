@@ -1808,6 +1808,7 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op) {
         d_ingrad0,
         K
     );
+    beta = 1.0;
     cublasSgemm(
         *cublas_handle_,
         CUBLAS_OP_N,
@@ -1966,6 +1967,10 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
 }
 
 void OperatorExecutorGPUV2::relu_forward(ReluOperator * op, VertexId left, VertexId right) {
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+    double t = -get_time();
+    #endif
    assert(op->get_num_input_tensors() == 1);
     assert(op->get_num_output_tensors() == 1);
 
@@ -1991,26 +1996,76 @@ void OperatorExecutorGPUV2::relu_forward(ReluOperator * op, VertexId left, Verte
 
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
-    DataType * input_data = new DataType[num_elements];
-    DataType * output_data = new DataType[num_elements];
-    CopyFromCUDADeviceToHost<DataType>(input_data +  start_idx, d_input_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data + start_idx, d_output_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    assert(input_data != NULL);
-    assert(output_data != NULL);
 
-#pragma omp parallel for 
-    for (size_t i = start_idx; i < end_idx; ++ i) {
-        output_data[i] = input_data[i] > 0 ? input_data[i]: 0;
+    
 
-        assert(!isnan(output_data[i]));
-    }
-    //CopyFromHostToCUDADevice<DataType>(d_input_data + start_idx, input_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<DataType>(d_output_data + start_idx, output_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    delete [] input_data;
-    delete [] output_data;
+    assert(d_input_data != NULL);
+    assert(d_output_data != NULL);
+    cudnnActivationDescriptor_t relu_descriptor;
+    cudnnCreateActivationDescriptor(&relu_descriptor);
+    cudnnSetActivationDescriptor(relu_descriptor,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,0);
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, end_idx - start_idx);
+    cudnnActivationForward(*cudnn_handle_, relu_descriptor,&alpha, data_descriptor, (const void*)(d_input_data + start_idx), &beta,data_descriptor,(void*)(d_output_data + start_idx));
+    cudnnDestroyActivationDescriptor(relu_descriptor);
+    cudnnDestroyTensorDescriptor(data_descriptor);
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+     t += get_time();
+     reluforward_time += t;
+    #endif
+//    assert(op->get_num_input_tensors() == 1);
+//     assert(op->get_num_output_tensors() == 1);
+
+//     Tensor * input_tensor = op->get_input_tensor(0);
+//     Tensor * output_tensor = op->get_output_tensor(0);
+//     assert(input_tensor != NULL);
+//     assert(output_tensor != NULL);
+//     assert(input_tensor->type == VERTEX_TENSOR);
+//     assert(output_tensor->type == VERTEX_TENSOR);
+
+//     TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+//     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+//     assert(input_tensor_resource != NULL);
+//     assert(output_tensor_resource != NULL);
+
+//     VertexId num_vertices = input_tensor_resource->get_num_vertices();
+//     size_t num_elements = input_tensor_resource->get_num_elements();
+//     assert(num_elements % num_vertices == 0);
+//     size_t num_elements_per_vertex = num_elements / num_vertices;
+
+//     size_t start_idx = num_elements_per_vertex * left;
+//     size_t end_idx = num_elements_per_vertex * right;
+
+//     DataType * d_input_data = input_tensor_resource->get_gpu_data();
+//     DataType * d_output_data = output_tensor_resource->get_gpu_data();
+//     DataType * input_data = new DataType[num_elements];
+//     DataType * output_data = new DataType[num_elements];
+//     CopyFromCUDADeviceToHost<DataType>(input_data +  start_idx, d_input_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data + start_idx, d_output_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     assert(input_data != NULL);
+//     assert(output_data != NULL);
+
+// #pragma omp parallel for 
+//     for (size_t i = start_idx; i < end_idx; ++ i) {
+//         output_data[i] = input_data[i] > 0 ? input_data[i]: 0;
+
+//         assert(!isnan(output_data[i]));
+//     }
+//     //CopyFromHostToCUDADevice<DataType>(d_input_data + start_idx, input_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     CopyFromHostToCUDADevice<DataType>(d_output_data + start_idx, output_data + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     delete [] input_data;
+//     delete [] output_data;
 }
 
 void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, VertexId right) {
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+    double t = -get_time();
+    #endif
     assert(op->get_num_input_tensors() == 2);
     assert(op->get_num_output_tensors() == 1);
 
@@ -2037,31 +2092,87 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, V
     size_t K = input_tensor_0->dims[1];
     assert(input_tensor_1->dims[0] == K);
     size_t M = input_tensor_1->dims[1];
-    DataType * input_data_0 = new DataType[right * K];
-    DataType * input_data_1 = new DataType[M * K];
-    DataType * output_data = new DataType[M * right];
-    CopyFromCUDADeviceToHost<DataType>(input_data_0, d_input_data_0, right * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_data_1, d_input_data_1, M * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * M, __FILE__, __LINE__);
-#pragma omp parallel for 
-    for (size_t i = left; i < right; ++ i) {
-        for (size_t j = 0; j < M; ++ j) {
-            DataType d = 0;
-            for (size_t k = 0; k < K; ++ k) {
-                d += input_data_0[i * K + k] * input_data_1[k * M + j];
-            }
-            output_data[i * M + j] = d;
+    size_t N = right - left;
+    int input_start_idx = left * K;
+    int output_start_idx = left * M;
+    float alpha = 1.0;
+    float beta = 0.0;
+    cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_N,
+        CUBLAS_OP_N,
+        M,
+        N,
+        K,
+        &alpha,
+        (const float *)d_input_data_1,
+        M,
+        (const float *)(d_input_data_0 + input_start_idx),
+        K,
+        &beta,
+        d_output_data + output_start_idx,
+        M
+    );
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+     t += get_time();
+     matmulforward_time += t;
+    #endif
+//     assert(op->get_num_input_tensors() == 2);
+//     assert(op->get_num_output_tensors() == 1);
 
-            assert(!isnan(output_data[i * M + j]));
-        }
-    }
-    CopyFromHostToCUDADevice<DataType>(d_output_data + left * M, output_data + left * M, right * M - left * M, __FILE__, __LINE__ );
-    delete[] input_data_0;
-    delete[] input_data_1;
-    delete[] output_data;
+//     Tensor * input_tensor_0 = op->get_input_tensor(0);
+//     Tensor * input_tensor_1 = op->get_input_tensor(1);
+//     Tensor * output_tensor = op->get_output_tensor(0);
+//     assert(input_tensor_0 != NULL);
+//     assert(input_tensor_1 != NULL);
+//     assert(output_tensor != NULL);
+//     assert(input_tensor_0->type == VERTEX_TENSOR);
+//     assert(output_tensor->type == VERTEX_TENSOR);
+
+//     TensorResourceGPU * input_tensor_resource_0 = (TensorResourceGPU*) input_tensor_0->resource;
+//     TensorResourceGPU * input_tensor_resource_1 = (TensorResourceGPU*) input_tensor_1->resource;
+//     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+//     assert(input_tensor_resource_0 != NULL);
+//     assert(input_tensor_resource_1 != NULL);
+//     assert(output_tensor_resource != NULL);
+
+//     DataType * d_input_data_0 = input_tensor_resource_0->get_gpu_data();
+//     DataType * d_input_data_1 = input_tensor_resource_1->get_gpu_data();
+//     DataType * d_output_data = output_tensor_resource->get_gpu_data();
+
+//     size_t K = input_tensor_0->dims[1];
+//     assert(input_tensor_1->dims[0] == K);
+//     size_t M = input_tensor_1->dims[1];
+//     DataType * input_data_0 = new DataType[right * K];
+//     DataType * input_data_1 = new DataType[M * K];
+//     DataType * output_data = new DataType[M * right];
+//     CopyFromCUDADeviceToHost<DataType>(input_data_0, d_input_data_0, right * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_data_1, d_input_data_1, M * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * M, __FILE__, __LINE__);
+// #pragma omp parallel for 
+//     for (size_t i = left; i < right; ++ i) {
+//         for (size_t j = 0; j < M; ++ j) {
+//             DataType d = 0;
+//             for (size_t k = 0; k < K; ++ k) {
+//                 d += input_data_0[i * K + k] * input_data_1[k * M + j];
+//             }
+//             output_data[i * M + j] = d;
+
+//             assert(!isnan(output_data[i * M + j]));
+//         }
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_output_data + left * M, output_data + left * M, right * M - left * M, __FILE__, __LINE__ );
+//     delete[] input_data_0;
+//     delete[] input_data_1;
+//     delete[] output_data;
 }
 
 void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op, VertexId left, VertexId right) {
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+    double t = -get_time();
+    #endif
     assert(op->get_num_input_tensors() == 1);
     assert(op->get_num_output_tensors() == 1);
 
@@ -2083,44 +2194,94 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op, VertexId left,
     int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
 
-    DataType * input_data = new DataType[right * activation_size];
-    DataType * output_data = new DataType[right * activation_size];
-    CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, right * activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * activation_size, __FILE__, __LINE__);
+    int num_vertices = right - left;
 
-#pragma omp parallel for 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType * input_activation = &input_data[v_i * activation_size];
-        DataType * output_activation = &output_data[v_i * activation_size];
-        DataType sum = 0.;
-        int max_index = 0;
-        for (int i = 0; i < activation_size; ++ i) {
-           // input_activation[i] = std::min(float(20.0), input_activation[i]);
-            if(input_activation[i] > input_activation[max_index]){
-                max_index = i;
-            }
-        }
-        DataType M = input_activation[max_index];
-        for (int i = 0; i < activation_size; ++ i) {
-           // input_activation[i] = std::min(float(20.0), input_activation[i]);
-            sum += exp(input_activation[i] - M);
-        }
-        for (int i = 0; i < activation_size; ++ i) {
-            output_activation[i] = exp(input_activation[i] - M) / sum;
-            if(isnan(output_activation[i])){
-                printf("%d, %f, %f\n", 1, input_activation[i], sum);
-                assert(false);
-            }
-          //  assert(!isnan(output_activation[i]));
-        }
-    }
-   CopyFromHostToCUDADevice<DataType>(d_output_data + left * activation_size, output_data + left * activation_size, right * activation_size - left * activation_size, __FILE__, __LINE__);
-   delete [] input_data;
-   delete [] output_data;
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, activation_size);
+
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnSoftmaxForward(
+        *cudnn_handle_,
+        CUDNN_SOFTMAX_ACCURATE,
+        CUDNN_SOFTMAX_MODE_INSTANCE,
+        &alpha,
+        data_descriptor,
+        (const void *)(d_input_data + left * activation_size),
+        &beta,
+        data_descriptor,
+        (void *)(d_output_data + left * activation_size)
+    );
+    cudnnDestroyTensorDescriptor(data_descriptor);
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+     t += get_time();
+     softmaxforward_time += t;
+    #endif
+//     assert(op->get_num_input_tensors() == 1);
+//     assert(op->get_num_output_tensors() == 1);
+
+//     Tensor * input_tensor = op->get_input_tensor(0);
+//     Tensor * output_tensor = op->get_output_tensor(0);
+//     assert(input_tensor != NULL);
+//     assert(output_tensor != NULL);
+//     assert(input_tensor->type == VERTEX_TENSOR);
+//     assert(output_tensor->type == VERTEX_TENSOR);
+    
+//     TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+//     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+//     assert(input_tensor_resource != NULL);
+//     assert(output_tensor_resource != NULL);
+
+//     DataType * d_input_data = input_tensor_resource->get_gpu_data();
+//     DataType * d_output_data = output_tensor_resource->get_gpu_data();
+
+//     int activation_size = input_tensor->dims[1];
+//     assert(output_tensor->dims[1] == activation_size);
+
+//     DataType * input_data = new DataType[right * activation_size];
+//     DataType * output_data = new DataType[right * activation_size];
+//     CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, right * activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * activation_size, __FILE__, __LINE__);
+
+// #pragma omp parallel for 
+//     for (VertexId v_i = left; v_i < right; ++ v_i) {
+//         DataType * input_activation = &input_data[v_i * activation_size];
+//         DataType * output_activation = &output_data[v_i * activation_size];
+//         DataType sum = 0.;
+//         int max_index = 0;
+//         for (int i = 0; i < activation_size; ++ i) {
+//            // input_activation[i] = std::min(float(20.0), input_activation[i]);
+//             if(input_activation[i] > input_activation[max_index]){
+//                 max_index = i;
+//             }
+//         }
+//         DataType M = input_activation[max_index];
+//         for (int i = 0; i < activation_size; ++ i) {
+//            // input_activation[i] = std::min(float(20.0), input_activation[i]);
+//             sum += exp(input_activation[i] - M);
+//         }
+//         for (int i = 0; i < activation_size; ++ i) {
+//             output_activation[i] = exp(input_activation[i] - M) / sum;
+//             if(isnan(output_activation[i])){
+//                 printf("%d, %f, %f\n", 1, input_activation[i], sum);
+//                 assert(false);
+//             }
+//           //  assert(!isnan(output_activation[i]));
+//         }
+//     }
+//    CopyFromHostToCUDADevice<DataType>(d_output_data + left * activation_size, output_data + left * activation_size, right * activation_size - left * activation_size, __FILE__, __LINE__);
+//    delete [] input_data;
+//    delete [] output_data;
 
 }
 
 void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, VertexId left, VertexId right) {
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+    double t = -get_time();
+    #endif
     assert(op->get_num_input_tensors() == 1);
     assert(op->get_num_output_tensors() == 1);
 
@@ -2145,40 +2306,125 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, Vertex
 
     int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
-    VertexId num_vertices = graph->get_num_global_vertices();
-    DataType * input_data = new DataType[num_vertices * activation_size];
-    DataType * output_data = new DataType[num_vertices * activation_size];
-    CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, num_vertices * activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, num_vertices * activation_size, __FILE__, __LINE__);
-#pragma omp parallel for schedule(dynamic) 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        InEdgeList in_edge_list = graph->get_in_edges(v_i);  
-        DataType * input_activation = &input_data[v_i * activation_size];
-        DataType * output_activation = &output_data[v_i * activation_size];
-        DataType norm_fact = 1. / double(in_edge_list.num_in_edges + 1);
-        for (int i = 0; i < activation_size; ++ i) {
-            output_activation[i] = input_activation[i] * norm_fact;
-            assert(!isnan(output_activation[i]));
-        }
-        for (EdgeId i = 0; i < in_edge_list.num_in_edges; ++ i) { 
-            InEdge e = in_edge_list.ptx[i];
-            VertexId src = e.src;
-            DataType * src_activation = &input_data[src * activation_size];
-            for (int j = 0; j < activation_size; ++ j) {
-                output_activation[j] += e.norm_factor * src_activation[j];
-
-                assert(!isnan(output_activation[j]));
-            }
-        }
+    //VertexId num_vertices = graph_->get_num_global_vertices();
+    // VertexId K = num_vertices;
+    // VertexId N = num_vertices;
+    assert(csr_.number_matrix > 0);
+    if(csr_.number_matrix == 2){
+    int N = right - left;
+    int K = csr_.inMatrixSize;
+    assert(K * activation_size > 0);
+    int gid = get_localgraph_In(left, right);
+    cusparseSpMatDescr_t SpCsr = lginfo_forward[gid].spcsr;
+    
+    cusparseDnMatDescr_t InputData, OutputData;
+    assert(d_input_data != nullptr);
+    assert(d_output_data != nullptr);
+    cusparseCreateDnMat(&InputData, K, activation_size, activation_size, (void*)d_input_data,CUDA_R_32F,CUSPARSE_ORDER_ROW);
+    cusparseCreateDnMat(&OutputData, N, activation_size, activation_size, (void*)(d_output_data + left * activation_size),CUDA_R_32F,CUSPARSE_ORDER_ROW);
+    float alpha = 1.0;
+    float beta = 0.0;
+    //void* dbuffer = lginfo_forward[gid].dbuffer;
+    
+    if(lginfo_forward[gid].alloc == false)
+    {
+    size_t buffer_size = 0;
+    cusparseSpMM_bufferSize(*cusparse_handle_,
+    CUSPARSE_OPERATION_NON_TRANSPOSE,
+    CUSPARSE_OPERATION_NON_TRANSPOSE,
+    &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+    CUSPARSE_SPMM_CSR_ALG2, &buffer_size
+    );
+    cudaMalloc(&lginfo_forward[gid].dbuffer, buffer_size);
+    lginfo_forward[gid].alloc = true;
     }
-    CopyFromHostToCUDADevice<DataType>(d_output_data + left * activation_size ,
-    output_data + left * activation_size , right * activation_size - left * activation_size, __FILE__, __LINE__);
+    cusparseSpMM(
+        *cusparse_handle_,
+        CUSPARSE_OPERATION_NON_TRANSPOSE,
+        CUSPARSE_OPERATION_NON_TRANSPOSE,
+        &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+        CUSPARSE_SPMM_CSR_ALG2, lginfo_forward[gid].dbuffer
+    );
+    
+    //cudaFree(lginfo_forward[gid].dbuffer);
+    //DeallocateCUDAMemory<int>(&lg.cuda_local_rowoffsets, __FILE__, __LINE__);
+    }
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+     t += get_time();
+     aggforward_time += t;
+    #endif
+//     assert(op->get_num_input_tensors() == 1);
+//     assert(op->get_num_output_tensors() == 1);
 
-    delete[] output_data;
-    delete[] input_data;
+//     Tensor * input_tensor = op->get_input_tensor(0);
+//     Tensor * output_tensor = op->get_output_tensor(0);
+//     assert(input_tensor != NULL);
+//     assert(output_tensor != NULL);
+//     assert(input_tensor->type == VERTEX_TENSOR);
+//     assert(output_tensor->type == VERTEX_TENSOR);
+
+//     TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+//     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+//     assert(input_tensor_resource != NULL);
+//     assert(output_tensor_resource != NULL);
+
+//     DataType * d_input_data = input_tensor_resource->get_gpu_data();
+//     DataType * d_output_data = output_tensor_resource->get_gpu_data();
+
+
+//      AbstractGraphStructure * graph = graph_;
+//      assert(graph != NULL);
+
+//      int activation_size = input_tensor->dims[1];
+//      assert(output_tensor->dims[1] == activation_size);
+//     // VertexId num_vertices = graph->get_num_global_vertices();
+//     // DataType * input_data = new DataType[num_vertices * activation_size];
+//     // DataType * output_data = new DataType[num_vertices * activation_size];
+//     // CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, num_vertices * activation_size, __FILE__, __LINE__);
+//     // CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, num_vertices * activation_size, __FILE__, __LINE__);
+//     // VertexId num_vertices = graph_->get_num_global_vertices();
+//     // VertexId K = num_vertices;
+//     // VertexId N = num_vertices;
+//      VertexId K = csr_.inMatrixSize;
+//      VertexId N = csr_.num_master_vertices;
+//     DataType * input_data = new DataType[K * activation_size];
+//     DataType * output_data = new DataType[N * activation_size];
+//     CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, K * activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, N * activation_size, __FILE__, __LINE__);
+// #pragma omp parallel for schedule(dynamic) 
+//     for (VertexId v_i = left; v_i < right; ++ v_i) {
+//         InEdgeList in_edge_list = graph->get_in_edges(v_i);  
+//         DataType * input_activation = &input_data[v_i * activation_size];
+//         DataType * output_activation = &output_data[v_i * activation_size];
+//         DataType norm_fact = 1. / double(in_edge_list.num_in_edges + 1);
+//         for (int i = 0; i < activation_size; ++ i) {
+//             output_activation[i] = input_activation[i] * norm_fact;
+//             assert(!isnan(output_activation[i]));
+//         }
+//         for (EdgeId i = 0; i < in_edge_list.num_in_edges; ++ i) { 
+//             InEdge e = in_edge_list.ptx[i];
+//             VertexId src = e.src;
+//             DataType * src_activation = &input_data[src * activation_size];
+//             for (int j = 0; j < activation_size; ++ j) {
+//                 output_activation[j] += e.norm_factor * src_activation[j];
+
+//                 assert(!isnan(output_activation[j]));
+//             }
+//         }
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_output_data + left * activation_size ,
+//     output_data + left * activation_size , right * activation_size - left * activation_size, __FILE__, __LINE__);
+
+//     delete[] output_data;
+//     delete[] input_data;
 }
 
 void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, VertexId right) {
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+    double t = -get_time();
+    #endif
     assert(op->get_num_input_tensors() == 1);
     assert(op->get_num_output_tensors() == 1);
 
@@ -2200,28 +2446,84 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, Vert
 
     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
-    DataType * input_grad = new DataType[end_idx];
-    DataType * input_data = new DataType[end_idx];
-    DataType * output_grad = new DataType[end_idx];
+    cudnnActivationDescriptor_t relu_descriptor;
+    cudnnCreateActivationDescriptor(&relu_descriptor);
+    cudnnSetActivationDescriptor(relu_descriptor,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,0);
+    cudnnTensorDescriptor_t data_descriptor;;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, end_idx - start_idx);
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnActivationBackward(
+        *cudnn_handle_,
+        relu_descriptor,
+        &alpha,
+        data_descriptor,
+        (const void *)(d_output_data + start_idx),
+        data_descriptor,
+        (const void *)(d_output_grad + start_idx),
+        data_descriptor,
+        (const void *)(d_input_data + start_idx),
+        &beta,
+        data_descriptor,
+        (void *)(d_input_grad + start_idx)
+    );
+    cudnnDestroyActivationDescriptor(relu_descriptor);
+    cudnnDestroyTensorDescriptor(data_descriptor);
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+     t += get_time();
+     relubackward_time += t;
+    #endif
+//     assert(op->get_num_input_tensors() == 1);
+//     assert(op->get_num_output_tensors() == 1);
 
-    CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, end_idx, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, end_idx, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, end_idx, __FILE__, __LINE__);
+//     Tensor * input_tensor = op->get_input_tensor(0);
+//     Tensor * output_tensor = op->get_output_tensor(0);
+//     assert(input_tensor->type == VERTEX_TENSOR);
+//     assert(output_tensor->type == VERTEX_TENSOR);
 
-#pragma omp parallel for 
-    for (size_t i = start_idx; i < end_idx; ++ i) {
-        input_grad[i] += (input_data[i] > 0 ? output_grad[i]: 0);
+//     TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+//     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+//     size_t num_elements = input_tensor_resource->get_num_elements();
+//     assert(num_elements == output_tensor_resource->get_num_elements());
 
-        assert(!isnan(input_grad[i]));
-    }
-    CopyFromHostToCUDADevice<DataType>(d_input_grad + start_idx, input_grad + start_idx, end_idx - start_idx, __FILE__, __LINE__);
-    delete[] input_data;
-    delete[] input_grad;
-    delete[] output_grad;
+//     VertexId num_vertices = input_tensor_resource->get_num_vertices();
+//     assert(num_elements % num_vertices == 0);
+//     size_t num_elements_per_vertex = num_elements / num_vertices;
+//     size_t start_idx = left * num_elements_per_vertex;
+//     size_t end_idx = right * num_elements_per_vertex;
+
+//     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
+//     DataType * d_input_data = input_tensor_resource->get_gpu_data();
+//     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+//     DataType * input_grad = new DataType[end_idx];
+//     DataType * input_data = new DataType[end_idx];
+//     DataType * output_grad = new DataType[end_idx];
+
+//     CopyFromCUDADeviceToHost<DataType>(input_data, d_input_data, end_idx, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, end_idx, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, end_idx, __FILE__, __LINE__);
+
+// #pragma omp parallel for 
+//     for (size_t i = start_idx; i < end_idx; ++ i) {
+//         input_grad[i] += (input_data[i] > 0 ? output_grad[i]: 0);
+
+//         assert(!isnan(input_grad[i]));
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_input_grad + start_idx, input_grad + start_idx, end_idx - start_idx, __FILE__, __LINE__);
+//     delete[] input_data;
+//     delete[] input_grad;
+//     delete[] output_grad;
 }
 
 void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, VertexId right) {
+#ifdef TIMETAG
+    cudaDeviceSynchronize();
+    double t = -get_time();
+#endif
     assert(op != NULL);
 
     assert(op->get_num_input_tensors() == 2);
@@ -2247,60 +2549,136 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, 
     // C = A x B
     // A size: N x K, B size: K x M, C size: N x M
     //size_t N = input_tensor_resource->get_num_vertices();
+    size_t N = right - left;
     size_t K = input_tensor_0->dims[1];
     assert(input_tensor_1->dims[0] == K);
     size_t M = input_tensor_1->dims[1];
+    int input_start_idx = left * K;
+    int output_start_idx = left * M;
+    float alpha = 1.0;
+    float beta = 0.0;
+   cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_T,
+        CUBLAS_OP_N,
+        K,
+        N,
+        M,
+        &alpha,
+        d_input_data_1,
+        M,
+        d_output_grad + output_start_idx,
+        M,
+        &beta,
+        d_input_grad_0 + input_start_idx,
+        K
+    );
+    beta = 1.0;
+    cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_N,
+        CUBLAS_OP_T,
+        M,
+        K,
+        N,
+        &alpha,
+        d_output_grad + output_start_idx,
+        M,
+        d_input_data_0 + input_start_idx,
+        K,
+        &beta,
+        d_input_grad_1,
+        M
+    );
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+     t += get_time();
+     matmulbackward_time += t;
+    #endif
 
-    DataType * input_data_0 = new DataType[right * K];
-    DataType * input_grad_0 = new DataType[right * K];
-    DataType * input_data_1 = new DataType[M * K];
-    DataType * input_grad_1 = new DataType[M * K];
-    DataType * output_grad = new DataType[M * right];
+//     assert(op != NULL);
 
-    CopyFromCUDADeviceToHost<DataType>(input_data_0, d_input_data_0, right * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_grad_0, d_input_grad_0, right * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_data_1, d_input_data_1, M * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(input_grad_1, d_input_grad_1, M * K, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, M * right, __FILE__, __LINE__);
-    // D(A) = D(C) x B^T 
-#pragma omp parallel for 
-    for (size_t i = left; i < right; ++ i) {
-        for (size_t k = 0; k < K; ++ k) {
-            DataType d = 0.;
-            for (size_t j = 0; j < M; ++ j) {
-                d += output_grad[i * M + j] * input_data_1[k * M + j]; // B^T[j][k] = B[k][j]
-            }
-            input_grad_0[i * K + k] += d;
+//     assert(op->get_num_input_tensors() == 2);
+//     assert(op->get_num_output_tensors() == 1);
+//     Tensor * input_tensor_0 = op->get_input_tensor(0);
+//     Tensor * input_tensor_1 = op->get_input_tensor(1);
+//     Tensor * output_tensor = op->get_output_tensor(0);
 
-            assert(!isnan(input_grad_0[i * K + k]));
-        }
-    }
+//     TensorResourceGPU * input_tensor_resource_0 = (TensorResourceGPU*) input_tensor_0->resource;
+//     TensorResourceGPU * input_tensor_resource_1 = (TensorResourceGPU*) input_tensor_1->resource;
+//     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+//     assert(input_tensor_resource_0 != NULL);
+//     assert(input_tensor_resource_1 != NULL);
+//     assert(output_tensor_resource != NULL);
 
-    // D(B) = A^T x D(C)
-#pragma omp parallel for 
-    for (size_t k = 0; k < K; ++ k) {
-        for (size_t j = 0; j < M; ++ j) {
-            DataType d = 0.;
-            for (size_t i = left; i < right; ++ i) {
-                d += input_data_0[i * K + k] * output_grad[i * M + j]; // A^T[k][i] = A[i][k]
-            }
-            input_grad_1[k * M + j] += d;
-            assert(!isnan(input_grad_1[k * M + j]));
-        }
-    }
-    CopyFromHostToCUDADevice<DataType>(d_input_grad_0 + left * K , input_grad_0 + left * K,
-    right * K - left * K , __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<DataType>(d_input_grad_1 , input_grad_1,
-    M * K, __FILE__, __LINE__);
+//     DataType * d_input_data_0 = input_tensor_resource_0->get_gpu_data();
+//     DataType * d_input_data_1 = input_tensor_resource_1->get_gpu_data();
+//     DataType * d_input_grad_0 = input_tensor_resource_0->get_gpu_grad();
+//     DataType * d_input_grad_1 = input_tensor_resource_1->get_gpu_grad();
+//     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    
 
-    delete[] input_data_0;
-    delete[] input_data_1;
-    delete[] output_grad;
-    delete[] input_grad_0;
-    delete[] input_grad_1;
+//     // C = A x B
+//     // A size: N x K, B size: K x M, C size: N x M
+//     //size_t N = input_tensor_resource->get_num_vertices();
+//     size_t K = input_tensor_0->dims[1];
+//     assert(input_tensor_1->dims[0] == K);
+//     size_t M = input_tensor_1->dims[1];
+
+//     DataType * input_data_0 = new DataType[right * K];
+//     DataType * input_grad_0 = new DataType[right * K];
+//     DataType * input_data_1 = new DataType[M * K];
+//     DataType * input_grad_1 = new DataType[M * K];
+//     DataType * output_grad = new DataType[M * right];
+
+//     CopyFromCUDADeviceToHost<DataType>(input_data_0, d_input_data_0, right * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_grad_0, d_input_grad_0, right * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_data_1, d_input_data_1, M * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(input_grad_1, d_input_grad_1, M * K, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, M * right, __FILE__, __LINE__);
+//     // D(A) = D(C) x B^T 
+// #pragma omp parallel for 
+//     for (size_t i = left; i < right; ++ i) {
+//         for (size_t k = 0; k < K; ++ k) {
+//             DataType d = 0.;
+//             for (size_t j = 0; j < M; ++ j) {
+//                 d += output_grad[i * M + j] * input_data_1[k * M + j]; // B^T[j][k] = B[k][j]
+//             }
+//             input_grad_0[i * K + k] += d;
+
+//             assert(!isnan(input_grad_0[i * K + k]));
+//         }
+//     }
+
+//     // D(B) = A^T x D(C)
+// #pragma omp parallel for 
+//     for (size_t k = 0; k < K; ++ k) {
+//         for (size_t j = 0; j < M; ++ j) {
+//             DataType d = 0.;
+//             for (size_t i = left; i < right; ++ i) {
+//                 d += input_data_0[i * K + k] * output_grad[i * M + j]; // A^T[k][i] = A[i][k]
+//             }
+//             input_grad_1[k * M + j] += d;
+//             assert(!isnan(input_grad_1[k * M + j]));
+//         }
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_input_grad_0 + left * K , input_grad_0 + left * K,
+//     right * K - left * K , __FILE__, __LINE__);
+//     CopyFromHostToCUDADevice<DataType>(d_input_grad_1 , input_grad_1,
+//     M * K, __FILE__, __LINE__);
+
+//     delete[] input_data_0;
+//     delete[] input_data_1;
+//     delete[] output_grad;
+//     delete[] input_grad_0;
+//     delete[] input_grad_1;
 }
 
 void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right) {
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+    double t = -get_time();
+    #endif
     assert(op != NULL);
 
     assert(op->get_num_input_tensors() == 1);
@@ -2322,44 +2700,99 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
     
 
-    AbstractGraphStructure * graph = graph_;
-    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+    //AbstractGraphStructure * graph = graph_;
+    //VertexId num_vertices = input_tensor_resource->get_num_vertices();
     int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
-    DataType * input_grad = new DataType[right * activation_size];
-    DataType * output_grad = new DataType[right * activation_size];
-    DataType * output_data = new DataType[right * activation_size];
-    CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, right * activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, right * activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * activation_size, __FILE__, __LINE__);
-#pragma omp parallel for 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType * in = &input_grad[v_i * activation_size];
-        DataType * out = &output_grad[v_i * activation_size];
-        DataType * out_data = &output_data[v_i * activation_size];
-        for (int j = 0; j < activation_size; ++ j) {
-            DataType grad = 0.;
-            for (int i = 0; i < activation_size; ++ i) {
-                // to enable conditional movement (to avoid branches)
-                DataType diff_i_j = - out_data[i] * out_data[j];
-                DataType same_i_j = out_data[i] * (1. - out_data[i]);
-                DataType grad_inc = (i != j ? diff_i_j: same_i_j) * out[i];
-                grad += grad_inc;
-            }
-            in[j] += grad;
-            assert(!isnan(in[j]));
-        }
-    }
+    int len  = right - left;
+    int start_idx = left * activation_size;
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, len, 1, 1, activation_size);
+    float alpha = 1.0;
+    float beta = 0.0;
+    cudnnSoftmaxBackward(
+        *cudnn_handle_,
+        CUDNN_SOFTMAX_FAST,
+        CUDNN_SOFTMAX_MODE_INSTANCE,
+        &alpha,
+        data_descriptor,
+        (const void *)(d_output_data + start_idx),
+        data_descriptor,
+        (const void *)(d_output_grad + start_idx),
+        &beta,
+        data_descriptor,
+        (void *)(d_input_grad + start_idx)
+    );
+     cudnnDestroyTensorDescriptor(data_descriptor);
+     #ifdef TIMETAG
+    cudaDeviceSynchronize();
+     t += get_time();
+     softmaxbackward_time += t;
+    #endif
+//     assert(op != NULL);
 
-    CopyFromHostToCUDADevice<DataType>(d_input_grad + left * activation_size, input_grad + left * activation_size,
-    right * activation_size - left * activation_size, __FILE__, __LINE__);
+//     assert(op->get_num_input_tensors() == 1);
+//     assert(op->get_num_output_tensors() == 1);
+//     Tensor * input_tensor = op->get_input_tensor(0);
+//     Tensor * output_tensor = op->get_output_tensor(0);
+//     assert(input_tensor != NULL);
+//     assert(output_tensor != NULL);
+//     assert(input_tensor->type == VERTEX_TENSOR);
+//     assert(output_tensor->type == VERTEX_TENSOR);
 
-    delete[] input_grad;
-    delete[] output_grad;
-    delete[] output_data;
+//     TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+//     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+//     assert(input_tensor_resource != NULL);
+//     assert(output_tensor_resource != NULL);
+
+//     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
+//     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+//     DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    
+
+//     AbstractGraphStructure * graph = graph_;
+//     VertexId num_vertices = input_tensor_resource->get_num_vertices();
+//     int activation_size = input_tensor->dims[1];
+//     assert(output_tensor->dims[1] == activation_size);
+//     DataType * input_grad = new DataType[right * activation_size];
+//     DataType * output_grad = new DataType[right * activation_size];
+//     DataType * output_data = new DataType[right * activation_size];
+//     CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, right * activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, right * activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * activation_size, __FILE__, __LINE__);
+// #pragma omp parallel for 
+//     for (VertexId v_i = left; v_i < right; ++ v_i) {
+//         DataType * in = &input_grad[v_i * activation_size];
+//         DataType * out = &output_grad[v_i * activation_size];
+//         DataType * out_data = &output_data[v_i * activation_size];
+//         for (int j = 0; j < activation_size; ++ j) {
+//             DataType grad = 0.;
+//             for (int i = 0; i < activation_size; ++ i) {
+//                 // to enable conditional movement (to avoid branches)
+//                 DataType diff_i_j = - out_data[i] * out_data[j];
+//                 DataType same_i_j = out_data[i] * (1. - out_data[i]);
+//                 DataType grad_inc = (i != j ? diff_i_j: same_i_j) * out[i];
+//                 grad += grad_inc;
+//             }
+//             in[j] += grad;
+//             assert(!isnan(in[j]));
+//         }
+//     }
+
+//     CopyFromHostToCUDADevice<DataType>(d_input_grad + left * activation_size, input_grad + left * activation_size,
+//     right * activation_size - left * activation_size, __FILE__, __LINE__);
+
+//     delete[] input_grad;
+//     delete[] output_grad;
+//     delete[] output_data;
 }
 
 void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, VertexId left, VertexId right) {
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+    double t = -get_time();
+    #endif
     assert(op != NULL);
 
     assert(op->get_num_input_tensors() == 1);
@@ -2378,37 +2811,877 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
 
     AbstractGraphStructure * graph = graph_;
-    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+    
+    //VertexId num_vertices = input_tensor_resource->get_num_vertices();
+   // VertexId num_vertices = graph_->get_num_global_vertices();
+    // VertexId K = num_vertices;
+    // VertexId N = num_vertices;
+    assert(csr_.number_matrix == 2);
+    if(csr_.number_matrix == 2){
+    int N = right - left;
+    int K = csr_.outMatrixSize;
     int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
-    DataType * input_grad = new DataType[num_vertices * activation_size];
-    DataType * output_grad = new DataType[num_vertices * activation_size];
-
-    CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, num_vertices *activation_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, num_vertices *activation_size, __FILE__, __LINE__);
-#pragma omp parallel for schedule(dynamic) 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType vtx_norm_factor = 1. / double(graph->get_in_degree(v_i) + 1);
-        DataType * in = &input_grad[v_i * activation_size];
-        DataType * out = &output_grad[v_i * activation_size];
-        for (int i = 0; i < activation_size; ++ i) {
-            in[i] += out[i] * vtx_norm_factor;
-            assert(!isnan(in[i]));
-        }
-        OutEdgeList out_edge_list = graph->get_out_edges(v_i);
-        //printf("Vertex %u, number of out-edges: %llu\n", v_i, out_edge_list.num_out_edges);
-        for (EdgeId e_i = 0; e_i < out_edge_list.num_out_edges; ++ e_i) {
-            OutEdge e = out_edge_list.ptx[e_i];
-            DataType * dst = &output_grad[e.dst * activation_size];
-            for (int i = 0; i < activation_size; ++ i) {
-                in[i] += dst[i] * e.norm_factor;
-                assert(!isnan(in[i]));
-            }
-        }
+    
+    int gid = get_localgraph_Out(left, right);
+    cusparseSpMatDescr_t SpCsr = lginfo_backward[gid].spcsr;
+    
+    cusparseDnMatDescr_t InputData, OutputData;
+    assert(d_input_grad != nullptr);
+    assert(d_output_grad != nullptr);
+    cusparseCreateDnMat(&InputData, K, activation_size, activation_size, (void*)d_output_grad,CUDA_R_32F,CUSPARSE_ORDER_ROW);
+    cusparseCreateDnMat(&OutputData, N, activation_size, activation_size, (void*)(d_input_grad + left * activation_size),CUDA_R_32F,CUSPARSE_ORDER_ROW);
+    float alpha = 1.0;
+    float beta = 0.0;
+    //void* dbuffer = nullptr;
+    if(lginfo_backward[gid].alloc == false){
+    size_t buffer_size = 0;
+    cusparseSpMM_bufferSize(*cusparse_handle_,
+    CUSPARSE_OPERATION_NON_TRANSPOSE,
+    CUSPARSE_OPERATION_NON_TRANSPOSE,
+    &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+    CUSPARSE_SPMM_CSR_ALG2, &buffer_size
+    );
+    cudaMalloc(&lginfo_backward[gid].dbuffer, buffer_size);
+    lginfo_backward[gid].alloc = true;
     }
-  CopyFromHostToCUDADevice<DataType>(d_input_grad + left * activation_size, input_grad + left * activation_size, 
-  right * activation_size - left * activation_size, __FILE__, __LINE__);
-  delete[] input_grad;
-  delete[] output_grad;
+    cusparseSpMM(
+        *cusparse_handle_,
+        CUSPARSE_OPERATION_NON_TRANSPOSE,
+        CUSPARSE_OPERATION_NON_TRANSPOSE,
+        &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+        CUSPARSE_SPMM_CSR_ALG2, lginfo_backward[gid].dbuffer
+    );
+    //cudaFree(dbuffer);
+    cusparseDestroyDnMat(InputData);
+    cusparseDestroyDnMat(OutputData);
+    
+   // DeallocateCUDAMemory<int>(&lg.cuda_local_rowoffsets,__FILE__,__LINE__);
+    }
+    #ifdef TIMETAG
+    cudaDeviceSynchronize();
+     t += get_time();
+     aggbackward_time += t;
+    #endif
+//     assert(op != NULL);
+
+//     assert(op->get_num_input_tensors() == 1);
+//     assert(op->get_num_output_tensors() == 1);
+//     Tensor * input_tensor = op->get_input_tensor(0);
+//     Tensor * output_tensor = op->get_output_tensor(0);
+//     assert(input_tensor != NULL);
+//     assert(output_tensor != NULL);
+
+//     TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+//     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+//     assert(input_tensor_resource != NULL);
+//     assert(output_tensor_resource != NULL);
+
+//     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
+//     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+
+//     // AbstractGraphStructure * graph = graph_;
+//     // VertexId num_vertices = input_tensor_resource->get_num_vertices();
+//     // int activation_size = input_tensor->dims[1];
+//     // assert(output_tensor->dims[1] == activation_size);
+//     // DataType * input_grad = new DataType[num_vertices * activation_size];
+//     // DataType * output_grad = new DataType[num_vertices * activation_size];
+
+//     // CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, num_vertices *activation_size, __FILE__, __LINE__);
+//     // CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, num_vertices *activation_size, __FILE__, __LINE__);
+//     AbstractGraphStructure * graph = graph_;
+//     // VertexId num_vertices = input_tensor_resource->get_num_vertices();
+   
+//     // VertexId K = num_vertices;
+//     // VertexId N = num_vertices;
+//     VertexId K = csr_.outMatrixSize;
+//     VertexId N = csr_.num_master_vertices;
+//     int activation_size = input_tensor->dims[1];
+//     assert(output_tensor->dims[1] == activation_size);
+//     DataType * input_grad = new DataType[N * activation_size];
+//     DataType * output_grad = new DataType[K * activation_size];
+
+//     CopyFromCUDADeviceToHost<DataType>(input_grad, d_input_grad, N *activation_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, K *activation_size, __FILE__, __LINE__);
+// #pragma omp parallel for schedule(dynamic) 
+//     for (VertexId v_i = left; v_i < right; ++ v_i) {
+//         DataType vtx_norm_factor = 1. / double(graph->get_in_degree(v_i) + 1);
+//         DataType * in = &input_grad[v_i * activation_size];
+//         DataType * out = &output_grad[v_i * activation_size];
+//         for (int i = 0; i < activation_size; ++ i) {
+//             in[i] += out[i] * vtx_norm_factor;
+//             assert(!isnan(in[i]));
+//         }
+//         OutEdgeList out_edge_list = graph->get_out_edges(v_i);
+//         //printf("Vertex %u, number of out-edges: %llu\n", v_i, out_edge_list.num_out_edges);
+//         for (EdgeId e_i = 0; e_i < out_edge_list.num_out_edges; ++ e_i) {
+//             OutEdge e = out_edge_list.ptx[e_i];
+//             DataType * dst = &output_grad[e.dst * activation_size];
+//             for (int i = 0; i < activation_size; ++ i) {
+//                 in[i] += dst[i] * e.norm_factor;
+//                 assert(!isnan(in[i]));
+//             }
+//         }
+//     }
+//   CopyFromHostToCUDADevice<DataType>(d_input_grad + left * activation_size, input_grad + left * activation_size, 
+//   right * activation_size - left * activation_size, __FILE__, __LINE__);
+//   delete[] input_grad;
+//   delete[] output_grad;
 }
 
+void OperatorExecutorGPUV2::add_forward(AddOperator * op){
+
+    
+    assert(op->get_num_input_tensors() == 2);
+    assert(op->get_num_output_tensors() == 1);
+    Tensor * input_tensor0 = op->get_input_tensor(0);
+    Tensor * input_tensor1 = op->get_input_tensor(1);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor0 != NULL);
+    assert(input_tensor1 != NULL);
+    assert(output_tensor != NULL);
+    if(input_tensor0->type == VERTEX_TENSOR){
+    assert(input_tensor0->type == VERTEX_TENSOR);
+    assert(input_tensor1->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource0 != NULL);
+    assert(input_tensor_resource1 != NULL);
+    assert(output_tensor_resource != NULL);
+    size_t num_elements = input_tensor_resource0->get_num_elements();
+    assert(num_elements == input_tensor_resource1->get_num_elements());
+    VertexId num_vertices = input_tensor_resource0->get_num_vertices();
+    assert(num_vertices == input_tensor_resource1->get_num_vertices());
+    VertexId K = input_tensor0->dims[1];
+    assert(K == input_tensor1->dims[1]);
+    DataType * d_input_data0 = input_tensor_resource0->get_gpu_data();
+    DataType * d_input_data1 = input_tensor_resource1->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    assert(d_input_data0 != NULL);
+    assert(d_input_data1 != NULL);
+    assert(d_output_data != NULL);
+
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+    float one = 1.0;
+    float zero = 0.0;
+    float alpha = op->alpha;
+    float beta = op->beta;
+    
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &alpha,
+    data_descriptor,
+    d_input_data0,
+    &zero,
+    data_descriptor,
+    d_output_data
+    );
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &beta,
+    data_descriptor,
+    d_input_data1,
+    &one,
+    data_descriptor,
+    d_output_data
+    );
+    cudnnDestroyTensorDescriptor(data_descriptor);
+    } else if(input_tensor0->type == NORMAL_TENSOR)
+    {
+    
+    assert(input_tensor0->type == NORMAL_TENSOR);
+    assert(input_tensor1->type == NORMAL_TENSOR);
+    assert(output_tensor->type == NORMAL_TENSOR);
+    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource0 != NULL);
+    assert(input_tensor_resource1 != NULL);
+    assert(output_tensor_resource != NULL);
+    size_t num_elements = input_tensor_resource0->get_num_elements();
+    assert(num_elements == input_tensor_resource1->get_num_elements());
+    VertexId K = input_tensor0->dims[1];
+    assert(K == input_tensor1->dims[1]);
+    DataType * d_input_data0 = input_tensor_resource0->get_gpu_data();
+    DataType * d_input_data1 = input_tensor_resource1->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    assert(d_input_data0 != NULL);
+    assert(d_input_data1 != NULL);
+    assert(d_output_data != NULL);
+
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+    float one = 1.0;
+    float zero = 0.0;
+    float alpha = op->alpha;
+    float beta = op->beta;
+    
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &alpha,
+    data_descriptor,
+    d_input_data0,
+    &zero,
+    data_descriptor,
+    d_output_data
+    );
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &beta,
+    data_descriptor,
+    d_input_data1,
+    &one,
+    data_descriptor,
+    d_output_data
+    );
+    cudnnDestroyTensorDescriptor(data_descriptor);
+
+    }
+    
+}
+void OperatorExecutorGPUV2::add_backward(AddOperator * op){
+    assert(op->get_num_input_tensors() == 2);
+    assert(op->get_num_output_tensors() == 1);
+    Tensor * input_tensor0 = op->get_input_tensor(0);
+    Tensor * input_tensor1 = op->get_input_tensor(1);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor0 != NULL);
+    assert(input_tensor1 != NULL);
+    assert(output_tensor != NULL);
+    if(input_tensor0->type == VERTEX_TENSOR){
+    assert(input_tensor0->type == VERTEX_TENSOR);
+    assert(input_tensor1->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource0 != NULL);
+    assert(input_tensor_resource1 != NULL);
+    assert(output_tensor_resource != NULL);
+    size_t num_elements = input_tensor_resource0->get_num_elements();
+    assert(num_elements == input_tensor_resource1->get_num_elements());
+    VertexId num_vertices = input_tensor_resource0->get_num_vertices();
+    assert(num_vertices == input_tensor_resource1->get_num_vertices());
+    VertexId K = input_tensor0->dims[1];
+    assert(K == input_tensor1->dims[1]);
+    DataType * d_input_grad0 = input_tensor_resource0->get_gpu_grad();
+    DataType * d_input_grad1 = input_tensor_resource1->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    //CopyFromCUDADeviceToCUDADevice<DataType>(d_input_grad0, d_output_grad, num_elements, __FILE__, __LINE__);
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+    float one = 1.0;
+    float zero = 0.0;
+    float alpha = op->alpha;
+    float beta = op->beta;
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &alpha,
+    data_descriptor,
+    d_output_grad,
+    &zero,
+    data_descriptor,
+    d_input_grad0
+    );
+    } else if(input_tensor0->type == NORMAL_TENSOR){
+    assert(input_tensor0->type == NORMAL_TENSOR);
+    assert(input_tensor1->type == NORMAL_TENSOR);
+    assert(output_tensor->type == NORMAL_TENSOR);
+    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource0 != NULL);
+    assert(input_tensor_resource1 != NULL);
+    assert(output_tensor_resource != NULL);
+    size_t num_elements = input_tensor_resource0->get_num_elements();
+    assert(num_elements == input_tensor_resource1->get_num_elements());
+    VertexId K = input_tensor0->dims[1];
+    assert(K == input_tensor1->dims[1]);
+    DataType * d_input_grad0 = input_tensor_resource0->get_gpu_grad();
+    DataType * d_input_grad1 = input_tensor_resource1->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    //CopyFromCUDADeviceToCUDADevice<DataType>(d_input_grad0, d_output_grad, num_elements, __FILE__, __LINE__);
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+    float one = 1.0;
+    float zero = 0.0;
+    float alpha = op->alpha;
+    float beta = op->beta;
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &alpha,
+    data_descriptor,
+    d_output_grad,
+    &zero,
+    data_descriptor,
+    d_input_grad0
+    );
+    }
+}
+void OperatorExecutorGPUV2::add_forward(AddOperator * op, VertexId left, VertexId right){
+
+    
+    assert(op->get_num_input_tensors() == 2);
+    assert(op->get_num_output_tensors() == 1);
+    Tensor * input_tensor0 = op->get_input_tensor(0);
+    Tensor * input_tensor1 = op->get_input_tensor(1);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor0 != NULL);
+    assert(input_tensor1 != NULL);
+    assert(output_tensor != NULL);
+    if(input_tensor0->type == VERTEX_TENSOR){
+    assert(input_tensor0->type == VERTEX_TENSOR);
+    assert(input_tensor1->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource0 != NULL);
+    assert(input_tensor_resource1 != NULL);
+    assert(output_tensor_resource != NULL);
+    VertexId K = input_tensor0->dims[1];
+    assert(K == input_tensor1->dims[1]);
+    DataType * d_input_data0 = input_tensor_resource0->get_gpu_data();
+    DataType * d_input_data1 = input_tensor_resource1->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    assert(d_input_data0 != NULL);
+    assert(d_input_data1 != NULL);
+    assert(d_output_data != NULL);
+
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, K * (right - left));
+    float one = 1.0;
+    float zero = 0.0;
+    float alpha = op->alpha;
+    float beta = op->beta;
+    
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &alpha,
+    data_descriptor,
+    d_input_data0 + K * left,
+    &zero,
+    data_descriptor,
+    d_output_data + K * left
+    );
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &beta,
+    data_descriptor,
+    d_input_data1 + K * left,
+    &one,
+    data_descriptor,
+    d_output_data + K * left
+    );
+    cudnnDestroyTensorDescriptor(data_descriptor);
+    } else if(input_tensor0->type == NORMAL_TENSOR)
+    {
+    
+    assert(input_tensor0->type == NORMAL_TENSOR);
+    assert(input_tensor1->type == NORMAL_TENSOR);
+    assert(output_tensor->type == NORMAL_TENSOR);
+    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource0 != NULL);
+    assert(input_tensor_resource1 != NULL);
+    assert(output_tensor_resource != NULL);
+    size_t num_elements = input_tensor_resource0->get_num_elements();
+    assert(num_elements == input_tensor_resource1->get_num_elements());
+    VertexId K = input_tensor0->dims[1];
+    assert(K == input_tensor1->dims[1]);
+    DataType * d_input_data0 = input_tensor_resource0->get_gpu_data();
+    DataType * d_input_data1 = input_tensor_resource1->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    assert(d_input_data0 != NULL);
+    assert(d_input_data1 != NULL);
+    assert(d_output_data != NULL);
+
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+    float one = 1.0;
+    float zero = 0.0;
+    float alpha = op->alpha;
+    float beta = op->beta;
+    
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &alpha,
+    data_descriptor,
+    d_input_data0,
+    &zero,
+    data_descriptor,
+    d_output_data
+    );
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &beta,
+    data_descriptor,
+    d_input_data1,
+    &one,
+    data_descriptor,
+    d_output_data
+    );
+    cudnnDestroyTensorDescriptor(data_descriptor);
+
+    }
+    
+}
+
+void OperatorExecutorGPUV2::add_backward(AddOperator * op, VertexId left, VertexId right){
+    assert(op->get_num_input_tensors() == 2);
+    assert(op->get_num_output_tensors() == 1);
+    Tensor * input_tensor0 = op->get_input_tensor(0);
+    Tensor * input_tensor1 = op->get_input_tensor(1);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor0 != NULL);
+    assert(input_tensor1 != NULL);
+    assert(output_tensor != NULL);
+    if(input_tensor0->type == VERTEX_TENSOR){
+    assert(input_tensor0->type == VERTEX_TENSOR);
+    assert(input_tensor1->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource0 != NULL);
+    assert(input_tensor_resource1 != NULL);
+    assert(output_tensor_resource != NULL);
+    
+    VertexId K = input_tensor0->dims[1];
+    assert(K == input_tensor1->dims[1]);
+    DataType * d_input_grad0 = input_tensor_resource0->get_gpu_grad();
+    DataType * d_input_grad1 = input_tensor_resource1->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    //CopyFromCUDADeviceToCUDADevice<DataType>(d_input_grad0, d_output_grad, num_elements, __FILE__, __LINE__);
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, K * (right - left));
+    float one = 1.0;
+    float zero = 0.0;
+    float alpha = op->alpha;
+    float beta = op->beta;
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &alpha,
+    data_descriptor,
+    d_output_grad + K * left,
+    &zero,
+    data_descriptor,
+    d_input_grad0 + K * left
+    );
+    } else if(input_tensor0->type == NORMAL_TENSOR){
+    assert(input_tensor0->type == NORMAL_TENSOR);
+    assert(input_tensor1->type == NORMAL_TENSOR);
+    assert(output_tensor->type == NORMAL_TENSOR);
+    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource0 != NULL);
+    assert(input_tensor_resource1 != NULL);
+    assert(output_tensor_resource != NULL);
+    size_t num_elements = input_tensor_resource0->get_num_elements();
+    assert(num_elements == input_tensor_resource1->get_num_elements());
+    VertexId K = input_tensor0->dims[1];
+    assert(K == input_tensor1->dims[1]);
+    DataType * d_input_grad0 = input_tensor_resource0->get_gpu_grad();
+    DataType * d_input_grad1 = input_tensor_resource1->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    //CopyFromCUDADeviceToCUDADevice<DataType>(d_input_grad0, d_output_grad, num_elements, __FILE__, __LINE__);
+    cudnnTensorDescriptor_t data_descriptor;
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+    float one = 1.0;
+    float zero = 0.0;
+    float alpha = op->alpha;
+    float beta = op->beta;
+    cudnnAddTensor(
+    *cudnn_handle_,
+    &alpha,
+    data_descriptor,
+    d_output_grad,
+    &zero,
+    data_descriptor,
+    d_input_grad0
+    );
+    }
+}
+
+void OperatorExecutorGPUV2::matmuladd_forward(MatmulAddOperator * op)
+{   
+    
+    assert(op->get_num_input_tensors() == 2);
+    assert(op->get_num_output_tensors() == 1);
+
+    Tensor * input_tensor_0 = op->get_input_tensor(0);
+    Tensor * input_tensor_1 = op->get_input_tensor(1);
+    Tensor * output_tensor = op->get_output_tensor(0);
+
+    TensorResourceGPU * input_tensor_resource_0 = (TensorResourceGPU*) input_tensor_0->resource;
+    TensorResourceGPU * input_tensor_resource_1 = (TensorResourceGPU*) input_tensor_1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+
+    DataType * input_data_0 = input_tensor_resource_0->get_cpu_data();
+    DataType * input_data_1 = input_tensor_resource_1->get_cpu_data();
+    DataType * output_data = output_tensor_resource->get_cpu_data();
+
+    DataType * d_input_data_0 = input_tensor_resource_0->get_gpu_data();
+    DataType * d_input_data_1 = input_tensor_resource_1->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+
+    VertexId num_vertices = graph_->get_num_global_vertices();
+    size_t N = num_vertices;
+    size_t K = input_tensor_0->dims[1];
+    assert(input_tensor_1->dims[0] == K);
+    size_t M = input_tensor_1->dims[1];
+    //ADD
+    assert(K == M);
+    assert(M == hidden_units);
+    cudnnTensorDescriptor_t weight_descriptor;
+    cudnnCreateTensorDescriptor(&weight_descriptor);
+    cudnnSetTensor4dDescriptor(weight_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, hidden_units * hidden_units);
+    float a = op->alpha;
+    float b = op->beta;
+    float one = 1.0;
+    float zero = 0.0;
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &a,
+        weight_descriptor,
+        d_input_data_1,
+        &zero,
+        weight_descriptor,
+        tp_weight
+    );
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &b,
+        weight_descriptor,
+        cuda_id,
+        &one,
+        weight_descriptor,
+        tp_weight
+    );
+    //MUL
+    float alpha = 1.0;
+    float beta = 0.0;
+    cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_N,
+        CUBLAS_OP_N,
+        M,
+        N,
+        K,
+        &alpha,
+        (const float *)tp_weight,
+        M,
+        (const float *)d_input_data_0,
+        K,
+        &beta,
+        d_output_data,
+        M
+    );
+    cudaDeviceSynchronize();
+    SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+}
+void OperatorExecutorGPUV2::matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right) {
+    assert(op->get_num_input_tensors() == 2);
+    assert(op->get_num_output_tensors() == 1);
+
+    Tensor * input_tensor_0 = op->get_input_tensor(0);
+    Tensor * input_tensor_1 = op->get_input_tensor(1);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor_0 != NULL);
+    assert(input_tensor_1 != NULL);
+    assert(output_tensor != NULL);
+    assert(input_tensor_0->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+
+    TensorResourceGPU * input_tensor_resource_0 = (TensorResourceGPU*) input_tensor_0->resource;
+    TensorResourceGPU * input_tensor_resource_1 = (TensorResourceGPU*) input_tensor_1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource_0 != NULL);
+    assert(input_tensor_resource_1 != NULL);
+    assert(output_tensor_resource != NULL);
+
+    size_t K = input_tensor_0->dims[1];
+    assert(input_tensor_1->dims[0] == K);
+    size_t M = input_tensor_1->dims[1];
+    assert(K == M);
+    assert(M == hidden_units);
+    DataType * d_input_data_0 = input_tensor_resource_0->get_gpu_data();
+    DataType * d_input_data_1 = input_tensor_resource_1->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+
+    cudnnTensorDescriptor_t weight_descriptor;
+    cudnnCreateTensorDescriptor(&weight_descriptor);
+    cudnnSetTensor4dDescriptor(weight_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, hidden_units * hidden_units);
+    float a = op->alpha;
+    float b = op->beta;
+    float one = 1.0;
+    float zero = 0.0;
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &a,
+        weight_descriptor,
+        d_input_data_1,
+        &zero,
+        weight_descriptor,
+        tp_weight
+    );
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &b,
+        weight_descriptor,
+        cuda_id,
+        &one,
+        weight_descriptor,
+        tp_weight
+    );
+
+    
+    size_t N = right - left;
+    int input_start_idx = left * K;
+    int output_start_idx = left * M;
+    float alpha = 1.0;
+    float beta = 0.0;
+    cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_N,
+        CUBLAS_OP_N,
+        M,
+        N,
+        K,
+        &alpha,
+        (const float *)tp_weight,
+        M,
+        (const float *)(d_input_data_0 + input_start_idx),
+        K,
+        &beta,
+        d_output_data + output_start_idx,
+        M
+    );
+    cudaDeviceSynchronize();
+    SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+}
+
+void OperatorExecutorGPUV2::matmuladd_backward(MatmulAddOperator * op) {
+    
+    assert(op != NULL);
+
+    assert(op->get_num_input_tensors() == 2);
+    assert(op->get_num_output_tensors() == 1);
+    Tensor * input_tensor_0 = op->get_input_tensor(0);
+    Tensor * input_tensor_1 = op->get_input_tensor(1);
+    Tensor * output_tensor = op->get_output_tensor(0);
+
+    TensorResourceGPU * input_tensor_resource_0 = (TensorResourceGPU*) input_tensor_0->resource;
+    TensorResourceGPU * input_tensor_resource_1 = (TensorResourceGPU*) input_tensor_1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource_0 != NULL);
+    assert(input_tensor_resource_1 != NULL);
+    assert(output_tensor_resource != NULL);
+
+    
+    
+    
+    // C = A x B
+    // A size: N x K, B size: K x M, C size: N x M
+    size_t N = graph_->get_num_global_vertices();
+    size_t K = input_tensor_0->dims[1];
+    assert(input_tensor_1->dims[0] == K);
+    size_t M = input_tensor_1->dims[1];
+    DataType * d_input0 =  input_tensor_resource_0->get_gpu_data(), * d_input1 = input_tensor_resource_1->get_gpu_data(), *d_ingrad0 = input_tensor_resource_0->get_gpu_grad(), * d_ingrad1 = input_tensor_resource_1->get_gpu_grad(), *d_outgrad = output_tensor_resource->get_gpu_grad();
+
+    assert(K == M);
+    assert(M == hidden_units);
+    SetCUDAMemory<DataType>(tp_grad, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+    SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+    cudnnTensorDescriptor_t weight_descriptor;
+    cudnnCreateTensorDescriptor(&weight_descriptor);
+    cudnnSetTensor4dDescriptor(weight_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, hidden_units * hidden_units);
+    float a = op->alpha;
+    float b = op->beta;
+    float one = 1.0;
+    float zero = 0.0;
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &a,
+        weight_descriptor,
+        d_input1,
+        &zero,
+        weight_descriptor,
+        tp_weight
+    );
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &b,
+        weight_descriptor,
+        cuda_id,
+        &one,
+        weight_descriptor,
+        tp_weight
+    );
+    float alpha = 1.0;
+    float beta = 0.0;
+   cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_T,
+        CUBLAS_OP_N,
+        K,
+        N,
+        M,
+        &alpha,
+        tp_weight,
+        M,
+        d_outgrad,
+        M,
+        &beta,
+        d_ingrad0,
+        K
+    );
+    cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_N,
+        CUBLAS_OP_T,
+        M,
+        K,
+        N,
+        &alpha,
+        d_outgrad,
+        M,
+        d_input0,
+        K,
+        &beta,
+        tp_grad,
+        M
+    );
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &a,
+        weight_descriptor,
+        tp_grad,
+        &zero,
+        weight_descriptor,
+        d_ingrad1
+    );
+    cudaDeviceSynchronize();
+    SetCUDAMemory<DataType>(tp_grad, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+    SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+}
+
+void OperatorExecutorGPUV2::matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right) {
+
+    assert(op != NULL);
+
+    assert(op->get_num_input_tensors() == 2);
+    assert(op->get_num_output_tensors() == 1);
+    Tensor * input_tensor_0 = op->get_input_tensor(0);
+    Tensor * input_tensor_1 = op->get_input_tensor(1);
+    Tensor * output_tensor = op->get_output_tensor(0);
+
+    TensorResourceGPU * input_tensor_resource_0 = (TensorResourceGPU*) input_tensor_0->resource;
+    TensorResourceGPU * input_tensor_resource_1 = (TensorResourceGPU*) input_tensor_1->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource_0 != NULL);
+    assert(input_tensor_resource_1 != NULL);
+    assert(output_tensor_resource != NULL);
+
+    DataType * d_input_data_0 = input_tensor_resource_0->get_gpu_data();
+    DataType * d_input_data_1 = input_tensor_resource_1->get_gpu_data();
+    DataType * d_input_grad_0 = input_tensor_resource_0->get_gpu_grad();
+    DataType * d_input_grad_1 = input_tensor_resource_1->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    
+    SetCUDAMemory<DataType>(tp_grad, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+    SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+    cudnnTensorDescriptor_t weight_descriptor;
+    cudnnCreateTensorDescriptor(&weight_descriptor);
+    cudnnSetTensor4dDescriptor(weight_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, hidden_units * hidden_units);
+    float a = op->alpha;
+    float b = op->beta;
+    float one = 1.0;
+    float zero = 0.0;
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &a,
+        weight_descriptor,
+        d_input_data_1,
+        &zero,
+        weight_descriptor,
+        tp_weight
+    );
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &b,
+        weight_descriptor,
+        cuda_id,
+        &one,
+        weight_descriptor,
+        tp_weight
+    );
+    // C = A x B
+    // A size: N x K, B size: K x M, C size: N x M
+    //size_t N = input_tensor_resource->get_num_vertices();
+    size_t N = right - left;
+    size_t K = input_tensor_0->dims[1];
+    assert(input_tensor_1->dims[0] == K);
+    size_t M = input_tensor_1->dims[1];
+    int input_start_idx = left * K;
+    int output_start_idx = left * M;
+    float alpha = 1.0;
+    float beta = 0.0;
+   cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_T,
+        CUBLAS_OP_N,
+        K,
+        N,
+        M,
+        &alpha,
+        tp_weight,
+        M,
+        d_output_grad + output_start_idx,
+        M,
+        &beta,
+        d_input_grad_0 + input_start_idx,
+        K
+    );
+    cublasSgemm(
+        *cublas_handle_,
+        CUBLAS_OP_N,
+        CUBLAS_OP_T,
+        M,
+        K,
+        N,
+        &alpha,
+        d_output_grad + output_start_idx,
+        M,
+        d_input_data_0 + input_start_idx,
+        K,
+        &beta,
+        tp_grad,
+        M
+    );
+    cudnnAddTensor(
+        *cudnn_handle_,
+        &a,
+        weight_descriptor,
+        tp_grad,
+        &one,
+        weight_descriptor,
+        d_input_grad_1
+    );
+    cudaDeviceSynchronize();
+    SetCUDAMemory<DataType>(tp_grad, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+    SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
+}

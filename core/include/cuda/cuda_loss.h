@@ -128,6 +128,7 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
         cudnnReduceTensorDescriptor_t MeanDesc;
         void LaunchCalculateGradients(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize);
         void LaunchCalculateGradientsMask(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize);
+        double LaunchGetLossWithStart(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int start);
         double LaunchGetLoss(DataType * std_data, DataType * output_data, int num_vertices, int outputsize);
         double LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type);
         bool usingsplit;

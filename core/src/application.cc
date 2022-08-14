@@ -89,7 +89,11 @@ Tensor * AbstractApplication::matmul(Tensor * a, Tensor * b) {
     operators_.push_back(matmul);
     return matmul->get_output_tensor(0);
 }
-
+Tensor * AbstractApplication::matmuladd(Tensor * a, Tensor * b, DataType alpha, DataType beta) {
+    Operator * matmuladd = new MatmulAddOperator(a, b, alpha, beta);
+    operators_.push_back(matmuladd);
+    return matmuladd->get_output_tensor(0);
+}
 Tensor * AbstractApplication::fc(Tensor * a, int num_hunits, std::string activation_fun) {
     Tensor * w = weight(a->dims[1], num_hunits);
     assert(w != NULL);
@@ -119,7 +123,17 @@ Tensor * AbstractApplication::aggregation(Tensor * t, AggregationType type) {
     operators_.push_back(aggregation);
     return aggregation->get_output_tensor(0);
 }
-
+Tensor * AbstractApplication::identity(int height, int width) {
+    assert(height == width);
+    Operator * identity = new IDentityOperator(height, width);
+    operators_.push_back(identity);
+    return identity->get_output_tensor(0);
+}
+Tensor * AbstractApplication::add(Tensor * a, Tensor * b, DataType alpha, DataType beta) {
+    Operator * add = new AddOperator(a, b, alpha, beta);
+    operators_.push_back(add);
+    return add->get_output_tensor(0);
+}
 AbstractApplication::AbstractApplication(int num_features): num_features_(num_features) {
     operators_.clear();
     input_tensor_ = NULL;

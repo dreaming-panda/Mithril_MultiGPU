@@ -1,8 +1,8 @@
 set(CUDA_HINTS
-   /home/p100/cuda112
+   /home/a100/cu111
 )
 set(CUDAPATHS
-  /home/a100/cuda112
+  /home/a100/cu111
 )
 
 # Finds the include directories

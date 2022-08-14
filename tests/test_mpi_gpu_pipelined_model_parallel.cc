@@ -76,23 +76,23 @@ class GCN: public AbstractApplication {
 };
 
 int main(int argc, char ** argv) {
-    volatile bool terminated = false;
-    std::thread timer_thread([&]() {
-        double runtime = 0;
-        while (! terminated) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            runtime += 100.;
-            if (runtime > 300000.) {
-                fprintf(stderr, "***** TIMEOUT ******\n");
-                exit(-1);
-            }
-        }
-    });
+    // volatile bool terminated = false;
+    // std::thread timer_thread([&]() {
+    //     double runtime = 0;
+    //     while (! terminated) {
+    //         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //         runtime += 100.;
+    //         if (runtime > 300000.) {
+    //             fprintf(stderr, "***** TIMEOUT ******\n");
+    //             exit(-1);
+    //         }
+    //     }
+    // });
 
-    std::string graph_path = "./storage/gnn_datasets/Cora";
-    int num_layers = 4;
-    int num_hidden_units = 16;
-    int num_epoch = 50;
+    std::string graph_path = "/home/p100/storage/gnn_datasets/arxiv";
+    int num_layers = 3;
+    int num_hidden_units = 256;
+    int num_epoch = 10000;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -101,7 +101,7 @@ int main(int argc, char ** argv) {
     Context::init_context();
 
     // load the graph dataset
-   CUDAFullyStructualGraph * graph_structure;
+    CUDAFullyStructualGraph * graph_structure;
     AbstractGraphNonStructualData * graph_non_structural_data;
 
     CUDAStructualGraphLoader graph_structure_loader;
@@ -129,7 +129,7 @@ int main(int argc, char ** argv) {
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
 
     // setup the execution engine
-    AbstractExecutionEngine * execution_engine = new DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU();
+    AbstractExecutionEngine * execution_engine = new MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU();
     AbstractOptimizer * optimizer = new AdamOptimizerCPU(learning_rate, weight_decay);
     OperatorExecutorGPU * executor = new OperatorExecutorGPU(graph_structure);
     cublasHandle_t cublas;
@@ -149,8 +149,6 @@ int main(int argc, char ** argv) {
     execution_engine->set_loss(loss);
 
     double acc = execution_engine->execute_application(gcn, num_epoch);
-    assert(acc > 0.7);
-
     // destroy the model
     delete gcn;
     delete execution_engine;
@@ -164,8 +162,8 @@ int main(int argc, char ** argv) {
 
     Context::finalize_context();
 
-    terminated = true;
-    timer_thread.join();
+    // terminated = true;
+    // timer_thread.join();
     return 0;
 }
 

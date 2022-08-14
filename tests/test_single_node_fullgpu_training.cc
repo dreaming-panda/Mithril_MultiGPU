@@ -59,38 +59,52 @@ class GCN: public AbstractApplication {
         }
         ~GCN() {}
 
+        // Tensor * forward(Tensor * input) {
+        //     Tensor * t = input;
+        //     for (int i = 0; i < num_layers_; ++ i) {
+        //         if(i != num_layers_ - 1){
+        //         t = aggregation(t, NORM_SUM);
+        //         int output_size = num_hidden_units_;
+        //         Tensor * w = weight(t->dims[1], output_size);
+        //         t = matmul(t, w);
+        //         }else{
+        //             int output_size = num_classes_;
+        //             Tensor * w = weight(t->dims[1], output_size);
+        //             t = matmul(t, w);
+        //             t = aggregation(t, NORM_SUM);
+        //         }
+        //         if (i == num_layers_ - 1) {
+        //             t = softmax(t);
+        //         } else {
+        //             t = relu(t);
+        //         }
+        //     }
+        //     return t;
+        // }
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
-            for (int i = 0; i < num_layers_; ++ i) {
-                if(i != num_layers_ - 1){
-                t = aggregation(t, NORM_SUM);
-                int output_size = num_hidden_units_;
-                Tensor * w = weight(t->dims[1], output_size);
-                t = matmul(t, w);
-                }else{
-                    int output_size = num_classes_;
-                    Tensor * w = weight(t->dims[1], output_size);
-                    t = matmul(t, w);
-                    t = aggregation(t, NORM_SUM);
-                }
-                if (i == num_layers_ - 1) {
-                    t = softmax(t);
-                } else {
-                    t = relu(t);
-                }
-            }
-            return t;
-        }
-        /*Tensor * forward(Tensor * input) {
-            Tensor * t = input;
+            Tensor * s = fc(input, num_hidden_units_);
             for (int i = 0; i < num_layers_; ++ i) {
                 t = aggregation(t, NORM_SUM);
+                if(i == 0){
+                t = add(t , input, 0.8, 0.2);
+                } else{
+                t = add(t , s, 0.8, 0.2);
+                }
                 int output_size = num_hidden_units_;
                 if (i == num_layers_ - 1) {
                     output_size = num_classes_;
                 }
                 Tensor * w = weight(t->dims[1], output_size);
+                if(t->dims[1] == output_size){
+                // Tensor * id = identity(t->dims[1], output_size);
+                // w = add(w, id, 1.0, 0.0);
+                // t = matmul(t, w);
+                    t = matmuladd(t, w, 1.0, 0.0);
+                }
+                else {
                 t = matmul(t, w);
+                }
                 if (i == num_layers_ - 1) {
                      t = softmax(t);
                 } else {
@@ -98,7 +112,7 @@ class GCN: public AbstractApplication {
                 }
             }
             return t;
-        }*/
+        }
 };
 
 int main(int argc, char ** argv) {
@@ -114,11 +128,11 @@ int main(int argc, char ** argv) {
             }
         }
     });*/
-    cudaSetDevice(2);
-    std::string graph_path = "/home/a100/storage/gnn_datasets/arxiv";
-    int num_layers = 2;
-    int num_hidden_units = 64;
-    int num_epoch = 3000;
+    cudaSetDevice(0);
+    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/products_new";
+    int num_layers = 3;
+    int num_hidden_units = 128;
+    int num_epoch = 50;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -171,6 +185,7 @@ int main(int argc, char ** argv) {
     executor->set_activation_size(num_hidden_units,num_classes);
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
     executor->build_inner_csr_();
+    executor->init_identity(num_hidden_units);
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
     execution_engine->setCuda(cudnn, graph_structure->get_num_global_vertices());

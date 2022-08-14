@@ -33,6 +33,12 @@ std::string get_op_type_str(OperatorType type) {
         return "OPERATOR_SOFTMAX";
     } else if (type == OPERATOR_AGGREGATION) {
         return "OPERATOR_AGGREGATION";
+    } else if (type == OPERATOR_ADD){
+        return "OPERATOR_ADD";
+    } else if (type == OPERATOR_IDEN){
+        return "OPERATOR_IDEN";
+    } else if (type == OPERATOR_MATMULADD) {
+        return "OPERATOR_MATMULADD";
     } else {
         fprintf(stderr, "Unrecognized operator type.\n");
         exit(-1);
@@ -187,7 +193,25 @@ MatmulOperator::MatmulOperator(Tensor * a, Tensor * b): Operator(a, b, 1, OPERAT
     output_tensors_[0].dims[0] = -1;
     output_tensors_[0].dims[1] = b->dims[1];
 }
+MatmulAddOperator::MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta): Operator(a, b, 1, OPERATOR_MATMULADD) {
+    assert(a->type == VERTEX_TENSOR);
+    assert(a->num_dims == 2);
+    assert(a->dims[0] == -1);
+    assert(a->dims[1] > 0);
 
+    assert(b->type == NORMAL_TENSOR);
+    assert(b->num_dims == 2);
+    assert(b->dims[0] > 0);
+    assert(b->dims[1] > 0);
+    assert(a->dims[1] == b->dims[0]);
+
+    output_tensors_[0].type = VERTEX_TENSOR;
+    output_tensors_[0].num_dims = 2;
+    output_tensors_[0].dims[0] = -1;
+    output_tensors_[0].dims[1] = b->dims[1];
+    this->alpha = alpha;
+    this->beta = beta;
+}
 // SoftmaxOperator
 
 SoftmaxOperator::SoftmaxOperator(Tensor * t): Operator(t, 1, OPERATOR_SOFTMAX) {
@@ -201,7 +225,49 @@ SoftmaxOperator::SoftmaxOperator(Tensor * t): Operator(t, 1, OPERATOR_SOFTMAX) {
     output_tensors_[0].dims[0] = -1;
     output_tensors_[0].dims[1] = t->dims[1];
 }
+IDentityOperator::IDentityOperator(int dim_0, int dim_1): Operator(1, OPERATOR_IDEN) {
+    assert(dim_0 > 0);
+    assert(dim_1 > 0);
 
+    output_tensors_[0].type = NORMAL_TENSOR;
+    output_tensors_[0].num_dims = 2;
+    output_tensors_[0].dims[0] = dim_0;
+    output_tensors_[0].dims[1] = dim_1;
+}
+AddOperator::AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta): Operator(a, b, 1, OPERATOR_ADD) {
+    
+    if(a->type == VERTEX_TENSOR){
+    assert(a->type == VERTEX_TENSOR);
+    assert(b->type == VERTEX_TENSOR);
+    assert(a->num_dims == 2);
+    assert(a->dims[0] == -1);
+    assert(a->dims[1] > 0);
+    assert(b->num_dims == 2);
+    assert(b->dims[0] == -1);
+    assert(b->dims[1] > 0);
+    output_tensors_[0].type = VERTEX_TENSOR;
+    output_tensors_[0].num_dims = 2;
+    output_tensors_[0].dims[0] = -1;
+    output_tensors_[0].dims[1] = b->dims[1];
+    this->alpha = alpha;
+    this->beta = beta;
+    } else if(a->type == NORMAL_TENSOR){
+        assert(a->type == NORMAL_TENSOR);
+        assert(b->type == NORMAL_TENSOR);
+    assert(a->num_dims == 2);
+    assert(a->dims[0] > 0);
+    assert(a->dims[1] > 0);
+    assert(b->num_dims == 2);
+    assert(b->dims[0] > 0);
+    assert(b->dims[1] > 0);
+    output_tensors_[0].type = NORMAL_TENSOR;
+    output_tensors_[0].num_dims = 2;
+    output_tensors_[0].dims[0] = b->dims[0];
+    output_tensors_[0].dims[1] = b->dims[1];
+    this->alpha = alpha;
+    this->beta = beta;
+    }
+}
 // AggregationOperator
 
 AggregationOperator::AggregationOperator(Tensor * t, AggregationType type): Operator(t, 1, OPERATOR_AGGREGATION), type_(type) {

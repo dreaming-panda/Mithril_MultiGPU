@@ -30,7 +30,8 @@ int per_thread_nodes
     
 }
 float SingleNodeExecutionEngineGPU::LaunchCalculate_Accuracy(DataType * cuda_acc_data, DataType * cuda_output_data, DataType * cuda_std_data, int num_vertices, int outputsize)
-{
+{   
+    
     const int ThreadNumber = 512;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
@@ -47,15 +48,15 @@ float SingleNodeExecutionEngineGPU::LaunchCalculate_Accuracy(DataType * cuda_acc
     //cudnnSetReduceTensorDescriptor(MeanDesc,CUDNN_REDUCE_TENSOR_AVG,CUDNN_DATA_FLOAT,CUDNN_NOT_PROPAGATE_NAN,CUDNN_REDUCE_TENSOR_NO_INDICES,CUDNN_32BIT_INDICES);
     //cudnnTensorDescriptor_t hit_descriptor;
     //cudnnCreateTensorDescriptor(&hit_descriptor);
-    //cudnnTensorDescriptor_t data_descriptor;
-    //cudnnCreateTensorDescriptor(&data_descriptor);
-    //cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
+    cudnnTensorDescriptor_t data_descriptor_;
+    cudnnCreateTensorDescriptor(&data_descriptor_);
+    cudnnSetTensor4dDescriptor(data_descriptor_, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
     //cudnnSetTensor4dDescriptor(hit_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, 1);
     const float alpha = 1.0f;
     const float beta = 0.0f;
     cudnnReduceTensor(
         cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
-        data_descriptor,cuda_acc_data,&beta,hit_descriptor,d_hit_
+        data_descriptor_,cuda_acc_data,&beta,hit_descriptor,d_hit_
     );
     DataType acc = 0.0;
     CopyFromCUDADeviceToHost<DataType>(&acc, d_hit_, 1, __FILE__, __LINE__);

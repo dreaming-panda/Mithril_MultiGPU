@@ -90,9 +90,14 @@ struct GPUCsr{
     int MatrixSize;
     int nnz;
 };
+struct CPUCsr{
+    int * host_rowoffsets_in;
+    int * host_rowoffsets_out;
+};
 class AbstractOperatorExecutor {
     protected:
         GPUCsr csr_;
+        CPUCsr cpu_csr_;
     public:
         AbstractOperatorExecutor() {
             csr_.number_matrix = 0;
@@ -136,6 +141,13 @@ class AbstractOperatorExecutor {
                         csr_.MatrixSize = MatrixSize;
                         csr_.nnz = nnz;
                      }
+        void set_cpu_csr(
+            int * row_in,
+            int * row_out
+        ){
+            cpu_csr_.host_rowoffsets_in = row_in;
+            cpu_csr_.host_rowoffsets_out = row_out;
+        }
         // the forwarding phases
         virtual void relu_forward(ReluOperator * op) = 0;
         virtual void matmul_forward(MatmulOperator * op) = 0;
@@ -159,6 +171,16 @@ class AbstractOperatorExecutor {
         virtual void matmul_backward(MatmulOperator * op, VertexId left, VertexId right) = 0;
         virtual void softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right) = 0;
         virtual void aggregation_backward(AggregationOperator * op, VertexId left, VertexId right) = 0;
+
+        virtual void add_forward(AddOperator * op) = 0;
+        virtual void add_backward(AddOperator * op) = 0;
+        virtual void add_forward(AddOperator * op, VertexId left, VertexId right) = 0;
+        virtual void add_backward(AddOperator * op, VertexId left, VertexId right) = 0;
+
+        virtual void matmuladd_forward(MatmulAddOperator * op) = 0;
+        virtual void matmuladd_backward(MatmulAddOperator * op) = 0;
+        virtual void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right) = 0;
+        virtual void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right) = 0;
 };
 
 // note that all CPU-version executor/optimizer/loss is not tuned and hence the performance is sub-optimal
@@ -345,6 +367,17 @@ class OperatorExecutorCPU: public AbstractOperatorExecutor {
         void matmul_backward(MatmulOperator * op, VertexId left, VertexId right);
         void softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right);
         void aggregation_backward(AggregationOperator * op, VertexId left, VertexId right);
+
+        void add_forward(AddOperator * op){assert(false);};
+        void add_backward(AddOperator * op){assert(false);};
+        void add_forward(AddOperator * op, VertexId left, VertexId right){assert(false);};
+        void add_backward(AddOperator * op, VertexId left, VertexId right){assert(false);};
+
+        void matmuladd_forward(MatmulAddOperator * op){assert(false);};
+        void matmuladd_backward(MatmulAddOperator * op){assert(false);};
+        void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right){assert(false);};
+        void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right){assert(false);};
+
 };
 
 #endif

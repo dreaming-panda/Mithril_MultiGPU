@@ -1076,7 +1076,7 @@ void DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU:
     // this thread is responsible for generating pending forwarding tasks
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-
+    cudaSetDevice(node_id % 2);
     if (node_id == 0) {
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             int num_finished_chunks = 0;
@@ -1156,7 +1156,7 @@ void DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU:
     // this thread is responsible for passing the forwarding task to the next node
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-
+    cudaSetDevice(node_id % 2);
     if (node_id < num_nodes - 1) {
         ForwardingTask task;
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
@@ -1209,7 +1209,7 @@ void DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU:
     // this thread is responsible for generating backwarding tasks
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-
+    cudaSetDevice(node_id % 2);
     if (node_id == num_nodes - 1) {
         ForwardingTask task;
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
@@ -1280,7 +1280,7 @@ void DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU:
     // this thread is responsible for passing the finished backwarding task to the previous node
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-
+    cudaSetDevice(node_id % 2);
     if (node_id > 0) {
         BackwardingTask task;
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
@@ -1344,7 +1344,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
     double start_time = get_time();
 
     // start the communication threads
-
+    
     ncclGroupStart();
     assert(communication_threads_.size() == 0);
     communication_threads_.push_back(
@@ -1367,7 +1367,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
                 backwarding_task_finalizer_thread_main(num_epoch, prev_tensors);
             })
             );
-
+    
     ForwardingTask forwarding_task;
     BackwardingTask backwarding_task;
     bool success;
@@ -1395,7 +1395,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
     }
 
     //print_weights(weight_ops, op_to_idx);
-
+    
     for (int epoch_id = 0; epoch_id < num_epoch; epoch_id ++) {
         int task_id = 0;
         int num_finished_forwarding_tasks = 0;
@@ -1427,6 +1427,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
                         + chunk_id) % window_size_;
                 weight_version_to_epoch_id_[version] = epoch_id;
                 weight_version_to_chunk_id_[version] = chunk_id;
+
                 for (Operator * op: weight_ops) {
                     Tensor * tensor = op->get_output_tensor(0);
                     assert(tensor != NULL);
@@ -1444,6 +1445,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
                   CopyFromCUDADeviceToCUDADevice<DataType>(stashed_data, data, num_elements, __FILE__, __LINE__);
                 }
                 
+              
                 // forward the activation locally
                 assert(executor_ != NULL);
                 int num_operators = operators.size();
@@ -1483,6 +1485,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
                     }
                 }
 
+               
                 // calculate the loss and accuracy if application
                 if (node_id == num_nodes - 1) {
                     double loss = loss_->get_loss(
@@ -1503,12 +1506,16 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
                 }
                 
                 finished_forwarding_task_queue_->push(forwarding_task);
+                
                 num_finished_forwarding_tasks ++;
+               
             }
 
+            
             // perform the backwarding task
             pending_backwarding_task_queue_->pop(backwarding_task, success);
             if (success) {
+               
                 ++ task_id;
 #ifdef SHOW_SCHEDULE_DETAILS
                 printf("%.3f ms: node %d, schedule the backwarding task of epoch %d chunk %d.\n",
@@ -1523,6 +1530,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
                 assert(weight_version_to_epoch_id_[version] == epoch_id);
                 assert(weight_version_to_chunk_id_[version] == chunk_id);
 
+               
                 // zero out the gradients
                 for (Tensor * t: tensors_need_init) {
                     assert(t != NULL);
@@ -1571,6 +1579,8 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
                     (*stashed_weight_data_[version])[op] = latest_data;
                 }
 
+
+               
                 // backward the gradients locally
                 assert(executor_ != NULL);
                 int num_operators = operators.size();
@@ -1732,7 +1742,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
     }
     printf("*** Node %d, done allocating resources for all tensors.\n",
             node_id);
-
+    
     // preparing the input tensor
     Tensor * input_tensor = application->get_input_tensor();
     assert(input_tensor != NULL);
@@ -1881,6 +1891,7 @@ double DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGP
         }
     }
 
+   
     // initialize the data structures of the pipeline scheduler
     //version_to_epoch_id_ = new int [num_nodes];
     //version_states_ = new VersionState [num_nodes];

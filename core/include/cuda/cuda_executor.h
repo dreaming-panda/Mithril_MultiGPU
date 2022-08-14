@@ -13,6 +13,7 @@
 #include"graph.h"
 #include <iostream>
 #include "utilities.h"
+#include "distributed_sys.h"
 class OperatorExecutorGPU:public AbstractOperatorExecutor
 {
     private: 
@@ -109,24 +110,39 @@ class OperatorExecutorGPU:public AbstractOperatorExecutor
         void matmul_forward(MatmulOperator * op);
         void softmax_forward(SoftmaxOperator * op);
         void aggregation_forward(AggregationOperator * op);
-
+        void add_forward(AddOperator * op){assert(false);};
+        
         void relu_backward(ReluOperator * op);
         void matmul_backward(MatmulOperator * op);
         void softmax_backward(SoftmaxOperator * op);
         void aggregation_backward(AggregationOperator * op);
+        void add_backward(AddOperator * op){assert(false);};
 
         void relu_forward(ReluOperator * op, VertexId left, VertexId right);
         void matmul_forward(MatmulOperator * op, VertexId left, VertexId right);
         void softmax_forward(SoftmaxOperator * op, VertexId left, VertexId right);
         void aggregation_forward(AggregationOperator * op, VertexId left, VertexId right);
+        void add_forward(AddOperator * op, VertexId left, VertexId right){assert(false);};
+
         void relu_backward(ReluOperator * op, VertexId left, VertexId right);
         void matmul_backward(MatmulOperator * op, VertexId left, VertexId right);
         void softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right);
         void aggregation_backward(AggregationOperator * op, VertexId left, VertexId right);
+        void add_backward(AddOperator * op, VertexId left, VertexId right){assert(false);};
 
-
+        void matmuladd_forward(MatmulAddOperator * op){assert(false);};;
+        void matmuladd_backward(MatmulAddOperator * op){assert(false);};;
+        void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right){assert(false);};;
+        void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right){assert(false);};;
 };
-
+struct LocalGraphInfo{
+    VertexId left;
+    VertexId right;
+    LocalGraphBasic lg;
+    cusparseSpMatDescr_t spcsr;
+    void * dbuffer;
+    bool alloc;
+};
 class OperatorExecutorGPUV2:public AbstractOperatorExecutor
 {
     private: 
@@ -161,6 +177,14 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         double matmulbackward_time;
         double aggforward_time;
         double aggbackward_time;
+        std::vector<LocalGraphInfo>lginfo_forward;
+        std::vector<LocalGraphInfo>lginfo_backward;
+        DataType * host_id;
+        DataType * cuda_id;
+        DataType * tp_weight;
+        DataType * tp_grad;
+        bool id_init;
+        int hidden_units;
     public:
         OperatorExecutorGPUV2(){
             graph_ = nullptr;
@@ -168,8 +192,11 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             cudnn_handle_ = nullptr;
             cusparse_handle_ = nullptr;
             dbuffer_ = nullptr;
+            tp_weight = nullptr;
+            tp_grad = nullptr;
             has_Spcsr_ = false;
             has_dbuffer_ = false;
+            id_init = false;
             reluforward_time = 0;
             relubackward_time = 0;
             softmaxforward_time = 0;
@@ -178,6 +205,7 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             matmulbackward_time = 0;
             aggforward_time = 0;
             aggbackward_time = 0;
+            hidden_units = 0;
           //  d_input_relu_forward = nullptr;
           //  d_output_relu_forward = nullptr;
           //  d_input_relu_forward_grad = nullptr;
@@ -194,8 +222,13 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             cudnn_handle_ = nullptr;
             cusparse_handle_ = nullptr;
             dbuffer_ = nullptr;
+            host_id = nullptr;
+            cuda_id = nullptr;
+            tp_weight = nullptr;
+            tp_grad = nullptr;
             has_Spcsr_ = false;
             has_dbuffer_ = false;
+            id_init = false;
             reluforward_time = 0;
             relubackward_time = 0;
             softmaxforward_time = 0;
@@ -204,6 +237,7 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             matmulbackward_time = 0;
             aggforward_time = 0;
             aggbackward_time = 0;
+            hidden_units = 0;
          //   d_input_relu_forward = nullptr;
          //   d_output_relu_forward = nullptr;
          //   d_input_relu_forward_grad = nullptr;
@@ -226,6 +260,24 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
          //    DeallocateCUDAMemory<DataType>(&d_output_softmax_forward_grad,__FILE__,__LINE__);
          if(has_Spcsr_ == true)cusparseDestroySpMat(SpCsr_);
          if(has_dbuffer_ == true)cudaFree(dbuffer_);
+         for(int i = 0; i < lginfo_forward.size(); ++i){
+            DeallocateCUDAMemory<int>(&lginfo_forward[i].lg.cuda_local_rowoffsets,__FILE__, __LINE__);
+            cusparseDestroySpMat(lginfo_forward[i].spcsr);
+            cudaFree(lginfo_forward[i].dbuffer);
+          }
+          for(int i = 0; i < lginfo_backward.size(); ++i){
+            DeallocateCUDAMemory<int>(&lginfo_backward[i].lg.cuda_local_rowoffsets,__FILE__, __LINE__);
+            cusparseDestroySpMat(lginfo_backward[i].spcsr);
+            cudaFree(lginfo_backward[i].dbuffer);
+          }
+        lginfo_forward.clear();
+        lginfo_backward.clear();
+        if(id_init == true){
+            delete [] host_id;
+            DeallocateCUDAMemory<DataType>(&cuda_id, __FILE__, __LINE__);
+            DeallocateCUDAMemory<DataType>(&tp_weight, __FILE__, __LINE__);
+            DeallocateCUDAMemory<DataType>(&tp_grad, __FILE__, __LINE__);
+        }
          };
         void set_graph(CUDAFullyStructualGraph * graph) {graph_ = graph;}
         void set_activation_size(int ac_s , int n_class){
@@ -276,6 +328,24 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
             has_Spcsr_ = true;
         }
+        void init_identity(int hidden_units){
+            assert(id_init == false);
+            int num_elements = hidden_units * hidden_units;
+            host_id = new DataType[num_elements];
+            for(int i = 0; i < hidden_units; ++i){
+                for(int j = 0; j < hidden_units; ++j){
+                    host_id[i * hidden_units + j] = (i == j ? 1 : 0);
+                }
+            }
+            this->hidden_units = hidden_units;
+            AllocateCUDAMemory<DataType>(&cuda_id, num_elements, __FILE__, __LINE__);
+            AllocateCUDAMemory<DataType>(&tp_weight, num_elements, __FILE__, __LINE__);
+            AllocateCUDAMemory<DataType>(&tp_grad, num_elements, __FILE__, __LINE__);
+            SetCUDAMemory<DataType>(tp_weight, 0, num_elements, __FILE__, __LINE__);
+            SetCUDAMemory<DataType>(tp_grad, 0, num_elements, __FILE__, __LINE__);
+            CopyFromHostToCUDADevice<DataType>(cuda_id, host_id, num_elements, __FILE__, __LINE__);
+            id_init = true;
+        }
         void relu_forward(ReluOperator * op);
         void matmul_forward(MatmulOperator * op);
         void softmax_forward(SoftmaxOperator * op);
@@ -294,6 +364,16 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         void matmul_backward(MatmulOperator * op, VertexId left, VertexId right);
         void softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right);
         void aggregation_backward(AggregationOperator * op, VertexId left, VertexId right);
+
+        void add_forward(AddOperator * op);
+        void add_backward(AddOperator * op);
+        void add_forward(AddOperator * op, VertexId left, VertexId right);
+        void add_backward(AddOperator * op, VertexId left, VertexId right);
+
+        void matmuladd_forward(MatmulAddOperator * op);
+        void matmuladd_backward(MatmulAddOperator * op);
+        void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right);
+        void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right);
         void Print(){
             std::cout << "relu forward :"<<reluforward_time<<std::endl;
             std::cout << "relu backward :"<<relubackward_time<<std::endl;
@@ -305,6 +385,108 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             std::cout << "agg backward :"<<aggbackward_time<<std::endl;
         }
 
+        unsigned int get_localgraph_In(VertexId left, VertexId right){
+            for(int i = 0; i < lginfo_forward.size(); ++i){
+                if(lginfo_forward[i].right == right && lginfo_forward[i].left == left){
+                    return i;
+                }
+            }
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int num_master_vertices_ = csr_.num_master_vertices;
+            int * row_offsets_in = new int[num_master_vertices_ + 1];
+            memset(row_offsets_in, 0, sizeof(int) * (num_master_vertices_ + 1));
+            for(VertexId i = left + 1; i < right + 1; ++i){
+                    row_offsets_in[i] = cpu_csr_.host_rowoffsets_in[i] - cpu_csr_.host_rowoffsets_in[left];
+            }
+            for(VertexId i = right + 1; i < num_master_vertices_ + 1; ++i){
+                    row_offsets_in[i] = row_offsets_in[right];
+            }
+            int * cuda_rows = nullptr;
+            int local_nnz = cpu_csr_.host_rowoffsets_in[right] - cpu_csr_.host_rowoffsets_in[left];
+           
+           
+            assert(local_nnz == row_offsets_in[right]);
+            AllocateCUDAMemory<int>(&cuda_rows, num_master_vertices_ + 1, __FILE__, __LINE__);
+            
+            CopyFromHostToCUDADevice<int>(cuda_rows, row_offsets_in, num_master_vertices_ + 1, __FILE__, __LINE__);
+            int skip = cpu_csr_.host_rowoffsets_in[left];
+            DataType * global_values = csr_.cuda_value_in;
+            DataType * local_values = global_values + skip;
+            int  * global_cols = csr_.cuda_col_in;
+            int * local_cols = global_cols + skip;
+            LocalGraphBasic lg;
+            lg.cuda_local_rowoffsets = cuda_rows;
+            lg.cuda_local_values = local_values;
+            lg.local_nnz = local_nnz;
+            lg.num_local_vertices = num_master_vertices_;
+            lg.cuda_local_cols = local_cols;
+            delete [] row_offsets_in;
+            LocalGraphInfo lginfo;
+            lginfo.left = left;
+            lginfo.right = right;
+            lginfo.lg = lg;
+            cusparseSpMatDescr_t SpCsr;
+            cusparseCreateCsr(&SpCsr, right - left, csr_.inMatrixSize, local_nnz, (void *)(cuda_rows + left), (void *)local_cols,(void *)local_values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+
+            
+            lginfo.spcsr = SpCsr;
+            lginfo.dbuffer = nullptr;
+            lginfo.alloc = false;
+            lginfo_forward.push_back(lginfo);
+           
+            return lginfo_forward.size() - 1;
+        }
+        unsigned int get_localgraph_Out(VertexId left, VertexId right){
+            for(int i = 0; i < lginfo_backward.size(); ++i){
+                if(lginfo_backward[i].right == right && lginfo_backward[i].left == left){
+                    return i;
+                }
+            }
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int num_master_vertices_ = csr_.num_master_vertices;
+            int * row_offsets_out = new int[num_master_vertices_ + 1];
+            memset(row_offsets_out, 0, sizeof(int) * (num_master_vertices_ + 1));
+            for(VertexId i = left + 1; i < right + 1; ++i){
+                    row_offsets_out[i] = cpu_csr_.host_rowoffsets_out[i] - cpu_csr_.host_rowoffsets_out[left];
+            }
+            for(VertexId i = right + 1; i < num_master_vertices_ + 1; ++i){
+                    row_offsets_out[i] = row_offsets_out[right];
+            }
+            int * cuda_rows = nullptr;
+            int local_nnz = cpu_csr_.host_rowoffsets_out[right] - cpu_csr_.host_rowoffsets_out[left];
+           
+           
+            assert(local_nnz == row_offsets_out[right]);
+            AllocateCUDAMemory<int>(&cuda_rows, num_master_vertices_ + 1, __FILE__, __LINE__);
+            CopyFromHostToCUDADevice<int>(cuda_rows, row_offsets_out, num_master_vertices_ + 1, __FILE__, __LINE__);
+            int skip = cpu_csr_.host_rowoffsets_out[left];
+            DataType * global_values = csr_.cuda_value_out;
+            DataType * local_values = global_values + skip;
+            int  * global_cols = csr_.cuda_col_out;
+            int * local_cols = global_cols + skip;
+            LocalGraphBasic lg;
+            lg.cuda_local_rowoffsets = cuda_rows;
+            lg.cuda_local_values = local_values;
+            lg.local_nnz = local_nnz;
+            lg.num_local_vertices = num_master_vertices_;
+            lg.cuda_local_cols = local_cols;
+            delete [] row_offsets_out;
+            LocalGraphInfo lginfo;
+            lginfo.left = left;
+            lginfo.right = right;
+            lginfo.lg = lg;
+            cusparseSpMatDescr_t SpCsr;
+            cusparseCreateCsr(&SpCsr, right - left, csr_.outMatrixSize, local_nnz, (void *)(cuda_rows + left), (void *)local_cols,(void *)local_values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+            lginfo.spcsr = SpCsr;
+            lginfo.dbuffer = nullptr;
+            lginfo.alloc = false;
+            lginfo_backward.push_back(lginfo);
+            
+            return lginfo_backward.size() - 1;
+            
+        }
 
 };
 #endif

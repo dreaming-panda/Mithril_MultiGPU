@@ -17,6 +17,8 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::
             case OPERATOR_WEIGHT:
                 // do nothing
                 break;
+            case OPERATOR_IDEN:
+                break;
             case OPERATOR_RELU:
                 executor_->relu_forward((ReluOperator*) op);
                 break;
@@ -28,6 +30,12 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::
                 break;
             case OPERATOR_AGGREGATION:
                 executor_->aggregation_forward((AggregationOperator*) op);
+                break;
+            case OPERATOR_ADD:
+                executor_->add_forward((AddOperator*) op, 0, graph_structure_->get_num_global_vertices());
+                break;
+            case OPERATOR_MATMULADD:
+                executor_->matmuladd_forward((MatmulAddOperator*) op, 0, graph_structure_->get_num_global_vertices());
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
@@ -73,6 +81,8 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
             case OPERATOR_WEIGHT:
                 // do nothing
                 break;
+            case OPERATOR_IDEN:
+                break;
             case OPERATOR_RELU:
                 executor_->relu_backward((ReluOperator*) op);
                 break;
@@ -84,6 +94,12 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
                 break;
             case OPERATOR_AGGREGATION:
                 executor_->aggregation_backward((AggregationOperator*) op);
+                break;
+            case OPERATOR_ADD:
+                executor_->add_backward((AddOperator*) op, 0, graph_structure_->get_num_global_vertices());
+                break;
+            case OPERATOR_MATMULADD:
+                executor_->matmuladd_backward((MatmulAddOperator*) op, 0, graph_structure_->get_num_global_vertices());
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
@@ -181,7 +197,41 @@ void SingleNodeExecutionEngineGPU::init_weight_tensor(Tensor * weight_tensor) {
     init_weight_tensor_data(data, num_elements, N);
     CopyFromHostToCUDADevice<DataType>(cuda_data, data, num_elements, __FILE__, __LINE__);
 }
+void SingleNodeExecutionEngineGPU::init_identity_tensor_data(
+        DataType * data,
+        size_t num_elements,
+        int N // dims[0]
+        ) {
+    //Initialization
+    assert(N > 0);
+    int M  = num_elements / N;
+    assert(M > 0);
+    assert(M == N);
+    
+    for (size_t i = 0; i < N; ++ i) {
+        for(size_t j = 0; j < N; ++j){
+            data[i * N + j] = (i == j ? 1.0 : 0.0);
+        }   
+    }
+}
+void SingleNodeExecutionEngineGPU::init_identity_tensor(Tensor * identity_tensor) {
+
+   
+    assert(identity_tensor != nullptr);
+    TensorResourceGPU * resource = (TensorResourceGPU*) identity_tensor->resource;
+    DataType * data = resource->get_cpu_data();
+    assert(data != nullptr);
+    DataType * cuda_data = resource->get_gpu_data();
+    assert(cuda_data != nullptr);
+    size_t num_elements = resource->get_num_elements();
+    // Initialization
+    int N = identity_tensor->dims[0];
+    init_identity_tensor_data(data, num_elements, N);
+    CopyFromHostToCUDADevice<DataType>(cuda_data, data, num_elements, __FILE__, __LINE__);
+}
 double SingleNodeExecutionEngineGPU::calculate_accuracy(Tensor * output_tensor, Tensor * std_tensor) {
+
+    
     assert(output_tensor->type == VERTEX_TENSOR);
     assert(std_tensor->type == VERTEX_TENSOR);
     assert(output_tensor->dims[0] == std_tensor->dims[0]);
@@ -202,10 +252,10 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy(Tensor * output_tensor, 
     assert(cuda_std_data != nullptr);
     VertexId num_vertices = output_resource->get_num_vertices();
     int output_size = output_tensor->dims[1];
-    //DataType * cuda_acc;
-    //AllocateCUDAMemory<DataType>(&cuda_acc, num_vertices, __FILE__, __LINE__);
+    DataType * cuda_acc_;
+   // AllocateCUDAMemory<DataType>(&cuda_acc_, num_vertices, __FILE__, __LINE__);
     double acc = LaunchCalculate_Accuracy(cuda_acc, cuda_output_data, cuda_std_data, num_vertices, output_size);
-    //DeallocateCUDAMemory<DataType>(&cuda_acc, __FILE__, __LINE__);
+   // DeallocateCUDAMemory<DataType>(&cuda_acc_, __FILE__, __LINE__);
     return acc;
 /*
     CopyFromCUDADeviceToHost<DataType>(output_data, cuda_output_data, output_size * num_vertices, __FILE__,__LINE__);
@@ -320,6 +370,10 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         if (op->get_type() == OPERATOR_WEIGHT) {
             assert(op->get_num_output_tensors() == 1);
             init_weight_tensor(op->get_output_tensor(0));
+        }
+        if (op->get_type() == OPERATOR_IDEN) {
+            assert(op->get_num_output_tensors() == 1);
+            init_identity_tensor(op->get_output_tensor(0));
         }
     }
     printf("*** Done preparing the weight tensor.\n");

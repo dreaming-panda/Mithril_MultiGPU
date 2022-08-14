@@ -44,7 +44,10 @@ enum OperatorType {
     OPERATOR_RELU,
     OPERATOR_MATMUL,
     OPERATOR_SOFTMAX,
-    OPERATOR_AGGREGATION
+    OPERATOR_AGGREGATION,
+    OPERATOR_ADD,
+    OPERATOR_IDEN,
+    OPERATOR_MATMULADD
 };
 
 std::string get_op_type_str(OperatorType type);
@@ -111,13 +114,31 @@ class MatmulOperator: public Operator {
         MatmulOperator(Tensor * a, Tensor * b);
         ~MatmulOperator() {}
 };
-
+class MatmulAddOperator: public Operator{
+    public:
+        MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta);
+        ~MatmulAddOperator() {}
+        DataType alpha;
+        DataType beta;
+};
 class SoftmaxOperator: public Operator {
     public:
         SoftmaxOperator(Tensor * t);
         ~SoftmaxOperator() {}
 };
-
+class AddOperator: public Operator {
+        public:
+        AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta);
+        ~AddOperator() {}
+        DataType alpha;
+        DataType beta;
+};
+class IDentityOperator: public Operator {
+    public:
+        
+        IDentityOperator(int dim_0, int dim_1);
+        ~IDentityOperator() {}
+};
 // graph operators
 
 class AggregationOperator: public Operator {

@@ -34,6 +34,8 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         void prepare_std_tensor(Tensor * std_tensor);
         void init_weight_tensor_data(DataType * data, size_t num_elements, int N);
         void init_weight_tensor(Tensor * weight_tensor);
+        void init_identity_tensor_data(DataType * data, size_t num_elements, int N);
+        void init_identity_tensor(Tensor * identity_tensor);
         double calculate_accuracy(Tensor * output_tensor, Tensor * std_tensor);
 
     public:

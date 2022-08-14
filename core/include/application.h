@@ -34,7 +34,7 @@ class AbstractApplication {
         Tensor * input_tensor_;
         Tensor * output_tensor_;
         bool is_computation_graph_ready_;
-        int num_features_;
+        
 
         // we set these functions accessing the computation graph to be private
         // so that the user programs cannot invoke them
@@ -52,6 +52,7 @@ class AbstractApplication {
         friend class DistributedPipelinedLinearModelParallelExecutionEngineCPU;
         friend class DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU;
         friend class DistributedPIPHybridParallelExecutionEngineCPU;
+         friend class DistributedPIPHybridParallelExecutionEngineGPU;
         friend class DistributedModelParallelExecutionEngineGPU;
         friend class DistributedPipelinedLinearModelParallelExecutionEngineGPU;
         friend class DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
@@ -63,14 +64,17 @@ class AbstractApplication {
         Tensor * weight(int height, int width);
         Tensor * fc(Tensor * a, int num_hunits, std::string activation_fun = "None");
         Tensor * matmul(Tensor * a, Tensor * b);
+        Tensor * matmuladd(Tensor * a, Tensor * b, DataType alpha, DataType beta);
         Tensor * softmax(Tensor * t);
         Tensor * aggregation(Tensor * t, AggregationType type);
-
+        Tensor * identity(int height, int width);
+        Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta);
     public:
         AbstractApplication(int num_features);
         virtual ~AbstractApplication();
         // users should symbolicly define the GNN model in this function
         virtual Tensor * forward(Tensor * input) = 0;
+        int num_features_;
 };
 
 #endif

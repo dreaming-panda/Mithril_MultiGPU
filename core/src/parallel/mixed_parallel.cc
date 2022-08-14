@@ -9,7 +9,7 @@
 #include <map>
 #define NUM_CHUNK_MAX 4
 #define NUM_CHUNK_WARM_UP 1
-#define WARM_UP_STEPS 5
+#define WARM_UP_STEPS -1
 
 void MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU::forwarding_tasks_generator_thread_main(
         int num_epoch,
@@ -420,25 +420,25 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
         VertexId *chunk_end_ = new VertexId [num_chunks_];
         assert(chunk_begin_ != NULL);
         assert(chunk_end_ != NULL);
-        if (epoch_id == warmups_ + 1){
-            for (Operator * op: weight_ops) {
-                    assert(op != NULL);
-                    Tensor * tensor = op->get_output_tensor(0);
+        // if (epoch_id == warmups_ + 1){
+        //     for (Operator * op: weight_ops) {
+        //             assert(op != NULL);
+        //             Tensor * tensor = op->get_output_tensor(0);
                     
-                    assert(tensor != NULL);
-                    TensorResourceCPU * resource = (TensorResourceCPU*) tensor->resource;
-                    assert(resource != NULL);
-                    int num_elements = resource->get_num_elements();
-                    DataType * latest_data = resource->get_data();
-                    assert(latest_data != NULL);
-                    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-                    for(int vi = 0 ;vi < num_nodes; ++ vi){
-                    DataType * stashed_data = stashed_weight_data_[vi]->at(op);
-                    memcpy(stashed_data, latest_data, sizeof(DataType) * num_elements);
+        //             assert(tensor != NULL);
+        //             TensorResourceCPU * resource = (TensorResourceCPU*) tensor->resource;
+        //             assert(resource != NULL);
+        //             int num_elements = resource->get_num_elements();
+        //             DataType * latest_data = resource->get_data();
+        //             assert(latest_data != NULL);
+        //             int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+        //             for(int vi = 0 ;vi < num_nodes; ++ vi){
+        //             DataType * stashed_data = stashed_weight_data_[vi]->at(op);
+        //             memcpy(stashed_data, latest_data, sizeof(DataType) * num_elements);
 
-                    }
-                }
-        }
+        //             }
+        //         }
+        // }
     for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
         chunk_begin_[chunk_id] = num_vertice_per_chunk * chunk_id;
         chunk_end_[chunk_id] = num_vertice_per_chunk * (chunk_id + 1);
@@ -446,6 +446,24 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
             chunk_end_[chunk_id] = num_vertices;
         }
     }
+    for (Tensor * t: tensors_need_init) {
+                    assert(t != NULL);
+                    TensorResourceCPU * resource = (TensorResourceCPU*) t->resource;
+                    assert(resource != NULL);
+                    if (t->type == VERTEX_TENSOR) {
+                       continue;
+                    } else {
+                        assert(t->op->get_type() == OPERATOR_WEIGHT ||
+                                t->op->get_type() == OPERATOR_INPUT);
+                        DataType * grad = resource->get_grad();
+                        assert(grad != NULL);
+                        size_t num_elements = resource->get_num_elements();
+                        memset(
+                                grad, 0, sizeof(DataType) * num_elements
+                              );
+                    }
+                }
+
         while (task_id < 2 * num_chunks_) {
             // round-robin between the forwarding and backwarding task queue
             // within each queue, FIFO scheduling is adopted
@@ -621,7 +639,7 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                         size_t num_elements = resource->get_num_elements();
                         memset(
                                 grad, 0, sizeof(DataType) * num_elements
-                              );
+                              );        
                     }
                 }
 
@@ -683,6 +701,7 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                 }
                 
                 // update the weight by applying the gradients
+                if(chunk_id == num_chunks_ - 1){
                 AbstractLowerLevelOptimizer * lower_level_optimizer = 
                     optimizer_->get_lower_level_optimizer();
                 for (Operator * op: weight_ops) {
@@ -703,7 +722,7 @@ double MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEng
                             resource->get_data(), num_elements
                             );
                 }
-
+            }
                 finished_backwarding_task_queue_->push(backwarding_task);
                 num_finished_backwarding_tasks ++;
             }

@@ -12,6 +12,7 @@ using namespace std;
 const int size_ = 512;
 ncclComm_t  comm;
 cudaStream_t  stream;
+int myRank, nRanks;
 static uint64_t getHostHash(const char* string) {
   // Based on DJB2a, result = result * 33 ^ char
   uint64_t result = 5381;
@@ -33,6 +34,7 @@ static void getHostName(char* hostname, int maxlen) {
 }
 
 void SendThread(){
+  cudaSetDevice(myRank);
     cudaStream_t ss;
     cudaStreamCreate(&ss);
     int * sendbuff = new int[size_];
@@ -72,6 +74,7 @@ void SendThread2(){
     cudaStreamDestroy(ss);
 }
 void RecvThread(){
+  cudaSetDevice(myRank);
     int * recvbuff;
     AllocateCUDAMemory<int>(&recvbuff, size_, __FILE__, __LINE__);
     int * cpubuff = new int[size_];
@@ -92,7 +95,7 @@ void RecvThread(){
 }
 int main(int argc, char* argv[])
 {   
-    int myRank, nRanks;
+    
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &nRanks);

@@ -30,7 +30,7 @@ limitations under the License.
 #include "executor.h"
 #include "parallel/pipelined_model_parallel.h"
 
-const double learning_rate = 5e-3;
+const double learning_rate = 1e-3;
 //const double learning_rate = 0.3;
 const double weight_decay = 0;
 
@@ -87,10 +87,10 @@ int main(int argc, char ** argv) {
     });*/
 
 
-    std::string graph_path = "/home/p100/storage/gnn_datasets/arxiv";
-    int num_layers = 2;
-    int num_hidden_units = 128;
-    int num_epoch = 3000;
+    std::string graph_path = "/home/p100/storage/gnn_datasets/new_arxiv";
+    int num_layers = 3;
+    int num_hidden_units = 256;
+    int num_epoch = 50;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);

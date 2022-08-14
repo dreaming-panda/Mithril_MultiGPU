@@ -82,8 +82,8 @@ int main(int argc, char ** argv) {
     });*/
 
     std::string graph_path = "./storage/gnn_datasets/Cora";
-    int num_layers = 4;
-    int num_hidden_units = 32;
+    int num_layers = 2;
+    int num_hidden_units = 16;
     int num_epoch = 50;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
@@ -115,14 +115,19 @@ int main(int argc, char ** argv) {
     printf("Number of classes: %d\n", num_classes);
     printf("Number of feature dimensions: %d\n", num_features);
 
+   
     // train the model
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
 
     // setup the execution engine
     AbstractExecutionEngine * execution_engine = new SingleNodeExecutionEngineCPU();
     AbstractOptimizer * optimizer = new AdamOptimizerCPU(5e-3,0.0);
+
+    
     //AbstractOptimizer * optimizer = new SGDOptimizerCPU(learning_rate);
     AbstractOperatorExecutor * executor = new OperatorExecutorCPU(graph_structure);
+
+    
     //AbstractLoss * loss = new MSELossCPU();
     AbstractLoss * loss = new CrossEntropyLossCPU();
     execution_engine->set_graph_structure(graph_structure);
@@ -131,6 +136,8 @@ int main(int argc, char ** argv) {
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
 
+
+    
     double acc = execution_engine->execute_application(gcn, num_epoch);
     //assert(acc > 0.5);
 

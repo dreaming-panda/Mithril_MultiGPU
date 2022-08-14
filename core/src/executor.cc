@@ -22,19 +22,16 @@ limitations under the License.
 #include "executor.h"
 #include "graph.h"
 #include "distributed_sys.h"
-#include <cuda_runtime.h>
-#include<cublas_v2.h>
-#include<cudnn.h>
-#include"cuda/cuda_utils.h"
+
 #define DEBUG
 // AbstractTensorResource
 
 AbstractTensorResource::AbstractTensorResource(Tensor * tensor):
     tensor_(tensor) {
         assert(tensor != NULL);
-    cublasHandle_t handle;
-    cublasCreate(&handle);
-    cublasDestroy(handle);
+    // cublasHandle_t handle;
+    // cublasCreate(&handle);
+    // cublasDestroy(handle);
     }
 
 // TensorResourceCPU

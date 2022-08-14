@@ -241,7 +241,26 @@ double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * ou
     CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
     return double(ls);
 }
+double CrossEntropyLossGPU::LaunchGetLossWithStart(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int start){
+    const int ThreadNumber = 1024;
+    const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
+    int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
+    CalculateLossKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, loss_data_ + start, epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
+    cudaDeviceSynchronize();
 
+    const float alpha = 1.0f;
+    const float beta = 0.0f; 
+    cudnnCreateTensorDescriptor(&data_descriptor);
+    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
+    cudnnReduceTensor(
+        cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
+        data_descriptor,loss_data_ + start,&beta,loss_descriptor,loss_
+    );
+    DataType ls = 0.0;
+    CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
+    //ls = (ls * num_vertices) / this->num_vertices_;
+    return double(ls);
+}
 void CrossEntropyLossGPUV2::LaunchCalculateGradients(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize)
 {
     const int ThreadNumber = 1024;

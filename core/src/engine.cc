@@ -291,6 +291,8 @@ double SingleNodeExecutionEngineCPU::execute_application(AbstractApplication * a
     const std::vector<Operator*>& operators = application->get_operators();
 
     // allocating resource for all tensors
+
+   
     printf("*** Allocating resources for all tensors...\n");
     for (Operator * op: operators) {
         assert(op != NULL);
@@ -300,12 +302,16 @@ double SingleNodeExecutionEngineCPU::execute_application(AbstractApplication * a
         for (int i = 0; i < num_output_tensors; ++ i) {
             Tensor * tensor = op->get_output_tensor(i);
             assert(tensor->resource == NULL);
+        
             tensor->resource = new TensorResourceCPU(tensor, graph_structure_->get_num_global_vertices());
             tensor->resource->map();
+           
         }
     }
     printf("*** Done allocating resource.\n");
 
+
+   
     // preparing the input tensor
     printf("*** Preparing the input tensor...\n");
     prepare_input_tensor(application->get_input_tensor());

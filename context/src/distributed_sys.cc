@@ -55,7 +55,7 @@ DistributedSys::DistributedSys() {
     MPI_Get_processor_name(host_name, &host_name_len);
     host_name[host_name_len] = 0;
     printf("Initialized node %s\n", host_name);
-   // cudaSetDevice(node_id_ % num_nodes_);
+    cudaSetDevice(node_id_ % 4);
   // cudaSetDevice(3);
 }
 

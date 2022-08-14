@@ -568,37 +568,55 @@ double CrossEntropyLossGPU::get_loss(Tensor * output_tensor, Tensor * std_tensor
 
     VertexId num_vertices = output_resource->get_num_vertices();
     int output_size = output_tensor->dims[1];
-    DataType * output_data = new DataType[right * output_size];
-    DataType * std_data = new DataType[right * output_size];
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * output_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(std_data, d_std_data, right * output_size, __FILE__, __LINE__);
-    double loss = 0.;
-#pragma omp parallel for reduction(+:loss)
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType * o = &output_data[v_i * output_size];
-        DataType * s = &std_data[v_i * output_size];
-        double delta = 0.;
-        for (int i = 0; i < output_size; ++ i) {
-          //  o[i] = std::max((float)1e-8, o[i]);
-          //  o[i] = std::min((float)(1 - 1e-8), o[i]);
-            delta -= s[i] * log(o[i] + 1e-8);
-            if(isnan(delta)){
-                printf("%d, %f, %f\n", 1, s[i], o[i]);
-            }
-            assert(!isnan(delta));
-        }
-        loss += delta;
-    }
-    loss /= double(num_vertices);
+    double ls = LaunchGetLossWithStart(d_std_data + left * output_size, d_output_data + left * output_size, right - left, output_size, left);
+    return double(ls * (right - left) / num_vertices);
+//     assert(output_tensor != NULL);
+//     assert(std_tensor != NULL);
+//     assert(output_tensor->type == VERTEX_TENSOR);
+//     assert(std_tensor->type == VERTEX_TENSOR);
+//     assert(output_tensor->dims[0] == std_tensor->dims[0]);
+//     assert(output_tensor->dims[1] == std_tensor->dims[1]);
 
-    delete[] std_data;
-    delete[] output_data;
-    return loss;
+//     assert(output_tensor->resource != NULL);
+//     assert(std_tensor->resource != NULL);
+//     TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor->resource;
+//     TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor->resource;
+
+//     DataType * d_output_data = output_resource->get_gpu_data();
+//     DataType * d_std_data = std_resource->get_gpu_data();
+
+//     VertexId num_vertices = output_resource->get_num_vertices();
+//     int output_size = output_tensor->dims[1];
+//     DataType * output_data = new DataType[right * output_size];
+//     DataType * std_data = new DataType[right * output_size];
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * output_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(std_data, d_std_data, right * output_size, __FILE__, __LINE__);
+//     double loss = 0.;
+// #pragma omp parallel for reduction(+:loss)
+//     for (VertexId v_i = left; v_i < right; ++ v_i) {
+//         DataType * o = &output_data[v_i * output_size];
+//         DataType * s = &std_data[v_i * output_size];
+//         double delta = 0.;
+//         for (int i = 0; i < output_size; ++ i) {
+//           //  o[i] = std::max((float)1e-8, o[i]);
+//           //  o[i] = std::min((float)(1 - 1e-8), o[i]);
+//             delta -= s[i] * log(o[i] + 1e-8);
+//             if(isnan(delta)){
+//                 printf("%d, %f, %f\n", 1, s[i], o[i]);
+//             }
+//             assert(!isnan(delta));
+//         }
+//         loss += delta;
+//     }
+//     loss /= double(num_vertices);
+
+//     delete[] std_data;
+//     delete[] output_data;
+//     return loss;
 }
 
 void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right) {
 
-    
     assert(output_tensor != NULL);
     assert(std_tensor != NULL);
     assert(output_tensor->type == VERTEX_TENSOR);
@@ -618,25 +636,47 @@ void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * s
 
     VertexId num_vertices = output_resource->get_num_vertices();
     int output_size = output_tensor->dims[1];
+    LaunchCalculateGradients(d_std_data + left * output_size, d_output_data + left * output_size, 
+    d_output_grad + left * output_size, right - left, output_size
+    );
+//     assert(output_tensor != NULL);
+//     assert(std_tensor != NULL);
+//     assert(output_tensor->type == VERTEX_TENSOR);
+//     assert(std_tensor->type == VERTEX_TENSOR);
+//     assert(output_tensor->dims[0] == std_tensor->dims[0]);
+//     assert(output_tensor->dims[1] == std_tensor->dims[1]);
 
-    DataType * output_data = new DataType[right * output_size];
-    DataType * std_data = new DataType[right * output_size];
-    DataType * output_grad = new DataType[right * output_size];
-    CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * output_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(std_data, d_std_data, right * output_size, __FILE__, __LINE__);
-    CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, right * output_size, __FILE__, __LINE__);
-#pragma omp parallel for 
-    for (VertexId i = left; i < right; ++ i) {
-        for (int j = 0; j < output_size; ++ j) {
-            double o = output_data[i * output_size + j];
-            double s = std_data[i * output_size + j];
-            output_grad[i * output_size + j] = - s / double(num_vertices) /( o + 1e-8);
-            assert(!isnan(output_grad[i * output_size + j]));
-        }
-    }
-    CopyFromHostToCUDADevice<DataType>(d_output_grad + left * output_size, output_grad + left * output_size,
-    right * output_size - left * output_size, __FILE__, __LINE__);
-    delete[] output_data;
-    delete[] std_data;
-    delete[] output_grad;
+//     assert(output_tensor->resource != NULL);
+//     assert(std_tensor->resource != NULL);
+//     TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor->resource;
+//     TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor->resource;
+
+//     DataType * d_output_data = output_resource->get_gpu_data();
+//     DataType * d_std_data = std_resource->get_gpu_data();
+//     DataType * d_output_grad = output_resource->get_gpu_grad();
+
+
+//     VertexId num_vertices = output_resource->get_num_vertices();
+//     int output_size = output_tensor->dims[1];
+
+//     DataType * output_data = new DataType[right * output_size];
+//     DataType * std_data = new DataType[right * output_size];
+//     DataType * output_grad = new DataType[right * output_size];
+//     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, right * output_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(std_data, d_std_data, right * output_size, __FILE__, __LINE__);
+//     CopyFromCUDADeviceToHost<DataType>(output_grad, d_output_grad, right * output_size, __FILE__, __LINE__);
+// #pragma omp parallel for 
+//     for (VertexId i = left; i < right; ++ i) {
+//         for (int j = 0; j < output_size; ++ j) {
+//             double o = output_data[i * output_size + j];
+//             double s = std_data[i * output_size + j];
+//             output_grad[i * output_size + j] = - s / double(num_vertices) /( o + 1e-8);
+//             assert(!isnan(output_grad[i * output_size + j]));
+//         }
+//     }
+//     CopyFromHostToCUDADevice<DataType>(d_output_grad + left * output_size, output_grad + left * output_size,
+//     right * output_size - left * output_size, __FILE__, __LINE__);
+//     delete[] output_data;
+//     delete[] std_data;
+//     delete[] output_grad;
 }
