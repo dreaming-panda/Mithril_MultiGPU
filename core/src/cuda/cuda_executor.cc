@@ -1461,10 +1461,6 @@ void OperatorExecutorGPUV2::relu_forward(ReluOperator * op)
     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
     size_t num_elements = input_tensor_resource->get_num_elements();
     assert(num_elements == output_tensor_resource->get_num_elements());
-    DataType * input_data = input_tensor_resource->get_cpu_data();
-    DataType * output_data = output_tensor_resource->get_cpu_data();
-    assert(input_data != nullptr);
-    assert(output_data != nullptr);
     float alpha = 1.0;
     float beta = 0.0;
 
@@ -1731,7 +1727,7 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op) {
         (const void *)d_output_grad,
         data_descriptor_relu_forward,
         (const void *)d_input_data,
-        &beta,
+        &alpha,
         data_descriptor_relu_forward,
         (void *)d_input_grad
     );
@@ -1881,7 +1877,7 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
         (const void *)d_output_data,
         data_descriptor_softmax_forward,
         (const void *)d_output_grad,
-        &beta,
+        &alpha,
         data_descriptor_softmax_forward,
         (void *)d_input_grad
     );
@@ -1943,7 +1939,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
     cusparseSpMM_bufferSize(*cusparse_handle_,
     CUSPARSE_OPERATION_NON_TRANSPOSE,
     CUSPARSE_OPERATION_NON_TRANSPOSE,
-    &alpha, SpCsr_, OutputGrad, &beta, InputGrad, CUDA_R_32F,
+    &alpha, SpCsr_, OutputGrad, &alpha, InputGrad, CUDA_R_32F,
     CUSPARSE_SPMM_CSR_ALG2, &buffer_size_
     );
     cudaMalloc(&dbuffer_, buffer_size_);
@@ -1953,7 +1949,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
         *cusparse_handle_,
         CUSPARSE_OPERATION_NON_TRANSPOSE,
         CUSPARSE_OPERATION_NON_TRANSPOSE,
-        &alpha, SpCsr_, OutputGrad, &beta, InputGrad, CUDA_R_32F,
+        &alpha, SpCsr_, OutputGrad, &alpha, InputGrad, CUDA_R_32F,
         CUSPARSE_SPMM_CSR_ALG2, dbuffer_
     );
   //  cudaFree(dbuffer);
@@ -2466,7 +2462,7 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, Vert
         (const void *)(d_output_grad + start_idx),
         data_descriptor,
         (const void *)(d_input_data + start_idx),
-        &beta,
+        &alpha,
         data_descriptor,
         (void *)(d_input_grad + start_idx)
     );
@@ -2569,11 +2565,11 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, 
         M,
         d_output_grad + output_start_idx,
         M,
-        &beta,
+        &alpha,
         d_input_grad_0 + input_start_idx,
         K
     );
-    beta = 1.0;
+    
     cublasSgemm(
         *cublas_handle_,
         CUBLAS_OP_N,
@@ -2586,7 +2582,7 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, 
         M,
         d_input_data_0 + input_start_idx,
         K,
-        &beta,
+        &alpha,
         d_input_grad_1,
         M
     );
@@ -2713,14 +2709,14 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left
     float beta = 0.0;
     cudnnSoftmaxBackward(
         *cudnn_handle_,
-        CUDNN_SOFTMAX_FAST,
+        CUDNN_SOFTMAX_ACCURATE,
         CUDNN_SOFTMAX_MODE_INSTANCE,
         &alpha,
         data_descriptor,
         (const void *)(d_output_data + start_idx),
         data_descriptor,
         (const void *)(d_output_grad + start_idx),
-        &beta,
+        &alpha,
         data_descriptor,
         (void *)(d_input_grad + start_idx)
     );
@@ -2839,7 +2835,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
     cusparseSpMM_bufferSize(*cusparse_handle_,
     CUSPARSE_OPERATION_NON_TRANSPOSE,
     CUSPARSE_OPERATION_NON_TRANSPOSE,
-    &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+    &alpha, SpCsr, InputData, &alpha, OutputData, CUDA_R_32F,
     CUSPARSE_SPMM_CSR_ALG2, &buffer_size
     );
     cudaMalloc(&lginfo_backward[gid].dbuffer, buffer_size);
@@ -2849,7 +2845,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
         *cusparse_handle_,
         CUSPARSE_OPERATION_NON_TRANSPOSE,
         CUSPARSE_OPERATION_NON_TRANSPOSE,
-        &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+        &alpha, SpCsr, InputData, &alpha, OutputData, CUDA_R_32F,
         CUSPARSE_SPMM_CSR_ALG2, lginfo_backward[gid].dbuffer
     );
     //cudaFree(dbuffer);
@@ -3089,6 +3085,15 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op){
     data_descriptor,
     d_input_grad0
     );
+    // cudnnAddTensor(
+    // *cudnn_handle_,
+    // &beta,
+    // data_descriptor,
+    // d_output_grad,
+    // &one,
+    // data_descriptor,
+    // d_input_grad1
+    // );
     } else if(input_tensor0->type == NORMAL_TENSOR){
     assert(input_tensor0->type == NORMAL_TENSOR);
     assert(input_tensor1->type == NORMAL_TENSOR);
@@ -3279,6 +3284,15 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op, VertexId left, Vertex
     data_descriptor,
     d_input_grad0 + K * left
     );
+    // cudnnAddTensor(
+    // *cudnn_handle_,
+    // &beta,
+    // data_descriptor,
+    // d_output_grad + K * left,
+    // &one,
+    // data_descriptor,
+    // d_input_grad1 + K * left
+    // );
     } else if(input_tensor0->type == NORMAL_TENSOR){
     assert(input_tensor0->type == NORMAL_TENSOR);
     assert(input_tensor1->type == NORMAL_TENSOR);

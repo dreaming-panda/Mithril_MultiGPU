@@ -59,60 +59,66 @@ class GCN: public AbstractApplication {
         }
         ~GCN() {}
 
-        // Tensor * forward(Tensor * input) {
-        //     Tensor * t = input;
-        //     for (int i = 0; i < num_layers_; ++ i) {
-        //         if(i != num_layers_ - 1){
-        //         t = aggregation(t, NORM_SUM);
-        //         int output_size = num_hidden_units_;
-        //         Tensor * w = weight(t->dims[1], output_size);
-        //         t = matmul(t, w);
-        //         }else{
-        //             int output_size = num_classes_;
-        //             Tensor * w = weight(t->dims[1], output_size);
-        //             t = matmul(t, w);
-        //             t = aggregation(t, NORM_SUM);
-        //         }
-        //         if (i == num_layers_ - 1) {
-        //             t = softmax(t);
-        //         } else {
-        //             t = relu(t);
-        //         }
-        //     }
-        //     return t;
-        // }
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
-            Tensor * s = fc(input, num_hidden_units_);
             for (int i = 0; i < num_layers_; ++ i) {
+                if(i != num_layers_ - 1){
                 t = aggregation(t, NORM_SUM);
-                if(i == 0){
-                t = add(t , input, 0.8, 0.2);
-                } else{
-                t = add(t , s, 0.8, 0.2);
-                }
                 int output_size = num_hidden_units_;
-                if (i == num_layers_ - 1) {
-                    output_size = num_classes_;
-                }
                 Tensor * w = weight(t->dims[1], output_size);
-                if(t->dims[1] == output_size){
-                // Tensor * id = identity(t->dims[1], output_size);
-                // w = add(w, id, 1.0, 0.0);
-                // t = matmul(t, w);
-                    t = matmuladd(t, w, 1.0, 0.0);
-                }
-                else {
                 t = matmul(t, w);
+                }else{
+                    int output_size = num_classes_;
+                    Tensor * w = weight(t->dims[1], output_size);
+                    t = matmul(t, w);
+                    t = aggregation(t, NORM_SUM);
                 }
                 if (i == num_layers_ - 1) {
-                     t = softmax(t);
+                    t = softmax(t);
                 } else {
                     t = relu(t);
                 }
             }
             return t;
         }
+        // Tensor * forward(Tensor * input) {
+        //     Tensor * t = input;
+        //    // Tensor * s = fc(input, num_hidden_units_);
+        //     for (int i = 0; i < num_layers_; ++ i) {
+        //         t = aggregation(t, NORM_SUM);
+        //         if(i == 0){
+        //         t = add(t , input, 0.8, 0.2);
+        //         } else{
+        //         t = add(t , input, 0.8, 0.2);
+        //         }
+        //         int output_size = num_hidden_units_;
+        //         if (i == num_layers_ - 1) {
+        //             output_size = num_classes_;
+        //         }
+        //         Tensor * w = weight(t->dims[1], output_size);
+        //         if(t->dims[1] == output_size){
+        //         // Tensor * id = identity(t->dims[1], output_size);
+        //         // w = add(w, id, 1.0, 0.0);
+        //         // t = matmul(t, w);
+        //         //t = matmuladd(t, w, 1.0, 0.0);
+        //         Tensor * m = matmul(t, w);
+        //         if(i == 0){
+        //         t = add(t, m, 0.0, 1.0);
+        //         }else {
+        //         t = add(t, m, 1.0 - 1.0 / i, 1.0 / i);
+        //         }
+        //         }
+        //         else {
+        //         t = matmul(t, w);
+        //         }
+        //         if (i == num_layers_ - 1) {
+        //              t = softmax(t);
+        //         } else {
+        //             t = relu(t);
+        //         }
+        //     }
+        //     return t;
+        // }
 };
 
 int main(int argc, char ** argv) {
@@ -132,7 +138,7 @@ int main(int argc, char ** argv) {
     std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/products_new";
     int num_layers = 3;
     int num_hidden_units = 128;
-    int num_epoch = 50;
+    int num_epoch = 2000;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -165,6 +171,7 @@ int main(int argc, char ** argv) {
     printf("Number of classes: %d\n", num_classes);
     printf("Number of feature dimensions: %d\n", num_features);
 
+    sleep(10);
     // train the model
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
 

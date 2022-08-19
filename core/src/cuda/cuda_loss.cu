@@ -23,13 +23,17 @@ int per_thread_nodes
     if(nid_end >= num_vertices)nid_end = num_vertices;
 
     for(int i = nid_start; i < nid_end; ++i){
+        double los = 0.0f;
         for(int j = 0; j < outputsize; ++j){
             double o = output_data[i * outputsize + j];
             double s = std_data[i * outputsize + j];
             output_grad[i * outputsize + j] = - s / double(num_vertices) /( o + epsilon);
-           //output_grad[i * outputsize + j] = - s / double(num_vertices);
-            //if(isnan(output_grad[i * outputsize + j]))output_grad[i * outputsize + j] = 0.0;
+            los -= s * log(o + epsilon);
         }
+        for(int j = 0; j < outputsize; ++j){
+            output_grad[i * outputsize + j]  /= (los + 0.31);
+        }
+
     }
 }
 __global__ void CalculateGradientsV2Kernel(
@@ -115,7 +119,7 @@ int per_thread_nodes
              delta -= s[j] * log(o[j] + epsilon);
             //delta -= s[j] * o[j];
         }
-        loss_data[i] = delta;
+        loss_data[i] = log(delta + 0.31) - log(0.31);
     }
 }
 __global__ void CalculateLossV2Kernel(

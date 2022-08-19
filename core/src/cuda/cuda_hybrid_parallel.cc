@@ -1,7 +1,7 @@
 #include"cuda/cuda_hybrid_parallel.h"
 #include"cuda/cuda_utils.h"
 
-#define FIXPART
+#define MODEL_C
 #define OPTIMIZE
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
@@ -3132,7 +3132,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     partitioning.partition_op_end[3] = num_operators;
 #endif
 
-#ifdef FIXPART
+#ifdef GRAPH
     // assert(num_nodes == 4);
     // for (int i = 0; i < 4; ++ i) {
     //     partitioning.partition_vid_begin[i] = 0;
@@ -3165,6 +3165,20 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     //     partitioning.partition_op_end[i] = i * (num_operators / 3);
     // }
     // partitioning.partition_op_end[3] = num_operators;
+#endif
+#ifdef MODEL
+    assert(num_nodes == 4);
+    for (int i = 0; i < 4; ++ i) {
+        partitioning.partition_vid_begin[i] = 0;
+        partitioning.partition_vid_end[i] = num_global_vertices;
+    }
+   
+   
+    for (int i = 0; i < 4; ++ i) {
+        partitioning.partition_op_begin[i] = (i) * (num_operators / 4);
+        partitioning.partition_op_end[i] = (i+1) * (num_operators / 4);
+    }
+    partitioning.partition_op_end[3] = num_operators;
 #endif
     /*
     assert(num_nodes == 1);

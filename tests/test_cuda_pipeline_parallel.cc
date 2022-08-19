@@ -76,32 +76,20 @@ class GCN: public AbstractApplication {
             assert(num_classes >= 1);
         }
         ~GCN() {}
-
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
-            Tensor * s = fc(input, num_hidden_units_);
             for (int i = 0; i < num_layers_; ++ i) {
+                if(i != num_layers_ - 1){
                 t = aggregation(t, NORM_SUM);
-                if(i == 0){
-                t = add(t , input, 0.8, 0.2);
-                } else {
-                t = add(t , s, 0.8, 0.2);
-                }
                 int output_size = num_hidden_units_;
-                if (i == num_layers_ - 1) {
-                    output_size = num_classes_;
-                }
                 Tensor * w = weight(t->dims[1], output_size);
-            //    t = matmul(t, w);
-               if(t->dims[1] == output_size){
-                // Tensor * id = identity(t->dims[1], output_size);
-                // w = add(w, id, 1.0, 0.0);
-                // t = matmul(t, w);
-                   t = matmuladd(t, w, 1.0, 0.0);
-               }
-               else {
-               t = matmul(t, w);
-               }
+                t = matmul(t, w);
+                }else{
+                    int output_size = num_classes_;
+                    Tensor * w = weight(t->dims[1], output_size);
+                    t = matmul(t, w);
+                    t = aggregation(t, NORM_SUM);
+                }
                 if (i == num_layers_ - 1) {
                     t = softmax(t);
                 } else {
@@ -110,6 +98,45 @@ class GCN: public AbstractApplication {
             }
             return t;
         }
+        // Tensor * forward(Tensor * input) {
+        //     Tensor * t = input;
+        //     Tensor * s = fc(input, num_hidden_units_);
+        //     for (int i = 0; i < num_layers_; ++ i) {
+        //         t = aggregation(t, NORM_SUM);
+        //         if(i == 0){
+        //         t = add(t , input, 0.8, 0.2);
+        //         } else {
+        //         t = add(t , s, 0.8, 0.2);
+        //         }
+        //         int output_size = num_hidden_units_;
+        //         if (i == num_layers_ - 1) {
+        //             output_size = num_classes_;
+        //         }
+        //         Tensor * w = weight(t->dims[1], output_size);
+        //     //    t = matmul(t, w);
+        //        if(t->dims[1] == output_size){
+        //         // Tensor * id = identity(t->dims[1], output_size);
+        //         // w = add(w, id, 1.0, 0.0);
+        //         // t = matmul(t, w);
+        //         //  t = matmuladd(t, w, 1.0, 0.0);
+        //         Tensor * m = matmul(t, w);
+        //         if(i == 0){
+        //         t = add(t, m, 0.0, 1.0);
+        //         } else {
+        //             t = add(t, m, 1.0 - 1.0 / i, 1.0 / i);
+        //         }
+        //        }
+        //        else {
+        //        t = matmul(t, w);
+        //        }
+        //         if (i == num_layers_ - 1) {
+        //             t = softmax(t);
+        //         } else {
+        //             t = relu(t);
+        //         }
+        //     }
+        //     return t;
+        // }
 };
 
 int main(int argc, char ** argv) {
@@ -126,10 +153,10 @@ int main(int argc, char ** argv) {
         }
     });*/
 
-    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/products_new";
+    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/new_arxiv";
     int num_layers = 3;
-    int num_hidden_units = 128;
-    int num_epoch = 50;
+    int num_hidden_units = 256;
+    int num_epoch = 5000;
 
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
@@ -169,13 +196,13 @@ int main(int argc, char ** argv) {
     GraphNonStructualDataLoaderFullyReplicated graph_non_structural_data_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
             graph_path + "/meta_data.txt",
-            graph_path + "/edge_list.txt",
+            graph_path + "/edge_list_new.txt",
             graph_path + "/vertex_structure_partition.txt"
             );
     graph_non_structural_data = graph_non_structural_data_loader.load_graph_non_structural_data(
             graph_path + "/meta_data.txt",
-            graph_path + "/feature.txt",
-            graph_path + "/label.txt",
+            graph_path + "/feature_new.txt",
+            graph_path + "/label_new.txt",
             graph_path + "/vertex_data_partition.txt"
             );
 
