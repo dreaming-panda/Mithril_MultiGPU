@@ -377,6 +377,9 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         }
     }
     printf("*** Done preparing the weight tensor.\n");
+
+    // sleep(100);
+    // exit(0);
     // start training
     double total_runtime = 0.;
     double loss_time = 0.;

@@ -137,7 +137,7 @@ int main(int argc, char ** argv) {
     cudaSetDevice(0);
     std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/products_new";
     int num_layers = 3;
-    int num_hidden_units = 128;
+    int num_hidden_units = 100;
     int num_epoch = 2000;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
@@ -171,7 +171,6 @@ int main(int argc, char ** argv) {
     printf("Number of classes: %d\n", num_classes);
     printf("Number of feature dimensions: %d\n", num_features);
 
-    sleep(10);
     // train the model
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
 
@@ -192,7 +191,7 @@ int main(int argc, char ** argv) {
     executor->set_activation_size(num_hidden_units,num_classes);
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
     executor->build_inner_csr_();
-    executor->init_identity(num_hidden_units);
+    //executor->init_identity(num_hidden_units);
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
     execution_engine->setCuda(cudnn, graph_structure->get_num_global_vertices());
@@ -202,7 +201,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
     execution_engine->set_lr_scheduler(lr_scheduler);
-
+    sleep(100);
     double acc = execution_engine->execute_application(gcn, num_epoch);
     #ifdef TIMETAG
     executor->Print();

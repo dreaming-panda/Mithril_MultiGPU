@@ -153,10 +153,10 @@ int main(int argc, char ** argv) {
         }
     });*/
 
-    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/new_arxiv";
+    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/products_new";
     int num_layers = 3;
-    int num_hidden_units = 256;
-    int num_epoch = 5000;
+    int num_hidden_units = 100;
+    int num_epoch = 100;
 
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
@@ -196,19 +196,19 @@ int main(int argc, char ** argv) {
     GraphNonStructualDataLoaderFullyReplicated graph_non_structural_data_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
             graph_path + "/meta_data.txt",
-            graph_path + "/edge_list_new.txt",
+            graph_path + "/edge_list.txt",
             graph_path + "/vertex_structure_partition.txt"
             );
     graph_non_structural_data = graph_non_structural_data_loader.load_graph_non_structural_data(
             graph_path + "/meta_data.txt",
-            graph_path + "/feature_new.txt",
-            graph_path + "/label_new.txt",
+            graph_path + "/feature.txt",
+            graph_path + "/label.txt",
             graph_path + "/vertex_data_partition.txt"
             );
 
     graph_structure->SetCuda(true);
-    graph_structure->InitMemory();
-    graph_structure->InitCsrBuffer();
+    //graph_structure->InitMemory();
+    //graph_structure->InitCsrBuffer();
     int num_classes = graph_non_structural_data->get_num_labels();
     int num_features = graph_non_structural_data->get_num_feature_dimensions();
     printf("Number of classes: %d\n", num_classes);
@@ -235,8 +235,8 @@ int main(int argc, char ** argv) {
     cusparseCreate(&cusparse);
     executor->set_activation_size(num_hidden_units,num_classes);
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
-    executor->build_inner_csr_();
-    executor->init_identity(num_hidden_units);
+    //executor->build_inner_csr_();
+    //executor->init_identity(num_hidden_units);
     //AbstractLoss * loss = new MSELossGPU();
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
@@ -246,7 +246,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_optimizer(optimizer);
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
-   
+    
     double acc = execution_engine->execute_application(gcn, num_epoch);
     //assert(acc > 0.5);
 

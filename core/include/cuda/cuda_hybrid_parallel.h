@@ -975,6 +975,7 @@ class CUDABPIPLocalGraph:public BPIPLocalGraph
             host_csrColIn_Out_ = new int[nnz_out_];
             host_csrRowOffsets_Out_ = new int[num_master_vertices_ + 1];
             host_csrValue_Out_ = new DataType[nnz_out_];
+            printf("%d, %d, %d\n", num_master_vertices_, nnz_in_, nnz_out_);
             AllocateCUDAMemory<int>(&cuda_csrRowOffsets_In_, num_master_vertices_ + 1, __FILE__, __LINE__);
             AllocateCUDAMemory<int>(&cuda_csrColIn_In_, nnz_in_, __FILE__, __LINE__);
             AllocateCUDAMemory<DataType>(&cuda_csrValue_In_, nnz_in_, __FILE__, __LINE__);

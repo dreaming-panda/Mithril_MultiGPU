@@ -1,8 +1,9 @@
 #include"cuda/cuda_hybrid_parallel.h"
 #include"cuda/cuda_utils.h"
 
-#define MODEL_C
+#define MODEL
 #define OPTIMIZE
+#define FIXPART
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
         pthread_barrier_t * barrier): 
@@ -2974,6 +2975,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_std_tensor() {
+
+    if(is_bottommost_node_)
+    {
     Tensor * output_tensor = application_->get_output_tensor();
     output_tensor_ = output_tensor;
     assert(output_tensor->type == VERTEX_TENSOR);
@@ -3006,6 +3010,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_std_tensor()
         //memcpy(data + offset, label_vec.data, sizeof(DataType) * num_labels);
          CopyFromHostToCUDADevice<DataType>(data + offset, label_vec.data, num_labels, __FILE__, __LINE__);
         offset += num_labels;
+    }
     }
 }
 
@@ -3058,9 +3063,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::release_resources() {
         Tensor * tensor = weight_op->get_output_tensor(0);
         tensor->resource->unmap();
     }
+    if(is_bottommost_node_){
     std_tensor_->resource->unmap();
     delete std_tensor_->resource;
     delete std_tensor_;
+    }
     int num_tensors = op_ten_manager_->get_num_tensors();
     for (int i = 0; i < num_tensors; ++ i) {
         Tensor * tensor = op_ten_manager_->get_tensor(i);
@@ -3229,6 +3236,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     partitioning_ = partitioning;
 
+
     // construct the helper classes
     printf("*** Node %d, constructing the helper classes...\n", node_id);
     op_ten_manager_ = new CUDAOperatorsAndTensorsManager(operators);
@@ -3236,10 +3244,12 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             graph_structure_, 
             partitioning.partition_vid_begin[node_id], partitioning.partition_vid_end[node_id]
             );
+    
     vtensor_manager_ = new CUDAVertexTensorDataGradManager(
             op_ten_manager_, vid_translation_,
             partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id]
             );
+   
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
@@ -3251,12 +3261,16 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             );
     shadow_gradients_ = new CUDAShadowGradientsMasterVertices(vid_translation_, chunk_manager_);
     //local_graph_ = new PIPLocalGraph(graph_structure_, vid_translation_);
+    
     CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_);
     lgraph->InitMemory();
     lgraph->InitCsr();
+    
+    
+    
     local_graph_ = lgraph;
     parameter_server_ = new CUDAPIPParallelParameterServer(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this);
-
+    
     assert(op_ten_manager_ != NULL);
     assert(vid_translation_ != NULL);
     assert(vtensor_manager_ != NULL);
@@ -3266,6 +3280,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     assert(local_graph_ != NULL);
     assert(parameter_server_ != NULL);
 
+    
     printf("*** Node %d, setting up some other necessary information...\n", node_id);
     // construct local chunk IDs
     chunk_manager_->get_local_chunk_ids(local_chunk_ids_);
@@ -3280,6 +3295,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     partition_end_ = partitioning.partition_vid_end[node_id];
     num_chunks_ = chunk_manager_->get_num_global_chunks();
 
+    
     // create the helper threads 
     printf("*** Node %d, starting the helper threads...\n", node_id);
     int num_helper_threads_ = 8; 
@@ -3290,8 +3306,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     forward_task_dispatcher_ = new CUDAPIPForwardTaskDispatcher(total_num_forwarding_tasks, &barrier_);
     forward_task_committer_ = new CUDAPIPForwardTaskCommitter(total_num_forwarding_tasks, &barrier_);
+    
     backward_task_dispatcher_ = new CUDAPIPBackwardTaskDispatcher(total_num_backwarding_tasks, &barrier_);
     backward_task_committer_ = new CUDAPIPBackwardTaskCommitter(total_num_backwarding_tasks, &barrier_);
+
+   
     act_update_sender_ = new CUDAPIPGraphDataActivationUpdateSender(this, total_num_forwarding_tasks, &barrier_);
     act_update_receiver_ = new CUDAPIPGraphDataActivationUpdateReceiver(this, &barrier_);
     grad_update_sender_ = new CUDAPIPGraphDataGradientUpdateSender(this, total_num_backwarding_tasks, &barrier_); 
@@ -3312,7 +3331,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     backward_task_committer_->set_engine(this);
 
     // some necessary initialization
-
+    
     generate_backward_operator_mask(operators);
     set_up_tensor_resourses();
     init_weights();
