@@ -23,10 +23,10 @@
 
 # Sets the possible install locations
 set(CUSPARSE_HINTS
-  /home/a100/cu111
+  /opt/apps/cuda/11.3/
 )
 set(CUSPARSE_PATHS
-  /home/a100/cu111
+  /opt/apps/cuda/11.3/
 )
 
 # Finds the include directories

@@ -153,7 +153,7 @@ int main(int argc, char ** argv) {
         }
     });*/
 
-    std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/products_new";
+    std::string graph_path = "./storage/gnn_datasets/Cora";
     int num_layers = 3;
     int num_hidden_units = 100;
     int num_epoch = 100;

@@ -5,11 +5,11 @@ project(Mithril)
 
 set (CMAKE_C_COMPILER "mpicc")
 set (CMAKE_CXX_COMPILER "mpicxx")
-set (CMAKE_CUDA_COMPILER "/home/a100/cu111/bin/nvcc")
+set (CMAKE_CUDA_COMPILER "/opt/apps/cuda/11.3/bin/nvcc")
 enable_language(CUDA)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)     
-set(BOOST_ROOT /home/a100/boost-install)
-set(Boost_NO_SYSTEM_PATHS ON)
+#set(BOOST_ROOT /opt/apps/intel18/impi18_0/boost/1.66)
+#set(Boost_NO_SYSTEM_PATHS ON)
 # find necessary dependent packages 
 find_package(cuDA REQUIRED)
 find_package(cuBLAS REQUIRED)
@@ -32,7 +32,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgcc_s -lc")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D PRINT_DEBUG_MSG") # delete this line to prevent printing debug msg
-set(CMAKE_CUDA_ARCHITECTURES 70 75 80)
+set(CMAKE_CUDA_ARCHITECTURES 61 75 80)
 # include directories
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${CUDA_INCLUDE_DIRS})
