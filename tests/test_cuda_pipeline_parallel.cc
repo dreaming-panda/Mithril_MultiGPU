@@ -196,13 +196,13 @@ int main(int argc, char ** argv) {
     GraphNonStructualDataLoaderFullyReplicated graph_non_structural_data_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
             graph_path + "/meta_data.txt",
-            graph_path + "/edge_list.txt",
+            graph_path + "/edge_list.bin",
             graph_path + "/vertex_structure_partition.txt"
             );
     graph_non_structural_data = graph_non_structural_data_loader.load_graph_non_structural_data(
             graph_path + "/meta_data.txt",
-            graph_path + "/feature.txt",
-            graph_path + "/label.txt",
+            graph_path + "/feature.bin",
+            graph_path + "/label.bin",
             graph_path + "/vertex_data_partition.txt"
             );
 

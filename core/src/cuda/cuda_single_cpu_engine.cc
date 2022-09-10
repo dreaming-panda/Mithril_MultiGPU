@@ -59,8 +59,8 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
             if (tensor != output_tensor) {
                 TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
                 assert(resource != nullptr);
-                DataType * grad = resource->get_cpu_grad();
-                assert(grad != nullptr);
+                // DataType * grad = resource->get_cpu_grad();
+                // assert(grad != nullptr);
                 DataType * cuda_grad = resource->get_gpu_grad();
                 assert(cuda_grad != nullptr);
                 size_t num_elements = resource->get_num_elements();
@@ -118,16 +118,17 @@ void SingleNodeExecutionEngineGPU::optimize_weights(
 void SingleNodeExecutionEngineGPU::prepare_input_tensor(Tensor * input_tensor) {
     TensorResourceGPU * tensor_resource = (TensorResourceGPU*) input_tensor->resource;
     assert(tensor_resource != nullptr);
-    assert(tensor_resource->get_cpu_data() != nullptr);
+    // assert(tensor_resource->get_cpu_data() != nullptr);
     assert(tensor_resource->get_gpu_data() != nullptr);
     int num_features = graph_non_structural_data_->get_num_feature_dimensions();
  //   printf("%d\n",num_features);
     assert(input_tensor->dims[0] == -1);
     assert(input_tensor->dims[1] == num_features);
     size_t offset = 0;
-    DataType * tensor_data = tensor_resource->get_cpu_data();
+    
     DataType * cuda_tensor_data = tensor_resource->get_gpu_data();
     VertexId num_vertices = graph_structure_->get_num_global_vertices();
+    DataType * tensor_data = new DataType[num_features * num_vertices];
     for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
         FeatureVector feature_vec = graph_non_structural_data_->get_feature(v_i);
     //    if(feature_vec.vec_len != num_features)printf("%d,%d\n",feature_vec.vec_len,v_i);
@@ -137,6 +138,7 @@ void SingleNodeExecutionEngineGPU::prepare_input_tensor(Tensor * input_tensor) {
         offset += num_features;
     }
     CopyFromHostToCUDADevice<DataType>(cuda_tensor_data, tensor_data, num_features * num_vertices, __FILE__, __LINE__);
+    delete [] tensor_data;
 }
 void SingleNodeExecutionEngineGPU::prepare_std_tensor(Tensor * std_tensor) {
     assert(std_tensor != nullptr);
@@ -144,8 +146,8 @@ void SingleNodeExecutionEngineGPU::prepare_std_tensor(Tensor * std_tensor) {
     TensorResourceGPU * resource = (TensorResourceGPU*) std_tensor->resource;
     assert(resource != nullptr);
 
-    DataType * data = resource->get_cpu_data();
-    assert(data != nullptr);
+   
+    
     DataType * cuda_data = resource->get_gpu_data();
     assert(cuda_data != nullptr);
     int num_labels = graph_non_structural_data_->get_num_labels();
@@ -157,7 +159,7 @@ void SingleNodeExecutionEngineGPU::prepare_std_tensor(Tensor * std_tensor) {
 
     printf("    Number of labels: %d\n", num_labels);
     printf("    Number of vertices: %u\n", num_vertices);
-
+    DataType * data = new DataType[num_vertices * num_labels];
     for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
         LabelVector label_vec = graph_non_structural_data_->get_label(v_i);
         assert(label_vec.vec_len == num_labels);
@@ -166,6 +168,7 @@ void SingleNodeExecutionEngineGPU::prepare_std_tensor(Tensor * std_tensor) {
         offset += num_labels;
     }
     CopyFromHostToCUDADevice<DataType>(cuda_data, data, num_vertices * num_labels, __FILE__, __LINE__);
+    delete [] data;
 }
 void SingleNodeExecutionEngineGPU::init_weight_tensor_data(
         DataType * data,
@@ -242,10 +245,10 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy(Tensor * output_tensor, 
     TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor->resource;
     TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor->resource;
 
-    DataType * output_data = output_resource->get_cpu_data();
-    DataType * std_data = std_resource->get_cpu_data();
-    assert(output_data != nullptr);
-    assert(std_data != nullptr);
+    // DataType * output_data = output_resource->get_cpu_data();
+    // DataType * std_data = std_resource->get_cpu_data();
+    // assert(output_data != nullptr);
+    // assert(std_data != nullptr);
     DataType * cuda_output_data = output_resource->get_gpu_data();
     DataType * cuda_std_data = std_resource->get_gpu_data();
     assert(cuda_output_data != nullptr);

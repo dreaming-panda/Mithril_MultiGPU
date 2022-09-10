@@ -1504,9 +1504,9 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op)
     TensorResourceGPU * input_tensor_resource_1 = (TensorResourceGPU*) input_tensor_1->resource;
     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
 
-    DataType * input_data_0 = input_tensor_resource_0->get_cpu_data();
-    DataType * input_data_1 = input_tensor_resource_1->get_cpu_data();
-    DataType * output_data = output_tensor_resource->get_cpu_data();
+    // DataType * input_data_0 = input_tensor_resource_0->get_cpu_data();
+    // DataType * input_data_1 = input_tensor_resource_1->get_cpu_data();
+    // DataType * output_data = output_tensor_resource->get_cpu_data();
 
     DataType * d_input_data_0 = input_tensor_resource_0->get_gpu_data();
     DataType * d_input_data_1 = input_tensor_resource_1->get_gpu_data();
@@ -1564,8 +1564,8 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op)
     assert(input_tensor_resource != NULL);
     assert(output_tensor_resource != NULL);
 
-    DataType * input_data = input_tensor_resource->get_cpu_data();
-    DataType * output_data = output_tensor_resource->get_cpu_data();
+    // DataType * input_data = input_tensor_resource->get_cpu_data();
+    // DataType * output_data = output_tensor_resource->get_cpu_data();
 
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
@@ -1611,13 +1611,13 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op)
     assert(input_tensor_resource != NULL);
     assert(output_tensor_resource != NULL);
 
-    DataType * input_data = input_tensor_resource->get_cpu_data();
-    DataType * output_data = output_tensor_resource->get_cpu_data();
+    // DataType * input_data = input_tensor_resource->get_cpu_data();
+    // DataType * output_data = output_tensor_resource->get_cpu_data();
 
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
-    assert(input_data != NULL);
-    assert(output_data != NULL);
+    // assert(input_data != NULL);
+    // assert(output_data != NULL);
     assert(d_input_data != NULL);
     assert(d_output_data != NULL);
 
@@ -1691,20 +1691,20 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op) {
     size_t num_elements = input_tensor_resource->get_num_elements();
     assert(num_elements == output_tensor_resource->get_num_elements());
 
-    DataType * input_grad = input_tensor_resource->get_cpu_grad();
-    DataType * input_data = input_tensor_resource->get_cpu_data();
-    DataType * output_grad = output_tensor_resource->get_cpu_grad();
-    DataType * output_data = output_tensor_resource->get_cpu_data();
+    // DataType * input_grad = input_tensor_resource->get_cpu_grad();
+    // DataType * input_data = input_tensor_resource->get_cpu_data();
+    // DataType * output_grad = output_tensor_resource->get_cpu_grad();
+    // DataType * output_data = output_tensor_resource->get_cpu_data();
 
     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
 
-    assert(input_grad != nullptr);
-    assert(input_data != nullptr);
-    assert(output_grad != nullptr);
-    assert(output_data != nullptr);
+    // assert(input_grad != nullptr);
+    // assert(input_data != nullptr);
+    // assert(output_grad != nullptr);
+    // assert(output_data != nullptr);
 
     assert(d_input_grad != nullptr);
     assert(d_input_data != nullptr);
@@ -1767,16 +1767,16 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op) {
     assert(input_tensor_resource_1 != NULL);
     assert(output_tensor_resource != NULL);
 
-    DataType * input_data_0 = input_tensor_resource_0->get_cpu_data();
-    DataType * input_data_1 = input_tensor_resource_1->get_cpu_data();
-    DataType * input_grad_0 = input_tensor_resource_0->get_cpu_grad();
-    DataType * input_grad_1 = input_tensor_resource_1->get_cpu_grad();
-    DataType * output_grad = output_tensor_resource->get_cpu_grad();
-    assert(input_data_0 != NULL);
-    assert(input_data_1 != NULL);
-    assert(input_grad_0 != NULL);
-    assert(input_grad_1 != NULL);
-    assert(output_grad != NULL);
+    // DataType * input_data_0 = input_tensor_resource_0->get_cpu_data();
+    // DataType * input_data_1 = input_tensor_resource_1->get_cpu_data();
+    // DataType * input_grad_0 = input_tensor_resource_0->get_cpu_grad();
+    // DataType * input_grad_1 = input_tensor_resource_1->get_cpu_grad();
+    // DataType * output_grad = output_tensor_resource->get_cpu_grad();
+    // assert(input_data_0 != NULL);
+    // assert(input_data_1 != NULL);
+    // assert(input_grad_0 != NULL);
+    // assert(input_grad_1 != NULL);
+    // assert(output_grad != NULL);
 
     
     // C = A x B
@@ -1849,17 +1849,17 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
     assert(input_tensor_resource != NULL);
     assert(output_tensor_resource != NULL);
 
-    DataType * input_grad = input_tensor_resource->get_cpu_grad();
-    DataType * output_grad = output_tensor_resource->get_cpu_grad();
-    DataType * output_data = output_tensor_resource->get_cpu_data();
+    // DataType * input_grad = input_tensor_resource->get_cpu_grad();
+    // DataType * output_grad = output_tensor_resource->get_cpu_grad();
+    // DataType * output_data = output_tensor_resource->get_cpu_data();
 
     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
 
-    assert(input_grad != NULL);
-    assert(output_grad != NULL);
-    assert(output_data != NULL);
+    // assert(input_grad != NULL);
+    // assert(output_grad != NULL);
+    // assert(output_data != NULL);
     
     AbstractGraphStructure * graph = graph_;
     VertexId num_vertices = graph->get_num_global_vertices();
@@ -1906,13 +1906,13 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
     assert(input_tensor_resource != NULL);
     assert(output_tensor_resource != NULL);
 
-    DataType * input_grad = input_tensor_resource->get_cpu_grad();
-    DataType * output_grad = output_tensor_resource->get_cpu_grad();
+    // DataType * input_grad = input_tensor_resource->get_cpu_grad();
+    // DataType * output_grad = output_tensor_resource->get_cpu_grad();
 
     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
-    assert(input_grad != NULL);
-    assert(output_grad != NULL);
+    // assert(input_grad != NULL);
+    // assert(output_grad != NULL);
 
     CUDAFullyStructualGraph* graph = graph_;
     VertexId num_vertices = graph->get_num_global_vertices();
@@ -3344,9 +3344,9 @@ void OperatorExecutorGPUV2::matmuladd_forward(MatmulAddOperator * op)
     TensorResourceGPU * input_tensor_resource_1 = (TensorResourceGPU*) input_tensor_1->resource;
     TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
 
-    DataType * input_data_0 = input_tensor_resource_0->get_cpu_data();
-    DataType * input_data_1 = input_tensor_resource_1->get_cpu_data();
-    DataType * output_data = output_tensor_resource->get_cpu_data();
+    // DataType * input_data_0 = input_tensor_resource_0->get_cpu_data();
+    // DataType * input_data_1 = input_tensor_resource_1->get_cpu_data();
+    // DataType * output_data = output_tensor_resource->get_cpu_data();
 
     DataType * d_input_data_0 = input_tensor_resource_0->get_gpu_data();
     DataType * d_input_data_1 = input_tensor_resource_1->get_gpu_data();

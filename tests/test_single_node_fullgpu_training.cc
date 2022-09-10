@@ -137,7 +137,7 @@ int main(int argc, char ** argv) {
     cudaSetDevice(0);
     std::string graph_path = "/data1/Zhuoming/storage/gnn_datasets/products_new";
     int num_layers = 3;
-    int num_hidden_units = 100;
+    int num_hidden_units = 128;
     int num_epoch = 2000;
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
@@ -154,13 +154,13 @@ int main(int argc, char ** argv) {
     GraphNonStructualDataLoaderFullyReplicated graph_non_structural_data_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
             graph_path + "/meta_data.txt",
-            graph_path + "/edge_list.txt",
+            graph_path + "/edge_list.bin",
             graph_path + "/vertex_structure_partition.txt"
             );
     graph_non_structural_data = graph_non_structural_data_loader.load_graph_non_structural_data(
             graph_path + "/meta_data.txt",
-            graph_path + "/feature.txt",
-            graph_path + "/label.txt",
+            graph_path + "/feature.bin",
+            graph_path + "/label.bin",
             graph_path + "/vertex_data_partition.txt"
             );
     graph_structure->SetCuda(true);
@@ -201,7 +201,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
     execution_engine->set_lr_scheduler(lr_scheduler);
-    sleep(100);
+    
     double acc = execution_engine->execute_application(gcn, num_epoch);
     #ifdef TIMETAG
     executor->Print();

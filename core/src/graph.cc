@@ -227,22 +227,28 @@ void GraphStructureFullyReplicatedV2::load_from_file(
     out_edges_ = new OutEdge [num_edges_];
     csc_idx_ = new EdgeId [num_vertices_ + 1];
     in_edges_ = new InEdge [num_edges_];
+    EdgeInner inner;
     assert(csr_idx_ != NULL);
     assert(out_edges_ != NULL);
     assert(csc_idx_ != NULL);
     assert(in_edges_ != NULL);
     // load edge data
-    int edge_data;
-    FILE * f = fopen(edge_list_file.c_str(), "r");
-    assert(f != NULL);
+    // int edge_data;
+    // FILE * f = fopen(edge_list_file.c_str(), "r");
+    // assert(f != NULL);
     // read in the sorted edges (with source) to build CSR first
+    std::ifstream in(edge_list_file, std::ios::binary);
     printf("Building the CSR structure...\n");
     double start_time = get_time();
+    
     VertexId last_src = 0;
     csr_idx_[0] = 0;
     for (EdgeId e_i = 0; e_i < num_edges_; ++ e_i) {
         VertexId src, dst;
-        assert(fscanf(f, "%u%u%d", &src, &dst, &edge_data) == 3);
+        in.read((char*)&inner, sizeof(EdgeInner));
+        src = inner.src;
+        dst = inner.dst;
+        //assert(fscanf(f, "%u%u%d", &src, &dst, &edge_data) == 3);
        // printf("%u, %u\n",src, dst);
         out_edges_[e_i].dst = dst;
         if(src == dst)selfcirclenumber++;
@@ -270,8 +276,11 @@ void GraphStructureFullyReplicatedV2::load_from_file(
     VertexId last_dst = 0;
     csc_idx_[0] = 0;
     for (EdgeId e_i = 0; e_i < num_edges_; ++ e_i) {
+        in.read((char*)&inner, sizeof(EdgeInner));
         VertexId src, dst;
-        assert(fscanf(f, "%u%u%d", &src, &dst, &edge_data) == 3);
+        src = inner.src;
+        dst = inner.dst;
+        // assert(fscanf(f, "%u%u%d", &src, &dst, &edge_data) == 3);
    //     printf("%d, %d",src, dst);
         in_edges_[e_i].src = src;
         if (dst != last_dst) {
@@ -289,9 +298,10 @@ void GraphStructureFullyReplicatedV2::load_from_file(
     for (VertexId v_i = 0; v_i < num_vertices_; ++ v_i) {
         assert(csc_idx_[v_i] <= csc_idx_[v_i + 1]);
     }
+    //delete [] inner;
     printf("        It takes %.3f seconds.\n",
             get_time() - start_time);
-    assert(fclose(f) == 0);
+    // assert(fclose(f) == 0);
     // set up the normalization factor
     for (VertexId v_i = 0; v_i < num_vertices_; ++ v_i) {
         double x = 1. / sqrt(1. + get_in_degree(v_i));
@@ -335,39 +345,37 @@ void GraphNonStructualDataFullyReplicated::load_from_file(const std::string meta
     readfile.close();
     labels = new LabelVector[num_vertices];
     features = new FeatureVector[num_vertices];
-    std::ifstream infile(vertex_feature_file);
+    std::ifstream infile(vertex_feature_file, std::ios::binary);
     assert(infile.good());
+    double start_time_features = get_time();
+    printf("Building the Feature Vector...\n");
     for (VertexId i = 0; i < num_vertices; i++)
     {
-        VertexId v;
-        infile >> v;
+        
         DataType *feature = new DataType[num_feature_dimensions];
-        for (Dimension i = 0; i < num_feature_dimensions; i++)
-        {
-            DataType data;
-            infile >> data;
-            feature[i] = data;
-        }
-        features[v].data = feature;
-        features[v].vec_len = num_feature_dimensions;
+        infile.read((char*)feature, sizeof(DataType)*num_feature_dimensions);
+        features[i].data = feature;
+        features[i].vec_len = num_feature_dimensions;
     }
+    printf("        It takes %.3f seconds.\n",
+            get_time() - start_time_features);
     infile.close();
     std::ifstream inputfile(vertex_label_file);
     assert(inputfile.good());
+
+    double start_time_labels = get_time();
+    printf("Building the Label Vector...\n");
     for (VertexId i = 0; i < num_vertices; i++)
     {
-        VertexId v;
-        inputfile >> v;
+        // VertexId v;
+        // inputfile >> v;
         DataType *label = new DataType[num_labels];
-        for (Category i = 0; i < num_labels; i++)
-        {
-            DataType data;
-            inputfile >> data;
-            label[i] = data;
-        }
-        labels[v].data = label;
-        labels[v].vec_len = num_labels;
+        inputfile.read((char*)label, sizeof(DataType)*num_labels);
+        labels[i].data = label;
+        labels[i].vec_len = num_labels;
     }
+    printf("        It takes %.3f seconds.\n",
+            get_time() - start_time_labels);
     inputfile.close();
 }
 Dimension GraphNonStructualDataFullyReplicated::get_num_feature_dimensions()

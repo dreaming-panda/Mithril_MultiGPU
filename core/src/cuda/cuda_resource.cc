@@ -14,18 +14,20 @@ void TensorResourceGPU::map()
         assert(tensor_->dims[1] > 0);
         size_t size = sizeof(DataType) * num_vertices_ * tensor_->dims[1];
         size_t size_ = num_vertices_ * tensor_->dims[1];
-        cpu_data_ = (DataType*) malloc(size);
-        cpu_grad_ = (DataType*) malloc(size);
+        //cpu_data_ = (DataType*) malloc(size);
+        //cpu_grad_ = (DataType*) malloc(size);
         AllocateCUDAMemory<DataType>(&gpu_data_,size_, __FILE__, __LINE__);
         AllocateCUDAMemory<DataType>(&gpu_grad_,size_, __FILE__, __LINE__);
-        assert(cpu_data_ != nullptr);
-        assert(cpu_grad_ != nullptr);
+        SetCUDAMemory<DataType>(gpu_data_, 0, size_, __FILE__, __LINE__);
+        SetCUDAMemory<DataType>(gpu_grad_, 0, size_, __FILE__, __LINE__);
+        //assert(cpu_data_ != nullptr);
+        //assert(cpu_grad_ != nullptr);
         assert(gpu_data_ != nullptr);
         assert(gpu_grad_ != nullptr);
-        memset(cpu_data_, 0, size);
-        memset(cpu_grad_, 0, size);
-        CopyFromHostToCUDADevice<DataType>(gpu_data_, cpu_data_, size_, __FILE__, __LINE__);
-        CopyFromHostToCUDADevice<DataType>(gpu_grad_, cpu_grad_, size_, __FILE__, __LINE__);
+        //memset(cpu_data_, 0, size);
+        //memset(cpu_grad_, 0, size);
+        //CopyFromHostToCUDADevice<DataType>(gpu_data_, cpu_data_, size_, __FILE__, __LINE__);
+        //CopyFromHostToCUDADevice<DataType>(gpu_grad_, cpu_grad_, size_, __FILE__, __LINE__);
     } else if (tensor_->type == EDGE_TENSOR) {
         fprintf(stderr, "The EDGE_TENSOR type has not been supported.\n");
         exit(-1);
@@ -40,26 +42,28 @@ void TensorResourceGPU::map()
         cpu_grad_ = (DataType*) malloc(size);
         AllocateCUDAMemory<DataType>(&gpu_data_,size_, __FILE__, __LINE__);
         AllocateCUDAMemory<DataType>(&gpu_grad_,size_, __FILE__, __LINE__);
+        SetCUDAMemory<DataType>(gpu_data_, 0, size_, __FILE__, __LINE__);
+        SetCUDAMemory<DataType>(gpu_grad_, 0, size_, __FILE__, __LINE__);
         assert(cpu_data_ != nullptr);
         assert(cpu_grad_ != nullptr);
         assert(gpu_data_ != nullptr);
         assert(gpu_grad_ != nullptr);
         memset(cpu_data_, 0, size);
         memset(cpu_grad_, 0, size);
-        CopyFromHostToCUDADevice<DataType>(gpu_data_, cpu_data_, size_, __FILE__, __LINE__);
-        CopyFromHostToCUDADevice<DataType>(gpu_grad_, cpu_grad_, size_, __FILE__, __LINE__);
+        // CopyFromHostToCUDADevice<DataType>(gpu_data_, cpu_data_, size_, __FILE__, __LINE__);
+        // CopyFromHostToCUDADevice<DataType>(gpu_grad_, cpu_grad_, size_, __FILE__, __LINE__);
     } else {
         fprintf(stderr, "Unrecognized tensor type.\n");
         exit(-1);
 }
 }
 void TensorResourceGPU::unmap(){
-            assert(cpu_data_ != nullptr);
-            assert(cpu_grad_ != nullptr);
-            free(cpu_data_);
-            free(cpu_grad_);
-            cpu_data_ = nullptr;
-            cpu_grad_ = nullptr;
+            // assert(cpu_data_ != nullptr);
+            // assert(cpu_grad_ != nullptr);
+            // free(cpu_data_);
+            // free(cpu_grad_);
+            // cpu_data_ = nullptr;
+            // cpu_grad_ = nullptr;
             DeallocateCUDAMemory<DataType>(&gpu_grad_, __FILE__, __LINE__);
             DeallocateCUDAMemory<DataType>(&gpu_data_, __FILE__, __LINE__);
             gpu_grad_ = nullptr;

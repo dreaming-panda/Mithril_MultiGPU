@@ -166,7 +166,11 @@ public:
     void destroy();
     void load_from_file(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file);
 };
-
+struct EdgeInner{
+    int src;
+    int dst;
+    
+};
 class GraphStructureFullyReplicatedV2: public AbstractGraphStructure {
     protected:
         bool is_alive_;
