@@ -989,6 +989,7 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
         if (left + 1 < num_nodes * 2) {
             VertexId boundary_begin = boundaries[left];
             VertexId boundary_end = boundaries[left + 1];
+            //printf("* %u %u\n", boundary_begin, boundary_end);
             assert(boundary_end > boundary_begin);
             VertexId num_v = boundary_end - boundary_begin;
             chunked_vertices += num_v;
@@ -1000,6 +1001,7 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
         }
         ++ left;
     }
+    //printf("%u %u\n", chunked_vertices, num_global_vertices_);
     assert(chunked_vertices == num_global_vertices_);
 
     if (! node_id) {
@@ -3104,6 +3106,22 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     accum_loss_ = 0;
 }
 
+void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {
+    FILE * fin = fopen(path.c_str(), "r");
+    assert(fin != NULL);
+    fscanf(fin, "%d", &p.num_partitions); // the first line: the number of partitions
+    for (int i = 0; i < p.num_partitions; ++ i) {
+        VertexId vid_begin, vid_end;
+        int op_begin, op_end;
+        fscanf(fin, "%u%u%d%d", &vid_begin, &vid_end, &op_begin, &op_end); //each following line: the range of the vertices and operators
+        p.partition_vid_begin[i] = vid_begin;
+        p.partition_vid_end[i] = vid_end;
+        p.partition_op_begin[i] = op_begin;
+        p.partition_op_end[i] = op_end;
+    }
+    assert(fclose(fin) == 0);
+}
+
 double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
     application_ = application;
     num_epoch_ = num_epoch;
@@ -3122,71 +3140,89 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     partitioning.partition_vid_end = new VertexId [num_nodes];
     partitioning.partition_op_begin = new int [num_nodes];
     partitioning.partition_op_end = new int [num_nodes];
-#ifndef FIXPART
-    assert(num_nodes == 4);
-    partitioning.partition_vid_begin[0] = 0;
-    partitioning.partition_vid_end[0] = num_global_vertices / 4;
-    for (int i = 1; i < 4; ++ i) {
-        partitioning.partition_vid_begin[i] = num_global_vertices / 4;
-        partitioning.partition_vid_end[i] = num_global_vertices;
-    }
-    partitioning.partition_op_begin[0] = 0;
-    partitioning.partition_op_end[0] = num_operators;
-    for (int i = 1; i < 4; ++ i) {
-        partitioning.partition_op_begin[i] = (i - 1) * (num_operators / 3);
-        partitioning.partition_op_end[i] = i * (num_operators / 3);
-    }
-    partitioning.partition_op_end[3] = num_operators;
-#endif
 
-#ifdef GRAPH
-    // assert(num_nodes == 4);
-    // for (int i = 0; i < 4; ++ i) {
-    //     partitioning.partition_vid_begin[i] = 0;
-    //     partitioning.partition_vid_end[i] = num_global_vertices;
-    // }
-    // partitioning.partition_op_begin[0] = 0;
-    // partitioning.partition_op_end[0] = 4;
-    // partitioning.partition_op_begin[1] = 4;
-    // partitioning.partition_op_end[1] = 7;
-    // partitioning.partition_op_begin[2] = 7;
-    // partitioning.partition_op_end[2] = 9;
-    // partitioning.partition_op_begin[3] = 9;
-    // partitioning.partition_op_end[3] = 13;
-    assert(num_nodes == 4);
-    for (int i = 0; i < 4; ++ i) {
-        partitioning.partition_vid_begin[i] = i * num_global_vertices / 4;
-        partitioning.partition_vid_end[i] = (i + 1) * num_global_vertices / 4;
+    load_partitioning("./partition.txt", partitioning);
+    assert(num_nodes == partitioning.num_partitions);
+    printf("Number of operators: %d\n", num_operators);
+    for (int p_i = 0; p_i < num_nodes; ++ p_i) {
+        VertexId vid_begin = partitioning.partition_vid_begin[p_i];
+        VertexId vid_end = partitioning.partition_vid_end[p_i]; 
+        int op_begin = partitioning.partition_op_begin[p_i];
+        int op_end = partitioning.partition_op_end[p_i];
+        printf("%u %u %d %d\n", vid_begin, vid_end, op_begin, op_end);
+        assert(vid_begin < vid_end);
+        assert(vid_begin >= 0);
+        assert(vid_end <= num_global_vertices);
+        assert(op_begin < op_end);
+        assert(op_begin >= 0);
+        assert(op_end <= num_operators);
     }
-    partitioning.partition_vid_end[3] = num_global_vertices;
-    partitioning.partition_op_begin[0] = 0;
-    partitioning.partition_op_end[0] = num_operators;
-    partitioning.partition_op_begin[1] = 0;
-    partitioning.partition_op_end[1] = num_operators;
-    partitioning.partition_op_begin[2] = 0;
-    partitioning.partition_op_end[2] = num_operators;
-    partitioning.partition_op_begin[3] = 0;
-    partitioning.partition_op_end[3] = num_operators;
-    // for (int i = 1; i < 4; ++ i) {
-    //     partitioning.partition_op_begin[i] = (i - 1) * (num_operators / 3);
-    //     partitioning.partition_op_end[i] = i * (num_operators / 3);
-    // }
-    // partitioning.partition_op_end[3] = num_operators;
-#endif
-#ifdef MODEL
-    assert(num_nodes == 4);
-    for (int i = 0; i < 4; ++ i) {
-        partitioning.partition_vid_begin[i] = 0;
-        partitioning.partition_vid_end[i] = num_global_vertices;
-    }
-   
-   
-    for (int i = 0; i < 4; ++ i) {
-        partitioning.partition_op_begin[i] = (i) * (num_operators / 4);
-        partitioning.partition_op_end[i] = (i+1) * (num_operators / 4);
-    }
-    partitioning.partition_op_end[3] = num_operators;
-#endif
+
+//#ifndef FIXPART
+//    assert(num_nodes == 4);
+//    partitioning.partition_vid_begin[0] = 0;
+//    partitioning.partition_vid_end[0] = num_global_vertices / 4;
+//    for (int i = 1; i < 4; ++ i) {
+//        partitioning.partition_vid_begin[i] = num_global_vertices / 4;
+//        partitioning.partition_vid_end[i] = num_global_vertices;
+//    }
+//    partitioning.partition_op_begin[0] = 0;
+//    partitioning.partition_op_end[0] = num_operators;
+//    for (int i = 1; i < 4; ++ i) {
+//        partitioning.partition_op_begin[i] = (i - 1) * (num_operators / 3);
+//        partitioning.partition_op_end[i] = i * (num_operators / 3);
+//    }
+//    partitioning.partition_op_end[3] = num_operators;
+//#endif
+//
+//#ifdef GRAPH
+//    // assert(num_nodes == 4);
+//    // for (int i = 0; i < 4; ++ i) {
+//    //     partitioning.partition_vid_begin[i] = 0;
+//    //     partitioning.partition_vid_end[i] = num_global_vertices;
+//    // }
+//    // partitioning.partition_op_begin[0] = 0;
+//    // partitioning.partition_op_end[0] = 4;
+//    // partitioning.partition_op_begin[1] = 4;
+//    // partitioning.partition_op_end[1] = 7;
+//    // partitioning.partition_op_begin[2] = 7;
+//    // partitioning.partition_op_end[2] = 9;
+//    // partitioning.partition_op_begin[3] = 9;
+//    // partitioning.partition_op_end[3] = 13;
+//    assert(num_nodes == 4);
+//    for (int i = 0; i < 4; ++ i) {
+//        partitioning.partition_vid_begin[i] = i * num_global_vertices / 4;
+//        partitioning.partition_vid_end[i] = (i + 1) * num_global_vertices / 4;
+//    }
+//    partitioning.partition_vid_end[3] = num_global_vertices;
+//    partitioning.partition_op_begin[0] = 0;
+//    partitioning.partition_op_end[0] = num_operators;
+//    partitioning.partition_op_begin[1] = 0;
+//    partitioning.partition_op_end[1] = num_operators;
+//    partitioning.partition_op_begin[2] = 0;
+//    partitioning.partition_op_end[2] = num_operators;
+//    partitioning.partition_op_begin[3] = 0;
+//    partitioning.partition_op_end[3] = num_operators;
+//    // for (int i = 1; i < 4; ++ i) {
+//    //     partitioning.partition_op_begin[i] = (i - 1) * (num_operators / 3);
+//    //     partitioning.partition_op_end[i] = i * (num_operators / 3);
+//    // }
+//    // partitioning.partition_op_end[3] = num_operators;
+//#endif
+//#ifdef MODEL
+//    assert(num_nodes == 4);
+//    for (int i = 0; i < 4; ++ i) {
+//        partitioning.partition_vid_begin[i] = 0;
+//        partitioning.partition_vid_end[i] = num_global_vertices;
+//    }
+//   
+//   
+//    for (int i = 0; i < 4; ++ i) {
+//        partitioning.partition_op_begin[i] = (i) * (num_operators / 4);
+//        partitioning.partition_op_end[i] = (i+1) * (num_operators / 4);
+//    }
+//    partitioning.partition_op_end[3] = num_operators;
+//#endif
     /*
     assert(num_nodes == 1);
     partitioning.partition_vid_begin[0] = 0;

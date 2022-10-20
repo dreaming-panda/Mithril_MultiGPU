@@ -36,13 +36,21 @@
 #SBATCH -o mithril.o%j       # Name of stdout output file
 #SBATCH -e mithril.e%j       # Name of stderr error file
 #SBATCH -p gtx      # Queue (partition) name
-#SBATCH -N 1             # Total # of nodes 
-#SBATCH -n 4            # Total # of mpi tasks
+#SBATCH -N 4             # Total # of nodes 
+#SBATCH -n 16            # Total # of mpi tasks
 #SBATCH -t 01:30:00        # Run time (hh:mm:ss)
-#SBATCH --mail-user=chenzhuoming911@gmail.com
+#SBATCH --mail-user=jingji.chen.000@gmail.com
 #SBATCH --mail-type=all    # Send email at begin and end of job
 
 # Other commands must follow all #SBATCH directives...
+
+mkdir -p build
+bash prepare.sh
+module load boost/1.66
+cd build
+cmake ..
+make -j
+cd ..
 
 module list
 pwd

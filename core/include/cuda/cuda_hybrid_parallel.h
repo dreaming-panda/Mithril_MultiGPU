@@ -613,6 +613,8 @@ struct CUDAPIPPartitioning {
     int * partition_op_end; // int [num_partitions]
 };
 
+void load_partitioning(const std::string &path, CUDAPIPPartitioning &p);
+
 class CUDAPIPPartitioner {
     public:
         // determine whether a partition is valid or not 
