@@ -193,7 +193,7 @@ int main(int argc, char ** argv) {
     //std::string graph_path = "./storage/gnn_datasets/Cora";
     std::string graph_path = "./new_arxiv";
     //int num_layers = 3;
-    int num_layers = 16;
+    int num_layers = 8;
     int num_hidden_units = 100;
     int num_epoch = 100;
 
