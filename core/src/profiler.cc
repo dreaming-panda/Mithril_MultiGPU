@@ -18,7 +18,7 @@ void Profiler::start_profiling() {
         fprintf(stderr, "ERROR: The profiler has been started!\n");
         exit(-1);
     }
-    printf("Starting profiling the application\n");
+    //printf("Starting profiling the application\n");
     profiling_started = true;
     // some initializations
     main_thread_events.clear();
@@ -36,10 +36,10 @@ void Profiler::end_profiling() {
     // some finalizations
     end_time = get_time();
     assert(end_time > start_time);
-    printf("Complete profiling the application:\n");
-    printf("\tNumber of main-thread events: %lu\n", main_thread_events.size());
-    printf("\tNumber of forward-task-dispatcher events: %lu\n", forward_task_dispatcher_events.size());
-    printf("\tNumber of backward-task-dispatcher events: %lu\n", backward_task_dispatcher_events.size());
+    //printf("Complete profiling the application:\n");
+    //printf("\tNumber of main-thread events: %lu\n", main_thread_events.size());
+    //printf("\tNumber of forward-task-dispatcher events: %lu\n", forward_task_dispatcher_events.size());
+    //printf("\tNumber of backward-task-dispatcher events: %lu\n", backward_task_dispatcher_events.size());
 }
 
 void Profiler::submit_main_thread_event(ProfilerEventType type) {
@@ -131,16 +131,13 @@ void Profiler::breakdown_analysis() {
             }
 
         }
-        if (num_forward_task_dispatcher_events > 0 && 
+        if (num_forward_task_dispatcher_events > 0 ||
                 num_backward_task_dispatcher_events > 0) {
-            layer_comm_time += delta_layer_comm_time / 2;
-            bubble_time += delta_bubble_time / 2;
-        } else if (num_forward_task_dispatcher_events == 0 &&
-                num_backward_task_dispatcher_events == 0) {
-            // do nothing
-        } else {
-            layer_comm_time += delta_layer_comm_time;
-            bubble_time += delta_bubble_time;
+            double s = delta_layer_comm_time + delta_bubble_time;
+            if (s > 0) {
+                layer_comm_time += delta_layer_comm_time / s * (end - start);
+                bubble_time += delta_bubble_time / s * (end - start);
+            }
         }
     };
 
@@ -182,7 +179,14 @@ void Profiler::breakdown_analysis() {
     breakdown_manager.add_breakdown("Bubble", bubble_time);
     breakdown_manager.add_breakdown("Compute", compute_time);
     breakdown_manager.add_breakdown("Imbalance", imbalance_time);
-    assert(breakdown_manager.get_breakdown_sum() / (end_time - start_time) > 0.95);
+
+    int node_id = DistributedSys::get_instance()->get_node_id(); 
+    if (breakdown_manager.get_breakdown_sum() / (end_time - start_time) <= 0.9) {
+        fprintf(stderr, "ERROR: undercount the overhead: breakdown sum / all time: %.3f\n",
+                breakdown_manager.get_breakdown_sum() / (end_time - start_time)
+               );
+    }
+    assert(breakdown_manager.get_breakdown_sum() / (end_time - start_time) >= 0.9 || node_id != 0);
     breakdown_manager.print_breakdowns();
 }
 

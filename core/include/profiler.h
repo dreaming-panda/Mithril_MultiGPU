@@ -8,6 +8,8 @@
 #include <vector>
 #include <utility>
 
+#include "distributed_sys.h"
+
 // obtain the trace of the execution first
 // and analyze the trace to obtain detailed
 // performance analysis, e.g. runtime breakdown
@@ -61,21 +63,33 @@ class RuntimeBreakdownManager {
     public:
         RuntimeBreakdownManager() {}
         void add_breakdown(std::string name, double t) {
-            breakdowns_[name] = t;
+            double avg;
+            MPI_Allreduce(
+                    &t, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
+                    MPI_SUM, MPI_COMM_WORLD
+                    );
+            int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+            avg /= double(num_nodes);
+            breakdowns_[name] = avg;
         }
-        void get_breakdown_sum() {
+        double get_breakdown_sum() {
             double sum = 0;
-            for (std::pair<std::string, double> i in breakdowns_) {
+            for (std::pair<std::string, double> i: breakdowns_) {
                 sum += i.second;
             }
             return sum;
         }
         void print_breakdowns() {
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            if (node_id != 0) {
+                return ;
+            }
+            printf("************ Profiling Results ************\n");
             double sum = get_breakdown_sum();
-            for (std::pair<std::string, double> i in breakdowns_) {
+            for (std::pair<std::string, double> i: breakdowns_) {
                 std::string name = i.first;
                 double time = i.second;
-                printf("\t\t%s: %.6f (s) (%.2f percentage)\n",
+                printf("\t%s: %.6f (s) (%.2f percentage)\n",
                         name.c_str(), time, time * 100. / sum);
             }
         }
