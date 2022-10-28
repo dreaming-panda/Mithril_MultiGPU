@@ -1978,6 +1978,8 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     assert(comm_buff != NULL);
     CUDAPIPForwardTask task;
 
+    double graph_act_comm = 0;
+
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
 
@@ -2004,6 +2006,8 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                         remote_node, ActivationInterchanging,
                         MPI_COMM_WORLD
                         );
+                graph_act_comm += sizeof(CUDAPIPForwardTask);
+
                 const std::vector<Tensor*> * tensors = 
                     engine_->data_dependencies_tracker_->get_activation_update_sender_dependencies(remote_node);
                 for (Tensor * tensor: *tensors) {
@@ -2048,12 +2052,14 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                                 remote_node, ActivationInterchanging,
                                 MPI_COMM_WORLD
                                 );
+                        graph_act_comm += sizeof(size_t);
                         MPI_Send(
                                 comm_buff, num_elements_to_send,
                                 DistributedSys::get_mpi_data_type<DataType>(),
                                 remote_node, ActivationInterchanging,
                                 MPI_COMM_WORLD
                                 );
+                        graph_act_comm += sizeof(DataType) * num_elements_to_send;
                         num_sent_elements += num_elements_to_send;
                     }
                     delete [] data_buff;
@@ -2061,6 +2067,15 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                 }
             }
         }
+    }
+
+    double avg;
+    MPI_Allreduce(&graph_act_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD);
+    avg /= double(num_nodes);
+    if (! node_id) {
+        printf("\tAmount of grpah-level activation communication (per node): %.3f MB\n",
+                avg / 1024. / 1024.);
     }
 
     delete [] comm_buff;
@@ -2169,6 +2184,8 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     assert(comm_buff != NULL);
     CUDAPIPBackwardTask task;
 
+    double graph_grad_comm = 0;
+
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
 
@@ -2195,6 +2212,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                         remote_node, GradientInterchanging,
                         MPI_COMM_WORLD
                         );
+                graph_grad_comm += sizeof(CUDAPIPBackwardTask);
                 const std::vector<Tensor*> * tensors =
                     engine_->data_dependencies_tracker_->get_gradients_update_sender_dependencies(
                             remote_node
@@ -2242,6 +2260,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                                 remote_node, GradientInterchanging,
                                 MPI_COMM_WORLD
                                 );
+                        graph_grad_comm += sizeof(size_t);
                         MPI_Send(
                                 comm_buff, num_elements_to_send,
                                 DistributedSys::get_mpi_data_type<DataType>(),
@@ -2249,12 +2268,22 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                                 MPI_COMM_WORLD
                                 );
                         num_sent_elements += num_elements_to_send;
+                        graph_grad_comm += num_elements_to_send * sizeof(DataType);
                     }
                     delete [] grad_buff;
                     assert(num_sent_elements == num_elements_should_be_sent);
                 }
             }
         }
+    }
+
+    double avg;
+    MPI_Allreduce(&graph_grad_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD);
+    avg /= double(num_nodes);
+    if (! node_id) {
+        printf("\tAmount of grpah-level gradient communication (per node): %.3f MB\n",
+                avg / 1024. / 1024.);
     }
 
     delete [] comm_buff;
