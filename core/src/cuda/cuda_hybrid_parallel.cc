@@ -744,10 +744,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     avg_layer_comm /= double(num_epoch);
 
     if (! node_id) {
-        printf("\tGraph-level communication (per epoch): %.3f MB\n",
-                avg_graph_comm / 1024. / 1024.);
-        printf("\tLayer-level communication (per epoch): %.3f MB\n",
-                avg_layer_comm / 1024. / 1024.);
+        printf("\tGraph-level communication (per epoch): %.3f GB\n",
+                avg_graph_comm / 1024. / 1024. / 1024.);
+        printf("\tLayer-level communication (per epoch): %.3f GB\n",
+                avg_layer_comm / 1024. / 1024. / 1024.);
+        printf("\tGraph+Layer-level communication (per epoch): %.3f GB\n",
+                (avg_graph_comm + avg_layer_comm) / 1024. / 1024. / 1024.);
     }
 }
 
