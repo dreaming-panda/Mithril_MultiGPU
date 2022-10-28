@@ -3,8 +3,10 @@
 
 #include <stdlib.h>
 
+#include <map>
 #include <string>
 #include <vector>
+#include <utility>
 
 // obtain the trace of the execution first
 // and analyze the trace to obtain detailed
@@ -45,6 +47,38 @@ class ProfilerEvent {
         ProfilerEvent(ProfilerEventType type, double time):
             type_(type), time_(time) {
             }
+        ProfilerEventType get_type() {
+            return type_;
+        }
+        double get_time() {
+            return time_;
+        }
+};
+
+class RuntimeBreakdownManager {
+    private:
+        std::map<std::string, double> breakdowns_;
+    public:
+        RuntimeBreakdownManager() {}
+        void add_breakdown(std::string name, double t) {
+            breakdowns_[name] = t;
+        }
+        void get_breakdown_sum() {
+            double sum = 0;
+            for (std::pair<std::string, double> i in breakdowns_) {
+                sum += i.second;
+            }
+            return sum;
+        }
+        void print_breakdowns() {
+            double sum = get_breakdown_sum();
+            for (std::pair<std::string, double> i in breakdowns_) {
+                std::string name = i.first;
+                double time = i.second;
+                printf("\t\t%s: %.6f (s) (%.2f percentage)\n",
+                        name.c_str(), time, time * 100. / sum);
+            }
+        }
 };
 
 class Profiler {

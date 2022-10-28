@@ -32,7 +32,7 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgcc_s -lc")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D PRINT_DEBUG_MSG") # delete this line to prevent printing debug msg
-set(CMAKE_CUDA_ARCHITECTURES 61 75 80)
+set (CMAKE_CUDA_ARCHITECTURES 61 75 80)
 # include directories
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${CUDA_INCLUDE_DIRS})
