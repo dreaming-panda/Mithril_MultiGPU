@@ -743,13 +743,24 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             );
     avg_layer_comm /= double(num_epoch);
 
+    double ps_comm = engine_->parameter_server_->get_comm();
+    double avg_ps_comm;
+    MPI_Allreduce(
+            &ps_comm, &avg_ps_comm, 1, 
+            DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    avg_ps_comm /= double(num_epoch);
+
     if (! node_id) {
-        printf("\tGraph-level communication (per epoch): %.3f GB\n",
+        printf("\tGraph-level communication (cluster-wide, per epoch): %.3f GB\n",
                 avg_graph_comm / 1024. / 1024. / 1024.);
-        printf("\tLayer-level communication (per epoch): %.3f GB\n",
+        printf("\tLayer-level communication (cluster-wide, per epoch): %.3f GB\n",
                 avg_layer_comm / 1024. / 1024. / 1024.);
-        printf("\tGraph+Layer-level communication (per epoch): %.3f GB\n",
+        printf("\tGraph+Layer-level communication (cluster-wide, per epoch): %.3f GB\n",
                 (avg_graph_comm + avg_layer_comm) / 1024. / 1024. / 1024.);
+        printf("\tParameter-server communication (cluster-wide, per epoch): %.3f GB\n",
+                avg_ps_comm / 1024. / 1024. / 1024.);
     }
 }
 
@@ -2592,6 +2603,7 @@ CUDAPIPParallelParameterServer::CUDAPIPParallelParameterServer(
     assert(data_pulling_request_handling_thread_ != NULL);
     assert(grad_pushing_handling_thread_ != NULL);
 
+    comm = 0;
 }
 
 CUDAPIPParallelParameterServer::~CUDAPIPParallelParameterServer() {
@@ -2644,6 +2656,7 @@ void CUDAPIPParallelParameterServer::pull_weight(WeightOperator * weight_op, Dat
                 &header, sizeof(CUDAPIPPSHeader), MPI_CHAR,
                 master_node, WeightPullingRequest, MPI_COMM_WORLD
                 );
+        comm += sizeof(CUDAPIPPSHeader);
         MPI_Status status;
         if(data_len == 0){
             data_buff = new DataType[num_elements];
@@ -2659,6 +2672,7 @@ void CUDAPIPParallelParameterServer::pull_weight(WeightOperator * weight_op, Dat
                 master_node, WeightPullingResponse, MPI_COMM_WORLD, 
                 &status
                 );
+        comm += num_elements * sizeof(DataType);
         CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
         
     }
@@ -2690,6 +2704,7 @@ void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataT
                 &header, sizeof(CUDAPIPPSHeader), MPI_CHAR,
                 master_node, GradPushing, MPI_COMM_WORLD
                 );
+        comm += sizeof(CUDAPIPPSHeader);
         if(grad_len == 0){
             grad_buff = new DataType[num_elements];
             grad_len = num_elements;
@@ -2704,6 +2719,7 @@ void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataT
                 grad_buff, num_elements, DistributedSys::get_mpi_data_type<DataType>(),
                 master_node, GradPushing, MPI_COMM_WORLD
                 );
+        comm += num_elements * sizeof(DataType);
         
     }
 }

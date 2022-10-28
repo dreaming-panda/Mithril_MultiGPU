@@ -1374,6 +1374,8 @@ class CUDAPIPParallelParameterServer {
         size_t data_len;
         size_t grad_len;
 
+        double comm;
+
     public:
         CUDAPIPParallelParameterServer(
                 CUDAOperatorsAndTensorsManager * op_ten_manager,
@@ -1384,6 +1386,7 @@ class CUDAPIPParallelParameterServer {
 
         void pull_weight(WeightOperator * weight_op, DataType * data);
         void push_grad(WeightOperator * weight_op, DataType * grad);
+        double get_comm() {return comm;}
 
         void print_weights() {
             for (std::pair<WeightOperator*, std::pair<DataType*, DataType*>> p: weight_data_grad_) {
