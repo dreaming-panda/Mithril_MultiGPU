@@ -728,25 +728,25 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double avg_graph_comm;
     MPI_Allreduce(
             &graph_comm, &avg_graph_comm, 1,
-            DistributedSys::get_mpi_data_type<double>,
+            DistributedSys::get_mpi_data_type<double>(),
             MPI_SUM, MPI_COMM_WORLD
             );
-    avg_graph_comm /= double(num_nodes);
+    avg_graph_comm /= double(num_epoch);
 
     double layer_comm = forward_task_dispatcher_->get_comm() 
         + backward_task_dispatcher_->get_comm();
     double avg_layer_comm;
     MPI_Allreduce(
             &layer_comm, &avg_layer_comm, 1,
-            DistributedSys::get_mpi_data_type<double>,
+            DistributedSys::get_mpi_data_type<double>(),
             MPI_SUM, MPI_COMM_WORLD
             );
-    avg_layer_comm /= double(num_nodes);
+    avg_layer_comm /= double(num_epoch);
 
     if (! node_id) {
-        printf("\tGraph-level communication (per node): %.3f MB\n",
+        printf("\tGraph-level communication (per epoch): %.3f MB\n",
                 avg_graph_comm / 1024. / 1024.);
-        printf("\tLayer-level communication (per node): %.3f MB\n",
+        printf("\tLayer-level communication (per epoch): %.3f MB\n",
                 avg_layer_comm / 1024. / 1024.);
     }
 }

@@ -118,7 +118,7 @@ int main(int argc, char ** argv) {
     //int num_layers = 3;
     int num_layers = 8;
     int num_hidden_units = 100;
-    int num_epoch = 100;
+    int num_epoch = 10;
 
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
