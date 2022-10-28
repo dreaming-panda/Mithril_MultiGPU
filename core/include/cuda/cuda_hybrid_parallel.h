@@ -166,11 +166,13 @@ class CUDAPIPForwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPFor
     private:
         // chunk_id -> number of ready remote nodes
         std::map<int, int> * num_ready_remote_nodes_;
+        double comm_;
     protected:
         void thread_main();
     public:
         CUDAPIPForwardTaskDispatcher(int max_num_tasks, pthread_barrier_t * barrier);
         ~CUDAPIPForwardTaskDispatcher();
+        double get_comm() {return comm_;}
 };
 class CUDAPIPBackwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPBackwardTask> {
     private:
@@ -178,6 +180,7 @@ class CUDAPIPBackwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPBa
         std::map<int, int> * num_ready_remote_nodes_;
         LockFreeQueue<CUDAPIPBackwardTask> * input_task_queue_; // for bottommost nodes
         cudnnHandle_t cudnn_;
+        double comm_;
     protected:
         void thread_main();
     public:
@@ -185,6 +188,7 @@ class CUDAPIPBackwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPBa
         ~CUDAPIPBackwardTaskDispatcher();
         LockFreeQueue<CUDAPIPBackwardTask> * get_input_task_queue();
         void insert_new_task(CUDAPIPBackwardTask task); // only works for bottommost nodes
+        double get_comm() {return comm_;}
 };
 class CUDAPIPForwardTaskCommitter: public CUDAAbstractTaskCommitter<CUDAPIPForwardTask> {
     protected:
@@ -1189,6 +1193,7 @@ class CUDAPIPGraphDataActivationUpdateSender {
         pthread_barrier_t * barrier_;
         LockFreeQueue<CUDAPIPForwardTask> * task_queue_;
         std::thread * thread_;
+        double comm_;
 
         void thread_main();
 
@@ -1223,6 +1228,9 @@ class CUDAPIPGraphDataActivationUpdateSender {
             thread_->join();
             delete thread_;
             thread_ = NULL;
+        }
+        inline double get_comm() {
+            return comm_;
         }
 };
 
@@ -1271,6 +1279,7 @@ class CUDAPIPGraphDataGradientUpdateSender {
         pthread_barrier_t * barrier_;
         LockFreeQueue<CUDAPIPBackwardTask> * task_queue_;
         std::thread * thread_;
+        double comm_;
 
         void thread_main();
 
@@ -1304,6 +1313,9 @@ class CUDAPIPGraphDataGradientUpdateSender {
             thread_->join();
             delete thread_;
             thread_ = NULL;
+        }
+        inline double get_comm() {
+            return comm_;
         }
 };
 class CUDAPIPGraphDataGradientUpdateReceiver {

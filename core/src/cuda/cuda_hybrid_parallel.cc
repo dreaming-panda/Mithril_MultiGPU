@@ -30,6 +30,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     assert(data_dependencies_tracker != NULL);
     DataType * data_buff = nullptr;
     size_t len = 0;
+    double comm = 0;
     if (engine_->is_topmost_node()) {
         // doesn't need to receive activation from dependent nodes
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
@@ -71,6 +72,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                         MPI_ANY_SOURCE, ForwardActivationPassing,
                         MPI_COMM_WORLD, &status
                         );
+                comm += sizeof(CUDAPIPForwardTask);
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteWaitForNewTask);
 
                 // receiving the activation data
@@ -114,6 +116,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                             remote_node, ForwardActivationPassing,
                             MPI_COMM_WORLD, &status
                             );
+                    comm += num_elements_this_chunk * sizeof(DataType);
                     CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements_this_chunk, __FILE__, __LINE__);
                     //delete [] data_buff;
                 }
@@ -135,6 +138,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             }
         }
     }
+    comm_ = comm;
     if(len > 0) {
     delete [] data_buff;
     }
@@ -179,6 +183,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
     CUDAPIPBackwardTask task;
     CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
     assert(data_dependencies_tracker != NULL);
+    double comm = 0;
 
     if (engine_->is_bottommost_node()) {
         // doesn't need to receive gradients from dependent nodes
@@ -230,6 +235,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                         MPI_ANY_SOURCE, BackwardGradientPassing,
                         MPI_COMM_WORLD, &status
                         );
+                comm += sizeof(CUDAPIPBackwardTask);
                 Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteWaitForNewTask);
 
                 Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherStartReceiveData);
@@ -273,6 +279,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                                 remote_node, BackwardGradientPassing,
                                 MPI_COMM_WORLD, &status
                               );
+                        comm += num_elements_to_receive * sizeof(DataType);
 #ifdef SHADOW_CPU
                         #pragma omp parallel for 
                         for(size_t i = 0; i < num_elements_to_receive; ++ i) {
@@ -326,6 +333,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
         delete [] comm_buff;
         DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
     }
+    comm_ = comm;
 }
 
 CUDAPIPForwardTaskCommitter::CUDAPIPForwardTaskCommitter(
@@ -713,6 +721,34 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     engine_->act_update_receiver_->wait_for_termination();
     engine_->grad_update_sender_->wait_for_termination(); 
     engine_->grad_update_receiver_->wait_for_termination();
+
+    // some communication-related metrics
+    double graph_comm = engine_->act_update_sender_->get_comm() 
+        + engine_->grad_update_sender_->get_comm();
+    double avg_graph_comm;
+    MPI_Allreduce(
+            &graph_comm, &avg_graph_comm, 1,
+            DistributedSys::get_mpi_data_type<double>,
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    avg_graph_comm /= double(num_nodes);
+
+    double layer_comm = forward_task_dispatcher_->get_comm() 
+        + backward_task_dispatcher_->get_comm();
+    double avg_layer_comm;
+    MPI_Allreduce(
+            &layer_comm, &avg_layer_comm, 1,
+            DistributedSys::get_mpi_data_type<double>,
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    avg_layer_comm /= double(num_nodes);
+
+    if (! node_id) {
+        printf("\tGraph-level communication (per node): %.3f MB\n",
+                avg_graph_comm / 1024. / 1024.);
+        printf("\tLayer-level communication (per node): %.3f MB\n",
+                avg_layer_comm / 1024. / 1024.);
+    }
 }
 
 bool CUDAOperatorsAndTensorsManager::is_operator_list_ordered() {
@@ -2069,14 +2105,15 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
         }
     }
 
-    double avg;
-    MPI_Allreduce(&graph_act_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
-            MPI_SUM, MPI_COMM_WORLD);
-    avg /= double(num_nodes);
-    if (! node_id) {
-        printf("\tAmount of grpah-level activation communication (per node): %.3f MB\n",
-                avg / 1024. / 1024.);
-    }
+    comm_ = graph_act_comm;
+    //double avg;
+    //MPI_Allreduce(&graph_act_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
+    //        MPI_SUM, MPI_COMM_WORLD);
+    //avg /= double(num_nodes);
+    //if (! node_id) {
+    //    printf("\tAmount of grpah-level activation communication (per node): %.3f MB\n",
+    //            avg / 1024. / 1024.);
+    //}
 
     delete [] comm_buff;
 }
@@ -2277,14 +2314,15 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
         }
     }
 
-    double avg;
-    MPI_Allreduce(&graph_grad_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
-            MPI_SUM, MPI_COMM_WORLD);
-    avg /= double(num_nodes);
-    if (! node_id) {
-        printf("\tAmount of grpah-level gradient communication (per node): %.3f MB\n",
-                avg / 1024. / 1024.);
-    }
+    comm_ = graph_grad_comm;
+    //double avg;
+    //MPI_Allreduce(&graph_grad_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
+    //        MPI_SUM, MPI_COMM_WORLD);
+    //avg /= double(num_nodes);
+    //if (! node_id) {
+    //    printf("\tAmount of grpah-level gradient communication (per node): %.3f MB\n",
+    //            avg / 1024. / 1024.);
+    //}
 
     delete [] comm_buff;
 }
