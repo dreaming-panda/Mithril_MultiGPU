@@ -4,14 +4,14 @@
 #include <vector>
 
 #include "profiler.h"
-#include "utilites.h"
+#include "utilities.h"
 
 std::vector<ProfilerEvent> Profiler::main_thread_events;
 std::vector<ProfilerEvent> Profiler::forward_task_dispatcher_events;
 std::vector<ProfilerEvent> Profiler::backward_task_dispatcher_events;
 double Profiler::start_time;
 double Profiler::end_time;
-double Profiler::profiling_started = false;
+bool Profiler::profiling_started = false;
 
 void Profiler::start_profiling() {
     if (profiling_started) {

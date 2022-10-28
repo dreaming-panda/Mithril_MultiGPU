@@ -49,9 +49,9 @@ class ProfilerEvent {
 
 class Profiler {
     private:
-        static std::vector<ProfilerEventType> main_thread_events;
-        static std::vector<ProfilerEventType> forward_task_dispatcher_events;
-        static std::vector<ProfilerEventType> backward_task_dispatcher_events;
+        static std::vector<ProfilerEvent> main_thread_events;
+        static std::vector<ProfilerEvent> forward_task_dispatcher_events;
+        static std::vector<ProfilerEvent> backward_task_dispatcher_events;
         static double start_time;
         static double end_time;
         static bool profiling_started;
