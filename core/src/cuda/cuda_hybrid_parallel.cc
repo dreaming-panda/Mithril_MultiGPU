@@ -1,5 +1,6 @@
-#include"cuda/cuda_hybrid_parallel.h"
-#include"cuda/cuda_utils.h"
+#include "cuda/cuda_hybrid_parallel.h"
+#include "cuda/cuda_utils.h"
+#include "profiler.h"
 
 #define MODEL
 #define OPTIMIZE
@@ -62,12 +63,18 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                 (*num_ready_remote_nodes_)[chunk_id] = 0;
             }
             while (num_dispatched_chunks < num_local_chunks) {
+                // waiting for communication from remote nodes
+                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartWaitForNewTask);
                 MPI_Status status;
                 MPI_Recv(
                         &task, sizeof(CUDAPIPForwardTask), MPI_CHAR, 
                         MPI_ANY_SOURCE, ForwardActivationPassing,
                         MPI_COMM_WORLD, &status
                         );
+                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteWaitForNewTask);
+
+                // receiving the activation data
+                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartReceiveData);
                 int remote_node = status.MPI_SOURCE;
                 const std::set<int> * dependent_remote_nodes = data_dependencies_tracker->get_dependent_remote_nodes_forward(
                         task.chunk_id
@@ -110,6 +117,8 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                     CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements_this_chunk, __FILE__, __LINE__);
                     //delete [] data_buff;
                 }
+                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteReceiveData);
+
                 int ready_nodes = (*num_ready_remote_nodes_)[task.chunk_id];
                 (*num_ready_remote_nodes_)[task.chunk_id] = (++ ready_nodes);
                 assert(ready_nodes <= dependent_remote_nodes->size());
@@ -214,12 +223,16 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
             }
             while (num_dispatched_chunks < num_local_chunks) {
                 // receive the meta data
+                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherStartWaitForNewTask);
                 MPI_Status status;
                 MPI_Recv(
                         &task, sizeof(CUDAPIPBackwardTask), MPI_CHAR,
                         MPI_ANY_SOURCE, BackwardGradientPassing,
                         MPI_COMM_WORLD, &status
                         );
+                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteWaitForNewTask);
+
+                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherStartReceiveData);
                 int remote_node = status.MPI_SOURCE;
                 // resolve the dependencies
                 const std::set<int> * dependent_remote_nodes = 
@@ -292,6 +305,8 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                     //delete [] s_buffer;
                     //printf("num_received_elements: %lu\n", num_received_elements);
                 }
+                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteReceiveData);
+
                 int ready_nodes = (*num_ready_remote_nodes_)[task.chunk_id];
                 (*num_ready_remote_nodes_)[task.chunk_id] = (++ ready_nodes);
                 assert(ready_nodes <= dependent_remote_nodes->size());
@@ -608,16 +623,22 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
+    Profiler::start_profiling();
+
     //engine_->parameter_server_->print_weights();
     double t = - get_time();
+
     int num_epoch = engine_->get_num_epoch();
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+        Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
         MPI_Barrier(MPI_COMM_WORLD);
         if (node_id == 0) {
             printf("\n********* Epoch %d: *********\n", epoch_id);
         }
         pthread_barrier_wait(barrier_);
         MPI_Barrier(MPI_COMM_WORLD);
+        Profiler::submit_main_thread_event(CrossEpochSyncCompleteEvent);
+
         double start_time = get_time();
         // keep poping dispatched tasks
         int num_scheduled_forward_tasks = 0;
@@ -633,6 +654,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 CUDAPIPForwardTask task;
                 forward_task_dispatcher_queue_->pop(task, success);
                 if (success) {
+                    Profiler::submit_main_thread_event(ForwardTaskStartEvent);
                     assert(task.epoch_id == epoch_id);
                     double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_SCHEDULE_DETAILS
@@ -649,6 +671,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     }
                     engine_->act_update_sender_->insert_new_task(task);
                     ++ num_scheduled_forward_tasks;
+                    Profiler::submit_main_thread_event(ForwardTaskCompleteEvent);
                 }
             }
 
@@ -656,6 +679,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 CUDAPIPBackwardTask task;
                 backward_task_dispatcher_queue_->pop(task, success);
                 if (success) {
+                    Profiler::submit_main_thread_event(BackwardTaskStartEvent);
                     assert(task.epoch_id == epoch_id);
                     double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_SCHEDULE_DETAILS
@@ -666,6 +690,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     backward_task_committer_queue_->push(task);
                     engine_->grad_update_sender_->insert_new_task(task); 
                     ++ num_scheduled_backward_tasks;
+                    Profiler::submit_main_thread_event(BackwardTaskCompleteEvent);
                 }
             }
 
@@ -675,6 +700,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     }
     t += get_time();
     printf("------------------------node id %d,  total time %fs---------------\n", node_id, t);
+
+    Profiler::end_profiling();
+    Profiler::breakdown_analysis();
+
     forward_task_dispatcher_->wait_for_termination();
     forward_task_committer_->wait_for_termination();
     backward_task_dispatcher_->wait_for_termination();
@@ -3084,9 +3113,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     // calculate the accuracy
     double accuracy = 0.;
     if (is_bottommost_node_) {
+        Profiler::submit_main_thread_event(AccuracyCalculationTaskStartEvent);
         accuracy = calculate_accuracy(output_tensor_, std_tensor_);
+        Profiler::submit_main_thread_event(AccuracyCalculationTaskCompleteEvent);
        
     }
+
+    Profiler::submit_main_thread_event(GPUSyncStartEvent);
     //printf("Node %d local accuracy: %.3f\n", DistributedSys::get_instance()->get_node_id(), accuracy);
     accuracy *= double(vid_translation_->get_num_master_vertices());
     MPI_Allreduce(&accuracy, &accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -3096,6 +3129,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     accum_loss_ *= (double(vid_translation_->get_num_master_vertices()) / 
         double(graph_structure_->get_num_global_vertices()));
     MPI_Allreduce(MPI_IN_PLACE, &accum_loss_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
     if (DistributedSys::get_instance()->is_master_node()) {
         printf("++++++++++ Accuracy: %.5f\n", accuracy_);
