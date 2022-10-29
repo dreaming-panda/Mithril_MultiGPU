@@ -759,23 +759,32 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double graph_net_time = engine_->act_update_sender_->get_graph_net_time()
         + engine_->grad_update_sender_->get_graph_net_time();
     MPI_Allreduce(
-            MPI_IN_PLACE, &graph_dev2host_time, 1
+            MPI_IN_PLACE, &graph_dev2host_time, 1,
             DistributedSys::get_mpi_data_type<double>(),
             MPI_SUM, MPI_COMM_WORLD
             );
     MPI_Allreduce(
-            MPI_IN_PLACE, &graph_memcpy_time, 1
+            MPI_IN_PLACE, &graph_memcpy_time, 1,
             DistributedSys::get_mpi_data_type<double>(),
             MPI_SUM, MPI_COMM_WORLD
             );
     MPI_Allreduce(
-            MPI_IN_PLACE, &graph_net_time, 1
+            MPI_IN_PLACE, &graph_net_time, 1,
             DistributedSys::get_mpi_data_type<double>(),
             MPI_SUM, MPI_COMM_WORLD
             );
     graph_dev2host_time /= double(num_epoch);
     graph_memcpy_time /= double(num_epoch);
     graph_net_time /= double(num_epoch);
+
+    int num_net_batches = engine_->act_update_sender_->get_num_net_batches()
+        + engine_->grad_update_sender_->get_num_net_batches();
+    MPI_Allreduce(
+            MPI_IN_PLACE, &num_net_batches, 1,
+            DistributedSys::get_mpi_data_type<int>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    num_net_batches /= num_epoch;
 
     if (! node_id) {
         printf("\tGraph-level communication (cluster-wide, per epoch): %.3f GB\n",
@@ -787,11 +796,13 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         printf("\tParameter-server communication (cluster-wide, per epoch): %.3f GB\n",
                 avg_ps_comm / 1024. / 1024. / 1024.);
         printf("\tGraph-level dev2host communication time: %.3f s, throughput: %.6f GBps\n",
-                graph_dev2host_time, avg_graph_comm / graph_dev2host_time);
+                graph_dev2host_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_dev2host_time);
         printf("\tGraph-level memcpy communication time: %.3f s, throughput: %.6f GBps\n",
-                graph_memcpy_time, avg_graph_comm / graph_memcpy_time);
+                graph_memcpy_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_memcpy_time);
         printf("\tGraph-level net communication time: %.3f s, throughput: %.6f GBps\n",
-                graph_net_time, avg_graph_comm / graph_net_time);
+                graph_net_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_net_time);
+        printf("\tGraph-level network batch size: %.3f Bytes\n",
+                avg_graph_comm / num_net_batches);
     }
 }
 
@@ -2062,6 +2073,7 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     double graph_dev2host_time = 0;
     double graph_memcpy_time = 0;
     double graph_net_time = 0;
+    int num_net_batches = 0;
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
@@ -2151,6 +2163,7 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                         graph_act_comm += sizeof(DataType) * num_elements_to_send;
                         num_sent_elements += num_elements_to_send;
                         graph_net_time += get_time();
+                        num_net_batches += 1;
                     }
                     delete [] data_buff;
                     assert(num_sent_elements == num_elements_should_be_sent);
@@ -2163,6 +2176,7 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     graph_dev2host_time_ = graph_dev2host_time;
     graph_memcpy_time_ = graph_memcpy_time;
     graph_net_time_ = graph_net_time;
+    num_net_batches_ = num_net_batches;
     //double avg;
     //MPI_Allreduce(&graph_act_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
     //        MPI_SUM, MPI_COMM_WORLD);
@@ -2282,6 +2296,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     double graph_dev2host_time = 0;
     double graph_memcpy_time = 0;
     double graph_net_time = 0;
+    int num_net_batches = 0;
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
@@ -2373,6 +2388,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                         graph_net_time += get_time();
                         num_sent_elements += num_elements_to_send;
                         graph_grad_comm += num_elements_to_send * sizeof(DataType);
+                        num_net_batches += 1;
                     }
                     delete [] grad_buff;
                     assert(num_sent_elements == num_elements_should_be_sent);
@@ -2385,6 +2401,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     graph_dev2host_time_ = graph_dev2host_time;
     graph_memcpy_time_ = graph_memcpy_time;
     graph_net_time_ = graph_net_time;
+    num_net_batches_ = num_net_batches;
     //double avg;
     //MPI_Allreduce(&graph_grad_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
     //        MPI_SUM, MPI_COMM_WORLD);
