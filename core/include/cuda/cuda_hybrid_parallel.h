@@ -1193,7 +1193,11 @@ class CUDAPIPGraphDataActivationUpdateSender {
         pthread_barrier_t * barrier_;
         LockFreeQueue<CUDAPIPForwardTask> * task_queue_;
         std::thread * thread_;
+
         double comm_;
+        double graph_dev2host_time_;
+        double graph_memcpy_time_;
+        double graph_net_time_;
 
         void thread_main();
 
@@ -1231,6 +1235,15 @@ class CUDAPIPGraphDataActivationUpdateSender {
         }
         inline double get_comm() {
             return comm_;
+        }
+        inline double get_graph_dev2host_time() {
+            return graph_dev2host_time_;
+        }
+        inline double get_graph_memcpy_time() {
+            return graph_memcpy_time_;
+        }
+        inline double get_graph_net_time() {
+            return graph_net_time_;
         }
 };
 
@@ -1279,7 +1292,11 @@ class CUDAPIPGraphDataGradientUpdateSender {
         pthread_barrier_t * barrier_;
         LockFreeQueue<CUDAPIPBackwardTask> * task_queue_;
         std::thread * thread_;
+
         double comm_;
+        double graph_dev2host_time_;
+        double graph_memcpy_time_;
+        double graph_net_time_;
 
         void thread_main();
 
@@ -1316,6 +1333,15 @@ class CUDAPIPGraphDataGradientUpdateSender {
         }
         inline double get_comm() {
             return comm_;
+        }
+        inline double get_graph_dev2host_time() {
+            return graph_dev2host_time_;
+        }
+        inline double get_graph_memcpy_time() {
+            return graph_memcpy_time_;
+        }
+        inline double get_graph_net_time() {
+            return graph_net_time_;
         }
 };
 class CUDAPIPGraphDataGradientUpdateReceiver {

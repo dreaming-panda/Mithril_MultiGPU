@@ -752,6 +752,31 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             );
     avg_ps_comm /= double(num_epoch);
 
+    double graph_dev2host_time = engine_->act_update_sender_->get_graph_dev2host_time()
+        + engine_->grad_update_sender_->get_graph_dev2host_time();
+    double graph_memcpy_time = engine_->act_update_sender_->get_graph_memcpy_time()
+        + engine_->grad_update_sender_->get_graph_memcpy_time();
+    double graph_net_time = engine_->act_update_sender_->get_graph_net_time()
+        + engine_->grad_update_sender_->get_graph_net_time();
+    MPI_Allreduce(
+            MPI_IN_PLACE, &graph_dev2host_time, 1
+            DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    MPI_Allreduce(
+            MPI_IN_PLACE, &graph_memcpy_time, 1
+            DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    MPI_Allreduce(
+            MPI_IN_PLACE, &graph_net_time, 1
+            DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    graph_dev2host_time /= double(num_epoch);
+    graph_memcpy_time /= double(num_epoch);
+    graph_net_time /= double(num_epoch);
+
     if (! node_id) {
         printf("\tGraph-level communication (cluster-wide, per epoch): %.3f GB\n",
                 avg_graph_comm / 1024. / 1024. / 1024.);
@@ -761,6 +786,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 (avg_graph_comm + avg_layer_comm) / 1024. / 1024. / 1024.);
         printf("\tParameter-server communication (cluster-wide, per epoch): %.3f GB\n",
                 avg_ps_comm / 1024. / 1024. / 1024.);
+        printf("\tGraph-level dev2host communication time: %.3f s, throughput: %.6f GBps\n",
+                graph_dev2host_time, avg_graph_comm / graph_dev2host_time);
+        printf("\tGraph-level memcpy communication time: %.3f s, throughput: %.6f GBps\n",
+                graph_memcpy_time, avg_graph_comm / graph_memcpy_time);
+        printf("\tGraph-level net communication time: %.3f s, throughput: %.6f GBps\n",
+                graph_net_time, avg_graph_comm / graph_net_time);
     }
 }
 
@@ -2028,6 +2059,9 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     CUDAPIPForwardTask task;
 
     double graph_act_comm = 0;
+    double graph_dev2host_time = 0;
+    double graph_memcpy_time = 0;
+    double graph_net_time = 0;
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
@@ -2079,9 +2113,12 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                     VertexId vid = chunk_begin;
                     assert(num_elements_per_vertex <= comm_buff_size);
                     DataType * data_buff = new DataType[(chunk_end - chunk_begin) * num_elements_per_vertex];
+                    graph_dev2host_time -= get_time();
                     CopyFromCUDADeviceToHost<DataType>(data_buff, data, (chunk_end - chunk_begin) * num_elements_per_vertex,__FILE__, __LINE__);
+                    graph_dev2host_time += get_time();
                     while (num_sent_elements < num_elements_should_be_sent) {
                         size_t num_elements_to_send = 0;
+                        graph_memcpy_time -= get_time();
                         while (vid < chunk_end && 
                                 num_elements_to_send + num_elements_per_vertex <= comm_buff_size) {
                             if (engine_->has_incoming_mirror(vid, remote_node)) {
@@ -2094,7 +2131,10 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                             }
                             ++ vid;
                         }
+                        graph_memcpy_time += get_time();
+
                         assert(num_elements_to_send > 0);
+                        graph_net_time -= get_time();
                         MPI_Send(
                                 &num_elements_to_send, 1, 
                                 DistributedSys::get_mpi_data_type<size_t>(),
@@ -2110,6 +2150,7 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                                 );
                         graph_act_comm += sizeof(DataType) * num_elements_to_send;
                         num_sent_elements += num_elements_to_send;
+                        graph_net_time += get_time();
                     }
                     delete [] data_buff;
                     assert(num_sent_elements == num_elements_should_be_sent);
@@ -2119,6 +2160,9 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     }
 
     comm_ = graph_act_comm;
+    graph_dev2host_time_ = graph_dev2host_time;
+    graph_memcpy_time_ = graph_memcpy_time;
+    graph_net_time_ = graph_net_time;
     //double avg;
     //MPI_Allreduce(&graph_act_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
     //        MPI_SUM, MPI_COMM_WORLD);
@@ -2235,6 +2279,9 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     CUDAPIPBackwardTask task;
 
     double graph_grad_comm = 0;
+    double graph_dev2host_time = 0;
+    double graph_memcpy_time = 0;
+    double graph_net_time = 0;
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
@@ -2288,8 +2335,11 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                     VertexId vid = chunk_begin;
                     assert(num_elements_per_vertex <= comm_buff_size);
                     DataType * grad_buff = new DataType[(chunk_end - chunk_begin) * num_elements_per_vertex];
+                    graph_dev2host_time -= get_time();
                     CopyFromCUDADeviceToHost<DataType>(grad_buff, grad, (chunk_end - chunk_begin) * num_elements_per_vertex, __FILE__, __LINE__);
+                    graph_dev2host_time += get_time();
                     while (num_sent_elements < num_elements_should_be_sent) {
+                        graph_memcpy_time -= get_time();
                         size_t num_elements_to_send = 0;
                         while (vid < chunk_end && 
                                 num_elements_to_send + num_elements_per_vertex <= comm_buff_size) {
@@ -2303,7 +2353,10 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                             }
                             ++ vid;
                         }
+                        graph_memcpy_time += get_time();
+
                         assert(num_elements_to_send > 0);
+                        graph_net_time -= get_time();
                         MPI_Send(
                                 &num_elements_to_send, 1,
                                 DistributedSys::get_mpi_data_type<size_t>(),
@@ -2317,6 +2370,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                                 remote_node, GradientInterchanging,
                                 MPI_COMM_WORLD
                                 );
+                        graph_net_time += get_time();
                         num_sent_elements += num_elements_to_send;
                         graph_grad_comm += num_elements_to_send * sizeof(DataType);
                     }
@@ -2328,6 +2382,9 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     }
 
     comm_ = graph_grad_comm;
+    graph_dev2host_time_ = graph_dev2host_time;
+    graph_memcpy_time_ = graph_memcpy_time;
+    graph_net_time_ = graph_net_time;
     //double avg;
     //MPI_Allreduce(&graph_grad_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
     //        MPI_SUM, MPI_COMM_WORLD);
