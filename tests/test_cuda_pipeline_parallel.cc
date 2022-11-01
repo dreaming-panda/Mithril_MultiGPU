@@ -189,6 +189,7 @@ int main(int argc, char ** argv) {
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(5e-3, 0);
     //AbstractOperatorExecutor * executor = new OperatorExecutorCPU(graph_structure);
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
+
     cublasHandle_t cublas;
     cublasCreate(&cublas);
     cudnnHandle_t cudnn;

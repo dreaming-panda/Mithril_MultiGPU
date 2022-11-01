@@ -1,24 +1,9 @@
-/*
-Copyright 2021, University of Southern California
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 #include <assert.h>
 #include <stdio.h>
 
 #include <string>
 #include <sstream> 
+#include <thread>
 
 #include <boost/program_options.hpp>
 
@@ -30,10 +15,38 @@ limitations under the License.
 #include "context.h"
 #include "executor.h"
 #include "parallel/model_parallel.h"
-#include "parallel/pipelined_model_parallel.h"
-#include "parallel/hybrid_parallel.h"
-const double learning_rate = 1e-3;
-const double weight_decay = 0;
+#include "cuda/cuda_executor.h"
+#include "cuda/cuda_graph_loader.h"
+#include "cuda/cuda_graph.h"
+#include "cublas_v2.h"
+#include "cuda/cuda_loss.h"
+#include"cuda/cuda_executor.h"
+#include "cuda/cuda_pipeline_parallel.h"
+#include "cuda/cuda_hybrid_parallel.h"
+#include "cuda/cuda_optimizer.h"
+#include "cuda/cuda_single_cpu_engine.h"
+#include "cuda/cuda_utils.h"
+#include "distributed_sys.h"
+
+static uint64_t getHostHash(const char* string) {
+  // Based on DJB2a, result = result * 33 ^ char
+  uint64_t result = 5381;
+  for (int c = 0; string[c] != '\0'; c++){
+    result = ((result << 5) + result) ^ string[c];
+  }
+  return result;
+}
+
+
+static void getHostName(char* hostname, int maxlen) {
+  gethostname(hostname, maxlen);
+  for (int i=0; i< maxlen; i++) {
+    if (hostname[i] == '.') {
+        hostname[i] = '\0';
+        return;
+    }
+  }
+}
 
 class GCN: public AbstractApplication {
     private:
@@ -60,9 +73,9 @@ class GCN: public AbstractApplication {
                 }
                 t = fc(t, output_size);
 
-                t = aggregation(t, NORM_SUM);
+                t = aggregation(t, NORM_SUM);  
 
-                if (i == num_layers_ - 1) {
+                if (i == num_layers_ - 1) { 
                     t = softmax(t);
                 } else {
                     t = relu(t);
@@ -71,6 +84,8 @@ class GCN: public AbstractApplication {
             return t;
         }
 };
+
+
 
 int main(int argc, char ** argv) {
     // parse input arguments
@@ -81,7 +96,9 @@ int main(int argc, char ** argv) {
         ("graph", po::value<std::string>()->required(), "The directory of the graph dataset.")
         ("layers", po::value<int>()->required(), "The number of GCN layers.")
         ("hunits", po::value<int>()->required(), "The number of hidden units.")
-        ("epoch", po::value<int>()->required(), "The number of epoches.");
+        ("epoch", po::value<int>()->required(), "The number of epoches.")
+        ("lr", po::value<double>()->required(), "The learning rate.")
+        ("decay", po::value<double>()->required(), "Weight decay.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -96,64 +113,68 @@ int main(int argc, char ** argv) {
         }
         exit(-1);
     }
+
     std::string graph_path = vm["graph"].as<std::string>();
     int num_layers = vm["layers"].as<int>();
     int num_hidden_units = vm["hunits"].as<int>();
-    int num_epoch = vm["epoch"].as<int>();
+    int epoch = vm["hunits"].as<int>();
+    double learning_rate = vm["lr"].as<double>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
     printf("The number of hidden units: %d\n", num_hidden_units);
+    printf("The number of training epoches: %d\n", epoch);
+    printf("Learning rate: %.6f\n", learning_rate);
 
-    Context::init_context();
-
-    // load the graph dataset
-    AbstractGraphStructure * graph_structure;
+    // loading graph
+    CUDAFullyStructualGraph * graph_structure;
     AbstractGraphNonStructualData * graph_non_structural_data;
 
-    GraphStructureLoaderFullyReplicated graph_structure_loader;
+    CUDAStructualGraphLoader graph_structure_loader;
     GraphNonStructualDataLoaderFullyReplicated graph_non_structural_data_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
             graph_path + "/meta_data.txt",
-            graph_path + "/edge_list.txt",
+            graph_path + "/edge_list.bin",
             graph_path + "/vertex_structure_partition.txt"
             );
     graph_non_structural_data = graph_non_structural_data_loader.load_graph_non_structural_data(
             graph_path + "/meta_data.txt",
-            graph_path + "/feature.txt",
-            graph_path + "/label.txt",
+            graph_path + "/feature.bin",
+            graph_path + "/label.bin",
             graph_path + "/vertex_data_partition.txt"
             );
-
+    graph_structure->SetCuda(true);
     int num_classes = graph_non_structural_data->get_num_labels();
     int num_features = graph_non_structural_data->get_num_feature_dimensions();
     printf("Number of classes: %d\n", num_classes);
     printf("Number of feature dimensions: %d\n", num_features);
 
-    // train the model
+    // initialize the engine
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
-
-    // setup the execution engine
-    AbstractExecutionEngine * execution_engine = new SingleNodeExecutionEngineCPU();
-    //AbstractExecutionEngine * execution_engine = new DistributedModelParallelExecutionEngineCPU();
-    //AbstractExecutionEngine * execution_engine = new DistributedPipelinedLinearModelParallelExecutionEngineCPU();
-    //AbstractExecutionEngine * execution_engine = new DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU();
-    //AbstractExecutionEngine * execution_engine = new DistributedPIPHybridParallelExecutionEngineCPU();
-    
-    //AbstractOptimizer * optimizer = new SGDOptimizerCPU(0.3);
-    AbstractOptimizer * optimizer = new AdamOptimizerCPU(learning_rate, weight_decay);
-
-    AbstractOperatorExecutor * executor = new OperatorExecutorCPU(graph_structure);
-    AbstractLoss * loss = new CrossEntropyLossCPU();
+    SingleNodeExecutionEngineGPU * execution_engine = new SingleNodeExecutionEngineGPU();
+    AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay);
+    OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
+    cublasHandle_t cublas;
+    cublasCreate(&cublas);
+    cudnnHandle_t cudnn;
+    cudnnCreate(&cudnn);
+    cusparseHandle_t cusparse;
+    cusparseCreate(&cusparse);
+    executor->set_activation_size(num_hidden_units,num_classes);
+    executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
+    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
+    loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
+    execution_engine->setCuda(cudnn, graph_structure->get_num_global_vertices());
     execution_engine->set_graph_structure(graph_structure);
     execution_engine->set_graph_non_structural_data(graph_non_structural_data);
     execution_engine->set_optimizer(optimizer);
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
 
+    // model training
     execution_engine->execute_application(gcn, num_epoch);
 
-    // destroy the model
+    // destroy the model and the engine
     delete gcn;
     delete execution_engine;
     delete optimizer;
@@ -163,14 +184,12 @@ int main(int argc, char ** argv) {
     // destroy the graph dataset
     graph_structure_loader.destroy_graph_structure(graph_structure);
     graph_non_structural_data_loader.destroy_graph_non_structural_data(graph_non_structural_data);
+    cublasDestroy(cublas);
+    cudnnDestroy(cudnn);
+    cusparseDestroy(cusparse);
 
-    Context::finalize_context();
     return 0;
 }
-
-
-
-
 
 
 
