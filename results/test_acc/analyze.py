@@ -52,23 +52,23 @@ def read_multi_gpu_accc(num_epoch, graph, model):
 if __name__ == "__main__":
     num_epoch = 5000
 
-    graph = "ogbn-arxiv"
     model = "gcn"
 
-    epoches = [i for i in range(num_epoch)]
-    single_gpu_acc = read_single_gpu_acc(num_epoch, graph, model)
-    multi_gpu_acc = read_multi_gpu_accc(num_epoch, graph, model)
+    for graph in ["citeseer", "cora", "pubmed", "ogbn-arxiv"]:
+        epoches = [i for i in range(num_epoch)]
+        single_gpu_acc = read_single_gpu_acc(num_epoch, graph, model)
+        multi_gpu_acc = read_multi_gpu_accc(num_epoch, graph, model)
 
-    #print(epoches)
-    #print(single_gpu_acc)
+        #print(epoches)
+        #print(single_gpu_acc)
 
-    plt.plot(epoches, single_gpu_acc, "-", label = "single-gpu")
-    plt.plot(epoches, multi_gpu_acc, "-", label = "multi-gpu")
-    plt.legend()
-    plt.ylabel("Train Acc")
-    plt.xlabel("Epoch")
-    plt.title("%s-%s" % (graph, model))
-    plt.savefig("%s-%s.pdf" % (graph, model))
-    plt.show()
+        plt.plot(epoches, single_gpu_acc, "-", label = "single-gpu")
+        plt.plot(epoches, multi_gpu_acc, "-", label = "multi-gpu")
+        plt.legend()
+        plt.ylabel("Train Acc")
+        plt.xlabel("Epoch")
+        plt.title("%s-%s" % (graph, model))
+        plt.savefig("%s-%s.pdf" % (graph, model))
+        plt.show()
 
 

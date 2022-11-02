@@ -161,16 +161,16 @@ int main(int argc, char ** argv) {
     int ntest = 0;
     for(int i = 0; i < graph_structure->get_num_global_vertices(); ++i)
     {
-        int j = i % 17;
-        if(j <= 12){
+        
+        if(i <= 59){
             training[i] = 1;
             ntrain ++;
         }
-        if(j <= 14 && j >= 13){
+        if(i <= 559 && i >= 60){
             valid[i] = 1;
             nvalid ++;
         }
-         if(j <= 16 && j >= 15){
+         if(i >= 18717){
             test[i] = 1;
             ntest ++;
         }
