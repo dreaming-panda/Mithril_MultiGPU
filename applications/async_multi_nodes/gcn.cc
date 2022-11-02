@@ -80,7 +80,7 @@ int main(int argc, char ** argv) {
         ("epoch", po::value<int>()->required(), "The number of epoches.")
         ("lr", po::value<double>()->required(), "The learning rate.")
         ("decay", po::value<double>()->required(), "Weight decay.")
-        ("part", po::value<std::string>->required(), "The graph-model co-partition strategy: graph, model, hybrid.");
+        ("part", po::value<std::string>()->required(), "The graph-model co-partition strategy: graph, model, hybrid.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -99,7 +99,7 @@ int main(int argc, char ** argv) {
     std::string graph_path = vm["graph"].as<std::string>();
     int num_layers = vm["layers"].as<int>();
     int num_hidden_units = vm["hunits"].as<int>();
-    int epoch = vm["hunits"].as<int>();
+    int num_epoch = vm["hunits"].as<int>();
     double learning_rate = vm["lr"].as<double>();
     double weight_decay = vm["decay"].as<double>();
     std::string partition_strategy = vm["part"].as<std::string>();
@@ -107,9 +107,14 @@ int main(int argc, char ** argv) {
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
     printf("The number of hidden units: %d\n", num_hidden_units);
-    printf("The number of training epoches: %d\n", epoch);
+    printf("The number of training epoches: %d\n", num_epoch);
     printf("Learning rate: %.6f\n", learning_rate);
     printf("The partition strategy: %s\n", partition_strategy.c_str());
+
+    volatile bool terminated = false;
+    Context::init_context();
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int node_number = DistributedSys::get_instance()->get_num_nodes();
 
     // loading graph
     CUDAFullyStructualGraph * graph_structure;
@@ -166,7 +171,8 @@ int main(int argc, char ** argv) {
         execution_engine->set_partition(partition);
     } else {
         // TODO: add model && graph strategy
-        fprintf(stderr, "Partition strategy %s is not supported\n");
+        fprintf(stderr, "Partition strategy %s is not supported\n",
+                partition_strategy.c_str());
         exit(-1);
     }
 
@@ -186,6 +192,10 @@ int main(int argc, char ** argv) {
     cublasDestroy(cublas);
     cudnnDestroy(cudnn);
     cusparseDestroy(cusparse);
+
+    Context::finalize_context();
+    terminated = true;
+    printf("[MPI Rank %d] Success \n", node_id);
 
     return 0;
 }

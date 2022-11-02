@@ -1410,6 +1410,7 @@ class CUDAPIPParallelParameterServer {
 
         double comm;
 
+
     public:
         CUDAPIPParallelParameterServer(
                 CUDAOperatorsAndTensorsManager * op_ten_manager,
@@ -1684,6 +1685,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         ~DistributedPIPHybridParallelExecutionEngineGPU();
 
         double execute_application(AbstractApplication * application, int num_epoch); // returned: the training accucacy of the last epoch
+        void set_partition(CUDAPIPPartitioning partition) {
+            partitioning_ = partition;
+        }
 };
 
 #endif

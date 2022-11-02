@@ -3334,7 +3334,10 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     partitioning.partition_op_begin = new int [num_nodes];
     partitioning.partition_op_end = new int [num_nodes];
 
-    load_partitioning("./partition.txt", partitioning);
+    //load_partitioning("./partition.txt", partitioning);
+    //partitioning_ = partitioning;
+    partitioning = partitioning_;
+
     assert(num_nodes == partitioning.num_partitions);
     printf("Number of operators: %d\n", num_operators);
     for (int p_i = 0; p_i < num_nodes; ++ p_i) {
@@ -3354,8 +3357,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     printf("*** Node %d owns the partition [%d, %d) x [%u, %u)\n", 
             node_id, partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id],
             partitioning.partition_vid_begin[node_id], partitioning.partition_vid_end[node_id]);
-
-    partitioning_ = partitioning;
 
     // construct the helper classes
     printf("*** Node %d, constructing the helper classes...\n", node_id);

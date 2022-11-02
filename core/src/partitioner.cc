@@ -195,7 +195,7 @@ struct DPKey {
 // another more efficient (but less optimal) dynamic programming algorithm
 // used to discover good hybrid parallelism strategies
 
-std::vector<WorkloadPartition> ParallelismDesigner::co_partition_model_and_graph(
+CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
         AbstractApplication * application,
         int num_gpus, int num_hidden_units
         ) {
