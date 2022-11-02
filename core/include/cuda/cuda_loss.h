@@ -88,11 +88,6 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
             DeallocateCUDAMemory<DataType>(&loss_data_, __FILE__, __LINE__);
             DeallocateCUDAMemory<DataType>(&loss_, __FILE__, __LINE__);
             DeallocateCUDAMemory<DataType>(&d_inter_, __FILE__, __LINE__);
-            if(usingsplit){
-                DeallocateCUDAMemory<bool>(&gpu_training_mask_, __FILE__, __LINE__);
-                DeallocateCUDAMemory<bool>(&gpu_valid_mask_, __FILE__, __LINE__);
-                DeallocateCUDAMemory<bool>(&gpu_test_mask_, __FILE__, __LINE__);
-            }
         };
         double get_loss(Tensor * output_tensor, Tensor * std_tensor);
         void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor);
@@ -105,17 +100,17 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
             cudnnCreateTensorDescriptor(&data_descriptor);
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
         }
-        void set_mask(bool * training, bool * valid, bool * test, int num_vertices){
+        void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest){
             training_mask_ = training;
             valid_mask_ = valid;
             test_mask_ = test;
-            AllocateCUDAMemory<bool>(&gpu_training_mask_, num_vertices, __FILE__, __LINE__);
-            AllocateCUDAMemory<bool>(&gpu_valid_mask_, num_vertices, __FILE__, __LINE__);
-            AllocateCUDAMemory<bool>(&gpu_test_mask_, num_vertices, __FILE__, __LINE__);
-            CopyFromHostToCUDADevice<bool>(gpu_training_mask_, training_mask_, num_vertices, __FILE__, __LINE__);
-            CopyFromHostToCUDADevice<bool>(gpu_valid_mask_, valid_mask_, num_vertices, __FILE__, __LINE__);
-            CopyFromHostToCUDADevice<bool>(gpu_test_mask_, test_mask_, num_vertices, __FILE__, __LINE__);
+            gpu_training_mask_ = gpu_training;
+            gpu_valid_mask_ = gpu_valid;
+            gpu_test_mask_ = gpu_test;
             usingsplit = true;
+            this->ntrain = ntrain;
+            this->nvalid = nvalid;
+            this->ntest = ntest;
         }
     private:
         cudnnHandle_t cudnn_;
@@ -132,12 +127,15 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
         double LaunchGetLoss(DataType * std_data, DataType * output_data, int num_vertices, int outputsize);
         double LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type);
         bool usingsplit;
-        bool * training_mask_;
-        bool * gpu_training_mask_;
-        bool * valid_mask_;
-        bool * gpu_valid_mask_;
-        bool * test_mask_;
-        bool * gpu_test_mask_;
+        int * training_mask_;
+        int * gpu_training_mask_;
+        int * valid_mask_;
+        int * gpu_valid_mask_;
+        int * test_mask_;
+        int * gpu_test_mask_;
+        int ntrain;
+        int nvalid;
+        int ntest;
 };
 class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
 {
@@ -158,11 +156,6 @@ class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
             DeallocateCUDAMemory<DataType>(&loss_data_, __FILE__, __LINE__);
             DeallocateCUDAMemory<DataType>(&loss_, __FILE__, __LINE__);
             DeallocateCUDAMemory<DataType>(&d_inter_, __FILE__, __LINE__);
-            if(usingsplit){
-                DeallocateCUDAMemory<bool>(&gpu_training_mask_, __FILE__, __LINE__);
-                DeallocateCUDAMemory<bool>(&gpu_valid_mask_, __FILE__, __LINE__);
-                DeallocateCUDAMemory<bool>(&gpu_test_mask_, __FILE__, __LINE__);
-            }
         };
         double get_loss(Tensor * output_tensor, Tensor * std_tensor);
         void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor);
@@ -175,17 +168,17 @@ class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
             cudnnCreateTensorDescriptor(&data_descriptor);
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
         }
-        void set_mask(bool * training, bool * valid, bool * test, int num_vertices){
+         void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest){
             training_mask_ = training;
             valid_mask_ = valid;
             test_mask_ = test;
-            AllocateCUDAMemory<bool>(&gpu_training_mask_, num_vertices, __FILE__, __LINE__);
-            AllocateCUDAMemory<bool>(&gpu_valid_mask_, num_vertices, __FILE__, __LINE__);
-            AllocateCUDAMemory<bool>(&gpu_test_mask_, num_vertices, __FILE__, __LINE__);
-            CopyFromHostToCUDADevice<bool>(gpu_training_mask_, training_mask_, num_vertices, __FILE__, __LINE__);
-            CopyFromHostToCUDADevice<bool>(gpu_valid_mask_, valid_mask_, num_vertices, __FILE__, __LINE__);
-            CopyFromHostToCUDADevice<bool>(gpu_test_mask_, test_mask_, num_vertices, __FILE__, __LINE__);
+            gpu_training_mask_ = gpu_training;
+            gpu_valid_mask_ = gpu_valid;
+            gpu_test_mask_ = gpu_test;
             usingsplit = true;
+            this->ntrain = ntrain;
+            this->nvalid = nvalid;
+            this->ntest = ntest;
         }
     private:
         cudnnHandle_t cudnn_;
@@ -206,11 +199,14 @@ class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
             return 0.;
         };
         bool usingsplit;
-        bool * training_mask_;
-        bool * gpu_training_mask_;
-        bool * valid_mask_;
-        bool * gpu_valid_mask_;
-        bool * test_mask_;
-        bool * gpu_test_mask_;
+        int * training_mask_;
+        int * gpu_training_mask_;
+        int * valid_mask_;
+        int * gpu_valid_mask_;
+        int * test_mask_;
+        int * gpu_test_mask_;
+        int ntrain;
+        int nvalid;
+        int ntest;
 };
 #endif

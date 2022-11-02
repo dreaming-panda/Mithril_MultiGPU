@@ -74,7 +74,7 @@ __global__ void CalculateGradientsMaskKernel(
 DataType * std_data,
 DataType * output_data,
 DataType * output_grad,
-bool * training_mask,
+int * training_mask,
 double epsilon,
 int num_vertices,
 int outputsize,
@@ -82,17 +82,34 @@ int ThreadNumber,
 int BlockNumber,
 int per_thread_nodes
 ){
+    // int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
+    // int nid_end = nid_start + per_thread_nodes;
+    // if(nid_end >= num_vertices)nid_end = num_vertices;
+
+    // for(int i = nid_start; i < nid_end; ++i){
+    //     for(int j = 0; j < outputsize; ++j){
+    //         double o = output_data[i * outputsize + j];
+    //         double s = std_data[i * outputsize + j];
+    //         output_grad[i * outputsize + j] = (training_mask[i] == 1)? (- s / double(num_vertices) /( o + epsilon)) : 0.0;
+    //         //if(isnan(output_grad[i * outputsize + j]))output_grad[i * outputsize + j] = 0.0;
+    //     }
+    // }
     int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
     int nid_end = nid_start + per_thread_nodes;
     if(nid_end >= num_vertices)nid_end = num_vertices;
 
     for(int i = nid_start; i < nid_end; ++i){
+        double los = 0.0f;
         for(int j = 0; j < outputsize; ++j){
             double o = output_data[i * outputsize + j];
             double s = std_data[i * outputsize + j];
-            output_grad[i * outputsize + j] = training_mask[i * outputsize + j] ? (- s / double(num_vertices) /( o + epsilon)) : 0.0;
-            //if(isnan(output_grad[i * outputsize + j]))output_grad[i * outputsize + j] = 0.0;
+            output_grad[i * outputsize + j] = - s / double(num_vertices) /( o + epsilon);
+            los -= s * log(o + epsilon);
         }
+        for(int j = 0; j < outputsize; ++j){
+            output_grad[i * outputsize + j]  = (training_mask[i] == 1)? output_grad[i * outputsize + j] / (los + 0.31) : 0.0;
+        }
+
     }
 }
 __global__ void CalculateLossKernel(
@@ -161,7 +178,7 @@ __global__ void CalculateLossMaskKernel(
 DataType * std_data,
 DataType * output_data,
 DataType * loss_data,
-bool * mask,
+int * mask,
 double epsilon,
 int num_vertices,
 int outputsize,
@@ -243,7 +260,17 @@ double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * ou
     );
     DataType ls = 0.0;
     CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
-    return double(ls);
+     if(type == 0)
+    {
+        return double(ls) * double(num_vertices) / double(ntrain);
+    }else if(type == 1){
+        return double(ls) * double(num_vertices) / double(nvalid);
+    }else if(type == 2){
+        return double(ls) * double(num_vertices) / double(ntest);
+    }else {
+        assert(false);
+    }
+    return 0.0f;
 }
 double CrossEntropyLossGPU::LaunchGetLossWithStart(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int start){
     const int ThreadNumber = 1024;

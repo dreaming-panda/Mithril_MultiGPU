@@ -17,6 +17,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         void execute_computation_graph_forward(const std::vector<Operator*> &operators);
         void execute_computation_graph_backward(const std::vector<Operator*> &operators, const std::vector<bool> &operator_mask, Tensor * output_tensor);
         float LaunchCalculate_Accuracy(DataType * cuda_acc_data,DataType * cuda_output_data, DataType * cuda_std_data, int num_vertices, int outputsize);
+        float LaunchCalculate_Accuracy_Mask(DataType * cuda_acc_data,DataType * cuda_output_data, DataType * cuda_std_data, int num_vertices, int outputsize, int type);
         cudnnHandle_t cudnn_;
         cudnnReduceTensorDescriptor_t MeanDesc;
         cudnnTensorDescriptor_t hit_descriptor;
@@ -26,6 +27,17 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         cudnnTensorDescriptor_t data_descriptor;
         LearningRateScheduler * lr_scheduler_;
         VertexId vertices_;
+        bool usingsplit;
+        int * training_mask_;
+        int * gpu_training_mask_;
+        int * valid_mask_;
+        int * gpu_valid_mask_;
+        int * test_mask_;
+        int * gpu_test_mask_;
+        int ntrain;
+        int nvalid;
+        int ntest;
+        double calculate_accuracy_mask(Tensor * output_tensor, Tensor * std_tensor, int type);
         
 
     protected:
@@ -64,6 +76,18 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
             AllocateCUDAMemory<DataType>(&cuda_acc, num_vertices, __FILE__, __LINE__);
             vertices_ = num_vertices;
+        }
+         void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest){
+            training_mask_ = training;
+            valid_mask_ = valid;
+            test_mask_ = test;
+            gpu_training_mask_ = gpu_training;
+            gpu_valid_mask_ = gpu_valid;
+            gpu_test_mask_ = gpu_test;
+            usingsplit = true;
+            this->ntrain = ntrain;
+            this->nvalid = nvalid;
+            this->ntest = ntest;
         }
         void destroyCuda(){
            // cudnnDestroy(cudnn_);

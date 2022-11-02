@@ -478,7 +478,7 @@ double CrossEntropyLossGPU::get_loss(Tensor * output_tensor, Tensor * std_tensor
 
     VertexId num_vertices = output_resource->get_num_vertices();
     int output_size = output_tensor->dims[1];
-    double ls = LaunchGetLoss(d_std_data, d_output_data, num_vertices, output_size);
+    double ls = LaunchGetLossMask(d_std_data, d_output_data, num_vertices, output_size, 0);
     return ls;
 }
 
@@ -502,7 +502,7 @@ void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * s
 
     VertexId num_vertices = output_resource->get_num_vertices();
     int output_size = output_tensor->dims[1];
-    LaunchCalculateGradients(d_std_data, d_output_data, d_output_grad, num_vertices, output_size);
+    LaunchCalculateGradientsMask(d_std_data, d_output_data, d_output_grad, num_vertices, output_size);
 }
 double CrossEntropyLossGPUV2::get_loss(Tensor * output_tensor, Tensor * std_tensor) {
     assert(output_tensor->type == VERTEX_TENSOR);
