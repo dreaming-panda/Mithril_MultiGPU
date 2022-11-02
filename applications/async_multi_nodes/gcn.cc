@@ -28,6 +28,26 @@
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
 
+static uint64_t getHostHash(const char* string) {
+  // Based on DJB2a, result = result * 33 ^ char
+  uint64_t result = 5381;
+  for (int c = 0; string[c] != '\0'; c++){
+    result = ((result << 5) + result) ^ string[c];
+  }
+  return result;
+}
+
+
+static void getHostName(char* hostname, int maxlen) {
+  gethostname(hostname, maxlen);
+  for (int i=0; i< maxlen; i++) {
+    if (hostname[i] == '.') {
+        hostname[i] = '\0';
+        return;
+    }
+  }
+}
+
 class GCN: public AbstractApplication {
     private:
         int num_layers_;
@@ -65,6 +85,8 @@ class GCN: public AbstractApplication {
         }
 };
 
+
+
 int main(int argc, char ** argv) {
     // parse input arguments
     namespace po = boost::program_options;
@@ -76,7 +98,8 @@ int main(int argc, char ** argv) {
         ("hunits", po::value<int>()->required(), "The number of hidden units.")
         ("epoch", po::value<int>()->required(), "The number of epoches.")
         ("lr", po::value<double>()->required(), "The learning rate.")
-        ("decay", po::value<double>()->required(), "Weight decay.");
+        ("decay", po::value<double>()->required(), "Weight decay.")
+        ("part", po::value<std::string>->required(), "The graph-model co-partition strategy: graph, model, hybrid.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -95,23 +118,21 @@ int main(int argc, char ** argv) {
     std::string graph_path = vm["graph"].as<std::string>();
     int num_layers = vm["layers"].as<int>();
     int num_hidden_units = vm["hunits"].as<int>();
-    int num_epoch = vm["epoch"].as<int>();
+    int epoch = vm["hunits"].as<int>();
     double learning_rate = vm["lr"].as<double>();
-    double weight_decay = vm["decay"].as<double>();
+    std::string partition_strategy = vm["part"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
     printf("The number of hidden units: %d\n", num_hidden_units);
-    printf("The number of training epoches: %d\n", num_epoch);
+    printf("The number of training epoches: %d\n", epoch);
     printf("Learning rate: %.6f\n", learning_rate);
+    printf("The partition strategy: %s\n", partition_strategy.c_str());
 
-    volatile bool terminated = false;
-    cudaSetDevice(0);
-    Context::init_context();
-
-    // load the graph dataset
+    // loading graph
     CUDAFullyStructualGraph * graph_structure;
     AbstractGraphNonStructualData * graph_non_structural_data;
+
     CUDAStructualGraphLoader graph_structure_loader;
     GraphNonStructualDataLoaderFullyReplicated graph_non_structural_data_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
@@ -126,18 +147,15 @@ int main(int argc, char ** argv) {
             graph_path + "/vertex_data_partition.txt"
             );
     graph_structure->SetCuda(true);
-    graph_structure->InitMemory();
-    graph_structure->InitCsrBuffer();
     int num_classes = graph_non_structural_data->get_num_labels();
     int num_features = graph_non_structural_data->get_num_feature_dimensions();
     printf("Number of classes: %d\n", num_classes);
     printf("Number of feature dimensions: %d\n", num_features);
 
-    // setup the execution engine
+    // initialize the engine
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
-    SingleNodeExecutionEngineGPU * execution_engine = new SingleNodeExecutionEngineGPU();
+    DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay);
-    LearningRateScheduler * lr_scheduler = new LearningRateScheduler(0.005e-3, learning_rate, 0.8, 1e-8, 20000, 0);
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
     cublasHandle_t cublas;
     cublasCreate(&cublas);
@@ -147,7 +165,6 @@ int main(int argc, char ** argv) {
     cusparseCreate(&cusparse);
     executor->set_activation_size(num_hidden_units,num_classes);
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
-    executor->build_inner_csr_();
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
     execution_engine->setCuda(cudnn, graph_structure->get_num_global_vertices());
@@ -156,24 +173,21 @@ int main(int argc, char ** argv) {
     execution_engine->set_optimizer(optimizer);
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
-    execution_engine->set_lr_scheduler(lr_scheduler);
 
-    // train the model
-    execution_engine->execute_application(gcn, num_epoch);
+    // model training
+    assert(partition_strategy == "hybrid"); // FIXME
+    execution_engine->execute_application(gcn, num_epoch, partition_strategy);
 
-    // destroy the model
+    // destroy the model and the engine
     delete gcn;
     delete execution_engine;
     delete optimizer;
     delete executor;
     delete loss;
-    delete lr_scheduler;
+
     // destroy the graph dataset
     graph_structure_loader.destroy_graph_structure(graph_structure);
     graph_non_structural_data_loader.destroy_graph_non_structural_data(graph_non_structural_data);
-
-    Context::finalize_context();
-    terminated = true;
     cublasDestroy(cublas);
     cudnnDestroy(cudnn);
     cusparseDestroy(cusparse);
