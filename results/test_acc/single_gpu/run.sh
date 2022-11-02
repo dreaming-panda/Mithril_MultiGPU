@@ -30,6 +30,6 @@ export OMP_NUM_THREADS=12
 for dataset in cora citeseer pubmed ogbn-arxiv
 #for dataset in ogbn-arxiv
 do
-    ibrun ./build/applications/single_gpu/gcn --graph /work/03924/xuehaiq/maverick2/jingji/gnn_datasets/$dataset --layers 3 --hunits 128 --epoch 5000 --lr 0.001 --decay 0 | tee ./results/test_acc/single_gpu/${dataset}_gcn.txt
+    ibrun ./build/applications/single_gpu/gcn --graph /work/03924/xuehaiq/maverick2/jingji/gnn_datasets/$dataset --layers 3 --hunits 128 --epoch 10000 --lr 0.001 --decay 0 | tee ./results/test_acc/single_gpu/${dataset}_gcn.txt
 done
 
