@@ -77,6 +77,7 @@ DataType * output_grad,
 int * training_mask,
 double epsilon,
 int num_vertices,
+int num_used_vertices,
 int outputsize,
 int ThreadNumber,
 int BlockNumber,
@@ -90,7 +91,7 @@ int per_thread_nodes
     //     for(int j = 0; j < outputsize; ++j){
     //         double o = output_data[i * outputsize + j];
     //         double s = std_data[i * outputsize + j];
-    //         output_grad[i * outputsize + j] = (training_mask[i] == 1)? (- s / double(num_vertices) /( o + epsilon)) : 0.0;
+    //         output_grad[i * outputsize + j] = (training_mask[i] == 1)? (- s / double(num_used_vertices) /( o + epsilon)) : 0.0;
     //         //if(isnan(output_grad[i * outputsize + j]))output_grad[i * outputsize + j] = 0.0;
     //     }
     // }
@@ -103,7 +104,7 @@ int per_thread_nodes
         for(int j = 0; j < outputsize; ++j){
             double o = output_data[i * outputsize + j];
             double s = std_data[i * outputsize + j];
-            output_grad[i * outputsize + j] = - s / double(num_vertices) /( o + epsilon);
+            output_grad[i * outputsize + j] = - s / double(num_used_vertices) /( o + epsilon);
             los -= s * log(o + epsilon);
         }
         for(int j = 0; j < outputsize; ++j){
@@ -232,7 +233,7 @@ void CrossEntropyLossGPU::LaunchCalculateGradientsMask(DataType * std_data, Data
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
-    CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
+    CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, ntrain, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
     cudaDeviceSynchronize();
 }
 double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type){
