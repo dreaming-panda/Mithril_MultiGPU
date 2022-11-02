@@ -28,26 +28,6 @@
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
 
-static uint64_t getHostHash(const char* string) {
-  // Based on DJB2a, result = result * 33 ^ char
-  uint64_t result = 5381;
-  for (int c = 0; string[c] != '\0'; c++){
-    result = ((result << 5) + result) ^ string[c];
-  }
-  return result;
-}
-
-
-static void getHostName(char* hostname, int maxlen) {
-  gethostname(hostname, maxlen);
-  for (int i=0; i< maxlen; i++) {
-    if (hostname[i] == '.') {
-        hostname[i] = '\0';
-        return;
-    }
-  }
-}
-
 class GCN: public AbstractApplication {
     private:
         int num_layers_;
@@ -120,6 +100,7 @@ int main(int argc, char ** argv) {
     int num_hidden_units = vm["hunits"].as<int>();
     int epoch = vm["hunits"].as<int>();
     double learning_rate = vm["lr"].as<double>();
+    double weight_decay = vm["decay"].as<double>();
     std::string partition_strategy = vm["part"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
