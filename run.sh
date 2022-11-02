@@ -37,7 +37,7 @@
 #SBATCH -e mithril.e%j       # Name of stderr error file
 #SBATCH -p gtx      # Queue (partition) name
 #SBATCH -N 4             # Total # of nodes 
-#SBATCH -n 16            # Total # of mpi tasks
+#SBATCH --ntasks-per-node 4            # Per node # mpi tasks
 #SBATCH -t 01:30:00        # Run time (hh:mm:ss)
 
 # Other commands must follow all #SBATCH directives...
@@ -60,6 +60,6 @@ export OMP_NUM_THREADS=12
 # Launch MPI code... 
 
 #ibrun ./build/tests/test_cuda_pipeline_parallel         # Use ibrun instead of mpirun or mpiexec
-ibrun ./build/applications/async_multi_nodes/gcn --graph /work/03924/xuehaiq/maverick2/jingji/gnn_datasets/ogbn-products --layers 3 --hunits 128 --epoch 1000 --lr 0.01 --decay 0 --part hybrid
+ibrun ./build/applications/async_multi_nodes/gcn --graph /work/03924/xuehaiq/maverick2/jingji/gnn_datasets/ogbn-products --layers 3 --hunits 128 --epoch 1000 --lr 0.001 --decay 0 --part hybrid
 
 # ---------------------------------------------------
