@@ -60,6 +60,6 @@ export OMP_NUM_THREADS=12
 # Launch MPI code... 
 
 #ibrun ./build/tests/test_cuda_pipeline_parallel         # Use ibrun instead of mpirun or mpiexec
-ibrun ./build/applications/async_multi_nodes/gcn --graph /work/03924/xuehaiq/maverick2/jingji/gnn_datasets/ogbn-arxiv --layers 3 --hunits 128 --epoch 1000 --lr 0.001 --decay 0 --part hybrid
+ibrun ./build/applications/async_multi_gpus/gcn --graph /work/03924/xuehaiq/maverick2/jingji/gnn_datasets/ogbn-arxiv --layers 3 --hunits 128 --epoch 1000 --lr 0.001 --decay 0 --part hybrid
 
 # ---------------------------------------------------
