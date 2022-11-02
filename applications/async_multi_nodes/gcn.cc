@@ -27,6 +27,7 @@
 #include "cuda/cuda_single_cpu_engine.h"
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
+#include "partitioner.h"
 
 class GCN: public AbstractApplication {
     private:
@@ -155,9 +156,22 @@ int main(int argc, char ** argv) {
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
 
+    // determine the partitioning 
+    if (partition_strategy == "hybrid") {
+        ParallelismDesigner parallelism_designer(graph_structure, 0.1);
+        int num_gpus = DistributedSys::get_instance()->get_num_nodes();
+        CUDAPIPPartitioning partition = parallelism_designer.co_partition_model_and_graph(
+                gcn, num_gpus, num_hidden_units
+                );
+        execution_engine->set_partition(partition);
+    } else {
+        // TODO: add model && graph strategy
+        fprintf(stderr, "Partition strategy %s is not supported\n");
+        exit(-1);
+    }
+
     // model training
-    assert(partition_strategy == "hybrid"); // FIXME
-    execution_engine->execute_application(gcn, num_epoch, partition_strategy);
+    execution_engine->execute_application(gcn, num_epoch);
 
     // destroy the model and the engine
     delete gcn;
