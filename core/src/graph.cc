@@ -251,7 +251,11 @@ void GraphStructureFullyReplicatedV2::load_from_file(
         //assert(fscanf(f, "%u%u%d", &src, &dst, &edge_data) == 3);
        // printf("%u, %u\n",src, dst);
         out_edges_[e_i].dst = dst;
-        if(src == dst)selfcirclenumber++;
+        //printf("%d %d\n", src, dst);
+        if(src == dst)
+        {selfcirclenumber++;
+       // printf("%d %d", src, dst);
+        }
         if (src != last_src) {
             for (; last_src + 1 < src; ++ last_src) {
                 csr_idx_[last_src + 1] = e_i;

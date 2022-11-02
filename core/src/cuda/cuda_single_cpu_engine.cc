@@ -289,6 +289,36 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy(Tensor * output_tensor, 
     return 1. * num_hits / num_vertices;
     */
 }
+
+double SingleNodeExecutionEngineGPU::calculate_accuracy_mask(Tensor * output_tensor, Tensor * std_tensor, int type) {
+
+    
+    assert(output_tensor->type == VERTEX_TENSOR);
+    assert(std_tensor->type == VERTEX_TENSOR);
+    assert(output_tensor->dims[0] == std_tensor->dims[0]);
+    assert(output_tensor->dims[1] == std_tensor->dims[1]);
+
+    assert(output_tensor->resource != nullptr);
+    assert(std_tensor->resource != nullptr);
+    TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor->resource;
+    TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor->resource;
+
+    // DataType * output_data = output_resource->get_cpu_data();
+    // DataType * std_data = std_resource->get_cpu_data();
+    // assert(output_data != nullptr);
+    // assert(std_data != nullptr);
+    DataType * cuda_output_data = output_resource->get_gpu_data();
+    DataType * cuda_std_data = std_resource->get_gpu_data();
+    assert(cuda_output_data != nullptr);
+    assert(cuda_std_data != nullptr);
+    VertexId num_vertices = output_resource->get_num_vertices();
+    int output_size = output_tensor->dims[1];
+    DataType * cuda_acc_;
+   // AllocateCUDAMemory<DataType>(&cuda_acc_, num_vertices, __FILE__, __LINE__);
+    double acc = LaunchCalculate_Accuracy_Mask(cuda_acc, cuda_output_data, cuda_std_data, num_vertices, output_size, type);
+   // DeallocateCUDAMemory<DataType>(&cuda_acc_, __FILE__, __LINE__);
+    return acc;
+}
 double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
     assert(application != NULL);
     const std::vector<Operator*>& operators = application->get_operators();
@@ -395,7 +425,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
    // std::ofstream o("acc.txt");
     printf("\n****** Start model training... ******\n");
     assert(num_epoch > num_warmups);
-    double accuracy, loss;
+    double train_accuracy, valid_accuracy, test_accuracy, loss;
     for (int epoch = 0; epoch < num_epoch; ++ epoch) {
         printf("    Epoch %d:", epoch);
         double epoch_time = - get_time();
@@ -410,7 +440,9 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         loss_time += lt;
 
         double ca = -get_time();
-        accuracy = calculate_accuracy(application->get_output_tensor(), std_tensor);
+        train_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,0);
+        valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
+        test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
         ca += get_time();
         calacc_time += ca;
 
@@ -432,7 +464,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         if (epoch >= num_warmups) {
             total_runtime += epoch_time;
         }
-        printf("        Loss %.5f, Accuracy %.3f\n", loss, accuracy);
+        printf("        Loss %.5f, Train Accuracy %.3f,      Valid Accuracy %.3f,        Test Accuracy %.3f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
        // out << loss << std::endl;
        // o << accuracy << std::endl; 
     }
@@ -461,5 +493,5 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     delete std_tensor->resource;
     delete std_tensor;
 
-    return accuracy;
+    return train_accuracy;
 }

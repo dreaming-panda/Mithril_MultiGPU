@@ -150,6 +150,44 @@ int main(int argc, char ** argv) {
     executor->build_inner_csr_();
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
+    int * training = new int[graph_structure->get_num_global_vertices()];
+    int * valid = new int[graph_structure->get_num_global_vertices()];
+    int * test = new int[graph_structure->get_num_global_vertices()];
+    memset(training, 0, sizeof(int) * graph_structure->get_num_global_vertices());
+    memset(valid, 0, sizeof(int) * graph_structure->get_num_global_vertices());
+    memset(test, 0, sizeof(int) * graph_structure->get_num_global_vertices());
+    int ntrain = 0;
+    int nvalid = 0;
+    int ntest = 0;
+    for(int i = 0; i < graph_structure->get_num_global_vertices(); ++i)
+    {
+        int j = i % 17;
+        if(j <= 12){
+            training[i] = 1;
+            ntrain ++;
+        }
+        if(j <= 14 && j >= 13){
+            valid[i] = 1;
+            nvalid ++;
+        }
+         if(j <= 16 && j >= 15){
+            test[i] = 1;
+            ntest ++;
+        }
+    }
+   
+    int * gpu_training_mask_;
+    int * gpu_valid_mask_;
+    int * gpu_test_mask_;
+    AllocateCUDAMemory<int>(&gpu_training_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    AllocateCUDAMemory<int>(&gpu_valid_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    AllocateCUDAMemory<int>(&gpu_test_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(gpu_training_mask_, training, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(gpu_valid_mask_, valid, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(gpu_test_mask_, test, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    printf("train nodes %d, valid nodes %d, test nodes %d\n", ntrain, nvalid, ntest);
+    loss->set_mask(training, valid, test, gpu_training_mask_, gpu_valid_mask_, gpu_test_mask_, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
+    execution_engine->set_mask(training, valid, test, gpu_training_mask_, gpu_valid_mask_, gpu_test_mask_, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
     execution_engine->setCuda(cudnn, graph_structure->get_num_global_vertices());
     execution_engine->set_graph_structure(graph_structure);
     execution_engine->set_graph_non_structural_data(graph_non_structural_data);
@@ -168,6 +206,9 @@ int main(int argc, char ** argv) {
     delete executor;
     delete loss;
     delete lr_scheduler;
+    DeallocateCUDAMemory<int>(&gpu_training_mask_, __FILE__, __LINE__);
+    DeallocateCUDAMemory<int>(&gpu_valid_mask_, __FILE__, __LINE__);
+    DeallocateCUDAMemory<int>(&gpu_test_mask_, __FILE__, __LINE__);
     // destroy the graph dataset
     graph_structure_loader.destroy_graph_structure(graph_structure);
     graph_non_structural_data_loader.destroy_graph_non_structural_data(graph_non_structural_data);
