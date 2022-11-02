@@ -99,7 +99,7 @@ int main(int argc, char ** argv) {
     std::string graph_path = vm["graph"].as<std::string>();
     int num_layers = vm["layers"].as<int>();
     int num_hidden_units = vm["hunits"].as<int>();
-    int num_epoch = vm["hunits"].as<int>();
+    int num_epoch = vm["epoch"].as<int>();
     double learning_rate = vm["lr"].as<double>();
     double weight_decay = vm["decay"].as<double>();
     std::string partition_strategy = vm["part"].as<std::string>();
