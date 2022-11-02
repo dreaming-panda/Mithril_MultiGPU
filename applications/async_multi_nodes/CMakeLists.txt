@@ -5,4 +5,4 @@ function (add_application application_name)
 endfunction()
 
 add_application(gcn)
-add_application(gcnii)
+#add_application(gcnii)
