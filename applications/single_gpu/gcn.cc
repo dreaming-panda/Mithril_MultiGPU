@@ -159,23 +159,18 @@ int main(int argc, char ** argv) {
     int ntrain = 0;
     int nvalid = 0;
     int ntest = 0;
+    ifstream in_mask(graph_path + "/split.txt");
     for(int i = 0; i < graph_structure->get_num_global_vertices(); ++i)
     {
-        
-        if(i <= 59){
-            training[i] = 1;
-            ntrain ++;
-        }
-        if(i <= 559 && i >= 60){
-            valid[i] = 1;
-            nvalid ++;
-        }
-         if(i >= 18717){
-            test[i] = 1;
-            ntest ++;
-        }
+       int x, y;
+       in_mask >> x >> y;
+       assert(x == i);
+       if(y==0){ntrain++; training[i] = 1;}
+       if(y==1){nvalid++; valid[i] = 1;}
+       if(y==2){ntest++; test[i] = 1;}
     }
    
+    in_mask.close();
     int * gpu_training_mask_;
     int * gpu_valid_mask_;
     int * gpu_test_mask_;
