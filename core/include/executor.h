@@ -73,6 +73,49 @@ class AbstractLoss {
         virtual void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor) = 0;
         virtual double get_loss(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right) = 0;
         virtual void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right) = 0;
+        bool usingsplit;
+        int * training_mask_;
+        int * gpu_training_mask_;
+        int * valid_mask_;
+        int * gpu_valid_mask_;
+        int * test_mask_;
+        int * gpu_test_mask_;
+        int ntrain;
+        int nvalid;
+        int ntest;
+        int gntrain;
+        int gnvalid;
+        int gntest;
+        void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest){
+            training_mask_ = training;
+            valid_mask_ = valid;
+            test_mask_ = test;
+            gpu_training_mask_ = gpu_training;
+            gpu_valid_mask_ = gpu_valid;
+            gpu_test_mask_ = gpu_test;
+            usingsplit = true;
+            this->ntrain = ntrain;
+            this->nvalid = nvalid;
+            this->ntest = ntest;
+            gntrain = ntrain;
+            gnvalid = nvalid;
+            gntest = ntest;
+        }
+        void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest, int gntrain, int gnvalid, int gntest){
+            training_mask_ = training;
+            valid_mask_ = valid;
+            test_mask_ = test;
+            gpu_training_mask_ = gpu_training;
+            gpu_valid_mask_ = gpu_valid;
+            gpu_test_mask_ = gpu_test;
+            usingsplit = true;
+            this->ntrain = ntrain;
+            this->nvalid = nvalid;
+            this->ntest = ntest;
+            this->gntrain = gntrain;
+            this->gnvalid = gnvalid;
+            this->gntest = gntest;
+        }
 };
 struct GPUCsr{
     int number_matrix;

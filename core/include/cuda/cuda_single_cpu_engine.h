@@ -28,16 +28,8 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         LearningRateScheduler * lr_scheduler_;
         VertexId vertices_;
         bool usingsplit;
-        int * training_mask_;
-        int * gpu_training_mask_;
-        int * valid_mask_;
-        int * gpu_valid_mask_;
-        int * test_mask_;
-        int * gpu_test_mask_;
-        int ntrain;
-        int nvalid;
-        int ntest;
-        double calculate_accuracy_mask(Tensor * output_tensor, Tensor * std_tensor, int type);
+        
+        
         
 
     protected:
@@ -49,7 +41,16 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         void init_identity_tensor_data(DataType * data, size_t num_elements, int N);
         void init_identity_tensor(Tensor * identity_tensor);
         double calculate_accuracy(Tensor * output_tensor, Tensor * std_tensor);
-
+        double calculate_accuracy_mask(Tensor * output_tensor, Tensor * std_tensor, int type);
+        int * training_mask_;
+        int * gpu_training_mask_;
+        int * valid_mask_;
+        int * gpu_valid_mask_;
+        int * test_mask_;
+        int * gpu_test_mask_;
+        int ntrain;
+        int nvalid;
+        int ntest;
     public:
         SingleNodeExecutionEngineGPU() {
             lr_scheduler_ = nullptr;

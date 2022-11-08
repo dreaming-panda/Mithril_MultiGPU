@@ -100,18 +100,7 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
             cudnnCreateTensorDescriptor(&data_descriptor);
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
         }
-        void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest){
-            training_mask_ = training;
-            valid_mask_ = valid;
-            test_mask_ = test;
-            gpu_training_mask_ = gpu_training;
-            gpu_valid_mask_ = gpu_valid;
-            gpu_test_mask_ = gpu_test;
-            usingsplit = true;
-            this->ntrain = ntrain;
-            this->nvalid = nvalid;
-            this->ntest = ntest;
-        }
+        
     private:
         cudnnHandle_t cudnn_;
         DataType * loss_data_;
@@ -123,19 +112,12 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
         cudnnReduceTensorDescriptor_t MeanDesc;
         void LaunchCalculateGradients(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize);
         void LaunchCalculateGradientsMask(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize);
+        void LaunchCalculateGradientsMaskWithStart(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize, int start);
         double LaunchGetLossWithStart(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int start);
+        double LaunchGetLossMaskWithStart(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int start, int type);
         double LaunchGetLoss(DataType * std_data, DataType * output_data, int num_vertices, int outputsize);
         double LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type);
-        bool usingsplit;
-        int * training_mask_;
-        int * gpu_training_mask_;
-        int * valid_mask_;
-        int * gpu_valid_mask_;
-        int * test_mask_;
-        int * gpu_test_mask_;
-        int ntrain;
-        int nvalid;
-        int ntest;
+       
 };
 class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
 {
@@ -168,18 +150,7 @@ class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
             cudnnCreateTensorDescriptor(&data_descriptor);
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
         }
-         void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest){
-            training_mask_ = training;
-            valid_mask_ = valid;
-            test_mask_ = test;
-            gpu_training_mask_ = gpu_training;
-            gpu_valid_mask_ = gpu_valid;
-            gpu_test_mask_ = gpu_test;
-            usingsplit = true;
-            this->ntrain = ntrain;
-            this->nvalid = nvalid;
-            this->ntest = ntest;
-        }
+       
     private:
         cudnnHandle_t cudnn_;
         DataType * loss_data_;
@@ -198,15 +169,6 @@ class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
             assert(false);
             return 0.;
         };
-        bool usingsplit;
-        int * training_mask_;
-        int * gpu_training_mask_;
-        int * valid_mask_;
-        int * gpu_valid_mask_;
-        int * test_mask_;
-        int * gpu_test_mask_;
-        int ntrain;
-        int nvalid;
-        int ntest;
+       
 };
 #endif

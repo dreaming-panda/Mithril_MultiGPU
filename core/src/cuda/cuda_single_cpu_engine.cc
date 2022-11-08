@@ -254,6 +254,7 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy(Tensor * output_tensor, 
     assert(cuda_output_data != nullptr);
     assert(cuda_std_data != nullptr);
     VertexId num_vertices = output_resource->get_num_vertices();
+    
     int output_size = output_tensor->dims[1];
     DataType * cuda_acc_;
    // AllocateCUDAMemory<DataType>(&cuda_acc_, num_vertices, __FILE__, __LINE__);

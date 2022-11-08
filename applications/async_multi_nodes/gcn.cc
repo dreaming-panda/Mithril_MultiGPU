@@ -28,7 +28,8 @@
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
 #include "partitioner.h"
-
+#include <fstream>
+using namespace std;
 class GCN: public AbstractApplication {
     private:
         int num_layers_;
@@ -154,6 +155,40 @@ int main(int argc, char ** argv) {
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
+    int * training = new int[graph_structure->get_num_global_vertices()];
+    int * valid = new int[graph_structure->get_num_global_vertices()];
+    int * test = new int[graph_structure->get_num_global_vertices()];
+    memset(training, 0, sizeof(int) * graph_structure->get_num_global_vertices());
+    memset(valid, 0, sizeof(int) * graph_structure->get_num_global_vertices());
+    memset(test, 0, sizeof(int) * graph_structure->get_num_global_vertices());
+    int ntrain = 0;
+    int nvalid = 0;
+    int ntest = 0;
+    ifstream in_mask(graph_path + "/split.txt");
+    for(int i = 0; i < graph_structure->get_num_global_vertices(); ++i)
+    {
+       int x, y;
+       in_mask >> x >> y;
+       assert(x == i);
+       if(y==0){ntrain++; training[i] = 1;}
+       if(y==1){nvalid++; valid[i] = 1;}
+       if(y==2){ntest++; test[i] = 1;}
+    }
+    in_mask.close();
+    // int * gpu_training_mask_;
+    // int * gpu_valid_mask_;
+    // int * gpu_test_mask_;
+    // AllocateCUDAMemory<int>(&gpu_training_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    // AllocateCUDAMemory<int>(&gpu_valid_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    // AllocateCUDAMemory<int>(&gpu_test_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    // CopyFromHostToCUDADevice<int>(gpu_training_mask_, training, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    // CopyFromHostToCUDADevice<int>(gpu_valid_mask_, valid, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    // CopyFromHostToCUDADevice<int>(gpu_test_mask_, test, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    printf("train nodes %d, valid nodes %d, test nodes %d\n", ntrain, nvalid, ntest);
+
+    
+    //loss->set_mask(training, valid, test, gpu_training_mask_, gpu_valid_mask_, gpu_test_mask_, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
+    execution_engine->set_mask(training, valid, test, nullptr, nullptr, nullptr, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
     execution_engine->setCuda(cudnn, graph_structure->get_num_global_vertices());
     execution_engine->set_graph_structure(graph_structure);
     execution_engine->set_graph_non_structural_data(graph_non_structural_data);
@@ -185,7 +220,9 @@ int main(int argc, char ** argv) {
     delete optimizer;
     delete executor;
     delete loss;
-
+    // DeallocateCUDAMemory<int>(&gpu_training_mask_, __FILE__, __LINE__);
+    // DeallocateCUDAMemory<int>(&gpu_valid_mask_, __FILE__, __LINE__);
+    // DeallocateCUDAMemory<int>(&gpu_test_mask_, __FILE__, __LINE__);
     // destroy the graph dataset
     graph_structure_loader.destroy_graph_structure(graph_structure);
     graph_non_structural_data_loader.destroy_graph_non_structural_data(graph_non_structural_data);

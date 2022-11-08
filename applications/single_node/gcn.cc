@@ -27,7 +27,8 @@
 #include "cuda/cuda_single_cpu_engine.h"
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
-
+#include <fstream>
+using namespace std;
 class GCN: public AbstractApplication {
     private:
         int num_layers_;
@@ -159,23 +160,17 @@ int main(int argc, char ** argv) {
     int ntrain = 0;
     int nvalid = 0;
     int ntest = 0;
+    ifstream in_mask(graph_path + "/split.txt");
     for(int i = 0; i < graph_structure->get_num_global_vertices(); ++i)
     {
-        int j = i % 17;
-        if(j <= 12){
-            training[i] = 1;
-            ntrain ++;
-        }
-        if(j <= 14 && j >= 13){
-            valid[i] = 1;
-            nvalid ++;
-        }
-         if(j <= 16 && j >= 15){
-            test[i] = 1;
-            ntest ++;
-        }
+       int x, y;
+       in_mask >> x >> y;
+       assert(x == i);
+       if(y==0){ntrain++; training[i] = 1;}
+       if(y==1){nvalid++; valid[i] = 1;}
+       if(y==2){ntest++; test[i] = 1;}
     }
-   
+    in_mask.close();
     int * gpu_training_mask_;
     int * gpu_valid_mask_;
     int * gpu_test_mask_;

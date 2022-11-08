@@ -1486,7 +1486,16 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         CUDAPIPGraphDataGradientUpdateSender * grad_update_sender_;
         CUDAPIPGraphDataGradientUpdateReceiver * grad_update_receiver_;
         int num_helper_threads_;
-
+        //masks
+        int * local_training_mask_;
+        int * local_gpu_training_mask_;
+        int * local_valid_mask_;
+        int * local_gpu_valid_mask_;
+        int * local_test_mask_;
+        int * local_gpu_test_mask_;
+        int local_ntrain;
+        int local_nvalid;
+        int local_ntest;
         // the scheduler
         CUDAAbstractPIPScheduler * scheduler_;
         cudnnHandle_t * cudnn_;

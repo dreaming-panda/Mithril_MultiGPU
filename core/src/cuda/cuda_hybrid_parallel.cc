@@ -3270,28 +3270,38 @@ void DistributedPIPHybridParallelExecutionEngineGPU::release_resources() {
 
 void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss() {
     // calculate the accuracy
-    double accuracy = 0.;
+    double train_accuracy = 0.;
+    double valid_accuracy = 0.;
+    double test_accuracy = 0.;
+    double valid_accuracy_ = 0.;
+    double test_accuracy_ = 0.;
     if (is_bottommost_node_) {
         Profiler::submit_main_thread_event(AccuracyCalculationTaskStartEvent);
-        accuracy = calculate_accuracy(output_tensor_, std_tensor_);
+        train_accuracy = calculate_accuracy_mask(output_tensor_, std_tensor_, 0);
+        valid_accuracy = calculate_accuracy_mask(output_tensor_, std_tensor_, 1);
+        test_accuracy = calculate_accuracy_mask(output_tensor_, std_tensor_, 2);
         Profiler::submit_main_thread_event(AccuracyCalculationTaskCompleteEvent);
        
     }
 
     Profiler::submit_main_thread_event(GPUSyncStartEvent);
     //printf("Node %d local accuracy: %.3f\n", DistributedSys::get_instance()->get_node_id(), accuracy);
-    accuracy *= double(vid_translation_->get_num_master_vertices());
-    MPI_Allreduce(&accuracy, &accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    accuracy_ /= double(graph_structure_->get_num_global_vertices());
+    // accuracy *= double(vid_translation_->get_num_master_vertices());
+    MPI_Allreduce(&train_accuracy, &accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&valid_accuracy, &valid_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&test_accuracy, &test_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    // accuracy_ /= double(graph_structure_->get_num_global_vertices());
 
     // calculate the loss
-    accum_loss_ *= (double(vid_translation_->get_num_master_vertices()) / 
-        double(graph_structure_->get_num_global_vertices()));
+    // accum_loss_ *= (double(vid_translation_->get_num_master_vertices()) / 
+    //     double(graph_structure_->get_num_global_vertices()));
     MPI_Allreduce(MPI_IN_PLACE, &accum_loss_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
     if (DistributedSys::get_instance()->is_master_node()) {
-        printf("++++++++++ Accuracy: %.5f\n", accuracy_);
+        printf("++++++++++ Train Accuracy: %.5f\n", accuracy_);
+        printf("++++++++++ Valid Accuracy: %.5f\n", valid_accuracy_);
+        printf("++++++++++ Test Accuracy: %.5f\n", test_accuracy_);
         printf("++++++++++ Loss: %.5f\n", accum_loss_);
     }
     //printf("Node %d, local accuracy: %.3f\n",
@@ -3467,6 +3477,35 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     lgraph->get_cuda_csrColIn_Out(),lgraph->get_cuda_csrValue_Out(),lgraph->get_cuda_csrRowOffsets_Out(),lgraph->get_nnz_out(),
     lgraph->get_num_master_vertices(),lgraph->get_inMatrixSize(),lgraph->get_outMatrixSize());
     executor->set_cpu_csr(lgraph->get_host_csrRowOffsets_In(), lgraph->get_host_csrRowOffsets_Out());
+    local_ntrain = 0;
+    local_nvalid = 0;
+    local_ntest = 0;
+    local_training_mask_ = new int[lgraph->get_num_master_vertices()];
+    local_valid_mask_ = new int[lgraph->get_num_master_vertices()];
+    local_test_mask_ = new int[lgraph->get_num_master_vertices()];
+    memset(local_training_mask_, 0, sizeof(int) * lgraph->get_num_master_vertices());
+    memset(local_valid_mask_, 0, sizeof(int) * lgraph->get_num_master_vertices());
+    memset(local_test_mask_, 0, sizeof(int) * lgraph->get_num_master_vertices());
+    for(int i = 0; i < lgraph->get_num_master_vertices(); ++ i){
+        local_training_mask_[i] = training_mask_[vid_translation_->get_global_vid_master_vertex(i)];
+        local_valid_mask_[i] = valid_mask_[vid_translation_->get_global_vid_master_vertex(i)];
+        local_test_mask_[i] = test_mask_[vid_translation_->get_global_vid_master_vertex(i)];
+        if (local_training_mask_[i] == 1)local_ntrain++;
+        if (local_valid_mask_[i] == 1)local_nvalid++;
+        if (local_test_mask_[i] == 1)local_ntest++;
+    }
+    
+    
+    AllocateCUDAMemory<int>(&local_gpu_training_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
+    AllocateCUDAMemory<int>(&local_gpu_valid_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
+    AllocateCUDAMemory<int>(&local_gpu_test_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(local_gpu_training_mask_, local_training_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(local_gpu_valid_mask_, local_valid_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(local_gpu_test_mask_, local_test_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
+    this->loss_->set_mask(local_training_mask_, local_valid_mask_, local_test_mask_, local_gpu_training_mask_, local_gpu_valid_mask_, local_gpu_test_mask_, lgraph->get_num_master_vertices(), local_ntrain, local_nvalid, local_ntest, ntrain, nvalid, ntest);
+    this->gpu_training_mask_ = local_gpu_training_mask_;
+    this->gpu_valid_mask_ = local_gpu_valid_mask_;
+    this->gpu_test_mask_ = local_gpu_test_mask_;
     weight_stashing_manager_ = new CUDAWeightStashingManager(local_weight_ops_);
     assert(weight_stashing_manager_ != NULL);
 
@@ -3528,7 +3567,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     delete [] partitioning.partition_vid_end;
     delete [] partitioning.partition_op_begin;
     delete [] partitioning.partition_op_end;
-
+    DeallocateCUDAMemory<int>(&local_gpu_training_mask_, __FILE__, __LINE__);
+    DeallocateCUDAMemory<int>(&local_gpu_valid_mask_, __FILE__, __LINE__);
+    DeallocateCUDAMemory<int>(&local_gpu_test_mask_, __FILE__, __LINE__);
     //printf("*** Node %d, done model training\n", node_id);
 
     return accuracy_;
