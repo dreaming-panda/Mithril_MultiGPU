@@ -465,7 +465,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         if (epoch >= num_warmups) {
             total_runtime += epoch_time;
         }
-        printf("        Loss %.5f, Train Accuracy %.3f,      Valid Accuracy %.3f,        Test Accuracy %.3f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+        printf("\tLoss %.5f\tTrainAcc %.3f\tValidAcc %.3f\tTestAcc %.3f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
        // out << loss << std::endl;
        // o << accuracy << std::endl; 
     }
