@@ -28,7 +28,9 @@
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
 #include <fstream>
+
 using namespace std;
+
 class GCN: public AbstractApplication {
     private:
         int num_layers_;
