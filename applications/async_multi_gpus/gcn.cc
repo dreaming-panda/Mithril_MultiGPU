@@ -170,9 +170,9 @@ int main(int argc, char ** argv) {
        int x, y;
        in_mask >> x >> y;
        //assert(x == i);
-       if(y==0){ntrain++; training[i] = 1;}
-       if(y==1){nvalid++; valid[i] = 1;}
-       if(y==2){ntest++; test[i] = 1;}
+       if(y==0){ntrain++; training[x] = 1;}
+       if(y==1){nvalid++; valid[x] = 1;}
+       if(y==2){ntest++; test[x] = 1;}
     }
     in_mask.close();
     // int * gpu_training_mask_;
