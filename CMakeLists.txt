@@ -5,7 +5,7 @@ project(Mithril)
 
 set (CMAKE_C_COMPILER "mpicc")
 set (CMAKE_CXX_COMPILER "mpicxx")
-set (CMAKE_CUDA_COMPILER "/opt/apps/cuda/11.3/bin/nvcc")
+set (CMAKE_CUDA_COMPILER "nvcc")
 enable_language(CUDA)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)     
 #set(BOOST_ROOT /opt/apps/intel18/impi18_0/boost/1.66)
