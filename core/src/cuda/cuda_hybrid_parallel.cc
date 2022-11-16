@@ -2789,6 +2789,8 @@ void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataT
         }
         assert(grad_buff != nullptr);
         CopyFromCUDADeviceToHost<DataType>(grad_buff, grad, num_elements, __FILE__, __LINE__);
+        printf("Pushed grad data %.9f %.9f ... to a remote node.\n",
+                grad_buff[0], grad_buff[1]);
         MPI_Send(
                 grad_buff, num_elements, DistributedSys::get_mpi_data_type<DataType>(),
                 master_node, GradPushing, MPI_COMM_WORLD

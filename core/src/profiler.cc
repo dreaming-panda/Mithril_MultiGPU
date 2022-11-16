@@ -75,7 +75,7 @@ void Profiler::breakdown_analysis() {
 
     auto process_idle_time_range = [&](double start, double end) {
         if (start >= end) {
-            return 0;
+            return ;
         }
         double delta_layer_comm_time = 0;
         double delta_bubble_time = 0;

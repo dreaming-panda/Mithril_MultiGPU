@@ -8,6 +8,7 @@
 #include "partitioner.h"
 #include "utilities.h"
 #include "cuda/cuda_hybrid_parallel.h"
+#include "distributed_sys.h"
 
 // NaiveCostModel
 
@@ -199,7 +200,10 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
         AbstractApplication * application,
         int num_gpus, int num_hidden_units
         ) {
-    printf("Using dynamic programming to discover a good hybrid parallelism strategy.\n");
+    bool is_master_node = DistributedSys::get_instance()->get_node_id() == 0;
+
+    if (is_master_node)
+        printf("Using dynamic programming to discover a good hybrid parallelism strategy.\n");
     double start_time = get_time();
 
     // holding the optimal solution that will be returned
@@ -215,7 +219,8 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
         op2idx[op] = op_idx;
     }
     VertexId num_vertices = graph_structure_->get_num_global_vertices();
-    printf("Number of operators: %d\n", num_operators);
+    if (is_master_node)
+        printf("Number of operators: %d\n", num_operators);
 
     {
         // print the cost distribution of the model
@@ -229,8 +234,9 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
             Operator * op = operators[op_idx];
             assert(op);
             double cost = cost_model_->get_operator_cost(0, num_vertices, op);
-            printf("The %d-th operator (type %s) has cost %.3f (ratio: %.6f)\n",
-                    op_idx, get_op_type_str(op->get_type()).c_str(), cost, cost / cost_sum);
+            if (is_master_node)
+                printf("The %d-th operator (type %s) has cost %.3f (ratio: %.6f)\n",
+                        op_idx, get_op_type_str(op->get_type()).c_str(), cost, cost / cost_sum);
         }
     }
 
@@ -425,9 +431,10 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
         }
         cached_optimal_cost[key] = min_cost;
         if (min_cost < INF) {
-            printf("The communication cost of partitioning vertices [0, %u) into %d parts: %.6f GB\n",
-                    graph_boundaries[boundary_id], p, 
-                    min_cost / 1024. / 1024. / 1024.);
+            if (is_master_node)
+                printf("The communication cost of partitioning vertices [0, %u) into %d parts: %.6f GB\n",
+                        graph_boundaries[boundary_id], p, 
+                        min_cost / 1024. / 1024. / 1024.);
             prev_keys[key] = prev_key;
         }
         return min_cost;
@@ -441,7 +448,8 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
     max_workload_per_gpu = (1. + alpha_) * ideal_workload_per_gpu;
 
     // calculate graph boundaries
-    printf("Pure graph-level partition:\n");
+    if (is_master_node)
+        printf("Pure graph-level partition:\n");
     graph_boundaries.clear();
     double accum_cost = 0;
     graph_boundaries.push_back(0);
@@ -457,11 +465,13 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
         if (gpu == num_gpus - 1) {
             right_boundary = num_vertices;
         }
-        printf("%u %u 0 %d\n", prev_boundary, right_boundary, num_operators);
+        if (is_master_node)
+            printf("%u %u 0 %d\n", prev_boundary, right_boundary, num_operators);
         graph_boundaries.push_back(right_boundary);
         prev_boundary = right_boundary;
     }
-    printf("%u %u\n", prev_boundary, num_vertices);
+    if (is_master_node)
+        printf("%u %u\n", prev_boundary, num_vertices);
 
     // preprocessing for fast mirror calculation
     preprocessing_for_faster_mirror_calculation(graph_boundaries);
@@ -473,9 +483,11 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
     std::vector<int> vertical_partition_offsets;
     double cost_sum = 0;
     if (min_comm_cost < INF) {
-        printf("(vertical stripping) The minimum amount of communication volume (DP): %.6f GB\n", 
-                min_comm_cost / 1024. / 1024. / 1024.);
-        printf("Solution:\n");
+        if (is_master_node)
+            printf("(vertical stripping) The minimum amount of communication volume (DP): %.6f GB\n", 
+                    min_comm_cost / 1024. / 1024. / 1024.);
+        if (is_master_node)
+            printf("Solution:\n");
         DPKey key(num_gpus, num_gpus);
         while (key.v > 0 || key.p > 0) {
             DPKey prev_key = prev_keys[key];
@@ -484,8 +496,9 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
             int num_p = key.p - prev_key.p;
             key = prev_key;
             // output the solution
-            printf("Vertices [%u, %u) vertically partitioned into %d parts\n",
-                    v_begin, v_end, num_p);
+            if (is_master_node)
+                printf("Vertices [%u, %u) vertically partitioned into %d parts\n",
+                        v_begin, v_end, num_p);
             cost_sum += get_cost_vertical_partition(
                     v_begin, v_end, num_p, &vertical_partition_offsets
                     );
@@ -502,7 +515,8 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
             }
         }
     } else {
-        printf("NO VALID SOLUTION\n");
+        if (is_master_node)
+            printf("NO VALID SOLUTION\n");
     }
     std::reverse(hybrid_partition.begin(), hybrid_partition.end());
 
@@ -513,17 +527,20 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
                 0, num_vertices, num_gpus
                 );
         if (cost_model_parallel < INF) {
-            printf("The minimum amount of communication volume (model parallel): %.6f GB (%.3fx)\n",
-                    cost_model_parallel / 1024. / 1024. / 1024., cost_model_parallel / min_comm_cost);
+            if (is_master_node)
+                printf("The minimum amount of communication volume (model parallel): %.6f GB (%.3fx)\n",
+                        cost_model_parallel / 1024. / 1024. / 1024., cost_model_parallel / min_comm_cost);
         } else {
             double expected_cost_model_parallel = 2. * sizeof(DataType) * num_vertices * num_hidden_units * (num_gpus - 1);
-            printf("No valid model parallel, expected comm volume: %.6f GB (%.3fx)\n",
-                    expected_cost_model_parallel / 1024. / 1024. / 1024., expected_cost_model_parallel / min_comm_cost);
+            if (is_master_node)
+                printf("No valid model parallel, expected comm volume: %.6f GB (%.3fx)\n",
+                        expected_cost_model_parallel / 1024. / 1024. / 1024., expected_cost_model_parallel / min_comm_cost);
             int assigned_operators = 0;
             for (int gpu = 0; gpu < num_gpus; ++ gpu) {
                 int operators_this_gpu = (num_operators - assigned_operators) / (num_gpus - gpu);
-                printf("0 %u %d %d\n", num_vertices, assigned_operators, 
-                        assigned_operators + operators_this_gpu);
+                if (is_master_node)
+                    printf("0 %u %d %d\n", num_vertices, assigned_operators, 
+                            assigned_operators + operators_this_gpu);
                 assigned_operators += operators_this_gpu;
             }
             assert(assigned_operators == num_operators);
@@ -573,19 +590,22 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
             v_left_boundary = v_right_boundary;
             graph_boundaries.push_back(v_right_boundary);
         }
-        printf("The minimum amount of communication volume (graph parallel): %.6f GB (%.3fx)\n",
-                cost_graph_parallel / 1024. / 1024. / 1024., cost_graph_parallel / min_comm_cost);
-        printf("Graph parallel boundaries: \n");
-        for (VertexId boundary: graph_boundaries) {
-            printf("%u ", boundary);
+        if (is_master_node) {
+            printf("The minimum amount of communication volume (graph parallel): %.6f GB (%.3fx)\n",
+                    cost_graph_parallel / 1024. / 1024. / 1024., cost_graph_parallel / min_comm_cost);
+            printf("Graph parallel boundaries: \n");
+            for (VertexId boundary: graph_boundaries) {
+                printf("%u ", boundary);
+            }
+            printf("\n");
         }
-        printf("\n");
     }
 
     double end_time = get_time();
     double exec_time = end_time - start_time;
-    printf("The dynamic programming algorithm takes %.3f seconds\n", 
-            exec_time);
+    if (is_master_node)
+        printf("The dynamic programming algorithm takes %.3f seconds\n", 
+                exec_time);
 
     CUDAPIPPartitioning pip_partitioning;
     pip_partitioning.num_partitions = num_gpus;
