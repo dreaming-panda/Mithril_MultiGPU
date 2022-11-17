@@ -112,7 +112,7 @@ class AdamOptimizerGPU: public AbstractOptimizer {
         // pipeline parallel) can be implemented
         AbstractLowerLevelOptimizer * get_lower_level_optimizer();
         void SetLearningRate(double new_lr){
-           // printf("chanege lr!\n");
+            //printf("chanege lr! %.9f\n", new_lr);
            // printf("chanege lr!\n");
            // printf("chanege lr!\n");
            // printf("chanege lr!\n");

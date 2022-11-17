@@ -98,6 +98,7 @@ LowerLevelAdamOptimizerGPU::LowerLevelAdamOptimizerGPU(
                 double epsilon):learning_rate_(learning_rate), 
     weight_decay_(weight_decay), beta1_(beta1), beta2_(beta2), epsilon_(epsilon){
             states_.clear();
+            //printf("Learning RATE: %.9f\n", learning_rate_);
     };
 LowerLevelAdamOptimizerGPU::~LowerLevelAdamOptimizerGPU(){
             for (std::pair<Operator*, OptimizerStateGPU> state_pair: states_) {
@@ -128,6 +129,7 @@ void LowerLevelAdamOptimizerGPU::optimize_weights(
     }
     LaunchOptimizeWeights(op,grad,weight_to_update,num_elements);
                 };
+
 AdamOptimizerGPU::AdamOptimizerGPU(
         double learning_rate,
         double weight_decay,
@@ -135,6 +137,8 @@ AdamOptimizerGPU::AdamOptimizerGPU(
         double beta2,
         double epsilon
         ) {
+    //printf("Creating an Adam Optimizer...\n");
+    //printf("High-level optimizer, Learning RATE: %.9f\n", learning_rate);
     lower_level_optimizer_ = new LowerLevelAdamOptimizerGPU(
             learning_rate, weight_decay,
             beta1, beta2, epsilon
@@ -151,6 +155,7 @@ void AdamOptimizerGPU::optimize_weights(
         const std::vector<bool> operator_mask
         ) {
     int num_operators = operators.size();
+    //printf("Optimize weight: ");
     for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
         Operator * op = operators[op_idx];
         if (operator_mask[op_idx] && op->get_type() == OPERATOR_WEIGHT) {
@@ -181,12 +186,22 @@ void AdamOptimizerGPU::optimize_weights(
             lower_level_optimizer_->optimize_weights(
                     op, cuda_grad, cuda_data, data_len
                     );
+            //{
+            //    DataType datas[data_len];
+            //    cudaMemcpy(datas, cuda_data, data_len * sizeof(DataType), cudaMemcpyDeviceToHost);
+            //    double sum = 0;
+            //    for (int i = 0; i < data_len; ++ i) {
+            //        sum += datas[i];
+            //    }
+            //    printf("OP %d, sum: %.9f ", op_idx, sum);
+            //}
            // CopyFromHostToCUDADevice<DataType>(cuda_data, data_, data_len, __FILE__, __LINE__);
            // CopyFromHostToCUDADevice<DataType>(cuda_grad, grad_, data_len, __FILE__, __LINE__);
           //  delete [] data_;
           //  delete [] grad_;
         }
     }
+    //printf("\n");
 }
 
 // the lower-level optimizer classes provided a lower-level 

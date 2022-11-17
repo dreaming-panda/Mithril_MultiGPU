@@ -2760,6 +2760,15 @@ void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataT
     for (int i = 0; i < tensor->num_dims; ++ i) {
         num_elements *= tensor->dims[i];
     }
+    //{
+    //    DataType grads[num_elements];
+    //    cudaMemcpy(grads, grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+    //    double sum = 0;
+    //    for (int i = 0; i < num_elements; ++ i) {
+    //        sum += grads[i];
+    //    }
+    //    printf("Push grad to PS, sum: %.9f\n", sum);
+    //}
     if (master_node == node_id) {
         // apply the gradient locally
         // lock the weight op first
@@ -2789,8 +2798,6 @@ void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataT
         }
         assert(grad_buff != nullptr);
         CopyFromCUDADeviceToHost<DataType>(grad_buff, grad, num_elements, __FILE__, __LINE__);
-        printf("Pushed grad data %.9f %.9f ... to a remote node.\n",
-                grad_buff[0], grad_buff[1]);
         MPI_Send(
                 grad_buff, num_elements, DistributedSys::get_mpi_data_type<DataType>(),
                 master_node, GradPushing, MPI_COMM_WORLD
@@ -3386,7 +3393,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-             graph_structure_->get_num_global_vertices() / 64
+             graph_structure_->get_num_global_vertices() / 1 // FIXME
             //graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new CUDADataDependenciesTracker(

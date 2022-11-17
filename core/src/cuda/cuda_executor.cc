@@ -1826,6 +1826,36 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op) {
      t  += get_time();
     matmulbackward_time += t;
     #endif
+
+    //printf("Matmul backward called: ");
+    //{
+    //     DataType grads[N * M];
+    //     cudaMemcpy(grads, d_outgrad, sizeof(DataType) * N * M, cudaMemcpyDeviceToHost);
+    //     double sum = 0;
+    //     for (int i = 0; i < N * M; ++ i) {
+    //         sum += grads[i];
+    //     }
+    //     printf(" C grad sum: %.9f", sum);
+    // }
+    // {
+    //     DataType grads[N * K];
+    //     cudaMemcpy(grads, d_ingrad0, sizeof(DataType) * N * K, cudaMemcpyDeviceToHost);
+    //     double sum = 0;
+    //     for (int i = 0; i < N * K; ++ i) {
+    //         sum += grads[i];
+    //     }
+    //     printf(" A grad sum: %.9f", sum);
+    // }
+    //{
+    //     DataType grads[K * M];
+    //     cudaMemcpy(grads, d_ingrad1, sizeof(DataType) * K * M, cudaMemcpyDeviceToHost);
+    //     double sum = 0;
+    //     for (int i = 0; i < K * M; ++ i) {
+    //         sum += grads[i];
+    //     }
+    //     printf(" B grad sum: %.9f\n", sum);
+    // }
+
 }
 void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
 
@@ -1886,6 +1916,29 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
      t  += get_time();
     softmaxbackward_time += t;
     #endif
+
+//    printf("Softmax backward called: ");
+//    {
+//        int num_elements = num_vertices * activation_size;
+//         DataType grads[num_elements];
+//         cudaMemcpy(grads, d_output_grad, num_elements * sizeof(DataType), cudaMemcpyDeviceToHost);
+//         double sum = 0;
+//         for (int i = 0; i < num_elements; ++ i) {
+//             sum += grads[i];
+//         }
+//         printf("Out grad sum: %.9f ", sum);
+//    }
+//     {
+//         int num_elements = num_vertices * activation_size;
+//         DataType grads[num_elements];
+//         cudaMemcpy(grads, d_input_grad, num_elements * sizeof(DataType), cudaMemcpyDeviceToHost);
+//         double sum = 0;
+//         for (int i = 0; i < num_elements; ++ i) {
+//             sum += grads[i];
+//         }
+//         printf("In grad sum: %.9f\n", sum);
+//     }
+//
 }
 void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
     #ifdef TIMETAG
@@ -2473,6 +2526,15 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, Vert
      t += get_time();
      relubackward_time += t;
     #endif
+
+     //DataType grads[num_elements];
+     //cudaMemcpy(grads, d_input_grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+     //double sum = 0;
+     //for (int i = 0; i < num_elements; ++ i) {
+     //    sum += grads[i];
+     //}
+     //printf("Relu backward called: input grad sum: %.9f\n", sum);
+
 //     assert(op->get_num_input_tensors() == 1);
 //     assert(op->get_num_output_tensors() == 1);
 
@@ -2591,6 +2653,36 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, 
      t += get_time();
      matmulbackward_time += t;
     #endif
+
+    // printf("Matmul backward called: ");
+    //{
+    //     DataType grads[N * M];
+    //     cudaMemcpy(grads, d_output_grad, sizeof(DataType) * N * M, cudaMemcpyDeviceToHost);
+    //     double sum = 0;
+    //     for (int i = 0; i < N * M; ++ i) {
+    //         sum += grads[i];
+    //     }
+    //     printf(" C grad sum: %.9f", sum);
+    // }
+    // {
+    //     DataType grads[N * K];
+    //     cudaMemcpy(grads, d_input_grad_0, sizeof(DataType) * N * K, cudaMemcpyDeviceToHost);
+    //     double sum = 0;
+    //     for (int i = 0; i < N * K; ++ i) {
+    //         sum += grads[i];
+    //     }
+    //     printf(" A grad sum: %.9f", sum);
+    // }
+    //{
+    //     DataType grads[K * M];
+    //     cudaMemcpy(grads, d_input_grad_1, sizeof(DataType) * K * M, cudaMemcpyDeviceToHost);
+    //     double sum = 0;
+    //     for (int i = 0; i < K * M; ++ i) {
+    //         sum += grads[i];
+    //     }
+    //     printf(" B grad sum: %.9f\n", sum);
+    // }
+
 
 //     assert(op != NULL);
 
@@ -2726,6 +2818,29 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left
      t += get_time();
      softmaxbackward_time += t;
     #endif
+
+//    printf("Softmax backward called: ");
+//    {
+//        int num_elements = len * activation_size;
+//         DataType grads[num_elements];
+//         cudaMemcpy(grads, d_output_grad, num_elements * sizeof(DataType), cudaMemcpyDeviceToHost);
+//         double sum = 0;
+//         for (int i = 0; i < num_elements; ++ i) {
+//             sum += grads[i];
+//         }
+//         printf("Out grad sum: %.9f ", sum);
+//    }
+//     {
+//         int num_elements = len * activation_size;
+//         DataType grads[num_elements];
+//         cudaMemcpy(grads, d_input_grad, num_elements * sizeof(DataType), cudaMemcpyDeviceToHost);
+//         double sum = 0;
+//         for (int i = 0; i < num_elements; ++ i) {
+//             sum += grads[i];
+//         }
+//         printf("In grad sum: %.9f\n", sum);
+//     }
+//
 //     assert(op != NULL);
 
 //     assert(op->get_num_input_tensors() == 1);
@@ -2859,6 +2974,32 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
      t += get_time();
      aggbackward_time += t;
     #endif
+
+    // int N = right - left;
+    //int activation_size = input_tensor->dims[1];
+    // printf("Aggregation backward: ");
+    // {
+    //     DataType grads[N * activation_size];
+    //     cudaMemcpy(grads, d_input_grad, sizeof(DataType) * N * activation_size, 
+    //             cudaMemcpyDeviceToHost);
+    //     double sum = 0;
+    //     for (int i = 0; i < N * activation_size; ++ i) {
+    //         sum += grads[i];
+    //     }
+    //     printf("Input grad sum: %.9f", sum);
+    // }
+    //{
+    //     DataType grads[N * activation_size];
+    //     cudaMemcpy(grads, d_output_grad, sizeof(DataType) * N * activation_size, 
+    //             cudaMemcpyDeviceToHost);
+    //     double sum = 0;
+    //     for (int i = 0; i < N * activation_size; ++ i) {
+    //         sum += grads[i];
+    //     }
+    //     printf(" Output grad sum: %.9f\n", sum);
+    // }
+
+
 //     assert(op != NULL);
 
 //     assert(op->get_num_input_tensors() == 1);

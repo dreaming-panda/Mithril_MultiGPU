@@ -503,6 +503,14 @@ void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * s
     VertexId num_vertices = output_resource->get_num_vertices();
     int output_size = output_tensor->dims[1];
     LaunchCalculateGradientsMask(d_std_data, d_output_data, d_output_grad, num_vertices, output_size);
+
+    //DataType grads[num_vertices * output_size];
+    //cudaMemcpy(grads, d_output_grad, sizeof(DataType) * num_vertices * output_size, cudaMemcpyDeviceToHost);
+    //double sum = 0;
+    //for (int i = 0; i < num_vertices * output_size; ++ i) {
+    //    sum += grads[i];
+    //}
+    //printf("grads: %.9f %.9f %.9f ..., sum: %.9f\n", grads[0], grads[1], grads[2], sum);
 }
 double CrossEntropyLossGPUV2::get_loss(Tensor * output_tensor, Tensor * std_tensor) {
     assert(output_tensor->type == VERTEX_TENSOR);
@@ -640,6 +648,17 @@ void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * s
     LaunchCalculateGradientsMaskWithStart(d_std_data + left * output_size, d_output_data + left * output_size, 
     d_output_grad + left * output_size, right - left, output_size, left
     );
+
+    //DataType grads[(right - left) * output_size]; 
+    //cudaMemcpy(grads, d_output_grad + left * output_size, sizeof(DataType) * (right - left) * output_size, 
+    //        cudaMemcpyDeviceToHost);
+    //double sum = 0;
+    //for (int i = 0; i < (right - left) * output_size; ++ i) {
+    //    sum += grads[i];
+    //}
+    //printf("left: %u, right: %u, grads of loss: %.9f, %.9f, %.9f ..., sum: %.9f\n",
+    //        left, right, grads[0], grads[1], grads[2], sum);
+
 //     assert(output_tensor != NULL);
 //     assert(std_tensor != NULL);
 //     assert(output_tensor->type == VERTEX_TENSOR);

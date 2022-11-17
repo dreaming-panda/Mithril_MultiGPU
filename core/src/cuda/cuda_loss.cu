@@ -94,6 +94,14 @@ int per_thread_nodes
             output_grad[i * outputsize + j] = (training_mask[i] == 1)? (- s / double(num_used_vertices) /( o + epsilon)) : 0.0;
             //if(isnan(output_grad[i * outputsize + j]))output_grad[i * outputsize + j] = 0.0;
         }
+        //if (training_mask[i] == 1) { // 
+        //    double sum = 0;
+        //    for (int j = 0; j < outputsize; ++ j) {
+        //        sum += output_grad[i * outputsize + j];
+        //    }
+        //    printf("grad: %.9f, %.9f, ..., sum: %.9f\n", 
+        //            output_grad[i * outputsize], output_grad[i * outputsize + 1], sum);
+        //}
     }
     // int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
     // int nid_end = nid_start + per_thread_nodes;
@@ -238,11 +246,13 @@ void CrossEntropyLossGPU::LaunchCalculateGradientsMask(DataType * std_data, Data
 }
 void CrossEntropyLossGPU::LaunchCalculateGradientsMaskWithStart(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize, int start)
 {
+    //printf("LaunchCalculateGradientsMaskWithStart invoked, ntrain: %d, gntrain: %d\n",
+    //        ntrain, gntrain);
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad, gpu_training_mask_ + start, epsilon_,num_vertices, gntrain ,outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, ntrain, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
+    //CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, ntrain, outputsize, ThreadNumber, BlockNumber, per_thread_nodes); FIXME
     cudaDeviceSynchronize();
 }
 double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type){

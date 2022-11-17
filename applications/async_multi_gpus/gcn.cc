@@ -29,7 +29,9 @@
 #include "distributed_sys.h"
 #include "partitioner.h"
 #include <fstream>
+
 using namespace std;
+
 class GCN: public AbstractApplication {
     private:
         int num_layers_;

@@ -62,6 +62,22 @@ size_t num_elements
     AdamOptimizeWeitghsKernel<<<BlockNumber, ThreadNumber>>>(grad,weight_to_update,m_t,v_t,beta1_,state.exp_beta1,beta2_,state.exp_beta2,
     epsilon_, weight_decay_, learning_rate_,ThreadNumber,BlockNumber,per_thread_elements,num_elements);
     cudaDeviceSynchronize();
+
+    //{
+    //    DataType datas[num_elements];
+    //    cudaMemcpy(datas, weight_to_update, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+    //    double data_sum = 0;
+    //    for (int i = 0; i < num_elements; ++ i) {
+    //        data_sum += datas[i];
+    //    }
+    //    DataType grads[num_elements];
+    //    cudaMemcpy(grads, grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+    //    double grad_sum = 0;
+    //    for (int i = 0; i < num_elements; ++ i) {
+    //        grad_sum += grads[i];
+    //    }
+    //    printf("Optmize weight: data sum: %.9f, grad sum: %.9f, lr: %.9f\n", data_sum, grad_sum, learning_rate_);
+    //}
     
    /*
    #pragma omp parallel for 
