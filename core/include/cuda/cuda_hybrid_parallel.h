@@ -31,8 +31,8 @@
 #include "executor.h"
 #define SHADOW_GPU
 
-#define LOW_LEARNING_RATE (0)
-#define NUM_STARTUP_EPOCH (0)
+#define LOW_LEARNING_RATE (1e-6)
+#define NUM_STARTUP_EPOCH (100)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDADataDependenciesTracker;
@@ -1415,6 +1415,7 @@ class CUDAPIPParallelParameterServer {
 
         double comm;
 
+        std::unordered_map<WeightOperator*, DataType*> accum_buffer_;
 
     public:
         CUDAPIPParallelParameterServer(
@@ -1427,6 +1428,9 @@ class CUDAPIPParallelParameterServer {
         void pull_weight(WeightOperator * weight_op, DataType * data);
         void push_grad(WeightOperator * weight_op, DataType * grad);
         double get_comm() {return comm;}
+
+        void clear_accum_buffer();
+        void commit_grad();
 
         void print_weights() {
             for (std::pair<WeightOperator*, std::pair<DataType*, DataType*>> p: weight_data_grad_) {
@@ -1451,6 +1455,7 @@ class CUDAPIPParallelParameterServer {
             }
         }
 };
+
 class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecutionEngineGPU {
     private:
         int num_epoch_;

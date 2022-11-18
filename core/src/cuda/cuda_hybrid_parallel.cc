@@ -638,7 +638,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double orignal_lr = engine_->optimizer_->get_learning_rate();
     printf("The learning rate specified by the user: %.9f\n", orignal_lr);
     printf("In the first %d epoch, the learning rate will be set to a low value (%.9f) for stability.\n",
-            NUM_STARTUP_EPOCH, LOW_LEARNING_RATE);
+            NUM_STARTUP_EPOCH, (double) LOW_LEARNING_RATE);
 
     Profiler::start_profiling();
 
@@ -647,11 +647,16 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     int num_epoch = engine_->get_num_epoch();
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-        if (epoch_id < NUM_STARTUP_EPOCH) {
-            engine_->optimizer_->SetLearningRate(LOW_LEARNING_RATE);
-        } else {
-            engine_->optimizer_->SetLearningRate(orignal_lr);
-        }
+        engine_->parameter_server_->clear_accum_buffer();
+
+        //if (epoch_id < NUM_STARTUP_EPOCH) {
+        //if ((epoch_id + 1) % 10 > 0) {
+        //if (epoch_id % 2 == 0) {
+        //if (epoch_id % 50 < 5) {
+        //    engine_->optimizer_->SetLearningRate(orignal_lr / 10);
+        //} else {
+        //    engine_->optimizer_->SetLearningRate(orignal_lr);
+        //}
 
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
         MPI_Barrier(MPI_COMM_WORLD);
@@ -718,6 +723,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
 
         }
+
+        //if (epoch_id % 50 >= 5)
+        engine_->parameter_server_->commit_grad();
+
         double train_acc;
         double valid_acc;
         double test_acc;
@@ -2686,6 +2695,13 @@ CUDAPIPParallelParameterServer::CUDAPIPParallelParameterServer(
             locks_[(WeightOperator*) op] = m;
             // weight initialization
             engine->hybrid_init_weight_tensor_data(data, num_elements, tensor->dims[0]);
+            {
+                // FIXME
+                DataType * buffer = NULL;
+                AllocateCUDAMemory<DataType>(&buffer, num_elements, __FILE__, __LINE__);
+                assert(buffer != NULL);
+                accum_buffer_[(WeightOperator*) op] = buffer;
+            }
         }
         weight_op_idx ++;
     }
@@ -2797,16 +2813,36 @@ void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataT
     //    printf("Push grad to PS, sum: %.9f\n", sum);
     //}
     if (master_node == node_id) {
-        // apply the gradient locally
-        // lock the weight op first
-        locks_[weight_op]->lock();
-        optimizer_->optimize_weights(
-                weight_op, grad, weight_data_grad_[weight_op].first,
-                num_elements
+        //// apply the gradient locally FIXME
+        //// lock the weight op first
+        //locks_[weight_op]->lock();
+        //optimizer_->optimize_weights(
+        //        weight_op, grad, weight_data_grad_[weight_op].first,
+        //        num_elements
+        //        );
+        //cudaDeviceSynchronize();
+        //locks_[weight_op]->unlock();
+
+        // FIXME
+        DataType acc_grad[num_elements];
+        cudaMemcpy(
+                acc_grad, accum_buffer_[weight_op], sizeof(DataType) * num_elements,
+                cudaMemcpyDeviceToHost
                 );
-        cudaDeviceSynchronize();
-        locks_[weight_op]->unlock();
+        DataType grad_cpu[num_elements];
+        cudaMemcpy(
+                grad_cpu, grad, sizeof(DataType) * num_elements,
+                cudaMemcpyDeviceToHost
+                );
+        for (size_t i = 0; i < num_elements; ++ i) {
+            acc_grad[i] += grad_cpu[i];
+        }
+        cudaMemcpy(
+                accum_buffer_[weight_op], acc_grad, sizeof(DataType) * num_elements,
+                cudaMemcpyHostToDevice
+                );
     } else {
+        assert(false); // FIXME
         CUDAPIPPSHeader header;
         header.type = 1;
         header.weight_op_idx = op_ten_manager_->get_operator_index(weight_op);
@@ -2831,6 +2867,43 @@ void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataT
                 );
         comm += num_elements * sizeof(DataType);
         
+    }
+}
+
+void CUDAPIPParallelParameterServer::clear_accum_buffer() {
+    // FIXME
+    for (std::pair<WeightOperator*, DataType*> p: accum_buffer_) {
+        WeightOperator * op = p.first;
+        Tensor * tensor = op->get_output_tensor(0);
+        assert(op->get_num_output_tensors() == 1);
+        assert(tensor != NULL);
+        size_t num_elements = 1;
+        for (int i = 0; i < tensor->num_dims; ++ i) {
+            num_elements *= tensor->dims[i];
+        }
+        cudaMemset(p.second, 0, sizeof(DataType) * num_elements);
+    }
+}
+
+void CUDAPIPParallelParameterServer::commit_grad() {
+    // FIXME
+    for (std::pair<WeightOperator*, DataType*> p: accum_buffer_) {
+        WeightOperator * op = p.first;
+        DataType * acc_buffer = p.second;
+        Tensor * tensor = op->get_output_tensor(0);
+        assert(op->get_num_output_tensors() == 1);
+        assert(tensor != NULL);
+        size_t num_elements = 1;
+        for (int i = 0; i < tensor->num_dims; ++ i) {
+            num_elements *= tensor->dims[i];
+        }
+        locks_[op]->lock();
+        optimizer_->optimize_weights(
+                op, acc_buffer, weight_data_grad_[op].first,
+                num_elements
+                );
+        cudaDeviceSynchronize();
+        locks_[op]->unlock();
     }
 }
 
