@@ -30,6 +30,10 @@
 
 #include "executor.h"
 #define SHADOW_GPU
+
+#define LOW_LEARNING_RATE (0)
+#define NUM_STARTUP_EPOCH (0)
+
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDADataDependenciesTracker;
 class CUDAShadowGradientsMasterVertices;
@@ -1658,7 +1662,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         //    init_weight_tensor_data(data, num_elements, N);
         //}
 
-        void calculate_accuracy_and_loss();
+        void calculate_accuracy_and_loss(double &train_acc, double &valid_acc, double &test_acc, double &loss);
         inline void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N){
             
             DataType * data_buff = new DataType[num_elements];

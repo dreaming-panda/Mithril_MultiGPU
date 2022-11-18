@@ -422,6 +422,9 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     double cf_time = 0.;
     double cb_time = 0.;
     const int num_warmups = 5; // the first five epoches are used for warming up 
+    double highest_valid_acc = 0;
+    double target_test_acc = 0;
+    int epoch_to_reach_the_target_acc = 0;
    // std::ofstream out("loss.txt");
    // std::ofstream o("acc.txt");
     printf("\n****** Start model training... ******\n");
@@ -465,7 +468,13 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         if (epoch >= num_warmups) {
             total_runtime += epoch_time;
         }
-        printf("\tLoss %.5f\tTrainAcc %.3f\tValidAcc %.3f\tTestAcc %.3f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+        printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+        if (valid_accuracy > highest_valid_acc) {
+            highest_valid_acc = valid_accuracy;
+            target_test_acc = test_accuracy;
+            epoch_to_reach_the_target_acc = epoch + 1;
+        }
+
        // out << loss << std::endl;
        // o << accuracy << std::endl; 
     }
@@ -477,6 +486,9 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     printf("calgra Time: %.3f(s)\n",calgra_time);
     printf("cf Time: %.3f(s)\n",cf_time);
     printf("cb Time: %.3f(s)\n",cb_time);
+    printf("Highest validation acc: %.4f\n", highest_valid_acc);
+    printf("Target test acc: %.4f\n", target_test_acc);
+    printf("Epochs to reach the target acc: %d\n", epoch_to_reach_the_target_acc);
     // releasing the resource of all tensors
     for (Operator * op: operators) {
         assert(op != NULL);

@@ -1,9 +1,11 @@
 #ifndef CUDA_OPTIMIZER_H_
 #define CUDA_OPTIMIZER_H_
+
 #include"executor.h"
 #include"cuda/cuda_utils.h"
 #include<cudnn.h>
 #include<float.h>
+
 class LowerLevelSGDOptimizerGPU: public AbstractLowerLevelOptimizer {
     private:
         double learning_rate_;
@@ -88,6 +90,9 @@ class LowerLevelAdamOptimizerGPU: public AbstractLowerLevelOptimizer {
            // printf("mmmmm\n");
             learning_rate_ = new_lr;
         }
+        double get_learning_rate() {
+            return learning_rate_;
+        }
 };
 class AdamOptimizerGPU: public AbstractOptimizer {
     private:
@@ -118,6 +123,9 @@ class AdamOptimizerGPU: public AbstractOptimizer {
            // printf("chanege lr!\n");
            // printf("chanege lr!\n");
             lower_level_optimizer_->SetLearningRate(new_lr);
+        }
+        double get_learning_rate() {
+            return lower_level_optimizer_->get_learning_rate();
         }
 };
 class LearningRateScheduler{

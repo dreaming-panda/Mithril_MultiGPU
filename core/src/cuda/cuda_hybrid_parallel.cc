@@ -631,6 +631,15 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
+    double highest_valid_acc = 0;
+    double target_test_acc = 0;
+    int epoch_to_reach_target_acc = 0;
+
+    double orignal_lr = engine_->optimizer_->get_learning_rate();
+    printf("The learning rate specified by the user: %.9f\n", orignal_lr);
+    printf("In the first %d epoch, the learning rate will be set to a low value (%.9f) for stability.\n",
+            NUM_STARTUP_EPOCH, LOW_LEARNING_RATE);
+
     Profiler::start_profiling();
 
     //engine_->parameter_server_->print_weights();
@@ -638,6 +647,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     int num_epoch = engine_->get_num_epoch();
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+        if (epoch_id < NUM_STARTUP_EPOCH) {
+            engine_->optimizer_->SetLearningRate(LOW_LEARNING_RATE);
+        } else {
+            engine_->optimizer_->SetLearningRate(orignal_lr);
+        }
+
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
         MPI_Barrier(MPI_COMM_WORLD);
         if (node_id == 0) {
@@ -703,7 +718,16 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
 
         }
-        engine_->calculate_accuracy_and_loss();
+        double train_acc;
+        double valid_acc;
+        double test_acc;
+        double loss;
+        engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
+        if (valid_acc > highest_valid_acc) {
+            highest_valid_acc = valid_acc;
+            target_test_acc = test_acc;
+            epoch_to_reach_target_acc = epoch_id + 1;
+        }
         //engine_->parameter_server_->print_weights();
     }
     t += get_time();
@@ -803,6 +827,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 graph_net_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_net_time);
         printf("\tGraph-level network batch size: %.3f Bytes\n",
                 avg_graph_comm / num_net_batches);
+        printf("Highest valid_acc: %.4f\n", highest_valid_acc);
+        printf("Target test_acc: %.4f\n", target_test_acc);
+        printf("Epoch to reach the target acc: %d\n", epoch_to_reach_target_acc);
     }
 }
 
@@ -3277,7 +3304,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::release_resources() {
     }
 }
 
-void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss() {
+void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss(
+        double &train_acc, 
+        double &valid_acc,
+        double &test_acc,
+        double &loss
+        ) {
     // calculate the accuracy
     double train_accuracy = 0.;
     double valid_accuracy = 0.;
@@ -3313,6 +3345,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
         printf("++++++++++ Test Accuracy: %.5f\n", test_accuracy_);
         printf("++++++++++ Loss: %.5f\n", accum_loss_);
     }
+    train_acc = accuracy_;
+    valid_acc = valid_accuracy_;
+    test_acc = test_accuracy_;
+    loss = accum_loss_;
     //printf("Node %d, local accuracy: %.3f\n",
     //        DistributedSys::get_instance()->get_node_id(), accuracy / double(vid_translation_->get_num_master_vertices()));
     accum_loss_ = 0;
@@ -3393,7 +3429,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-             graph_structure_->get_num_global_vertices() / 1 // FIXME
+             graph_structure_->get_num_global_vertices() / 512
             //graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new CUDADataDependenciesTracker(

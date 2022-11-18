@@ -63,6 +63,10 @@ class AbstractOptimizer {
         virtual void SetLearningRate(double new_lr){
             assert(false);
         }
+        virtual double get_learning_rate() {
+            assert(false);
+            return 0;
+        }
 };
 
 class AbstractLoss {
