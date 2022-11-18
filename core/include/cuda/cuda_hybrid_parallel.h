@@ -46,6 +46,7 @@ enum CUDAPIPParallelMessageType {
     WeightPullingRequest, // pull the weight from the parameter servers
     WeightPullingResponse
 };
+
 template<typename T>
 class CUDAAbstractTaskDispatcher {
     protected:

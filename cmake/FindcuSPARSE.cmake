@@ -24,6 +24,7 @@
 # Sets the possible install locations
 set(CUSPARSE_HINTS
   /opt/apps/cuda/11.3/
+  /usr/local/cuda-11.6/
 )
 set(CUSPARSE_PATHS
   /opt/apps/cuda/11.3/
