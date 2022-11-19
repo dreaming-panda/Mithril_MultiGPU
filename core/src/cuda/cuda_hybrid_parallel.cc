@@ -637,8 +637,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     double orignal_lr = engine_->optimizer_->get_learning_rate();
     printf("The learning rate specified by the user: %.9f\n", orignal_lr);
-    printf("In the first %d epoch, the learning rate will be set to a low value (%.9f) for stability.\n",
-            NUM_STARTUP_EPOCH, (double) LOW_LEARNING_RATE);
+    //printf("In the first %d epoch, the learning rate will be set to a low value (%.9f) for stability.\n",
+    //        NUM_STARTUP_EPOCH, (double) LOW_LEARNING_RATE);
 
     Profiler::start_profiling();
 
@@ -649,11 +649,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         engine_->parameter_server_->clear_accum_buffer();
 
-        //if (epoch_id < NUM_STARTUP_EPOCH) {
-        //if ((epoch_id + 1) % 10 > 0) {
-        //if (epoch_id % 2 == 0) {
         //if (epoch_id % 50 < 5) {
-        //    engine_->optimizer_->SetLearningRate(orignal_lr / 10);
+        //    engine_->optimizer_->SetLearningRate(0);
         //} else {
         //    engine_->optimizer_->SetLearningRate(orignal_lr);
         //}
@@ -724,8 +721,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         }
 
-        //if (epoch_id % 50 >= 5)
-        engine_->parameter_server_->commit_grad();
+        if ((epoch_id + 1) % 10 == 0)
+            engine_->parameter_server_->commit_grad();
 
         double train_acc;
         double valid_acc;

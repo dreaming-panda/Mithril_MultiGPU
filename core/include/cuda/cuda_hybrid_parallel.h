@@ -31,8 +31,8 @@
 #include "executor.h"
 #define SHADOW_GPU
 
-#define LOW_LEARNING_RATE (1e-6)
-#define NUM_STARTUP_EPOCH (100)
+#define LOW_LEARNING_RATE (0)
+#define NUM_STARTUP_EPOCH (10)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDADataDependenciesTracker;
