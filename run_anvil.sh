@@ -20,7 +20,7 @@ make -j
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_arxiv --layers 2 --hunits 256 --epoch 1000 --lr 1e-3 --decay 0  | tee ../results/test_acc_large_graphs_small_lr/sync/arxiv_gcn.txt
 
 # run single-node with async
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/reddit --layers 2 --hunits 256 --epoch 2000 --lr 1e-3 --decay 0  --part hybrid | tee ../results/test_acc_large_graphs_small_lr/async/reddit_gcn.txt
+mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/reddit --layers 2 --hunits 256 --epoch 1900 --lr 1e-3 --decay 0  --part hybrid | tee ../results/test_acc_large_graphs_small_lr/async/reddit_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_products --layers 3 --hunits 256 --epoch 1000 --lr 1e-3 --decay 0 --part hybrid  | tee ../results/test_acc_large_graphs_small_lr/async/products_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_arxiv --layers 2 --hunits 256 --epoch 2000 --lr 1e-3 --decay 0 --part hybrid  | tee ../results/test_acc_large_graphs_small_lr/async/arxiv_gcn.txt
 
