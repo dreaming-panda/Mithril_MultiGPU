@@ -3502,7 +3502,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-             graph_structure_->get_num_global_vertices() / 32
+             graph_structure_->get_num_global_vertices() / 512
             //graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new CUDADataDependenciesTracker(
