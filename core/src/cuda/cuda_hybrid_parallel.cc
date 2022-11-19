@@ -721,7 +721,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         }
 
-        if ((epoch_id + 1) % 10 == 0)
+        if ((epoch_id + 1) % 10 == 0 || epoch_id > 1000)
             engine_->parameter_server_->commit_grad();
 
         double train_acc;
