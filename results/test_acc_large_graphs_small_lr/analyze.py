@@ -32,6 +32,7 @@ def read_single_gpu_acc(num_epoch, graph, model):
     return acc
 
 def read_multi_gpu_accc(num_epoch, graph, model):
+    num_startup_epoches = 50
     acc = []
     epoch_id = 0
     #print("./async/%s_%s.txt" % (graph, model))
@@ -49,7 +50,7 @@ def read_multi_gpu_accc(num_epoch, graph, model):
                         assert(False)
                 #print("'%s'" % (line))
                 line = line.strip().split(" ")
-                if epoch_id >= 1000 or (epoch_id + 1) % 10 == 0:
+                if epoch_id >= 10 * num_startup_epoches or (epoch_id + 1) % 10 == 0:
                     acc.append(float(line[-1]))
                 epoch_id += 1
     print(len(acc))
@@ -57,11 +58,11 @@ def read_multi_gpu_accc(num_epoch, graph, model):
     return acc
 
 if __name__ == "__main__":
-    num_epoch = 1000
+    num_epoch = 5000
 
     model = "gcn"
 
-    for graph in ["reddit"]:
+    for graph in ["reddit", "arxiv"]:
         single_gpu_epoches = [i for i in range(num_epoch)]
         multi_gpu_epoches = [i  for i in range(num_epoch)]
         single_gpu_acc = read_single_gpu_acc(num_epoch, graph, model)
@@ -75,12 +76,15 @@ if __name__ == "__main__":
         #print(epoches)
         #print(single_gpu_acc)
 
-        plt.plot(single_gpu_epoches, single_gpu_acc, "-*", label = "single-gpu")
-        plt.plot(multi_gpu_epoches, multi_gpu_acc, "-+", label = "async")
+        plt.plot(single_gpu_epoches, single_gpu_acc, "-", label = "single-gpu")
+        plt.plot(multi_gpu_epoches, multi_gpu_acc, "-", label = "async")
         plt.legend()
         plt.ylabel("TestAcc")
         plt.xlabel("Epoch")
         plt.title("%s-%s" % (graph, model))
+        #plt.ylim([0.45, 0.55])
+        #plt.ylim([0.94, 0.955])
+
         plt.savefig("%s-%s.pdf" % (graph, model))
         plt.show()
 
