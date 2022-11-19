@@ -1,0 +1,245 @@
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 3
+The number of hidden units: 256
+The number of training epoches: 1000
+Learning rate: 0.001000
+The partition strategy: hybrid
+Initialized node g003.anvil.rcac.purdue.edu
+Building the CSR structure...
+        It takes 1.887 seconds.
+Building the CSC structure...
+        It takes 1.854 seconds.
+Building the Feature Vector...
+        It takes 0.580 seconds.
+Building the Label Vector...
+        It takes 0.318 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Using dynamic programming to discover a good hybrid parallelism strategy.
+Number of operators: 13
+The 0-th operator (type OPERATOR_INPUT) has cost 0.000 (ratio: 0.000000)
+The 1-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 2-th operator (type OPERATOR_MATMUL) has cost 62695142400.000 (ratio: 0.008744)
+The 3-th operator (type OPERATOR_AGGREGATION) has cost 3167181414400.000 (ratio: 0.441728)
+The 4-th operator (type OPERATOR_RELU) has cost 626951424.000 (ratio: 0.000087)
+The 5-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 6-th operator (type OPERATOR_MATMUL) has cost 160499564544.000 (ratio: 0.022385)
+The 7-th operator (type OPERATOR_AGGREGATION) has cost 3167181414400.000 (ratio: 0.441728)
+The 8-th operator (type OPERATOR_RELU) has cost 626951424.000 (ratio: 0.000087)
+The 9-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 10-th operator (type OPERATOR_MATMUL) has cost 29466716928.000 (ratio: 0.004110)
+The 11-th operator (type OPERATOR_AGGREGATION) has cost 581474712800.000 (ratio: 0.081098)
+The 12-th operator (type OPERATOR_SOFTMAX) has cost 230208726.000 (ratio: 0.000032)
+Pure graph-level partition:
+0 2449029 0 13
+2449029 2449029
+The communication cost of partitioning vertices [0, 0) into 0 parts: 0.000000 GB
+The communication cost of partitioning vertices [0, 2449029) into 1 parts: 0.000000 GB
+(vertical stripping) The minimum amount of communication volume (DP): 0.000000 GB
+Solution:
+Vertices [0, 2449029) vertically partitioned into 1 parts
+The minimum amount of communication volume (model parallel): 0.000000 GB (-nanx)
+The minimum amount of communication volume (graph parallel): 0.000000 GB (-nanx)
+Graph parallel boundaries: 
+0 2449029 
+The dynamic programming algorithm takes 1.323 seconds
+*** Node 0, starting model training...
+Number of operators: 13
+0 2449029 0 13
+*** Node 0 owns the partition [0, 13) x [0, 2449029)
+*** Node 0, constructing the helper classes...
+Operators:
+    Op 0: type OPERATOR_INPUT, output tensors: 0
+    Op 1: type OPERATOR_WEIGHT, output tensors: 1
+    Op 2: type OPERATOR_MATMUL, output tensors: 2
+    Op 3: type OPERATOR_AGGREGATION, output tensors: 3
+    Op 4: type OPERATOR_RELU, output tensors: 4
+    Op 5: type OPERATOR_WEIGHT, output tensors: 5
+    Op 6: type OPERATOR_MATMUL, output tensors: 6
+    Op 7: type OPERATOR_AGGREGATION, output tensors: 7
+    Op 8: type OPERATOR_RELU, output tensors: 8
+    Op 9: type OPERATOR_WEIGHT, output tensors: 9
+    Op 10: type OPERATOR_MATMUL, output tensors: 10
+    Op 11: type OPERATOR_AGGREGATION, output tensors: 11
+    Op 12: type OPERATOR_SOFTMAX, output tensors: 12
+Boundaries: 0 2449029
+Fragments: [0, 2449029)
+Chunks: 0-[0, 4783) 1-[4783, 9566) 2-[9566, 14349) 3-[14349, 19132) 4-[19132, 23915) 5-[23915, 28698) 6-[28698, 33481) 7-[33481, 38264) 8-[38264, 43047) ... 512-[2448896, 2449029)
+(Forwarding) Node 0 (fragment 0) depends on nodes:
+(Backwarding) Node 0 (fragment 0) depends on nodes:
+(I-link dependencies): node 0 should send activation to nodes:
+(I-link dependencies): node 0 should receive activation from nodes:
+(I-link dependencies): node 0 should send gradient to nodes:
+(I-link dependencies): node 0 should receive gradient from nodes:
+2449029, 126167053, 126167053
+csr in-out ready !*** Node 0, setting up some other necessary information...
+*** Node 0, starting the helper threads...
++++++++++ Node 0 initializing the weights for op[0, 13)...
++++++++++ Node 0, mapping weight op 1
++++++++++ Node 0, mapping weight op 5
++++++++++ Node 0, mapping weight op 9
+*** Node 0, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.001000000
+In the first 100 epoch, the learning rate will be set to a low value (0.000001000) for stability.
+
+********* Epoch 0: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 1.35239
+
+********* Epoch 1: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 2: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 3: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 4: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 5: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 6: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 7: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 8: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 9: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 10: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 11: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 12: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 13: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 14: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 15: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 16: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 17: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 18: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 19: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 20: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 21: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 22: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 23: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 24: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 25: *********
+++++++++++ Train Accuracy: 0.00000
+++++++++++ Valid Accuracy: 0.00000
+++++++++++ Test Accuracy: 0.00000
+++++++++++ Loss: 0.00000
+
+********* Epoch 26: *********
