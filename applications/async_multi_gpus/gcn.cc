@@ -83,7 +83,8 @@ int main(int argc, char ** argv) {
         ("epoch", po::value<int>()->required(), "The number of epoches.")
         ("lr", po::value<double>()->required(), "The learning rate.")
         ("decay", po::value<double>()->required(), "Weight decay.")
-        ("part", po::value<std::string>()->required(), "The graph-model co-partition strategy: graph, model, hybrid.");
+        ("part", po::value<std::string>()->required(), "The graph-model co-partition strategy: graph, model, hybrid.")
+        ("startup", po::value<int>()->required(), "The number of startup epoches (i.e., epoches without any asynchrony).");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -105,12 +106,14 @@ int main(int argc, char ** argv) {
     int num_epoch = vm["epoch"].as<int>();
     double learning_rate = vm["lr"].as<double>();
     double weight_decay = vm["decay"].as<double>();
+    int num_startup_epoches = vm["startup"].as<int>();
     std::string partition_strategy = vm["part"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
     printf("The number of hidden units: %d\n", num_hidden_units);
     printf("The number of training epoches: %d\n", num_epoch);
+    printf("The number of startup epoches: %d\n", num_startup_epoches);
     printf("Learning rate: %.6f\n", learning_rate);
     printf("The partition strategy: %s\n", partition_strategy.c_str());
 
@@ -214,6 +217,7 @@ int main(int argc, char ** argv) {
     }
 
     // model training
+    execution_engine->set_num_startup_epoches(num_startup_epoches);
     execution_engine->execute_application(gcn, num_epoch);
 
     // destroy the model and the engine

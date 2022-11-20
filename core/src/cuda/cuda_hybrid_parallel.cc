@@ -721,8 +721,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         }
 
-        int num_startup_epoches = 50;
-        if ((epoch_id + 1) % 10 == 0 || epoch_id > num_startup_epoches * 10)
+        int num_startup_epoches = engine_->num_startup_epoches_;
+        if ((epoch_id + 1) % 10 == 0 || epoch_id >= num_startup_epoches * 10)
             engine_->parameter_server_->commit_grad();
 
         double train_acc;
@@ -3442,6 +3442,9 @@ void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {
 }
 
 double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
+    num_epoch += 10 * num_startup_epoches_;
+    num_epoch -= num_startup_epoches_;
+
     application_ = application;
     num_epoch_ = num_epoch;
     const std::vector<Operator*> operators = application->get_operators();
@@ -3500,7 +3503,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-             graph_structure_->get_num_global_vertices() / 512
+             graph_structure_->get_num_global_vertices() / 128
             //graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new CUDADataDependenciesTracker(

@@ -1485,6 +1485,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         double accuracy_;
         double accum_loss_;
 
+        int num_startup_epoches_ = 0;
+
         // the threads responsible for communication and computation
         pthread_barrier_t barrier_;
         CUDAPIPForwardTaskDispatcher * forward_task_dispatcher_;
@@ -1706,6 +1708,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         double execute_application(AbstractApplication * application, int num_epoch); // returned: the training accucacy of the last epoch
         void set_partition(CUDAPIPPartitioning partition) {
             partitioning_ = partition;
+        }
+        void set_num_startup_epoches(int num_startup_epoches) {
+            num_startup_epoches_ = num_startup_epoches;
         }
 };
 
