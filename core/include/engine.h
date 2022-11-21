@@ -28,6 +28,9 @@ limitations under the License.
 #include "graph.h"
 #include "executor.h"
 #include "cuda/cuda_executor.h"
+
+#define NUM_CONVERGE_EPOCH (100)
+
 class AbstractExecutionEngine {
     protected:
         AbstractGraphStructure * graph_structure_;

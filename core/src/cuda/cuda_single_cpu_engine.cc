@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <fstream>
+
 void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::vector<Operator*> &operators) {
     assert(executor_ != nullptr);
     for (Operator* op: operators) {
@@ -430,7 +431,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     printf("\n****** Start model training... ******\n");
     assert(num_epoch > num_warmups);
     double train_accuracy, valid_accuracy, test_accuracy, loss;
-    for (int epoch = 0; epoch < num_epoch; ++ epoch) {
+    for (int epoch = 0; epoch < num_epoch ||num_epoch == -1; ++ epoch) {
         printf("    Epoch %d:", epoch);
         double epoch_time = - get_time();
 
@@ -473,6 +474,11 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             highest_valid_acc = valid_accuracy;
             target_test_acc = test_accuracy;
             epoch_to_reach_the_target_acc = epoch + 1;
+        }
+
+        if (num_epoch = -1 && (epoch - (epoch_to_reach_the_target_acc - 1)) > NUM_CONVERGE_EPOCH) {
+            printf("The validation accuracy hasn't increased for %d epoches, stop model training\n",
+                    (int) NUM_CONVERGE_EPOCH);
         }
 
        // out << loss << std::endl;

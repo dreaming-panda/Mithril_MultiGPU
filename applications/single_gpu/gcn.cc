@@ -77,7 +77,7 @@ int main(int argc, char ** argv) {
         ("graph", po::value<std::string>()->required(), "The directory of the graph dataset.")
         ("layers", po::value<int>()->required(), "The number of GCN layers.")
         ("hunits", po::value<int>()->required(), "The number of hidden units.")
-        ("epoch", po::value<int>()->required(), "The number of epoches.")
+        ("epoch", po::value<int>()->required(), "The number of epoches (-1: train until converge).")
         ("lr", po::value<double>()->required(), "The learning rate.")
         ("decay", po::value<double>()->required(), "Weight decay.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
