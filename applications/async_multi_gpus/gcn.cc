@@ -62,7 +62,7 @@ class GCN: public AbstractApplication {
                 if (i == num_layers_ - 1) { 
                     t = softmax(t);
                 } else {
-                    t = relu(t);
+                    //t = relu(t); FIXME
                 }
             }
             return t;
