@@ -429,9 +429,11 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
    // std::ofstream out("loss.txt");
    // std::ofstream o("acc.txt");
     printf("\n****** Start model training... ******\n");
-    assert(num_epoch > num_warmups);
+    assert(num_epoch > num_warmups || num_epoch == -1);
     double train_accuracy, valid_accuracy, test_accuracy, loss;
-    for (int epoch = 0; epoch < num_epoch ||num_epoch == -1; ++ epoch) {
+    //printf("num_epoch: %d\n", num_epoch);
+    int epoch;
+    for (epoch = 0; epoch < num_epoch || num_epoch == -1; ++ epoch) {
         printf("    Epoch %d:", epoch);
         double epoch_time = - get_time();
 
@@ -476,16 +478,18 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             epoch_to_reach_the_target_acc = epoch + 1;
         }
 
-        if (num_epoch = -1 && (epoch - (epoch_to_reach_the_target_acc - 1)) > NUM_CONVERGE_EPOCH) {
+        //printf("num_epoch: %d\n", num_epoch);
+        if (num_epoch == -1 && (epoch - (epoch_to_reach_the_target_acc - 1)) > NUM_CONVERGE_EPOCH) {
             printf("The validation accuracy hasn't increased for %d epoches, stop model training\n",
                     (int) NUM_CONVERGE_EPOCH);
+            break;
         }
 
        // out << loss << std::endl;
        // o << accuracy << std::endl; 
     }
     printf("\nAverage per-epoch runtime: %.3f (s)\n",
-            total_runtime / double(num_epoch - num_warmups));
+            total_runtime / double(epoch + 1 - num_warmups));
     printf("Total Time: %.3f(s)\n",total_runtime);
     printf("loss Time: %.3f(s)\n",loss_time);
     printf("calacc Time: %.3f(s)\n",calacc_time);
