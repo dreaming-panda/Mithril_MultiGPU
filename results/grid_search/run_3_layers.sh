@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node 1 
 #SBATCH --cpus-per-task 32
 
-NUM_EPOCH=5000 
+NUM_EPOCH=-1
 
 echo "Grid search to discover the optimal parameter"
 hostname
@@ -33,9 +33,9 @@ for NUM_LAYERS in 3
 do
     for HUNITS in 16 64 256
     do
-        for LEARNING_RATE in 0.001 0.003 0.01 0.03 
+        for LEARNING_RATE in 0.03 0.01 0.003 0.001 0.0003
         do
-            for DECAY in 0 0.00001 0.0001
+            for DECAY in 0 0.00001 0.0001 0.001
             do
                 echo "Runing $NUM_LAYERS-layer GCN with $HUNITS hidden units, $LEARNING_RATE learning rate, and $DECAY decay"
                 mkdir -p $NUM_LAYERS/$HUNITS/$LEARNING_RATE/$DECAY
