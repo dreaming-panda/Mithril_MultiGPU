@@ -64,11 +64,11 @@ if __name__ == "__main__":
         epoches = [i for i in range(num_epoch)]
         sync_acc = read_sync_gpu_acc(num_epoch, graph, model)
         plt.plot(epoches, sync_acc, "-", label = "sync")
-        for num_startup_epoches in [0, 50]:
+        for num_startup_epoches in [0, 100]:
             async_acc = read_async_gpu_accc(num_epoch, graph, model, num_startup_epoches)
             plt.plot(epoches, async_acc, "-", label = "async (startup=%s)" % (num_startup_epoches))
         max_acc = max(sync_acc)
-        plt.ylim([max_acc - 0.01, max_acc + 0.01])
+        plt.ylim([max_acc - 0.3, max_acc + 0.1])
         plt.legend()
         plt.show()
 
