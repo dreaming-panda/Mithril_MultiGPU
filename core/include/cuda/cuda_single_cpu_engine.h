@@ -28,6 +28,8 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         LearningRateScheduler * lr_scheduler_;
         VertexId vertices_;
         bool usingsplit;
+        std::string weight_file_;
+        bool inference_mode_ = false;
         
         
         
@@ -59,6 +61,10 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
             DeallocateCUDAMemory<DataType>(&d_hit_, __FILE__, __LINE__);
             DeallocateCUDAMemory<DataType>(&d_inter_, __FILE__, __LINE__);
             DeallocateCUDAMemory<DataType>(&cuda_acc, __FILE__, __LINE__);
+        }
+        void set_weight_file(std::string weight_file) {
+            weight_file_ = weight_file;
+            inference_mode_ = true;
         }
         double execute_application(AbstractApplication * application, int num_epoch);
         void set_lr_scheduler(LearningRateScheduler * lr_scheduler){

@@ -1,0 +1,3106 @@
+The graph dataset locates at /ssd512/gnn_datasets/with_split/reordered/ogbn_arxiv_bi
+The number of GCN layers: 3
+The number of hidden units: 256
+The number of training epoches: 500
+The number of startup epoches: 0
+Learning rate: 0.001000
+The partition strategy: hybrid
+Initialized node amadeus-MS-7B86
+Building the CSR structure...
+        It takes 0.037 seconds.
+Building the CSC structure...
+        It takes 0.037 seconds.
+Building the Feature Vector...
+        It takes 0.040 seconds.
+Building the Label Vector...
+        It takes 0.017 seconds.
+Number of classes: 40
+Number of feature dimensions: 128
+train nodes 90941, valid nodes 29799, test nodes 48603
+Using dynamic programming to discover a good hybrid parallelism strategy.
+Number of operators: 13
+The 0-th operator (type OPERATOR_INPUT) has cost 0.000 (ratio: 0.000000)
+The 1-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 2-th operator (type OPERATOR_MATMUL) has cost 5549031424.000 (ratio: 0.037928)
+The 3-th operator (type OPERATOR_AGGREGATION) has cost 59279308800.000 (ratio: 0.405183)
+The 4-th operator (type OPERATOR_RELU) has cost 43351808.000 (ratio: 0.000296)
+The 5-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 6-th operator (type OPERATOR_MATMUL) has cost 11098062848.000 (ratio: 0.075857)
+The 7-th operator (type OPERATOR_AGGREGATION) has cost 59279308800.000 (ratio: 0.405183)
+The 8-th operator (type OPERATOR_RELU) has cost 43351808.000 (ratio: 0.000296)
+The 9-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 10-th operator (type OPERATOR_MATMUL) has cost 1734072320.000 (ratio: 0.011853)
+The 11-th operator (type OPERATOR_AGGREGATION) has cost 9262392000.000 (ratio: 0.063310)
+The 12-th operator (type OPERATOR_SOFTMAX) has cost 13547440.000 (ratio: 0.000093)
+Pure graph-level partition:
+0 169343 0 13
+169343 169343
+The communication cost of partitioning vertices [0, 0) into 0 parts: 0.000000 GB
+The communication cost of partitioning vertices [0, 169343) into 1 parts: 0.000000 GB
+(vertical stripping) The minimum amount of communication volume (DP): 0.000000 GB
+Solution:
+Vertices [0, 169343) vertically partitioned into 1 parts
+The minimum amount of communication volume (model parallel): 0.000000 GB (-nanx)
+The minimum amount of communication volume (graph parallel): 0.000000 GB (-nanx)
+Graph parallel boundaries: 
+0 169343 
+The dynamic programming algorithm takes 0.048 seconds
+*** Node 0, starting model training...
+Number of operators: 13
+0 169343 0 13
+*** Node 0 owns the partition [0, 13) x [0, 169343)
+*** Node 0, constructing the helper classes...
+Operators:
+    Op 0: type OPERATOR_INPUT, output tensors: 0
+    Op 1: type OPERATOR_WEIGHT, output tensors: 1
+    Op 2: type OPERATOR_MATMUL, output tensors: 2
+    Op 3: type OPERATOR_AGGREGATION, output tensors: 3
+    Op 4: type OPERATOR_RELU, output tensors: 4
+    Op 5: type OPERATOR_WEIGHT, output tensors: 5
+    Op 6: type OPERATOR_MATMUL, output tensors: 6
+    Op 7: type OPERATOR_AGGREGATION, output tensors: 7
+    Op 8: type OPERATOR_RELU, output tensors: 8
+    Op 9: type OPERATOR_WEIGHT, output tensors: 9
+    Op 10: type OPERATOR_MATMUL, output tensors: 10
+    Op 11: type OPERATOR_AGGREGATION, output tensors: 11
+    Op 12: type OPERATOR_SOFTMAX, output tensors: 12
+Boundaries: 0 169343
+Fragments: [0, 169343)
+Chunks: 0-[0, 1322) 1-[1322, 2644) 2-[2644, 3966) 3-[3966, 5288) 4-[5288, 6610) 5-[6610, 7932) 6-[7932, 9254) 7-[9254, 10576) 8-[10576, 11898) ... 128-[169216, 169343)
+(Forwarding) Node 0 (fragment 0) depends on nodes:
+(Backwarding) Node 0 (fragment 0) depends on nodes:
+(I-link dependencies): node 0 should send activation to nodes:
+(I-link dependencies): node 0 should receive activation from nodes:
+(I-link dependencies): node 0 should send gradient to nodes:
+(I-link dependencies): node 0 should receive gradient from nodes:
+169343, 2484941, 2484941
+csr in-out ready !*** Node 0, setting up some other necessary information...
+*** Node 0, starting the helper threads...
++++++++++ Node 0 initializing the weights for op[0, 13)...
++++++++++ Node 0, mapping weight op 1
++++++++++ Node 0, mapping weight op 5
++++++++++ Node 0, mapping weight op 9
+*** Node 0, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.001000000
+
+********* Epoch 0: *********
+++++++++++ Train Accuracy: 0.01219
+++++++++++ Valid Accuracy: 0.00966
+++++++++++ Test Accuracy: 0.00866
+++++++++++ Loss: 3.69469
+
+********* Epoch 1: *********
+++++++++++ Train Accuracy: 0.04891
+++++++++++ Valid Accuracy: 0.03014
+++++++++++ Test Accuracy: 0.02415
+++++++++++ Loss: 3.66372
+
+********* Epoch 2: *********
+++++++++++ Train Accuracy: 0.17843
+++++++++++ Valid Accuracy: 0.07638
+++++++++++ Test Accuracy: 0.05866
+++++++++++ Loss: 3.60402
+
+********* Epoch 3: *********
+++++++++++ Train Accuracy: 0.17906
+++++++++++ Valid Accuracy: 0.07628
+++++++++++ Test Accuracy: 0.05862
+++++++++++ Loss: 3.53085
+
+********* Epoch 4: *********
+++++++++++ Train Accuracy: 0.17906
+++++++++++ Valid Accuracy: 0.07628
+++++++++++ Test Accuracy: 0.05862
+++++++++++ Loss: 3.44757
+
+********* Epoch 5: *********
+++++++++++ Train Accuracy: 0.17906
+++++++++++ Valid Accuracy: 0.07628
+++++++++++ Test Accuracy: 0.05862
+++++++++++ Loss: 3.35306
+
+********* Epoch 6: *********
+++++++++++ Train Accuracy: 0.17906
+++++++++++ Valid Accuracy: 0.07628
+++++++++++ Test Accuracy: 0.05862
+++++++++++ Loss: 3.25358
+
+********* Epoch 7: *********
+++++++++++ Train Accuracy: 0.17906
+++++++++++ Valid Accuracy: 0.07628
+++++++++++ Test Accuracy: 0.05862
+++++++++++ Loss: 3.16849
+
+********* Epoch 8: *********
+++++++++++ Train Accuracy: 0.17906
+++++++++++ Valid Accuracy: 0.07628
+++++++++++ Test Accuracy: 0.05862
+++++++++++ Loss: 3.12227
+
+********* Epoch 9: *********
+++++++++++ Train Accuracy: 0.17908
+++++++++++ Valid Accuracy: 0.07628
+++++++++++ Test Accuracy: 0.05864
+++++++++++ Loss: 3.10617
+
+********* Epoch 10: *********
+++++++++++ Train Accuracy: 0.19349
+++++++++++ Valid Accuracy: 0.09876
+++++++++++ Test Accuracy: 0.07660
+++++++++++ Loss: 3.08400
+
+********* Epoch 11: *********
+++++++++++ Train Accuracy: 0.27829
+++++++++++ Valid Accuracy: 0.29541
+++++++++++ Test Accuracy: 0.26375
+++++++++++ Loss: 3.06282
+
+********* Epoch 12: *********
+++++++++++ Train Accuracy: 0.26526
+++++++++++ Valid Accuracy: 0.29578
+++++++++++ Test Accuracy: 0.26496
+++++++++++ Loss: 3.04592
+
+********* Epoch 13: *********
+++++++++++ Train Accuracy: 0.29941
+++++++++++ Valid Accuracy: 0.31921
+++++++++++ Test Accuracy: 0.28258
+++++++++++ Loss: 3.00530
+
+********* Epoch 14: *********
+++++++++++ Train Accuracy: 0.33338
+++++++++++ Valid Accuracy: 0.35441
+++++++++++ Test Accuracy: 0.31650
+++++++++++ Loss: 2.93851
+
+********* Epoch 15: *********
+++++++++++ Train Accuracy: 0.34056
+++++++++++ Valid Accuracy: 0.38985
+++++++++++ Test Accuracy: 0.36072
+++++++++++ Loss: 2.87209
+
+********* Epoch 16: *********
+++++++++++ Train Accuracy: 0.27906
+++++++++++ Valid Accuracy: 0.30696
+++++++++++ Test Accuracy: 0.29107
+++++++++++ Loss: 2.83792
+
+********* Epoch 17: *********
+++++++++++ Train Accuracy: 0.20688
+++++++++++ Valid Accuracy: 0.13000
+++++++++++ Test Accuracy: 0.10769
+++++++++++ Loss: 2.83409
+
+********* Epoch 18: *********
+++++++++++ Train Accuracy: 0.21149
+++++++++++ Valid Accuracy: 0.14078
+++++++++++ Test Accuracy: 0.12059
+++++++++++ Loss: 2.80834
+
+********* Epoch 19: *********
+++++++++++ Train Accuracy: 0.27314
+++++++++++ Valid Accuracy: 0.27732
+++++++++++ Test Accuracy: 0.24933
+++++++++++ Loss: 2.74752
+
+********* Epoch 20: *********
+++++++++++ Train Accuracy: 0.30281
+++++++++++ Valid Accuracy: 0.31132
+++++++++++ Test Accuracy: 0.27949
+++++++++++ Loss: 2.70855
+
+********* Epoch 21: *********
+++++++++++ Train Accuracy: 0.29649
+++++++++++ Valid Accuracy: 0.30998
+++++++++++ Test Accuracy: 0.27764
+++++++++++ Loss: 2.71935
+
+********* Epoch 22: *********
+++++++++++ Train Accuracy: 0.28235
+++++++++++ Valid Accuracy: 0.30444
+++++++++++ Test Accuracy: 0.27321
+++++++++++ Loss: 2.73520
+
+********* Epoch 23: *********
+++++++++++ Train Accuracy: 0.29226
+++++++++++ Valid Accuracy: 0.31484
+++++++++++ Test Accuracy: 0.28523
+++++++++++ Loss: 2.70399
+
+********* Epoch 24: *********
+++++++++++ Train Accuracy: 0.32970
+++++++++++ Valid Accuracy: 0.34135
+++++++++++ Test Accuracy: 0.31903
+++++++++++ Loss: 2.62288
+
+********* Epoch 25: *********
+++++++++++ Train Accuracy: 0.37735
+++++++++++ Valid Accuracy: 0.38508
+++++++++++ Test Accuracy: 0.37123
+++++++++++ Loss: 2.53495
+
+********* Epoch 26: *********
+++++++++++ Train Accuracy: 0.38026
+++++++++++ Valid Accuracy: 0.41750
+++++++++++ Test Accuracy: 0.41964
+++++++++++ Loss: 2.49591
+
+********* Epoch 27: *********
+++++++++++ Train Accuracy: 0.35272
+++++++++++ Valid Accuracy: 0.41941
+++++++++++ Test Accuracy: 0.43674
+++++++++++ Loss: 2.52372
+
+********* Epoch 28: *********
+++++++++++ Train Accuracy: 0.33735
+++++++++++ Valid Accuracy: 0.40884
+++++++++++ Test Accuracy: 0.42341
+++++++++++ Loss: 2.55961
+
+********* Epoch 29: *********
+++++++++++ Train Accuracy: 0.35238
+++++++++++ Valid Accuracy: 0.42065
+++++++++++ Test Accuracy: 0.41876
+++++++++++ Loss: 2.53234
+
+********* Epoch 30: *********
+++++++++++ Train Accuracy: 0.39167
+++++++++++ Valid Accuracy: 0.44330
+++++++++++ Test Accuracy: 0.42067
+++++++++++ Loss: 2.45014
+
+********* Epoch 31: *********
+++++++++++ Train Accuracy: 0.43363
+++++++++++ Valid Accuracy: 0.45810
+++++++++++ Test Accuracy: 0.41958
+++++++++++ Loss: 2.37935
+
+********* Epoch 32: *********
+++++++++++ Train Accuracy: 0.44199
+++++++++++ Valid Accuracy: 0.45720
+++++++++++ Test Accuracy: 0.41569
+++++++++++ Loss: 2.36407
+
+********* Epoch 33: *********
+++++++++++ Train Accuracy: 0.42842
+++++++++++ Valid Accuracy: 0.44599
+++++++++++ Test Accuracy: 0.40759
+++++++++++ Loss: 2.38823
+
+********* Epoch 34: *********
+++++++++++ Train Accuracy: 0.40289
+++++++++++ Valid Accuracy: 0.42441
+++++++++++ Test Accuracy: 0.39170
+++++++++++ Loss: 2.40731
+
+********* Epoch 35: *********
+++++++++++ Train Accuracy: 0.36838
+++++++++++ Valid Accuracy: 0.37297
+++++++++++ Test Accuracy: 0.33959
+++++++++++ Loss: 2.39599
+
+********* Epoch 36: *********
+++++++++++ Train Accuracy: 0.35987
+++++++++++ Valid Accuracy: 0.35192
+++++++++++ Test Accuracy: 0.32107
+++++++++++ Loss: 2.35324
+
+********* Epoch 37: *********
+++++++++++ Train Accuracy: 0.37921
+++++++++++ Valid Accuracy: 0.36444
+++++++++++ Test Accuracy: 0.33722
+++++++++++ Loss: 2.29303
+
+********* Epoch 38: *********
+++++++++++ Train Accuracy: 0.39685
+++++++++++ Valid Accuracy: 0.38226
+++++++++++ Test Accuracy: 0.36341
+++++++++++ Loss: 2.24266
+
+********* Epoch 39: *********
+++++++++++ Train Accuracy: 0.39997
+++++++++++ Valid Accuracy: 0.40468
+++++++++++ Test Accuracy: 0.39950
+++++++++++ Loss: 2.22549
+
+********* Epoch 40: *********
+++++++++++ Train Accuracy: 0.39740
+++++++++++ Valid Accuracy: 0.43193
+++++++++++ Test Accuracy: 0.44621
+++++++++++ Loss: 2.23690
+
+********* Epoch 41: *********
+++++++++++ Train Accuracy: 0.39407
+++++++++++ Valid Accuracy: 0.43206
+++++++++++ Test Accuracy: 0.45859
+++++++++++ Loss: 2.24855
+
+********* Epoch 42: *********
+++++++++++ Train Accuracy: 0.39208
+++++++++++ Valid Accuracy: 0.40367
+++++++++++ Test Accuracy: 0.42946
+++++++++++ Loss: 2.23955
+
+********* Epoch 43: *********
+++++++++++ Train Accuracy: 0.40115
+++++++++++ Valid Accuracy: 0.39464
+++++++++++ Test Accuracy: 0.41938
+++++++++++ Loss: 2.21353
+
+********* Epoch 44: *********
+++++++++++ Train Accuracy: 0.42838
+++++++++++ Valid Accuracy: 0.44045
+++++++++++ Test Accuracy: 0.46108
+++++++++++ Loss: 2.18480
+
+********* Epoch 45: *********
+++++++++++ Train Accuracy: 0.45689
+++++++++++ Valid Accuracy: 0.49367
+++++++++++ Test Accuracy: 0.49394
+++++++++++ Loss: 2.16208
+
+********* Epoch 46: *********
+++++++++++ Train Accuracy: 0.45614
+++++++++++ Valid Accuracy: 0.48002
+++++++++++ Test Accuracy: 0.45485
+++++++++++ Loss: 2.14558
+
+********* Epoch 47: *********
+++++++++++ Train Accuracy: 0.44416
+++++++++++ Valid Accuracy: 0.45119
+++++++++++ Test Accuracy: 0.40960
+++++++++++ Loss: 2.12975
+
+********* Epoch 48: *********
+++++++++++ Train Accuracy: 0.44347
+++++++++++ Valid Accuracy: 0.45186
+++++++++++ Test Accuracy: 0.41084
+++++++++++ Loss: 2.11017
+
+********* Epoch 49: *********
+++++++++++ Train Accuracy: 0.44332
+++++++++++ Valid Accuracy: 0.45461
+++++++++++ Test Accuracy: 0.41609
+++++++++++ Loss: 2.09407
+
+********* Epoch 50: *********
+++++++++++ Train Accuracy: 0.42458
+++++++++++ Valid Accuracy: 0.42971
+++++++++++ Test Accuracy: 0.39380
+++++++++++ Loss: 2.09624
+
+********* Epoch 51: *********
+++++++++++ Train Accuracy: 0.39268
+++++++++++ Valid Accuracy: 0.38683
+++++++++++ Test Accuracy: 0.34821
+++++++++++ Loss: 2.11582
+
+********* Epoch 52: *********
+++++++++++ Train Accuracy: 0.37773
+++++++++++ Valid Accuracy: 0.36595
+++++++++++ Test Accuracy: 0.32724
+++++++++++ Loss: 2.12610
+
+********* Epoch 53: *********
+++++++++++ Train Accuracy: 0.38215
+++++++++++ Valid Accuracy: 0.37038
+++++++++++ Test Accuracy: 0.33471
+++++++++++ Loss: 2.10404
+
+********* Epoch 54: *********
+++++++++++ Train Accuracy: 0.40753
+++++++++++ Valid Accuracy: 0.39219
+++++++++++ Test Accuracy: 0.36362
+++++++++++ Loss: 2.05320
+
+********* Epoch 55: *********
+++++++++++ Train Accuracy: 0.44453
+++++++++++ Valid Accuracy: 0.44337
+++++++++++ Test Accuracy: 0.42999
+++++++++++ Loss: 1.99676
+
+********* Epoch 56: *********
+++++++++++ Train Accuracy: 0.47434
+++++++++++ Valid Accuracy: 0.50176
+++++++++++ Test Accuracy: 0.51974
+++++++++++ Loss: 1.96248
+
+********* Epoch 57: *********
+++++++++++ Train Accuracy: 0.46435
+++++++++++ Valid Accuracy: 0.46666
+++++++++++ Test Accuracy: 0.49894
+++++++++++ Loss: 1.96523
+
+********* Epoch 58: *********
+++++++++++ Train Accuracy: 0.43435
+++++++++++ Valid Accuracy: 0.38065
+++++++++++ Test Accuracy: 0.42197
+++++++++++ Loss: 1.99617
+
+********* Epoch 59: *********
+++++++++++ Train Accuracy: 0.43839
+++++++++++ Valid Accuracy: 0.37833
+++++++++++ Test Accuracy: 0.41446
+++++++++++ Loss: 2.03178
+
+********* Epoch 60: *********
+++++++++++ Train Accuracy: 0.44638
+++++++++++ Valid Accuracy: 0.39062
+++++++++++ Test Accuracy: 0.41788
+++++++++++ Loss: 2.05068
+
+********* Epoch 61: *********
+++++++++++ Train Accuracy: 0.45243
+++++++++++ Valid Accuracy: 0.40615
+++++++++++ Test Accuracy: 0.41703
+++++++++++ Loss: 2.04198
+
+********* Epoch 62: *********
+++++++++++ Train Accuracy: 0.47394
+++++++++++ Valid Accuracy: 0.45210
+++++++++++ Test Accuracy: 0.44878
+++++++++++ Loss: 2.00631
+
+********* Epoch 63: *********
+++++++++++ Train Accuracy: 0.50073
+++++++++++ Valid Accuracy: 0.50052
+++++++++++ Test Accuracy: 0.48491
+++++++++++ Loss: 1.95460
+
+********* Epoch 64: *********
+++++++++++ Train Accuracy: 0.51835
+++++++++++ Valid Accuracy: 0.52566
+++++++++++ Test Accuracy: 0.49785
+++++++++++ Loss: 1.90491
+
+********* Epoch 65: *********
+++++++++++ Train Accuracy: 0.51823
+++++++++++ Valid Accuracy: 0.51727
+++++++++++ Test Accuracy: 0.48553
+++++++++++ Loss: 1.87628
+
+********* Epoch 66: *********
+++++++++++ Train Accuracy: 0.50006
+++++++++++ Valid Accuracy: 0.49388
+++++++++++ Test Accuracy: 0.46005
+++++++++++ Loss: 1.87922
+
+********* Epoch 67: *********
+++++++++++ Train Accuracy: 0.46912
+++++++++++ Valid Accuracy: 0.45478
+++++++++++ Test Accuracy: 0.42253
+++++++++++ Loss: 1.90863
+
+********* Epoch 68: *********
+++++++++++ Train Accuracy: 0.44533
+++++++++++ Valid Accuracy: 0.42293
+++++++++++ Test Accuracy: 0.38716
+++++++++++ Loss: 1.94322
+
+********* Epoch 69: *********
+++++++++++ Train Accuracy: 0.43630
+++++++++++ Valid Accuracy: 0.41129
+++++++++++ Test Accuracy: 0.37187
+++++++++++ Loss: 1.95819
+
+********* Epoch 70: *********
+++++++++++ Train Accuracy: 0.44410
+++++++++++ Valid Accuracy: 0.41575
+++++++++++ Test Accuracy: 0.37708
+++++++++++ Loss: 1.94177
+
+********* Epoch 71: *********
+++++++++++ Train Accuracy: 0.46132
+++++++++++ Valid Accuracy: 0.43488
+++++++++++ Test Accuracy: 0.39960
+++++++++++ Loss: 1.90062
+
+********* Epoch 72: *********
+++++++++++ Train Accuracy: 0.48509
+++++++++++ Valid Accuracy: 0.46616
+++++++++++ Test Accuracy: 0.44016
+++++++++++ Loss: 1.85290
+
+********* Epoch 73: *********
+++++++++++ Train Accuracy: 0.50967
+++++++++++ Valid Accuracy: 0.50985
+++++++++++ Test Accuracy: 0.49330
+++++++++++ Loss: 1.81719
+
+********* Epoch 74: *********
+++++++++++ Train Accuracy: 0.52717
+++++++++++ Valid Accuracy: 0.55056
+++++++++++ Test Accuracy: 0.54639
+++++++++++ Loss: 1.80368
+
+********* Epoch 75: *********
+++++++++++ Train Accuracy: 0.53421
+++++++++++ Valid Accuracy: 0.56804
+++++++++++ Test Accuracy: 0.57883
+++++++++++ Loss: 1.81071
+
+********* Epoch 76: *********
+++++++++++ Train Accuracy: 0.52783
+++++++++++ Valid Accuracy: 0.55163
+++++++++++ Test Accuracy: 0.56715
+++++++++++ Loss: 1.82760
+
+********* Epoch 77: *********
+++++++++++ Train Accuracy: 0.51767
+++++++++++ Valid Accuracy: 0.52307
+++++++++++ Test Accuracy: 0.53820
+++++++++++ Loss: 1.84218
+
+********* Epoch 78: *********
+++++++++++ Train Accuracy: 0.51278
+++++++++++ Valid Accuracy: 0.50314
+++++++++++ Test Accuracy: 0.51733
+++++++++++ Loss: 1.84742
+
+********* Epoch 79: *********
+++++++++++ Train Accuracy: 0.51646
+++++++++++ Valid Accuracy: 0.50307
+++++++++++ Test Accuracy: 0.51777
+++++++++++ Loss: 1.84216
+
+********* Epoch 80: *********
+++++++++++ Train Accuracy: 0.52645
+++++++++++ Valid Accuracy: 0.52146
+++++++++++ Test Accuracy: 0.53606
+++++++++++ Loss: 1.82861
+
+********* Epoch 81: *********
+++++++++++ Train Accuracy: 0.53502
+++++++++++ Valid Accuracy: 0.55002
+++++++++++ Test Accuracy: 0.56071
+++++++++++ Loss: 1.80898
+
+********* Epoch 82: *********
+++++++++++ Train Accuracy: 0.54256
+++++++++++ Valid Accuracy: 0.57314
+++++++++++ Test Accuracy: 0.58155
+++++++++++ Loss: 1.78423
+
+********* Epoch 83: *********
+++++++++++ Train Accuracy: 0.54620
+++++++++++ Valid Accuracy: 0.57670
+++++++++++ Test Accuracy: 0.58070
+++++++++++ Loss: 1.75770
+
+********* Epoch 84: *********
+++++++++++ Train Accuracy: 0.54235
+++++++++++ Valid Accuracy: 0.55760
+++++++++++ Test Accuracy: 0.54717
+++++++++++ Loss: 1.73660
+
+********* Epoch 85: *********
+++++++++++ Train Accuracy: 0.53892
+++++++++++ Valid Accuracy: 0.53512
+++++++++++ Test Accuracy: 0.51589
+++++++++++ Loss: 1.72881
+
+********* Epoch 86: *********
+++++++++++ Train Accuracy: 0.53189
+++++++++++ Valid Accuracy: 0.51404
+++++++++++ Test Accuracy: 0.49040
+++++++++++ Loss: 1.73695
+
+********* Epoch 87: *********
+++++++++++ Train Accuracy: 0.52361
+++++++++++ Valid Accuracy: 0.50086
+++++++++++ Test Accuracy: 0.47114
+++++++++++ Loss: 1.75538
+
+********* Epoch 88: *********
+++++++++++ Train Accuracy: 0.51803
+++++++++++ Valid Accuracy: 0.49535
+++++++++++ Test Accuracy: 0.46256
+++++++++++ Loss: 1.77159
+
+********* Epoch 89: *********
+++++++++++ Train Accuracy: 0.51840
+++++++++++ Valid Accuracy: 0.49703
+++++++++++ Test Accuracy: 0.46386
+++++++++++ Loss: 1.77334
+
+********* Epoch 90: *********
+++++++++++ Train Accuracy: 0.52597
+++++++++++ Valid Accuracy: 0.50710
+++++++++++ Test Accuracy: 0.47553
+++++++++++ Loss: 1.75585
+
+********* Epoch 91: *********
+++++++++++ Train Accuracy: 0.53696
+++++++++++ Valid Accuracy: 0.52123
+++++++++++ Test Accuracy: 0.49129
+++++++++++ Loss: 1.72441
+
+********* Epoch 92: *********
+++++++++++ Train Accuracy: 0.54899
+++++++++++ Valid Accuracy: 0.53831
+++++++++++ Test Accuracy: 0.51343
+++++++++++ Loss: 1.69110
+
+********* Epoch 93: *********
+++++++++++ Train Accuracy: 0.55581
+++++++++++ Valid Accuracy: 0.55666
+++++++++++ Test Accuracy: 0.53676
+++++++++++ Loss: 1.66817
+
+********* Epoch 94: *********
+++++++++++ Train Accuracy: 0.56025
+++++++++++ Valid Accuracy: 0.57482
+++++++++++ Test Accuracy: 0.56173
+++++++++++ Loss: 1.66191
+
+********* Epoch 95: *********
+++++++++++ Train Accuracy: 0.56147
+++++++++++ Valid Accuracy: 0.58791
+++++++++++ Test Accuracy: 0.58889
+++++++++++ Loss: 1.67030
+
+********* Epoch 96: *********
+++++++++++ Train Accuracy: 0.55922
+++++++++++ Valid Accuracy: 0.59069
+++++++++++ Test Accuracy: 0.59914
+++++++++++ Loss: 1.68488
+
+********* Epoch 97: *********
+++++++++++ Train Accuracy: 0.55506
+++++++++++ Valid Accuracy: 0.58304
+++++++++++ Test Accuracy: 0.59443
+++++++++++ Loss: 1.69542
+
+********* Epoch 98: *********
+++++++++++ Train Accuracy: 0.55233
+++++++++++ Valid Accuracy: 0.57294
+++++++++++ Test Accuracy: 0.58566
+++++++++++ Loss: 1.69558
+
+********* Epoch 99: *********
+++++++++++ Train Accuracy: 0.55275
+++++++++++ Valid Accuracy: 0.56837
+++++++++++ Test Accuracy: 0.58025
+++++++++++ Loss: 1.68543
+
+********* Epoch 100: *********
+++++++++++ Train Accuracy: 0.55736
+++++++++++ Valid Accuracy: 0.57593
+++++++++++ Test Accuracy: 0.58455
+++++++++++ Loss: 1.66903
+
+********* Epoch 101: *********
+++++++++++ Train Accuracy: 0.56493
+++++++++++ Valid Accuracy: 0.59009
+++++++++++ Test Accuracy: 0.59500
+++++++++++ Loss: 1.65091
+
+********* Epoch 102: *********
+++++++++++ Train Accuracy: 0.57143
+++++++++++ Valid Accuracy: 0.59770
+++++++++++ Test Accuracy: 0.59749
+++++++++++ Loss: 1.63450
+
+********* Epoch 103: *********
+++++++++++ Train Accuracy: 0.57555
+++++++++++ Valid Accuracy: 0.59599
+++++++++++ Test Accuracy: 0.58854
+++++++++++ Loss: 1.62221
+
+********* Epoch 104: *********
+++++++++++ Train Accuracy: 0.57642
+++++++++++ Valid Accuracy: 0.58311
+++++++++++ Test Accuracy: 0.56361
+++++++++++ Loss: 1.61557
+
+********* Epoch 105: *********
+++++++++++ Train Accuracy: 0.57556
+++++++++++ Valid Accuracy: 0.56844
+++++++++++ Test Accuracy: 0.54404
+++++++++++ Loss: 1.61525
+
+********* Epoch 106: *********
+++++++++++ Train Accuracy: 0.57070
+++++++++++ Valid Accuracy: 0.55566
+++++++++++ Test Accuracy: 0.52746
+++++++++++ Loss: 1.62040
+
+********* Epoch 107: *********
+++++++++++ Train Accuracy: 0.56308
+++++++++++ Valid Accuracy: 0.54183
+++++++++++ Test Accuracy: 0.51217
+++++++++++ Loss: 1.62824
+
+********* Epoch 108: *********
+++++++++++ Train Accuracy: 0.55683
+++++++++++ Valid Accuracy: 0.53253
+++++++++++ Test Accuracy: 0.50061
+++++++++++ Loss: 1.63411
+
+********* Epoch 109: *********
+++++++++++ Train Accuracy: 0.55372
+++++++++++ Valid Accuracy: 0.52931
+++++++++++ Test Accuracy: 0.49783
+++++++++++ Loss: 1.63312
+
+********* Epoch 110: *********
+++++++++++ Train Accuracy: 0.55559
+++++++++++ Valid Accuracy: 0.53384
+++++++++++ Test Accuracy: 0.50439
+++++++++++ Loss: 1.62261
+
+********* Epoch 111: *********
+++++++++++ Train Accuracy: 0.56205
+++++++++++ Valid Accuracy: 0.54498
+++++++++++ Test Accuracy: 0.52118
+++++++++++ Loss: 1.60385
+
+********* Epoch 112: *********
+++++++++++ Train Accuracy: 0.57055
+++++++++++ Valid Accuracy: 0.56532
+++++++++++ Test Accuracy: 0.54657
+++++++++++ Loss: 1.58229
+
+********* Epoch 113: *********
+++++++++++ Train Accuracy: 0.57894
+++++++++++ Valid Accuracy: 0.58928
+++++++++++ Test Accuracy: 0.57883
+++++++++++ Loss: 1.56575
+
+********* Epoch 114: *********
+++++++++++ Train Accuracy: 0.58403
+++++++++++ Valid Accuracy: 0.60801
+++++++++++ Test Accuracy: 0.60651
+++++++++++ Loss: 1.56065
+
+********* Epoch 115: *********
+++++++++++ Train Accuracy: 0.58236
+++++++++++ Valid Accuracy: 0.60757
+++++++++++ Test Accuracy: 0.61270
+++++++++++ Loss: 1.56784
+
+********* Epoch 116: *********
+++++++++++ Train Accuracy: 0.57544
+++++++++++ Valid Accuracy: 0.59650
+++++++++++ Test Accuracy: 0.60288
+++++++++++ Loss: 1.58128
+
+********* Epoch 117: *********
+++++++++++ Train Accuracy: 0.56887
+++++++++++ Valid Accuracy: 0.58596
+++++++++++ Test Accuracy: 0.58881
+++++++++++ Loss: 1.59189
+
+********* Epoch 118: *********
+++++++++++ Train Accuracy: 0.56973
+++++++++++ Valid Accuracy: 0.58354
+++++++++++ Test Accuracy: 0.58505
+++++++++++ Loss: 1.59257
+
+********* Epoch 119: *********
+++++++++++ Train Accuracy: 0.57651
+++++++++++ Valid Accuracy: 0.59130
+++++++++++ Test Accuracy: 0.59175
+++++++++++ Loss: 1.58161
+
+********* Epoch 120: *********
+++++++++++ Train Accuracy: 0.58638
+++++++++++ Valid Accuracy: 0.60432
+++++++++++ Test Accuracy: 0.60293
+++++++++++ Loss: 1.56342
+
+********* Epoch 121: *********
+++++++++++ Train Accuracy: 0.59336
+++++++++++ Valid Accuracy: 0.60965
+++++++++++ Test Accuracy: 0.60780
+++++++++++ Loss: 1.54557
+
+********* Epoch 122: *********
+++++++++++ Train Accuracy: 0.59386
+++++++++++ Valid Accuracy: 0.60405
+++++++++++ Test Accuracy: 0.59725
+++++++++++ Loss: 1.53457
+
+********* Epoch 123: *********
+++++++++++ Train Accuracy: 0.59065
+++++++++++ Valid Accuracy: 0.59234
+++++++++++ Test Accuracy: 0.57579
+++++++++++ Loss: 1.53280
+
+********* Epoch 124: *********
+++++++++++ Train Accuracy: 0.58494
+++++++++++ Valid Accuracy: 0.57854
+++++++++++ Test Accuracy: 0.55807
+++++++++++ Loss: 1.53779
+
+********* Epoch 125: *********
+++++++++++ Train Accuracy: 0.57941
+++++++++++ Valid Accuracy: 0.56593
+++++++++++ Test Accuracy: 0.54523
+++++++++++ Loss: 1.54415
+
+********* Epoch 126: *********
+++++++++++ Train Accuracy: 0.57611
+++++++++++ Valid Accuracy: 0.56223
+++++++++++ Test Accuracy: 0.53898
+++++++++++ Loss: 1.54691
+
+********* Epoch 127: *********
+++++++++++ Train Accuracy: 0.57728
+++++++++++ Valid Accuracy: 0.56223
+++++++++++ Test Accuracy: 0.53935
+++++++++++ Loss: 1.54432
+
+********* Epoch 128: *********
+++++++++++ Train Accuracy: 0.58023
+++++++++++ Valid Accuracy: 0.56831
+++++++++++ Test Accuracy: 0.54700
+++++++++++ Loss: 1.53804
+
+********* Epoch 129: *********
+++++++++++ Train Accuracy: 0.58344
+++++++++++ Valid Accuracy: 0.57794
+++++++++++ Test Accuracy: 0.55818
+++++++++++ Loss: 1.53073
+
+********* Epoch 130: *********
+++++++++++ Train Accuracy: 0.58634
+++++++++++ Valid Accuracy: 0.58955
+++++++++++ Test Accuracy: 0.57276
+++++++++++ Loss: 1.52356
+
+********* Epoch 131: *********
+++++++++++ Train Accuracy: 0.58912
+++++++++++ Valid Accuracy: 0.60015
+++++++++++ Test Accuracy: 0.58618
+++++++++++ Loss: 1.51611
+
+********* Epoch 132: *********
+++++++++++ Train Accuracy: 0.59281
+++++++++++ Valid Accuracy: 0.60898
+++++++++++ Test Accuracy: 0.59840
+++++++++++ Loss: 1.50811
+
+********* Epoch 133: *********
+++++++++++ Train Accuracy: 0.59645
+++++++++++ Valid Accuracy: 0.61307
+++++++++++ Test Accuracy: 0.60595
+++++++++++ Loss: 1.50104
+
+********* Epoch 134: *********
+++++++++++ Train Accuracy: 0.59815
+++++++++++ Valid Accuracy: 0.61593
+++++++++++ Test Accuracy: 0.61013
+++++++++++ Loss: 1.49736
+
+********* Epoch 135: *********
+++++++++++ Train Accuracy: 0.60047
+++++++++++ Valid Accuracy: 0.61646
+++++++++++ Test Accuracy: 0.61451
+++++++++++ Loss: 1.49856
+
+********* Epoch 136: *********
+++++++++++ Train Accuracy: 0.60070
+++++++++++ Valid Accuracy: 0.61670
+++++++++++ Test Accuracy: 0.61739
+++++++++++ Loss: 1.50366
+
+********* Epoch 137: *********
+++++++++++ Train Accuracy: 0.59923
+++++++++++ Valid Accuracy: 0.61787
+++++++++++ Test Accuracy: 0.61817
+++++++++++ Loss: 1.50912
+
+********* Epoch 138: *********
+++++++++++ Train Accuracy: 0.59809
+++++++++++ Valid Accuracy: 0.61811
+++++++++++ Test Accuracy: 0.61834
+++++++++++ Loss: 1.51012
+
+********* Epoch 139: *********
+++++++++++ Train Accuracy: 0.59841
+++++++++++ Valid Accuracy: 0.61693
+++++++++++ Test Accuracy: 0.61700
+++++++++++ Loss: 1.50297
+
+********* Epoch 140: *********
+++++++++++ Train Accuracy: 0.60013
+++++++++++ Valid Accuracy: 0.61801
+++++++++++ Test Accuracy: 0.61599
+++++++++++ Loss: 1.48816
+
+********* Epoch 141: *********
+++++++++++ Train Accuracy: 0.60373
+++++++++++ Valid Accuracy: 0.61975
+++++++++++ Test Accuracy: 0.61439
+++++++++++ Loss: 1.47139
+
+********* Epoch 142: *********
+++++++++++ Train Accuracy: 0.60501
+++++++++++ Valid Accuracy: 0.61898
+++++++++++ Test Accuracy: 0.61157
+++++++++++ Loss: 1.46061
+
+********* Epoch 143: *********
+++++++++++ Train Accuracy: 0.60444
+++++++++++ Valid Accuracy: 0.61781
+++++++++++ Test Accuracy: 0.60661
+++++++++++ Loss: 1.46071
+
+********* Epoch 144: *********
+++++++++++ Train Accuracy: 0.60057
+++++++++++ Valid Accuracy: 0.61203
+++++++++++ Test Accuracy: 0.59959
+++++++++++ Loss: 1.47004
+
+********* Epoch 145: *********
+++++++++++ Train Accuracy: 0.59713
+++++++++++ Valid Accuracy: 0.60569
+++++++++++ Test Accuracy: 0.59091
+++++++++++ Loss: 1.48121
+
+********* Epoch 146: *********
+++++++++++ Train Accuracy: 0.59496
+++++++++++ Valid Accuracy: 0.60109
+++++++++++ Test Accuracy: 0.58313
+++++++++++ Loss: 1.48565
+
+********* Epoch 147: *********
+++++++++++ Train Accuracy: 0.59597
+++++++++++ Valid Accuracy: 0.59915
+++++++++++ Test Accuracy: 0.57980
+++++++++++ Loss: 1.47926
+
+********* Epoch 148: *********
+++++++++++ Train Accuracy: 0.60042
+++++++++++ Valid Accuracy: 0.60046
+++++++++++ Test Accuracy: 0.58064
+++++++++++ Loss: 1.46497
+
+********* Epoch 149: *********
+++++++++++ Train Accuracy: 0.60359
+++++++++++ Valid Accuracy: 0.60321
+++++++++++ Test Accuracy: 0.58268
+++++++++++ Loss: 1.45042
+
+********* Epoch 150: *********
+++++++++++ Train Accuracy: 0.60614
+++++++++++ Valid Accuracy: 0.60643
+++++++++++ Test Accuracy: 0.58618
+++++++++++ Loss: 1.44255
+
+********* Epoch 151: *********
+++++++++++ Train Accuracy: 0.60589
+++++++++++ Valid Accuracy: 0.60875
+++++++++++ Test Accuracy: 0.59177
+++++++++++ Loss: 1.44342
+
+********* Epoch 152: *********
+++++++++++ Train Accuracy: 0.60390
+++++++++++ Valid Accuracy: 0.61103
+++++++++++ Test Accuracy: 0.59760
+++++++++++ Loss: 1.44944
+
+********* Epoch 153: *********
+++++++++++ Train Accuracy: 0.60280
+++++++++++ Valid Accuracy: 0.61432
+++++++++++ Test Accuracy: 0.60340
+++++++++++ Loss: 1.45416
+
+********* Epoch 154: *********
+++++++++++ Train Accuracy: 0.60399
+++++++++++ Valid Accuracy: 0.61797
+++++++++++ Test Accuracy: 0.61258
+++++++++++ Loss: 1.45302
+
+********* Epoch 155: *********
+++++++++++ Train Accuracy: 0.60659
+++++++++++ Valid Accuracy: 0.62160
+++++++++++ Test Accuracy: 0.61980
+++++++++++ Loss: 1.44654
+
+********* Epoch 156: *********
+++++++++++ Train Accuracy: 0.60936
+++++++++++ Valid Accuracy: 0.62623
+++++++++++ Test Accuracy: 0.62523
+++++++++++ Loss: 1.43914
+
+********* Epoch 157: *********
+++++++++++ Train Accuracy: 0.60905
+++++++++++ Valid Accuracy: 0.62771
+++++++++++ Test Accuracy: 0.62811
+++++++++++ Loss: 1.43505
+
+********* Epoch 158: *********
+++++++++++ Train Accuracy: 0.60788
+++++++++++ Valid Accuracy: 0.62801
+++++++++++ Test Accuracy: 0.62733
+++++++++++ Loss: 1.43493
+
+********* Epoch 159: *********
+++++++++++ Train Accuracy: 0.60800
+++++++++++ Valid Accuracy: 0.62781
+++++++++++ Test Accuracy: 0.62506
+++++++++++ Loss: 1.43588
+
+********* Epoch 160: *********
+++++++++++ Train Accuracy: 0.61023
+++++++++++ Valid Accuracy: 0.62740
+++++++++++ Test Accuracy: 0.62260
+++++++++++ Loss: 1.43424
+
+********* Epoch 161: *********
+++++++++++ Train Accuracy: 0.61152
+++++++++++ Valid Accuracy: 0.62606
+++++++++++ Test Accuracy: 0.62136
+++++++++++ Loss: 1.42881
+
+********* Epoch 162: *********
+++++++++++ Train Accuracy: 0.61223
+++++++++++ Valid Accuracy: 0.62411
+++++++++++ Test Accuracy: 0.61589
+++++++++++ Loss: 1.42183
+
+********* Epoch 163: *********
+++++++++++ Train Accuracy: 0.61235
+++++++++++ Valid Accuracy: 0.61935
+++++++++++ Test Accuracy: 0.60797
+++++++++++ Loss: 1.41734
+
+********* Epoch 164: *********
+++++++++++ Train Accuracy: 0.61016
+++++++++++ Valid Accuracy: 0.61271
+++++++++++ Test Accuracy: 0.59663
+++++++++++ Loss: 1.41801
+
+********* Epoch 165: *********
+++++++++++ Train Accuracy: 0.60806
+++++++++++ Valid Accuracy: 0.60556
+++++++++++ Test Accuracy: 0.58544
+++++++++++ Loss: 1.42288
+
+********* Epoch 166: *********
+++++++++++ Train Accuracy: 0.60513
+++++++++++ Valid Accuracy: 0.59965
+++++++++++ Test Accuracy: 0.57871
+++++++++++ Loss: 1.42772
+
+********* Epoch 167: *********
+++++++++++ Train Accuracy: 0.60462
+++++++++++ Valid Accuracy: 0.59781
+++++++++++ Test Accuracy: 0.57678
+++++++++++ Loss: 1.42761
+
+********* Epoch 168: *********
+++++++++++ Train Accuracy: 0.60645
+++++++++++ Valid Accuracy: 0.60126
+++++++++++ Test Accuracy: 0.57966
+++++++++++ Loss: 1.42057
+
+********* Epoch 169: *********
+++++++++++ Train Accuracy: 0.60974
+++++++++++ Valid Accuracy: 0.60774
+++++++++++ Test Accuracy: 0.58879
+++++++++++ Loss: 1.40933
+
+********* Epoch 170: *********
+++++++++++ Train Accuracy: 0.61290
+++++++++++ Valid Accuracy: 0.61797
+++++++++++ Test Accuracy: 0.60192
+++++++++++ Loss: 1.39981
+
+********* Epoch 171: *********
+++++++++++ Train Accuracy: 0.61374
+++++++++++ Valid Accuracy: 0.62505
+++++++++++ Test Accuracy: 0.61151
+++++++++++ Loss: 1.39716
+
+********* Epoch 172: *********
+++++++++++ Train Accuracy: 0.61247
+++++++++++ Valid Accuracy: 0.62603
+++++++++++ Test Accuracy: 0.61850
+++++++++++ Loss: 1.40210
+
+********* Epoch 173: *********
+++++++++++ Train Accuracy: 0.60982
+++++++++++ Valid Accuracy: 0.62720
+++++++++++ Test Accuracy: 0.62116
+++++++++++ Loss: 1.41049
+
+********* Epoch 174: *********
+++++++++++ Train Accuracy: 0.60833
+++++++++++ Valid Accuracy: 0.62391
+++++++++++ Test Accuracy: 0.62153
+++++++++++ Loss: 1.41609
+
+********* Epoch 175: *********
+++++++++++ Train Accuracy: 0.60892
+++++++++++ Valid Accuracy: 0.62519
+++++++++++ Test Accuracy: 0.62323
+++++++++++ Loss: 1.41453
+
+********* Epoch 176: *********
+++++++++++ Train Accuracy: 0.61266
+++++++++++ Valid Accuracy: 0.62848
+++++++++++ Test Accuracy: 0.62809
+++++++++++ Loss: 1.40597
+
+********* Epoch 177: *********
+++++++++++ Train Accuracy: 0.61696
+++++++++++ Valid Accuracy: 0.63227
+++++++++++ Test Accuracy: 0.63222
+++++++++++ Loss: 1.39479
+
+********* Epoch 178: *********
+++++++++++ Train Accuracy: 0.62015
+++++++++++ Valid Accuracy: 0.63408
+++++++++++ Test Accuracy: 0.63424
+++++++++++ Loss: 1.38672
+
+********* Epoch 179: *********
+++++++++++ Train Accuracy: 0.61983
+++++++++++ Valid Accuracy: 0.63250
+++++++++++ Test Accuracy: 0.62879
+++++++++++ Loss: 1.38537
+
+********* Epoch 180: *********
+++++++++++ Train Accuracy: 0.61803
+++++++++++ Valid Accuracy: 0.62710
+++++++++++ Test Accuracy: 0.61867
+++++++++++ Loss: 1.39010
+
+********* Epoch 181: *********
+++++++++++ Train Accuracy: 0.61397
+++++++++++ Valid Accuracy: 0.62022
+++++++++++ Test Accuracy: 0.60453
+++++++++++ Loss: 1.39656
+
+********* Epoch 182: *********
+++++++++++ Train Accuracy: 0.61236
+++++++++++ Valid Accuracy: 0.61153
+++++++++++ Test Accuracy: 0.59278
+++++++++++ Loss: 1.39946
+
+********* Epoch 183: *********
+++++++++++ Train Accuracy: 0.61258
+++++++++++ Valid Accuracy: 0.60730
+++++++++++ Test Accuracy: 0.58663
+++++++++++ Loss: 1.39631
+
+********* Epoch 184: *********
+++++++++++ Train Accuracy: 0.61430
+++++++++++ Valid Accuracy: 0.60794
+++++++++++ Test Accuracy: 0.58546
+++++++++++ Loss: 1.38895
+
+********* Epoch 185: *********
+++++++++++ Train Accuracy: 0.61584
+++++++++++ Valid Accuracy: 0.61170
+++++++++++ Test Accuracy: 0.58918
+++++++++++ Loss: 1.38186
+
+********* Epoch 186: *********
+++++++++++ Train Accuracy: 0.61656
+++++++++++ Valid Accuracy: 0.61646
+++++++++++ Test Accuracy: 0.59620
+++++++++++ Loss: 1.37878
+
+********* Epoch 187: *********
+++++++++++ Train Accuracy: 0.61557
+++++++++++ Valid Accuracy: 0.62240
+++++++++++ Test Accuracy: 0.60363
+++++++++++ Loss: 1.38025
+
+********* Epoch 188: *********
+++++++++++ Train Accuracy: 0.61461
+++++++++++ Valid Accuracy: 0.62576
+++++++++++ Test Accuracy: 0.61101
+++++++++++ Loss: 1.38369
+
+********* Epoch 189: *********
+++++++++++ Train Accuracy: 0.61441
+++++++++++ Valid Accuracy: 0.62818
+++++++++++ Test Accuracy: 0.61854
+++++++++++ Loss: 1.38540
+
+********* Epoch 190: *********
+++++++++++ Train Accuracy: 0.61543
+++++++++++ Valid Accuracy: 0.63079
+++++++++++ Test Accuracy: 0.62447
+++++++++++ Loss: 1.38320
+
+********* Epoch 191: *********
+++++++++++ Train Accuracy: 0.61791
+++++++++++ Valid Accuracy: 0.63197
+++++++++++ Test Accuracy: 0.63041
+++++++++++ Loss: 1.37779
+
+********* Epoch 192: *********
+++++++++++ Train Accuracy: 0.62028
+++++++++++ Valid Accuracy: 0.63469
+++++++++++ Test Accuracy: 0.63340
+++++++++++ Loss: 1.37208
+
+********* Epoch 193: *********
+++++++++++ Train Accuracy: 0.62218
+++++++++++ Valid Accuracy: 0.63727
+++++++++++ Test Accuracy: 0.63591
+++++++++++ Loss: 1.36910
+
+********* Epoch 194: *********
+++++++++++ Train Accuracy: 0.62417
+++++++++++ Valid Accuracy: 0.63734
+++++++++++ Test Accuracy: 0.63603
+++++++++++ Loss: 1.36998
+
+********* Epoch 195: *********
+++++++++++ Train Accuracy: 0.62331
+++++++++++ Valid Accuracy: 0.63586
+++++++++++ Test Accuracy: 0.63212
+++++++++++ Loss: 1.37307
+
+********* Epoch 196: *********
+++++++++++ Train Accuracy: 0.62195
+++++++++++ Valid Accuracy: 0.63351
+++++++++++ Test Accuracy: 0.62628
+++++++++++ Loss: 1.37503
+
+********* Epoch 197: *********
+++++++++++ Train Accuracy: 0.62204
+++++++++++ Valid Accuracy: 0.63039
+++++++++++ Test Accuracy: 0.61974
+++++++++++ Loss: 1.37317
+
+********* Epoch 198: *********
+++++++++++ Train Accuracy: 0.62234
+++++++++++ Valid Accuracy: 0.62730
+++++++++++ Test Accuracy: 0.61439
+++++++++++ Loss: 1.36743
+
+********* Epoch 199: *********
+++++++++++ Train Accuracy: 0.62348
+++++++++++ Valid Accuracy: 0.62566
+++++++++++ Test Accuracy: 0.61060
+++++++++++ Loss: 1.36051
+
+********* Epoch 200: *********
+++++++++++ Train Accuracy: 0.62359
+++++++++++ Valid Accuracy: 0.62630
+++++++++++ Test Accuracy: 0.61031
+++++++++++ Loss: 1.35612
+
+********* Epoch 201: *********
+++++++++++ Train Accuracy: 0.62207
+++++++++++ Valid Accuracy: 0.62643
+++++++++++ Test Accuracy: 0.61212
+++++++++++ Loss: 1.35652
+
+********* Epoch 202: *********
+++++++++++ Train Accuracy: 0.62014
+++++++++++ Valid Accuracy: 0.62881
+++++++++++ Test Accuracy: 0.61474
+++++++++++ Loss: 1.36097
+
+********* Epoch 203: *********
+++++++++++ Train Accuracy: 0.61877
+++++++++++ Valid Accuracy: 0.63016
+++++++++++ Test Accuracy: 0.61745
+++++++++++ Loss: 1.36591
+
+********* Epoch 204: *********
+++++++++++ Train Accuracy: 0.61806
+++++++++++ Valid Accuracy: 0.63177
+++++++++++ Test Accuracy: 0.62050
+++++++++++ Loss: 1.36712
+
+********* Epoch 205: *********
+++++++++++ Train Accuracy: 0.61976
+++++++++++ Valid Accuracy: 0.63301
+++++++++++ Test Accuracy: 0.62420
+++++++++++ Loss: 1.36265
+
+********* Epoch 206: *********
+++++++++++ Train Accuracy: 0.62237
+++++++++++ Valid Accuracy: 0.63512
+++++++++++ Test Accuracy: 0.62653
+++++++++++ Loss: 1.35435
+
+********* Epoch 207: *********
+++++++++++ Train Accuracy: 0.62547
+++++++++++ Valid Accuracy: 0.63690
+++++++++++ Test Accuracy: 0.62811
+++++++++++ Loss: 1.34667
+
+********* Epoch 208: *********
+++++++++++ Train Accuracy: 0.62762
+++++++++++ Valid Accuracy: 0.63730
+++++++++++ Test Accuracy: 0.62852
+++++++++++ Loss: 1.34367
+
+********* Epoch 209: *********
+++++++++++ Train Accuracy: 0.62822
+++++++++++ Valid Accuracy: 0.63667
+++++++++++ Test Accuracy: 0.62727
+++++++++++ Loss: 1.34632
+
+********* Epoch 210: *********
+++++++++++ Train Accuracy: 0.62635
+++++++++++ Valid Accuracy: 0.63640
+++++++++++ Test Accuracy: 0.62486
+++++++++++ Loss: 1.35187
+
+********* Epoch 211: *********
+++++++++++ Train Accuracy: 0.62560
+++++++++++ Valid Accuracy: 0.63532
+++++++++++ Test Accuracy: 0.62432
+++++++++++ Loss: 1.35569
+
+********* Epoch 212: *********
+++++++++++ Train Accuracy: 0.62635
+++++++++++ Valid Accuracy: 0.63482
+++++++++++ Test Accuracy: 0.62387
+++++++++++ Loss: 1.35446
+
+********* Epoch 213: *********
+++++++++++ Train Accuracy: 0.62720
+++++++++++ Valid Accuracy: 0.63657
+++++++++++ Test Accuracy: 0.62560
+++++++++++ Loss: 1.34831
+
+********* Epoch 214: *********
+++++++++++ Train Accuracy: 0.62889
+++++++++++ Valid Accuracy: 0.63764
+++++++++++ Test Accuracy: 0.62957
+++++++++++ Loss: 1.34064
+
+********* Epoch 215: *********
+++++++++++ Train Accuracy: 0.62929
+++++++++++ Valid Accuracy: 0.63928
+++++++++++ Test Accuracy: 0.63342
+++++++++++ Loss: 1.33575
+
+********* Epoch 216: *********
+++++++++++ Train Accuracy: 0.62828
+++++++++++ Valid Accuracy: 0.63871
+++++++++++ Test Accuracy: 0.63659
+++++++++++ Loss: 1.33601
+
+********* Epoch 217: *********
+++++++++++ Train Accuracy: 0.62575
+++++++++++ Valid Accuracy: 0.63955
+++++++++++ Test Accuracy: 0.63766
+++++++++++ Loss: 1.34027
+
+********* Epoch 218: *********
+++++++++++ Train Accuracy: 0.62462
+++++++++++ Valid Accuracy: 0.63895
+++++++++++ Test Accuracy: 0.63792
+++++++++++ Loss: 1.34468
+
+********* Epoch 219: *********
+++++++++++ Train Accuracy: 0.62472
+++++++++++ Valid Accuracy: 0.63959
+++++++++++ Test Accuracy: 0.63634
+++++++++++ Loss: 1.34545
+
+********* Epoch 220: *********
+++++++++++ Train Accuracy: 0.62655
+++++++++++ Valid Accuracy: 0.63965
+++++++++++ Test Accuracy: 0.63294
+++++++++++ Loss: 1.34148
+
+********* Epoch 221: *********
+++++++++++ Train Accuracy: 0.62796
+++++++++++ Valid Accuracy: 0.63761
+++++++++++ Test Accuracy: 0.62766
+++++++++++ Loss: 1.33505
+
+********* Epoch 222: *********
+++++++++++ Train Accuracy: 0.62889
+++++++++++ Valid Accuracy: 0.63422
+++++++++++ Test Accuracy: 0.61941
+++++++++++ Loss: 1.32999
+
+********* Epoch 223: *********
+++++++++++ Train Accuracy: 0.62914
+++++++++++ Valid Accuracy: 0.63005
+++++++++++ Test Accuracy: 0.61239
+++++++++++ Loss: 1.32900
+
+********* Epoch 224: *********
+++++++++++ Train Accuracy: 0.62809
+++++++++++ Valid Accuracy: 0.62660
+++++++++++ Test Accuracy: 0.60546
+++++++++++ Loss: 1.33188
+
+********* Epoch 225: *********
+++++++++++ Train Accuracy: 0.62749
+++++++++++ Valid Accuracy: 0.62596
+++++++++++ Test Accuracy: 0.60334
+++++++++++ Loss: 1.33574
+
+********* Epoch 226: *********
+++++++++++ Train Accuracy: 0.62780
+++++++++++ Valid Accuracy: 0.62878
+++++++++++ Test Accuracy: 0.60564
+++++++++++ Loss: 1.33712
+
+********* Epoch 227: *********
+++++++++++ Train Accuracy: 0.62888
+++++++++++ Valid Accuracy: 0.63281
+++++++++++ Test Accuracy: 0.61441
+++++++++++ Loss: 1.33433
+
+********* Epoch 228: *********
+++++++++++ Train Accuracy: 0.62983
+++++++++++ Valid Accuracy: 0.63680
+++++++++++ Test Accuracy: 0.62348
+++++++++++ Loss: 1.32860
+
+********* Epoch 229: *********
+++++++++++ Train Accuracy: 0.63061
+++++++++++ Valid Accuracy: 0.64016
+++++++++++ Test Accuracy: 0.63422
+++++++++++ Loss: 1.32339
+
+********* Epoch 230: *********
+++++++++++ Train Accuracy: 0.63034
+++++++++++ Valid Accuracy: 0.64113
+++++++++++ Test Accuracy: 0.64181
+++++++++++ Loss: 1.32203
+
+********* Epoch 231: *********
+++++++++++ Train Accuracy: 0.62843
+++++++++++ Valid Accuracy: 0.64113
+++++++++++ Test Accuracy: 0.64447
+++++++++++ Loss: 1.32513
+
+********* Epoch 232: *********
+++++++++++ Train Accuracy: 0.62644
+++++++++++ Valid Accuracy: 0.63935
+++++++++++ Test Accuracy: 0.64445
+++++++++++ Loss: 1.32981
+
+********* Epoch 233: *********
+++++++++++ Train Accuracy: 0.62624
+++++++++++ Valid Accuracy: 0.64012
+++++++++++ Test Accuracy: 0.64389
+++++++++++ Loss: 1.33186
+
+********* Epoch 234: *********
+++++++++++ Train Accuracy: 0.62822
+++++++++++ Valid Accuracy: 0.64230
+++++++++++ Test Accuracy: 0.64344
+++++++++++ Loss: 1.32934
+
+********* Epoch 235: *********
+++++++++++ Train Accuracy: 0.63115
+++++++++++ Valid Accuracy: 0.64445
+++++++++++ Test Accuracy: 0.64148
+++++++++++ Loss: 1.32396
+
+********* Epoch 236: *********
+++++++++++ Train Accuracy: 0.63261
+++++++++++ Valid Accuracy: 0.64193
+++++++++++ Test Accuracy: 0.63202
+++++++++++ Loss: 1.31928
+
+********* Epoch 237: *********
+++++++++++ Train Accuracy: 0.63208
+++++++++++ Valid Accuracy: 0.63452
+++++++++++ Test Accuracy: 0.61784
+++++++++++ Loss: 1.31783
+
+********* Epoch 238: *********
+++++++++++ Train Accuracy: 0.63141
+++++++++++ Valid Accuracy: 0.62811
+++++++++++ Test Accuracy: 0.60570
+++++++++++ Loss: 1.31962
+
+********* Epoch 239: *********
+++++++++++ Train Accuracy: 0.62972
+++++++++++ Valid Accuracy: 0.62331
+++++++++++ Test Accuracy: 0.59723
+++++++++++ Loss: 1.32282
+
+********* Epoch 240: *********
+++++++++++ Train Accuracy: 0.62872
+++++++++++ Valid Accuracy: 0.62163
+++++++++++ Test Accuracy: 0.59521
+++++++++++ Loss: 1.32530
+
+********* Epoch 241: *********
+++++++++++ Train Accuracy: 0.62862
+++++++++++ Valid Accuracy: 0.62542
+++++++++++ Test Accuracy: 0.59883
+++++++++++ Loss: 1.32554
+
+********* Epoch 242: *********
+++++++++++ Train Accuracy: 0.63006
+++++++++++ Valid Accuracy: 0.63146
+++++++++++ Test Accuracy: 0.60998
+++++++++++ Loss: 1.32291
+
+********* Epoch 243: *********
+++++++++++ Train Accuracy: 0.63089
+++++++++++ Valid Accuracy: 0.63623
+++++++++++ Test Accuracy: 0.62210
+++++++++++ Loss: 1.31815
+
+********* Epoch 244: *********
+++++++++++ Train Accuracy: 0.63127
+++++++++++ Valid Accuracy: 0.63989
+++++++++++ Test Accuracy: 0.63311
+++++++++++ Loss: 1.31352
+
+********* Epoch 245: *********
+++++++++++ Train Accuracy: 0.63170
+++++++++++ Valid Accuracy: 0.64217
+++++++++++ Test Accuracy: 0.64126
+++++++++++ Loss: 1.31163
+
+********* Epoch 246: *********
+++++++++++ Train Accuracy: 0.63098
+++++++++++ Valid Accuracy: 0.64136
+++++++++++ Test Accuracy: 0.64554
+++++++++++ Loss: 1.31337
+
+********* Epoch 247: *********
+++++++++++ Train Accuracy: 0.62965
+++++++++++ Valid Accuracy: 0.64160
+++++++++++ Test Accuracy: 0.64669
+++++++++++ Loss: 1.31697
+
+********* Epoch 248: *********
+++++++++++ Train Accuracy: 0.62981
+++++++++++ Valid Accuracy: 0.64287
+++++++++++ Test Accuracy: 0.64630
+++++++++++ Loss: 1.31949
+
+********* Epoch 249: *********
+++++++++++ Train Accuracy: 0.63110
+++++++++++ Valid Accuracy: 0.64499
+++++++++++ Test Accuracy: 0.64488
+++++++++++ Loss: 1.31910
+
+********* Epoch 250: *********
+++++++++++ Train Accuracy: 0.63356
+++++++++++ Valid Accuracy: 0.64700
+++++++++++ Test Accuracy: 0.64161
+++++++++++ Loss: 1.31615
+
+********* Epoch 251: *********
+++++++++++ Train Accuracy: 0.63436
+++++++++++ Valid Accuracy: 0.64425
+++++++++++ Test Accuracy: 0.63455
+++++++++++ Loss: 1.31218
+
+********* Epoch 252: *********
+++++++++++ Train Accuracy: 0.63524
+++++++++++ Valid Accuracy: 0.63821
+++++++++++ Test Accuracy: 0.62467
+++++++++++ Loss: 1.30876
+
+********* Epoch 253: *********
+++++++++++ Train Accuracy: 0.63517
+++++++++++ Valid Accuracy: 0.63462
+++++++++++ Test Accuracy: 0.61809
+++++++++++ Loss: 1.30693
+
+********* Epoch 254: *********
+++++++++++ Train Accuracy: 0.63447
+++++++++++ Valid Accuracy: 0.63348
+++++++++++ Test Accuracy: 0.61272
+++++++++++ Loss: 1.30731
+
+********* Epoch 255: *********
+++++++++++ Train Accuracy: 0.63403
+++++++++++ Valid Accuracy: 0.63284
+++++++++++ Test Accuracy: 0.61247
+++++++++++ Loss: 1.30972
+
+********* Epoch 256: *********
+++++++++++ Train Accuracy: 0.63253
+++++++++++ Valid Accuracy: 0.63589
+++++++++++ Test Accuracy: 0.61694
+++++++++++ Loss: 1.31260
+
+********* Epoch 257: *********
+++++++++++ Train Accuracy: 0.63208
+++++++++++ Valid Accuracy: 0.63908
+++++++++++ Test Accuracy: 0.62432
+++++++++++ Loss: 1.31340
+
+********* Epoch 258: *********
+++++++++++ Train Accuracy: 0.63294
+++++++++++ Valid Accuracy: 0.64200
+++++++++++ Test Accuracy: 0.63144
+++++++++++ Loss: 1.31054
+
+********* Epoch 259: *********
+++++++++++ Train Accuracy: 0.63400
+++++++++++ Valid Accuracy: 0.64368
+++++++++++ Test Accuracy: 0.63848
+++++++++++ Loss: 1.30522
+
+********* Epoch 260: *********
+++++++++++ Train Accuracy: 0.63491
+++++++++++ Valid Accuracy: 0.64623
+++++++++++ Test Accuracy: 0.64259
+++++++++++ Loss: 1.30037
+
+********* Epoch 261: *********
+++++++++++ Train Accuracy: 0.63520
+++++++++++ Valid Accuracy: 0.64579
+++++++++++ Test Accuracy: 0.64584
+++++++++++ Loss: 1.29853
+
+********* Epoch 262: *********
+++++++++++ Train Accuracy: 0.63492
+++++++++++ Valid Accuracy: 0.64660
+++++++++++ Test Accuracy: 0.64582
+++++++++++ Loss: 1.30026
+
+********* Epoch 263: *********
+++++++++++ Train Accuracy: 0.63455
+++++++++++ Valid Accuracy: 0.64717
+++++++++++ Test Accuracy: 0.64321
+++++++++++ Loss: 1.30412
+
+********* Epoch 264: *********
+++++++++++ Train Accuracy: 0.63413
+++++++++++ Valid Accuracy: 0.64606
+++++++++++ Test Accuracy: 0.63801
+++++++++++ Loss: 1.30744
+
+********* Epoch 265: *********
+++++++++++ Train Accuracy: 0.63435
+++++++++++ Valid Accuracy: 0.64197
+++++++++++ Test Accuracy: 0.63091
+++++++++++ Loss: 1.30763
+
+********* Epoch 266: *********
+++++++++++ Train Accuracy: 0.63509
+++++++++++ Valid Accuracy: 0.64032
+++++++++++ Test Accuracy: 0.62716
+++++++++++ Loss: 1.30364
+
+********* Epoch 267: *********
+++++++++++ Train Accuracy: 0.63757
+++++++++++ Valid Accuracy: 0.64022
+++++++++++ Test Accuracy: 0.62558
+++++++++++ Loss: 1.29691
+
+********* Epoch 268: *********
+++++++++++ Train Accuracy: 0.63919
+++++++++++ Valid Accuracy: 0.64177
+++++++++++ Test Accuracy: 0.62735
+++++++++++ Loss: 1.29092
+
+********* Epoch 269: *********
+++++++++++ Train Accuracy: 0.64016
+++++++++++ Valid Accuracy: 0.64495
+++++++++++ Test Accuracy: 0.63148
+++++++++++ Loss: 1.28920
+
+********* Epoch 270: *********
+++++++++++ Train Accuracy: 0.63896
+++++++++++ Valid Accuracy: 0.64556
+++++++++++ Test Accuracy: 0.63642
+++++++++++ Loss: 1.29282
+
+********* Epoch 271: *********
+++++++++++ Train Accuracy: 0.63638
+++++++++++ Valid Accuracy: 0.64667
+++++++++++ Test Accuracy: 0.63963
+++++++++++ Loss: 1.29912
+
+********* Epoch 272: *********
+++++++++++ Train Accuracy: 0.63525
+++++++++++ Valid Accuracy: 0.64804
+++++++++++ Test Accuracy: 0.64284
+++++++++++ Loss: 1.30320
+
+********* Epoch 273: *********
+++++++++++ Train Accuracy: 0.63594
+++++++++++ Valid Accuracy: 0.64982
+++++++++++ Test Accuracy: 0.64560
+++++++++++ Loss: 1.30143
+
+********* Epoch 274: *********
+++++++++++ Train Accuracy: 0.63729
+++++++++++ Valid Accuracy: 0.65059
+++++++++++ Test Accuracy: 0.64706
+++++++++++ Loss: 1.29420
+
+********* Epoch 275: *********
+++++++++++ Train Accuracy: 0.64015
+++++++++++ Valid Accuracy: 0.65079
+++++++++++ Test Accuracy: 0.64778
+++++++++++ Loss: 1.28570
+
+********* Epoch 276: *********
+++++++++++ Train Accuracy: 0.64070
+++++++++++ Valid Accuracy: 0.65116
+++++++++++ Test Accuracy: 0.64722
+++++++++++ Loss: 1.28097
+
+********* Epoch 277: *********
+++++++++++ Train Accuracy: 0.64031
+++++++++++ Valid Accuracy: 0.64918
+++++++++++ Test Accuracy: 0.64264
+++++++++++ Loss: 1.28258
+
+********* Epoch 278: *********
+++++++++++ Train Accuracy: 0.63845
+++++++++++ Valid Accuracy: 0.64603
+++++++++++ Test Accuracy: 0.63473
+++++++++++ Loss: 1.28920
+
+********* Epoch 279: *********
+++++++++++ Train Accuracy: 0.63604
+++++++++++ Valid Accuracy: 0.63969
+++++++++++ Test Accuracy: 0.62548
+++++++++++ Loss: 1.29631
+
+********* Epoch 280: *********
+++++++++++ Train Accuracy: 0.63474
+++++++++++ Valid Accuracy: 0.63653
+++++++++++ Test Accuracy: 0.61990
+++++++++++ Loss: 1.29875
+
+********* Epoch 281: *********
+++++++++++ Train Accuracy: 0.63601
+++++++++++ Valid Accuracy: 0.63683
+++++++++++ Test Accuracy: 0.61924
+++++++++++ Loss: 1.29418
+
+********* Epoch 282: *********
+++++++++++ Train Accuracy: 0.63879
+++++++++++ Valid Accuracy: 0.64012
+++++++++++ Test Accuracy: 0.62439
+++++++++++ Loss: 1.28490
+
+********* Epoch 283: *********
+++++++++++ Train Accuracy: 0.64223
+++++++++++ Valid Accuracy: 0.64667
+++++++++++ Test Accuracy: 0.63255
+++++++++++ Loss: 1.27644
+
+********* Epoch 284: *********
+++++++++++ Train Accuracy: 0.64260
+++++++++++ Valid Accuracy: 0.65069
+++++++++++ Test Accuracy: 0.64264
+++++++++++ Loss: 1.27397
+
+********* Epoch 285: *********
+++++++++++ Train Accuracy: 0.64143
+++++++++++ Valid Accuracy: 0.65341
+++++++++++ Test Accuracy: 0.64838
+++++++++++ Loss: 1.27881
+
+********* Epoch 286: *********
+++++++++++ Train Accuracy: 0.63874
+++++++++++ Valid Accuracy: 0.65244
+++++++++++ Test Accuracy: 0.65031
+++++++++++ Loss: 1.28735
+
+********* Epoch 287: *********
+++++++++++ Train Accuracy: 0.63737
+++++++++++ Valid Accuracy: 0.65170
+++++++++++ Test Accuracy: 0.65115
+++++++++++ Loss: 1.29334
+
+********* Epoch 288: *********
+++++++++++ Train Accuracy: 0.63768
+++++++++++ Valid Accuracy: 0.65217
+++++++++++ Test Accuracy: 0.65126
+++++++++++ Loss: 1.29222
+
+********* Epoch 289: *********
+++++++++++ Train Accuracy: 0.64047
+++++++++++ Valid Accuracy: 0.65375
+++++++++++ Test Accuracy: 0.65233
+++++++++++ Loss: 1.28434
+
+********* Epoch 290: *********
+++++++++++ Train Accuracy: 0.64416
+++++++++++ Valid Accuracy: 0.65432
+++++++++++ Test Accuracy: 0.65181
+++++++++++ Loss: 1.27466
+
+********* Epoch 291: *********
+++++++++++ Train Accuracy: 0.64500
+++++++++++ Valid Accuracy: 0.65334
+++++++++++ Test Accuracy: 0.64716
+++++++++++ Loss: 1.26925
+
+********* Epoch 292: *********
+++++++++++ Train Accuracy: 0.64453
+++++++++++ Valid Accuracy: 0.64982
+++++++++++ Test Accuracy: 0.63704
+++++++++++ Loss: 1.27118
+
+********* Epoch 293: *********
+++++++++++ Train Accuracy: 0.64164
+++++++++++ Valid Accuracy: 0.64314
+++++++++++ Test Accuracy: 0.62817
+++++++++++ Loss: 1.27855
+
+********* Epoch 294: *********
+++++++++++ Train Accuracy: 0.63860
+++++++++++ Valid Accuracy: 0.63757
+++++++++++ Test Accuracy: 0.61780
+++++++++++ Loss: 1.28590
+
+********* Epoch 295: *********
+++++++++++ Train Accuracy: 0.63767
+++++++++++ Valid Accuracy: 0.63489
+++++++++++ Test Accuracy: 0.61519
+++++++++++ Loss: 1.28799
+
+********* Epoch 296: *********
+++++++++++ Train Accuracy: 0.63840
+++++++++++ Valid Accuracy: 0.63771
+++++++++++ Test Accuracy: 0.61860
+++++++++++ Loss: 1.28324
+
+********* Epoch 297: *********
+++++++++++ Train Accuracy: 0.64124
+++++++++++ Valid Accuracy: 0.64365
+++++++++++ Test Accuracy: 0.62803
+++++++++++ Loss: 1.27462
+
+********* Epoch 298: *********
+++++++++++ Train Accuracy: 0.64274
+++++++++++ Valid Accuracy: 0.65120
+++++++++++ Test Accuracy: 0.63866
+++++++++++ Loss: 1.26763
+
+********* Epoch 299: *********
+++++++++++ Train Accuracy: 0.64255
+++++++++++ Valid Accuracy: 0.65331
+++++++++++ Test Accuracy: 0.64718
+++++++++++ Loss: 1.26663
+
+********* Epoch 300: *********
+++++++++++ Train Accuracy: 0.64083
+++++++++++ Valid Accuracy: 0.65341
+++++++++++ Test Accuracy: 0.65226
+++++++++++ Loss: 1.27178
+
+********* Epoch 301: *********
+++++++++++ Train Accuracy: 0.63957
+++++++++++ Valid Accuracy: 0.65261
+++++++++++ Test Accuracy: 0.65294
+++++++++++ Loss: 1.27894
+
+********* Epoch 302: *********
+++++++++++ Train Accuracy: 0.63899
+++++++++++ Valid Accuracy: 0.65193
+++++++++++ Test Accuracy: 0.65360
+++++++++++ Loss: 1.28255
+
+********* Epoch 303: *********
+++++++++++ Train Accuracy: 0.64032
+++++++++++ Valid Accuracy: 0.65254
+++++++++++ Test Accuracy: 0.65350
+++++++++++ Loss: 1.27979
+
+********* Epoch 304: *********
+++++++++++ Train Accuracy: 0.64341
+++++++++++ Valid Accuracy: 0.65539
+++++++++++ Test Accuracy: 0.65333
+++++++++++ Loss: 1.27250
+
+********* Epoch 305: *********
+++++++++++ Train Accuracy: 0.64627
+++++++++++ Valid Accuracy: 0.65522
+++++++++++ Test Accuracy: 0.65037
+++++++++++ Loss: 1.26575
+
+********* Epoch 306: *********
+++++++++++ Train Accuracy: 0.64666
+++++++++++ Valid Accuracy: 0.65190
+++++++++++ Test Accuracy: 0.64132
+++++++++++ Loss: 1.26413
+
+********* Epoch 307: *********
+++++++++++ Train Accuracy: 0.64555
+++++++++++ Valid Accuracy: 0.64573
+++++++++++ Test Accuracy: 0.62973
+++++++++++ Loss: 1.26839
+
+********* Epoch 308: *********
+++++++++++ Train Accuracy: 0.64248
+++++++++++ Valid Accuracy: 0.63844
+++++++++++ Test Accuracy: 0.61807
+++++++++++ Loss: 1.27487
+
+********* Epoch 309: *********
+++++++++++ Train Accuracy: 0.64115
+++++++++++ Valid Accuracy: 0.63549
+++++++++++ Test Accuracy: 0.61290
+++++++++++ Loss: 1.27841
+
+********* Epoch 310: *********
+++++++++++ Train Accuracy: 0.64089
+++++++++++ Valid Accuracy: 0.63586
+++++++++++ Test Accuracy: 0.61515
+++++++++++ Loss: 1.27609
+
+********* Epoch 311: *********
+++++++++++ Train Accuracy: 0.64232
+++++++++++ Valid Accuracy: 0.64183
+++++++++++ Test Accuracy: 0.62379
+++++++++++ Loss: 1.26929
+
+********* Epoch 312: *********
+++++++++++ Train Accuracy: 0.64369
+++++++++++ Valid Accuracy: 0.64969
+++++++++++ Test Accuracy: 0.63677
+++++++++++ Loss: 1.26265
+
+********* Epoch 313: *********
+++++++++++ Train Accuracy: 0.64464
+++++++++++ Valid Accuracy: 0.65418
+++++++++++ Test Accuracy: 0.64761
+++++++++++ Loss: 1.26101
+
+********* Epoch 314: *********
+++++++++++ Train Accuracy: 0.64247
+++++++++++ Valid Accuracy: 0.65452
+++++++++++ Test Accuracy: 0.65335
+++++++++++ Loss: 1.26569
+
+********* Epoch 315: *********
+++++++++++ Train Accuracy: 0.64017
+++++++++++ Valid Accuracy: 0.65130
+++++++++++ Test Accuracy: 0.65383
+++++++++++ Loss: 1.27315
+
+********* Epoch 316: *********
+++++++++++ Train Accuracy: 0.63894
+++++++++++ Valid Accuracy: 0.64959
+++++++++++ Test Accuracy: 0.65342
+++++++++++ Loss: 1.27734
+
+********* Epoch 317: *********
+++++++++++ Train Accuracy: 0.63969
+++++++++++ Valid Accuracy: 0.65029
+++++++++++ Test Accuracy: 0.65500
+++++++++++ Loss: 1.27460
+
+********* Epoch 318: *********
+++++++++++ Train Accuracy: 0.64354
+++++++++++ Valid Accuracy: 0.65385
+++++++++++ Test Accuracy: 0.65568
+++++++++++ Loss: 1.26655
+
+********* Epoch 319: *********
+++++++++++ Train Accuracy: 0.64755
+++++++++++ Valid Accuracy: 0.65710
+++++++++++ Test Accuracy: 0.65475
+++++++++++ Loss: 1.25889
+
+********* Epoch 320: *********
+++++++++++ Train Accuracy: 0.64905
+++++++++++ Valid Accuracy: 0.65539
+++++++++++ Test Accuracy: 0.64648
+++++++++++ Loss: 1.25723
+
+********* Epoch 321: *********
+++++++++++ Train Accuracy: 0.64690
+++++++++++ Valid Accuracy: 0.64677
+++++++++++ Test Accuracy: 0.63157
+++++++++++ Loss: 1.26303
+
+********* Epoch 322: *********
+++++++++++ Train Accuracy: 0.64377
+++++++++++ Valid Accuracy: 0.63693
+++++++++++ Test Accuracy: 0.61558
+++++++++++ Loss: 1.27227
+
+********* Epoch 323: *********
+++++++++++ Train Accuracy: 0.64115
+++++++++++ Valid Accuracy: 0.63150
+++++++++++ Test Accuracy: 0.60513
+++++++++++ Loss: 1.27862
+
+********* Epoch 324: *********
+++++++++++ Train Accuracy: 0.64064
+++++++++++ Valid Accuracy: 0.62922
+++++++++++ Test Accuracy: 0.60256
+++++++++++ Loss: 1.27747
+
+********* Epoch 325: *********
+++++++++++ Train Accuracy: 0.64232
+++++++++++ Valid Accuracy: 0.63381
+++++++++++ Test Accuracy: 0.60914
+++++++++++ Loss: 1.26890
+
+********* Epoch 326: *********
+++++++++++ Train Accuracy: 0.64506
+++++++++++ Valid Accuracy: 0.64254
+++++++++++ Test Accuracy: 0.62214
+++++++++++ Loss: 1.25783
+
+********* Epoch 327: *********
+++++++++++ Train Accuracy: 0.64680
+++++++++++ Valid Accuracy: 0.65247
+++++++++++ Test Accuracy: 0.63895
+++++++++++ Loss: 1.25119
+
+********* Epoch 328: *********
+++++++++++ Train Accuracy: 0.64563
+++++++++++ Valid Accuracy: 0.65690
+++++++++++ Test Accuracy: 0.65103
+++++++++++ Loss: 1.25389
+
+********* Epoch 329: *********
+++++++++++ Train Accuracy: 0.64189
+++++++++++ Valid Accuracy: 0.65455
+++++++++++ Test Accuracy: 0.65552
+++++++++++ Loss: 1.26501
+
+********* Epoch 330: *********
+++++++++++ Train Accuracy: 0.63784
+++++++++++ Valid Accuracy: 0.64898
+++++++++++ Test Accuracy: 0.65294
+++++++++++ Loss: 1.27727
+
+********* Epoch 331: *********
+++++++++++ Train Accuracy: 0.63642
+++++++++++ Valid Accuracy: 0.64553
+++++++++++ Test Accuracy: 0.65142
+++++++++++ Loss: 1.28183
+
+********* Epoch 332: *********
+++++++++++ Train Accuracy: 0.63914
+++++++++++ Valid Accuracy: 0.64797
+++++++++++ Test Accuracy: 0.65286
+++++++++++ Loss: 1.27491
+
+********* Epoch 333: *********
+++++++++++ Train Accuracy: 0.64368
+++++++++++ Valid Accuracy: 0.65197
+++++++++++ Test Accuracy: 0.65714
+++++++++++ Loss: 1.26075
+
+********* Epoch 334: *********
+++++++++++ Train Accuracy: 0.64925
+++++++++++ Valid Accuracy: 0.65761
+++++++++++ Test Accuracy: 0.65786
+++++++++++ Loss: 1.24864
+
+********* Epoch 335: *********
+++++++++++ Train Accuracy: 0.65118
+++++++++++ Valid Accuracy: 0.65824
+++++++++++ Test Accuracy: 0.65136
+++++++++++ Loss: 1.24669
+
+********* Epoch 336: *********
+++++++++++ Train Accuracy: 0.64845
+++++++++++ Valid Accuracy: 0.64841
+++++++++++ Test Accuracy: 0.63340
+++++++++++ Loss: 1.25641
+
+********* Epoch 337: *********
+++++++++++ Train Accuracy: 0.64409
+++++++++++ Valid Accuracy: 0.63620
+++++++++++ Test Accuracy: 0.61194
+++++++++++ Loss: 1.27157
+
+********* Epoch 338: *********
+++++++++++ Train Accuracy: 0.64103
+++++++++++ Valid Accuracy: 0.62734
+++++++++++ Test Accuracy: 0.59766
+++++++++++ Loss: 1.28297
+
+********* Epoch 339: *********
+++++++++++ Train Accuracy: 0.63990
+++++++++++ Valid Accuracy: 0.62314
+++++++++++ Test Accuracy: 0.59126
+++++++++++ Loss: 1.28392
+
+********* Epoch 340: *********
+++++++++++ Train Accuracy: 0.64140
+++++++++++ Valid Accuracy: 0.62603
+++++++++++ Test Accuracy: 0.59478
+++++++++++ Loss: 1.27389
+
+********* Epoch 341: *********
+++++++++++ Train Accuracy: 0.64515
+++++++++++ Valid Accuracy: 0.63261
+++++++++++ Test Accuracy: 0.60531
+++++++++++ Loss: 1.25822
+
+********* Epoch 342: *********
+++++++++++ Train Accuracy: 0.64806
+++++++++++ Valid Accuracy: 0.64388
+++++++++++ Test Accuracy: 0.62379
+++++++++++ Loss: 1.24522
+
+********* Epoch 343: *********
+++++++++++ Train Accuracy: 0.64895
+++++++++++ Valid Accuracy: 0.65475
+++++++++++ Test Accuracy: 0.64233
+++++++++++ Loss: 1.24205
+
+********* Epoch 344: *********
+++++++++++ Train Accuracy: 0.64608
+++++++++++ Valid Accuracy: 0.65787
+++++++++++ Test Accuracy: 0.65342
+++++++++++ Loss: 1.25103
+
+********* Epoch 345: *********
+++++++++++ Train Accuracy: 0.64094
+++++++++++ Valid Accuracy: 0.65324
+++++++++++ Test Accuracy: 0.65580
+++++++++++ Loss: 1.26738
+
+********* Epoch 346: *********
+++++++++++ Train Accuracy: 0.63612
+++++++++++ Valid Accuracy: 0.64579
+++++++++++ Test Accuracy: 0.65233
+++++++++++ Loss: 1.28094
+
+********* Epoch 347: *********
+++++++++++ Train Accuracy: 0.63492
+++++++++++ Valid Accuracy: 0.64254
+++++++++++ Test Accuracy: 0.65132
+++++++++++ Loss: 1.28300
+
+********* Epoch 348: *********
+++++++++++ Train Accuracy: 0.63838
+++++++++++ Valid Accuracy: 0.64542
+++++++++++ Test Accuracy: 0.65228
+++++++++++ Loss: 1.27177
+
+********* Epoch 349: *********
+++++++++++ Train Accuracy: 0.64449
+++++++++++ Valid Accuracy: 0.65261
+++++++++++ Test Accuracy: 0.65838
+++++++++++ Loss: 1.25380
+
+********* Epoch 350: *********
+++++++++++ Train Accuracy: 0.65082
+++++++++++ Valid Accuracy: 0.65932
+++++++++++ Test Accuracy: 0.66033
+++++++++++ Loss: 1.23981
+
+********* Epoch 351: *********
+++++++++++ Train Accuracy: 0.65335
+++++++++++ Valid Accuracy: 0.66042
+++++++++++ Test Accuracy: 0.65654
+++++++++++ Loss: 1.23806
+
+********* Epoch 352: *********
+++++++++++ Train Accuracy: 0.65051
+++++++++++ Valid Accuracy: 0.65224
+++++++++++ Test Accuracy: 0.63854
+++++++++++ Loss: 1.24950
+
+********* Epoch 353: *********
+++++++++++ Train Accuracy: 0.64584
+++++++++++ Valid Accuracy: 0.63908
+++++++++++ Test Accuracy: 0.61609
+++++++++++ Loss: 1.26696
+
+********* Epoch 354: *********
+++++++++++ Train Accuracy: 0.64194
+++++++++++ Valid Accuracy: 0.62831
+++++++++++ Test Accuracy: 0.59858
+++++++++++ Loss: 1.28043
+
+********* Epoch 355: *********
+++++++++++ Train Accuracy: 0.64086
+++++++++++ Valid Accuracy: 0.62267
+++++++++++ Test Accuracy: 0.59013
+++++++++++ Loss: 1.28288
+
+********* Epoch 356: *********
+++++++++++ Train Accuracy: 0.64155
+++++++++++ Valid Accuracy: 0.62361
+++++++++++ Test Accuracy: 0.58898
+++++++++++ Loss: 1.27362
+
+********* Epoch 357: *********
+++++++++++ Train Accuracy: 0.64503
+++++++++++ Valid Accuracy: 0.62908
+++++++++++ Test Accuracy: 0.59640
+++++++++++ Loss: 1.25770
+
+********* Epoch 358: *********
+++++++++++ Train Accuracy: 0.64778
+++++++++++ Valid Accuracy: 0.63734
+++++++++++ Test Accuracy: 0.61260
+++++++++++ Loss: 1.24272
+
+********* Epoch 359: *********
+++++++++++ Train Accuracy: 0.64982
+++++++++++ Valid Accuracy: 0.64935
+++++++++++ Test Accuracy: 0.63169
+++++++++++ Loss: 1.23544
+
+********* Epoch 360: *********
+++++++++++ Train Accuracy: 0.64942
+++++++++++ Valid Accuracy: 0.65774
+++++++++++ Test Accuracy: 0.64821
+++++++++++ Loss: 1.23913
+
+********* Epoch 361: *********
+++++++++++ Train Accuracy: 0.64542
+++++++++++ Valid Accuracy: 0.65784
+++++++++++ Test Accuracy: 0.65691
+++++++++++ Loss: 1.25210
+
+********* Epoch 362: *********
+++++++++++ Train Accuracy: 0.64022
+++++++++++ Valid Accuracy: 0.65157
+++++++++++ Test Accuracy: 0.65539
+++++++++++ Loss: 1.26758
+
+********* Epoch 363: *********
+++++++++++ Train Accuracy: 0.63678
+++++++++++ Valid Accuracy: 0.64489
+++++++++++ Test Accuracy: 0.65266
+++++++++++ Loss: 1.27676
+
+********* Epoch 364: *********
+++++++++++ Train Accuracy: 0.63683
+++++++++++ Valid Accuracy: 0.64314
+++++++++++ Test Accuracy: 0.65165
+++++++++++ Loss: 1.27407
+
+********* Epoch 365: *********
+++++++++++ Train Accuracy: 0.64109
+++++++++++ Valid Accuracy: 0.64737
+++++++++++ Test Accuracy: 0.65486
+++++++++++ Loss: 1.26039
+
+********* Epoch 366: *********
+++++++++++ Train Accuracy: 0.64727
+++++++++++ Valid Accuracy: 0.65579
+++++++++++ Test Accuracy: 0.66039
+++++++++++ Loss: 1.24300
+
+********* Epoch 367: *********
+++++++++++ Train Accuracy: 0.65302
+++++++++++ Valid Accuracy: 0.66170
+++++++++++ Test Accuracy: 0.66239
+++++++++++ Loss: 1.23129
+
+********* Epoch 368: *********
+++++++++++ Train Accuracy: 0.65548
+++++++++++ Valid Accuracy: 0.66163
+++++++++++ Test Accuracy: 0.65776
+++++++++++ Loss: 1.23148
+
+********* Epoch 369: *********
+++++++++++ Train Accuracy: 0.65248
+++++++++++ Valid Accuracy: 0.65412
+++++++++++ Test Accuracy: 0.64103
+++++++++++ Loss: 1.24312
+
+********* Epoch 370: *********
+++++++++++ Train Accuracy: 0.64815
+++++++++++ Valid Accuracy: 0.64214
+++++++++++ Test Accuracy: 0.61815
+++++++++++ Loss: 1.25919
+
+********* Epoch 371: *********
+++++++++++ Train Accuracy: 0.64399
+++++++++++ Valid Accuracy: 0.63120
+++++++++++ Test Accuracy: 0.60140
+++++++++++ Loss: 1.27102
+
+********* Epoch 372: *********
+++++++++++ Train Accuracy: 0.64310
+++++++++++ Valid Accuracy: 0.62499
+++++++++++ Test Accuracy: 0.59264
+++++++++++ Loss: 1.27291
+
+********* Epoch 373: *********
+++++++++++ Train Accuracy: 0.64371
+++++++++++ Valid Accuracy: 0.62563
+++++++++++ Test Accuracy: 0.59221
+++++++++++ Loss: 1.26464
+
+********* Epoch 374: *********
+++++++++++ Train Accuracy: 0.64710
+++++++++++ Valid Accuracy: 0.63086
+++++++++++ Test Accuracy: 0.59819
+++++++++++ Loss: 1.25054
+
+********* Epoch 375: *********
+++++++++++ Train Accuracy: 0.64949
+++++++++++ Valid Accuracy: 0.63925
+++++++++++ Test Accuracy: 0.61229
+++++++++++ Loss: 1.23688
+
+********* Epoch 376: *********
+++++++++++ Train Accuracy: 0.65136
+++++++++++ Valid Accuracy: 0.64861
+++++++++++ Test Accuracy: 0.62992
+++++++++++ Loss: 1.22918
+
+********* Epoch 377: *********
+++++++++++ Train Accuracy: 0.65164
+++++++++++ Valid Accuracy: 0.65740
+++++++++++ Test Accuracy: 0.64694
+++++++++++ Loss: 1.23032
+
+********* Epoch 378: *********
+++++++++++ Train Accuracy: 0.64890
+++++++++++ Valid Accuracy: 0.65905
+++++++++++ Test Accuracy: 0.65607
+++++++++++ Loss: 1.23962
+
+********* Epoch 379: *********
+++++++++++ Train Accuracy: 0.64453
+++++++++++ Valid Accuracy: 0.65522
+++++++++++ Test Accuracy: 0.65710
+++++++++++ Loss: 1.25262
+
+********* Epoch 380: *********
+++++++++++ Train Accuracy: 0.64056
+++++++++++ Valid Accuracy: 0.64952
+++++++++++ Test Accuracy: 0.65549
+++++++++++ Loss: 1.26249
+
+********* Epoch 381: *********
+++++++++++ Train Accuracy: 0.63959
+++++++++++ Valid Accuracy: 0.64636
+++++++++++ Test Accuracy: 0.65387
+++++++++++ Loss: 1.26385
+
+********* Epoch 382: *********
+++++++++++ Train Accuracy: 0.64159
+++++++++++ Valid Accuracy: 0.64851
+++++++++++ Test Accuracy: 0.65562
+++++++++++ Loss: 1.25553
+
+********* Epoch 383: *********
+++++++++++ Train Accuracy: 0.64682
+++++++++++ Valid Accuracy: 0.65475
+++++++++++ Test Accuracy: 0.65963
+++++++++++ Loss: 1.24138
+
+********* Epoch 384: *********
+++++++++++ Train Accuracy: 0.65249
+++++++++++ Valid Accuracy: 0.66106
+++++++++++ Test Accuracy: 0.66259
+++++++++++ Loss: 1.22842
+
+********* Epoch 385: *********
+++++++++++ Train Accuracy: 0.65671
+++++++++++ Valid Accuracy: 0.66519
+++++++++++ Test Accuracy: 0.66255
+++++++++++ Loss: 1.22294
+
+********* Epoch 386: *********
+++++++++++ Train Accuracy: 0.65652
+++++++++++ Valid Accuracy: 0.66224
+++++++++++ Test Accuracy: 0.65375
+++++++++++ Loss: 1.22738
+
+********* Epoch 387: *********
+++++++++++ Train Accuracy: 0.65324
+++++++++++ Valid Accuracy: 0.65284
+++++++++++ Test Accuracy: 0.63716
+++++++++++ Loss: 1.23888
+
+********* Epoch 388: *********
+++++++++++ Train Accuracy: 0.64941
+++++++++++ Valid Accuracy: 0.64227
+++++++++++ Test Accuracy: 0.61844
+++++++++++ Loss: 1.25096
+
+********* Epoch 389: *********
+++++++++++ Train Accuracy: 0.64705
+++++++++++ Valid Accuracy: 0.63412
+++++++++++ Test Accuracy: 0.60515
+++++++++++ Loss: 1.25770
+
+********* Epoch 390: *********
+++++++++++ Train Accuracy: 0.64689
+++++++++++ Valid Accuracy: 0.63079
+++++++++++ Test Accuracy: 0.60060
+++++++++++ Loss: 1.25628
+
+********* Epoch 391: *********
+++++++++++ Train Accuracy: 0.64812
+++++++++++ Valid Accuracy: 0.63214
+++++++++++ Test Accuracy: 0.60212
+++++++++++ Loss: 1.24785
+
+********* Epoch 392: *********
+++++++++++ Train Accuracy: 0.65043
+++++++++++ Valid Accuracy: 0.63868
+++++++++++ Test Accuracy: 0.60916
+++++++++++ Loss: 1.23630
+
+********* Epoch 393: *********
+++++++++++ Train Accuracy: 0.65269
+++++++++++ Valid Accuracy: 0.64670
+++++++++++ Test Accuracy: 0.62264
+++++++++++ Loss: 1.22626
+
+********* Epoch 394: *********
+++++++++++ Train Accuracy: 0.65386
+++++++++++ Valid Accuracy: 0.65522
+++++++++++ Test Accuracy: 0.63794
+++++++++++ Loss: 1.22137
+
+********* Epoch 395: *********
+++++++++++ Train Accuracy: 0.65324
+++++++++++ Valid Accuracy: 0.65985
+++++++++++ Test Accuracy: 0.65111
+++++++++++ Loss: 1.22327
+
+********* Epoch 396: *********
+++++++++++ Train Accuracy: 0.65173
+++++++++++ Valid Accuracy: 0.66120
+++++++++++ Test Accuracy: 0.65749
+++++++++++ Loss: 1.23087
+
+********* Epoch 397: *********
+++++++++++ Train Accuracy: 0.64799
+++++++++++ Valid Accuracy: 0.65771
+++++++++++ Test Accuracy: 0.65870
+++++++++++ Loss: 1.24052
+
+********* Epoch 398: *********
+++++++++++ Train Accuracy: 0.64537
+++++++++++ Valid Accuracy: 0.65435
+++++++++++ Test Accuracy: 0.65798
+++++++++++ Loss: 1.24735
+
+********* Epoch 399: *********
+++++++++++ Train Accuracy: 0.64422
+++++++++++ Valid Accuracy: 0.65193
+++++++++++ Test Accuracy: 0.65761
+++++++++++ Loss: 1.24781
+
+********* Epoch 400: *********
+++++++++++ Train Accuracy: 0.64613
+++++++++++ Valid Accuracy: 0.65425
+++++++++++ Test Accuracy: 0.65895
+++++++++++ Loss: 1.24131
+
+********* Epoch 401: *********
+++++++++++ Train Accuracy: 0.64987
+++++++++++ Valid Accuracy: 0.65811
+++++++++++ Test Accuracy: 0.66247
+++++++++++ Loss: 1.23064
+
+********* Epoch 402: *********
+++++++++++ Train Accuracy: 0.65433
+++++++++++ Valid Accuracy: 0.66385
+++++++++++ Test Accuracy: 0.66463
+++++++++++ Loss: 1.22062
+
+********* Epoch 403: *********
+++++++++++ Train Accuracy: 0.65819
+++++++++++ Valid Accuracy: 0.66593
+++++++++++ Test Accuracy: 0.66455
+++++++++++ Loss: 1.21579
+
+********* Epoch 404: *********
+++++++++++ Train Accuracy: 0.65839
+++++++++++ Valid Accuracy: 0.66378
+++++++++++ Test Accuracy: 0.65831
+++++++++++ Loss: 1.21814
+
+********* Epoch 405: *********
+++++++++++ Train Accuracy: 0.65662
+++++++++++ Valid Accuracy: 0.65740
+++++++++++ Test Accuracy: 0.64566
+++++++++++ Loss: 1.22608
+
+********* Epoch 406: *********
+++++++++++ Train Accuracy: 0.65385
+++++++++++ Valid Accuracy: 0.65026
+++++++++++ Test Accuracy: 0.63136
+++++++++++ Loss: 1.23519
+
+********* Epoch 407: *********
+++++++++++ Train Accuracy: 0.65183
+++++++++++ Valid Accuracy: 0.64328
+++++++++++ Test Accuracy: 0.61982
+++++++++++ Loss: 1.24102
+
+********* Epoch 408: *********
+++++++++++ Train Accuracy: 0.65048
+++++++++++ Valid Accuracy: 0.63851
+++++++++++ Test Accuracy: 0.61278
+++++++++++ Loss: 1.24100
+
+********* Epoch 409: *********
+++++++++++ Train Accuracy: 0.65098
+++++++++++ Valid Accuracy: 0.63888
+++++++++++ Test Accuracy: 0.61272
+++++++++++ Loss: 1.23537
+
+********* Epoch 410: *********
+++++++++++ Train Accuracy: 0.65285
+++++++++++ Valid Accuracy: 0.64405
+++++++++++ Test Accuracy: 0.61739
+++++++++++ Loss: 1.22668
+
+********* Epoch 411: *********
+++++++++++ Train Accuracy: 0.65502
+++++++++++ Valid Accuracy: 0.64902
+++++++++++ Test Accuracy: 0.62694
+++++++++++ Loss: 1.21848
+
+********* Epoch 412: *********
+++++++++++ Train Accuracy: 0.65558
+++++++++++ Valid Accuracy: 0.65499
+++++++++++ Test Accuracy: 0.63799
+++++++++++ Loss: 1.21377
+
+********* Epoch 413: *********
+++++++++++ Train Accuracy: 0.65560
+++++++++++ Valid Accuracy: 0.65969
+++++++++++ Test Accuracy: 0.64790
+++++++++++ Loss: 1.21406
+
+********* Epoch 414: *********
+++++++++++ Train Accuracy: 0.65459
+++++++++++ Valid Accuracy: 0.66133
+++++++++++ Test Accuracy: 0.65488
+++++++++++ Loss: 1.21877
+
+********* Epoch 415: *********
+++++++++++ Train Accuracy: 0.65194
+++++++++++ Valid Accuracy: 0.66056
+++++++++++ Test Accuracy: 0.65747
+++++++++++ Loss: 1.22549
+
+********* Epoch 416: *********
+++++++++++ Train Accuracy: 0.64938
+++++++++++ Valid Accuracy: 0.65888
+++++++++++ Test Accuracy: 0.65885
+++++++++++ Loss: 1.23088
+
+********* Epoch 417: *********
+++++++++++ Train Accuracy: 0.64853
+++++++++++ Valid Accuracy: 0.65700
+++++++++++ Test Accuracy: 0.66060
+++++++++++ Loss: 1.23237
+
+********* Epoch 418: *********
+++++++++++ Train Accuracy: 0.64912
+++++++++++ Valid Accuracy: 0.65794
+++++++++++ Test Accuracy: 0.66210
+++++++++++ Loss: 1.22915
+
+********* Epoch 419: *********
+++++++++++ Train Accuracy: 0.65149
+++++++++++ Valid Accuracy: 0.66039
+++++++++++ Test Accuracy: 0.66422
+++++++++++ Loss: 1.22241
+
+********* Epoch 420: *********
+++++++++++ Train Accuracy: 0.65503
+++++++++++ Valid Accuracy: 0.66418
+++++++++++ Test Accuracy: 0.66609
+++++++++++ Loss: 1.21496
+
+********* Epoch 421: *********
+++++++++++ Train Accuracy: 0.65773
+++++++++++ Valid Accuracy: 0.66596
+++++++++++ Test Accuracy: 0.66607
+++++++++++ Loss: 1.20997
+
+********* Epoch 422: *********
+++++++++++ Train Accuracy: 0.65967
+++++++++++ Valid Accuracy: 0.66509
+++++++++++ Test Accuracy: 0.66412
+++++++++++ Loss: 1.20956
+
+********* Epoch 423: *********
+++++++++++ Train Accuracy: 0.65888
+++++++++++ Valid Accuracy: 0.66220
+++++++++++ Test Accuracy: 0.65463
+++++++++++ Loss: 1.21360
+
+********* Epoch 424: *********
+++++++++++ Train Accuracy: 0.65713
+++++++++++ Valid Accuracy: 0.65747
+++++++++++ Test Accuracy: 0.64373
+++++++++++ Loss: 1.21972
+
+********* Epoch 425: *********
+++++++++++ Train Accuracy: 0.65552
+++++++++++ Valid Accuracy: 0.65251
+++++++++++ Test Accuracy: 0.63266
+++++++++++ Loss: 1.22470
+
+********* Epoch 426: *********
+++++++++++ Train Accuracy: 0.65439
+++++++++++ Valid Accuracy: 0.64818
+++++++++++ Test Accuracy: 0.62513
+++++++++++ Loss: 1.22623
+
+********* Epoch 427: *********
+++++++++++ Train Accuracy: 0.65478
+++++++++++ Valid Accuracy: 0.64603
+++++++++++ Test Accuracy: 0.62099
+++++++++++ Loss: 1.22376
+
+********* Epoch 428: *********
+++++++++++ Train Accuracy: 0.65535
+++++++++++ Valid Accuracy: 0.64630
+++++++++++ Test Accuracy: 0.62132
+++++++++++ Loss: 1.21853
+
+********* Epoch 429: *********
+++++++++++ Train Accuracy: 0.65621
+++++++++++ Valid Accuracy: 0.64925
+++++++++++ Test Accuracy: 0.62675
+++++++++++ Loss: 1.21276
+
+********* Epoch 430: *********
+++++++++++ Train Accuracy: 0.65636
+++++++++++ Valid Accuracy: 0.65355
+++++++++++ Test Accuracy: 0.63471
+++++++++++ Loss: 1.20857
+
+********* Epoch 431: *********
+++++++++++ Train Accuracy: 0.65725
+++++++++++ Valid Accuracy: 0.65727
+++++++++++ Test Accuracy: 0.64420
+++++++++++ Loss: 1.20714
+
+********* Epoch 432: *********
+++++++++++ Train Accuracy: 0.65695
+++++++++++ Valid Accuracy: 0.66177
+++++++++++ Test Accuracy: 0.65154
+++++++++++ Loss: 1.20842
+
+********* Epoch 433: *********
+++++++++++ Train Accuracy: 0.65607
+++++++++++ Valid Accuracy: 0.66445
+++++++++++ Test Accuracy: 0.65737
+++++++++++ Loss: 1.21153
+
+********* Epoch 434: *********
+++++++++++ Train Accuracy: 0.65457
+++++++++++ Valid Accuracy: 0.66348
+++++++++++ Test Accuracy: 0.66165
+++++++++++ Loss: 1.21499
+
+********* Epoch 435: *********
+++++++++++ Train Accuracy: 0.65303
+++++++++++ Valid Accuracy: 0.66204
+++++++++++ Test Accuracy: 0.66370
+++++++++++ Loss: 1.21725
+
+********* Epoch 436: *********
+++++++++++ Train Accuracy: 0.65261
+++++++++++ Valid Accuracy: 0.66204
+++++++++++ Test Accuracy: 0.66514
+++++++++++ Loss: 1.21714
+
+********* Epoch 437: *********
+++++++++++ Train Accuracy: 0.65356
+++++++++++ Valid Accuracy: 0.66304
+++++++++++ Test Accuracy: 0.66654
+++++++++++ Loss: 1.21438
+
+********* Epoch 438: *********
+++++++++++ Train Accuracy: 0.65561
+++++++++++ Valid Accuracy: 0.66472
+++++++++++ Test Accuracy: 0.66798
+++++++++++ Loss: 1.20988
+
+********* Epoch 439: *********
+++++++++++ Train Accuracy: 0.65783
+++++++++++ Valid Accuracy: 0.66616
+++++++++++ Test Accuracy: 0.66747
+++++++++++ Loss: 1.20545
+
+********* Epoch 440: *********
+++++++++++ Train Accuracy: 0.66023
+++++++++++ Valid Accuracy: 0.66593
+++++++++++ Test Accuracy: 0.66669
+++++++++++ Loss: 1.20294
+
+********* Epoch 441: *********
+++++++++++ Train Accuracy: 0.66114
+++++++++++ Valid Accuracy: 0.66553
+++++++++++ Test Accuracy: 0.66177
+++++++++++ Loss: 1.20324
+
+********* Epoch 442: *********
+++++++++++ Train Accuracy: 0.66052
+++++++++++ Valid Accuracy: 0.66291
+++++++++++ Test Accuracy: 0.65348
+++++++++++ Loss: 1.20586
+
+********* Epoch 443: *********
+++++++++++ Train Accuracy: 0.65957
+++++++++++ Valid Accuracy: 0.65992
+++++++++++ Test Accuracy: 0.64473
+++++++++++ Loss: 1.20918
+
+********* Epoch 444: *********
+++++++++++ Train Accuracy: 0.65844
+++++++++++ Valid Accuracy: 0.65412
+++++++++++ Test Accuracy: 0.63609
+++++++++++ Loss: 1.21152
+
+********* Epoch 445: *********
+++++++++++ Train Accuracy: 0.65816
+++++++++++ Valid Accuracy: 0.65086
+++++++++++ Test Accuracy: 0.62920
+++++++++++ Loss: 1.21193
+
+********* Epoch 446: *********
+++++++++++ Train Accuracy: 0.65770
+++++++++++ Valid Accuracy: 0.64982
+++++++++++ Test Accuracy: 0.62805
+++++++++++ Loss: 1.21030
+
+********* Epoch 447: *********
+++++++++++ Train Accuracy: 0.65768
+++++++++++ Valid Accuracy: 0.65116
+++++++++++ Test Accuracy: 0.63008
+++++++++++ Loss: 1.20724
+
+********* Epoch 448: *********
+++++++++++ Train Accuracy: 0.65783
+++++++++++ Valid Accuracy: 0.65469
+++++++++++ Test Accuracy: 0.63531
+++++++++++ Loss: 1.20370
+
+********* Epoch 449: *********
+++++++++++ Train Accuracy: 0.65869
+++++++++++ Valid Accuracy: 0.65720
+++++++++++ Test Accuracy: 0.64280
+++++++++++ Loss: 1.20070
+
+********* Epoch 450: *********
+++++++++++ Train Accuracy: 0.65930
+++++++++++ Valid Accuracy: 0.66271
+++++++++++ Test Accuracy: 0.65144
+++++++++++ Loss: 1.19906
+
+********* Epoch 451: *********
+++++++++++ Train Accuracy: 0.65981
+++++++++++ Valid Accuracy: 0.66647
+++++++++++ Test Accuracy: 0.65860
+++++++++++ Loss: 1.19923
+
+********* Epoch 452: *********
+++++++++++ Train Accuracy: 0.65877
+++++++++++ Valid Accuracy: 0.66834
+++++++++++ Test Accuracy: 0.66375
+++++++++++ Loss: 1.20104
+
+********* Epoch 453: *********
+++++++++++ Train Accuracy: 0.65764
+++++++++++ Valid Accuracy: 0.66841
+++++++++++ Test Accuracy: 0.66745
+++++++++++ Loss: 1.20360
+
+********* Epoch 454: *********
+++++++++++ Train Accuracy: 0.65656
+++++++++++ Valid Accuracy: 0.66670
+++++++++++ Test Accuracy: 0.66807
+++++++++++ Loss: 1.20558
+
+********* Epoch 455: *********
+++++++++++ Train Accuracy: 0.65641
+++++++++++ Valid Accuracy: 0.66633
+++++++++++ Test Accuracy: 0.66885
+++++++++++ Loss: 1.20583
+
+********* Epoch 456: *********
+++++++++++ Train Accuracy: 0.65746
+++++++++++ Valid Accuracy: 0.66724
+++++++++++ Test Accuracy: 0.66909
+++++++++++ Loss: 1.20395
+
+********* Epoch 457: *********
+++++++++++ Train Accuracy: 0.65908
+++++++++++ Valid Accuracy: 0.66751
+++++++++++ Test Accuracy: 0.66963
+++++++++++ Loss: 1.20060
+
+********* Epoch 458: *********
+++++++++++ Train Accuracy: 0.66092
+++++++++++ Valid Accuracy: 0.66774
+++++++++++ Test Accuracy: 0.66944
+++++++++++ Loss: 1.19715
+
+********* Epoch 459: *********
+++++++++++ Train Accuracy: 0.66276
+++++++++++ Valid Accuracy: 0.66808
+++++++++++ Test Accuracy: 0.66700
+++++++++++ Loss: 1.19497
+
+********* Epoch 460: *********
+++++++++++ Train Accuracy: 0.66307
+++++++++++ Valid Accuracy: 0.66764
+++++++++++ Test Accuracy: 0.66206
+++++++++++ Loss: 1.19481
+
+********* Epoch 461: *********
+++++++++++ Train Accuracy: 0.66245
+++++++++++ Valid Accuracy: 0.66459
+++++++++++ Test Accuracy: 0.65424
+++++++++++ Loss: 1.19643
+
+********* Epoch 462: *********
+++++++++++ Train Accuracy: 0.66160
+++++++++++ Valid Accuracy: 0.66086
+++++++++++ Test Accuracy: 0.64753
+++++++++++ Loss: 1.19881
+
+********* Epoch 463: *********
+++++++++++ Train Accuracy: 0.66020
+++++++++++ Valid Accuracy: 0.65693
+++++++++++ Test Accuracy: 0.64062
+++++++++++ Loss: 1.20068
+
+********* Epoch 464: *********
+++++++++++ Train Accuracy: 0.65968
+++++++++++ Valid Accuracy: 0.65489
+++++++++++ Test Accuracy: 0.63663
+++++++++++ Loss: 1.20111
+
+********* Epoch 465: *********
+++++++++++ Train Accuracy: 0.65958
+++++++++++ Valid Accuracy: 0.65489
+++++++++++ Test Accuracy: 0.63655
+++++++++++ Loss: 1.19976
+
+********* Epoch 466: *********
+++++++++++ Train Accuracy: 0.65954
+++++++++++ Valid Accuracy: 0.65613
+++++++++++ Test Accuracy: 0.63975
+++++++++++ Loss: 1.19700
+
+********* Epoch 467: *********
+++++++++++ Train Accuracy: 0.66064
+++++++++++ Valid Accuracy: 0.65908
+++++++++++ Test Accuracy: 0.64490
+++++++++++ Loss: 1.19373
+
+********* Epoch 468: *********
+++++++++++ Train Accuracy: 0.66198
+++++++++++ Valid Accuracy: 0.66304
+++++++++++ Test Accuracy: 0.65156
+++++++++++ Loss: 1.19105
+
+********* Epoch 469: *********
+++++++++++ Train Accuracy: 0.66239
+++++++++++ Valid Accuracy: 0.66740
+++++++++++ Test Accuracy: 0.65901
+++++++++++ Loss: 1.18983
+
+********* Epoch 470: *********
+++++++++++ Train Accuracy: 0.66221
+++++++++++ Valid Accuracy: 0.67086
+++++++++++ Test Accuracy: 0.66414
+++++++++++ Loss: 1.19037
+
+********* Epoch 471: *********
+++++++++++ Train Accuracy: 0.66121
+++++++++++ Valid Accuracy: 0.67140
+++++++++++ Test Accuracy: 0.66776
+++++++++++ Loss: 1.19227
+
+********* Epoch 472: *********
+++++++++++ Train Accuracy: 0.65986
+++++++++++ Valid Accuracy: 0.67049
+++++++++++ Test Accuracy: 0.66940
+++++++++++ Loss: 1.19446
+
+********* Epoch 473: *********
+++++++++++ Train Accuracy: 0.65957
+++++++++++ Valid Accuracy: 0.66979
+++++++++++ Test Accuracy: 0.66996
+++++++++++ Loss: 1.19574
+
+********* Epoch 474: *********
+++++++++++ Train Accuracy: 0.65998
+++++++++++ Valid Accuracy: 0.66952
+++++++++++ Test Accuracy: 0.67045
+++++++++++ Loss: 1.19529
+
+********* Epoch 475: *********
+++++++++++ Train Accuracy: 0.66103
+++++++++++ Valid Accuracy: 0.66982
+++++++++++ Test Accuracy: 0.67078
+++++++++++ Loss: 1.19315
+
+********* Epoch 476: *********
+++++++++++ Train Accuracy: 0.66251
+++++++++++ Valid Accuracy: 0.67079
+++++++++++ Test Accuracy: 0.67037
+++++++++++ Loss: 1.19015
+
+********* Epoch 477: *********
+++++++++++ Train Accuracy: 0.66457
+++++++++++ Valid Accuracy: 0.67012
+++++++++++ Test Accuracy: 0.66963
+++++++++++ Loss: 1.18752
+
+********* Epoch 478: *********
+++++++++++ Train Accuracy: 0.66515
+++++++++++ Valid Accuracy: 0.66979
+++++++++++ Test Accuracy: 0.66687
+++++++++++ Loss: 1.18626
+
+********* Epoch 479: *********
+++++++++++ Train Accuracy: 0.66488
+++++++++++ Valid Accuracy: 0.66928
+++++++++++ Test Accuracy: 0.66245
+++++++++++ Loss: 1.18669
+
+********* Epoch 480: *********
+++++++++++ Train Accuracy: 0.66444
+++++++++++ Valid Accuracy: 0.66734
+++++++++++ Test Accuracy: 0.65708
+++++++++++ Loss: 1.18831
+
+********* Epoch 481: *********
+++++++++++ Train Accuracy: 0.66338
+++++++++++ Valid Accuracy: 0.66428
+++++++++++ Test Accuracy: 0.65179
+++++++++++ Loss: 1.19009
+
+********* Epoch 482: *********
+++++++++++ Train Accuracy: 0.66224
+++++++++++ Valid Accuracy: 0.66126
+++++++++++ Test Accuracy: 0.64685
+++++++++++ Loss: 1.19102
+
+********* Epoch 483: *********
+++++++++++ Train Accuracy: 0.66182
+++++++++++ Valid Accuracy: 0.66006
+++++++++++ Test Accuracy: 0.64455
+++++++++++ Loss: 1.19054
+
+********* Epoch 484: *********
+++++++++++ Train Accuracy: 0.66213
+++++++++++ Valid Accuracy: 0.66059
+++++++++++ Test Accuracy: 0.64634
+++++++++++ Loss: 1.18875
+
+********* Epoch 485: *********
+++++++++++ Train Accuracy: 0.66300
+++++++++++ Valid Accuracy: 0.66240
+++++++++++ Test Accuracy: 0.64934
+++++++++++ Loss: 1.18626
+
+********* Epoch 486: *********
+++++++++++ Train Accuracy: 0.66414
+++++++++++ Valid Accuracy: 0.66529
+++++++++++ Test Accuracy: 0.65362
+++++++++++ Loss: 1.18392
+
+********* Epoch 487: *********
+++++++++++ Train Accuracy: 0.66473
+++++++++++ Valid Accuracy: 0.66845
+++++++++++ Test Accuracy: 0.65963
+++++++++++ Loss: 1.18249
+
+********* Epoch 488: *********
+++++++++++ Train Accuracy: 0.66447
+++++++++++ Valid Accuracy: 0.67133
+++++++++++ Test Accuracy: 0.66364
+++++++++++ Loss: 1.18237
+
+********* Epoch 489: *********
+++++++++++ Train Accuracy: 0.66417
+++++++++++ Valid Accuracy: 0.67116
+++++++++++ Test Accuracy: 0.66675
+++++++++++ Loss: 1.18341
+
+********* Epoch 490: *********
+++++++++++ Train Accuracy: 0.66317
+++++++++++ Valid Accuracy: 0.67194
+++++++++++ Test Accuracy: 0.66866
+++++++++++ Loss: 1.18496
+
+********* Epoch 491: *********
+++++++++++ Train Accuracy: 0.66301
+++++++++++ Valid Accuracy: 0.67194
+++++++++++ Test Accuracy: 0.67016
+++++++++++ Loss: 1.18614
+
+********* Epoch 492: *********
+++++++++++ Train Accuracy: 0.66256
+++++++++++ Valid Accuracy: 0.67230
+++++++++++ Test Accuracy: 0.67105
+++++++++++ Loss: 1.18623
+
+********* Epoch 493: *********
+++++++++++ Train Accuracy: 0.66300
+++++++++++ Valid Accuracy: 0.67230
+++++++++++ Test Accuracy: 0.67084
+++++++++++ Loss: 1.18505
+
+********* Epoch 494: *********
+++++++++++ Train Accuracy: 0.66431
+++++++++++ Valid Accuracy: 0.67304
+++++++++++ Test Accuracy: 0.67173
+++++++++++ Loss: 1.18300
+
+********* Epoch 495: *********
+++++++++++ Train Accuracy: 0.66562
+++++++++++ Valid Accuracy: 0.67331
+++++++++++ Test Accuracy: 0.67160
+++++++++++ Loss: 1.18088
+
+********* Epoch 496: *********
+++++++++++ Train Accuracy: 0.66612
+++++++++++ Valid Accuracy: 0.67324
+++++++++++ Test Accuracy: 0.67006
+++++++++++ Loss: 1.17948
+
+********* Epoch 497: *********
+++++++++++ Train Accuracy: 0.66623
+++++++++++ Valid Accuracy: 0.67217
+++++++++++ Test Accuracy: 0.66679
+++++++++++ Loss: 1.17923
+
+********* Epoch 498: *********
+++++++++++ Train Accuracy: 0.66625
+++++++++++ Valid Accuracy: 0.67136
+++++++++++ Test Accuracy: 0.66397
+++++++++++ Loss: 1.17997
+
+********* Epoch 499: *********
+++++++++++ Train Accuracy: 0.66566
+++++++++++ Valid Accuracy: 0.66949
+++++++++++ Test Accuracy: 0.66103
+++++++++++ Loss: 1.18112
+------------------------node id 0,  total time 145.123730s---------------
+************ Profiling Results ************
+	Bubble: 0.000000 (s) (0.00 percentage)
+	Compute: 145.015857 (s) (100.00 percentage)
+	GraphComm: 0.005820 (s) (0.00 percentage)
+	Imbalance: 0.000277 (s) (0.00 percentage)
+	LayerComm: 0.000000 (s) (0.00 percentage)
+	Graph-level communication (cluster-wide, per epoch): 0.000 GB
+	Layer-level communication (cluster-wide, per epoch): 0.000 GB
+	Graph+Layer-level communication (cluster-wide, per epoch): 0.000 GB
+	Parameter-server communication (cluster-wide, per epoch): 0.000 GB
+	Graph-level dev2host communication time: 0.000 s, throughput: -nan GBps
+	Graph-level memcpy communication time: 0.000 s, throughput: -nan GBps
+	Graph-level net communication time: 0.000 s, throughput: -nan GBps
+	Graph-level network batch size: -nan Bytes
+Highest valid_acc: 0.6733
+Target test_acc: 0.6716
+Epoch to reach the target acc: 496
+[MPI Rank 0] Success 

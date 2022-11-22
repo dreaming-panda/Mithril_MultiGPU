@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <fstream>
 
+#define DUMP_WEGIHTS (true) // FIXME
+
 void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::vector<Operator*> &operators) {
     assert(executor_ != nullptr);
     for (Operator* op: operators) {
@@ -413,6 +415,12 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     }
     printf("*** Done preparing the weight tensor.\n");
 
+    FILE * weight_fout = NULL;
+    if (DUMP_WEGIHTS) {
+        weight_fout = fopen("./weights.txt", "w");
+        assert(weight_fout != NULL);
+    }
+
     // sleep(100);
     // exit(0);
     // start training
@@ -472,6 +480,31 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             total_runtime += epoch_time;
         }
         printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+
+        if (DUMP_WEGIHTS) {
+            fprintf(weight_fout, "Epoch: %d\n", epoch);
+            for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
+                Operator * op = operators[op_idx];
+                if (op->get_type() == OPERATOR_WEIGHT) {
+                    assert(op->get_num_output_tensors() == 1);
+                    Tensor * output_tensor = op->get_output_tensor(0);
+                    assert(output_tensor != NULL);
+                    TensorResourceGPU * resource = (TensorResourceGPU*) output_tensor->resource;
+                    assert(resource != NULL);
+                    DataType * cuda_data = resource->get_gpu_data();
+                    size_t num_elements = 1;
+                    for (int i = 0; i < output_tensor->num_dims; ++ i) {
+                        num_elements *= output_tensor->dims[i];
+                    }
+                    DataType buff[num_elements];
+                    cudaMemcpy(buff, cuda_data, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+                    for (size_t i = 0; i < num_elements; ++ i) {
+                        fprintf(weight_fout, "Weight: %.20f\n", buff[i]);
+                    }
+                }
+            }
+        }
+
         if (valid_accuracy > highest_valid_acc) {
             highest_valid_acc = valid_accuracy;
             target_test_acc = test_accuracy;
@@ -515,6 +548,11 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     std_tensor->resource->unmap();
     delete std_tensor->resource;
     delete std_tensor;
+
+    if (DUMP_WEGIHTS) {
+        assert(weight_fout != NULL);
+        assert(fclose(weight_fout) == 0);
+    }
 
     return train_accuracy;
 }

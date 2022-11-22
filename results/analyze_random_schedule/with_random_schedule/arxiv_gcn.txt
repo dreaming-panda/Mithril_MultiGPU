@@ -1,0 +1,3606 @@
+The graph dataset locates at /ssd512/gnn_datasets/with_split/reordered/ogbn_arxiv_bi
+The number of GCN layers: 3
+The number of hidden units: 256
+The number of training epoches: 500
+The number of startup epoches: 0
+Learning rate: 0.010000
+The partition strategy: hybrid
+Initialized node amadeus-MS-7B86
+Building the CSR structure...
+        It takes 0.034 seconds.
+Building the CSC structure...
+        It takes 0.033 seconds.
+Building the Feature Vector...
+        It takes 0.037 seconds.
+Building the Label Vector...
+        It takes 0.016 seconds.
+Number of classes: 40
+Number of feature dimensions: 128
+train nodes 90941, valid nodes 29799, test nodes 48603
+Using dynamic programming to discover a good hybrid parallelism strategy.
+Number of operators: 13
+The 0-th operator (type OPERATOR_INPUT) has cost 0.000 (ratio: 0.000000)
+The 1-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 2-th operator (type OPERATOR_MATMUL) has cost 5549031424.000 (ratio: 0.037928)
+The 3-th operator (type OPERATOR_AGGREGATION) has cost 59279308800.000 (ratio: 0.405183)
+The 4-th operator (type OPERATOR_RELU) has cost 43351808.000 (ratio: 0.000296)
+The 5-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 6-th operator (type OPERATOR_MATMUL) has cost 11098062848.000 (ratio: 0.075857)
+The 7-th operator (type OPERATOR_AGGREGATION) has cost 59279308800.000 (ratio: 0.405183)
+The 8-th operator (type OPERATOR_RELU) has cost 43351808.000 (ratio: 0.000296)
+The 9-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 10-th operator (type OPERATOR_MATMUL) has cost 1734072320.000 (ratio: 0.011853)
+The 11-th operator (type OPERATOR_AGGREGATION) has cost 9262392000.000 (ratio: 0.063310)
+The 12-th operator (type OPERATOR_SOFTMAX) has cost 13547440.000 (ratio: 0.000093)
+Pure graph-level partition:
+0 169343 0 13
+169343 169343
+The communication cost of partitioning vertices [0, 0) into 0 parts: 0.000000 GB
+The communication cost of partitioning vertices [0, 169343) into 1 parts: 0.000000 GB
+(vertical stripping) The minimum amount of communication volume (DP): 0.000000 GB
+Solution:
+Vertices [0, 169343) vertically partitioned into 1 parts
+The minimum amount of communication volume (model parallel): 0.000000 GB (-nanx)
+The minimum amount of communication volume (graph parallel): 0.000000 GB (-nanx)
+Graph parallel boundaries: 
+0 169343 
+The dynamic programming algorithm takes 0.048 seconds
+*** Node 0, starting model training...
+Number of operators: 13
+0 169343 0 13
+*** Node 0 owns the partition [0, 13) x [0, 169343)
+*** Node 0, constructing the helper classes...
+Operators:
+    Op 0: type OPERATOR_INPUT, output tensors: 0
+    Op 1: type OPERATOR_WEIGHT, output tensors: 1
+    Op 2: type OPERATOR_MATMUL, output tensors: 2
+    Op 3: type OPERATOR_AGGREGATION, output tensors: 3
+    Op 4: type OPERATOR_RELU, output tensors: 4
+    Op 5: type OPERATOR_WEIGHT, output tensors: 5
+    Op 6: type OPERATOR_MATMUL, output tensors: 6
+    Op 7: type OPERATOR_AGGREGATION, output tensors: 7
+    Op 8: type OPERATOR_RELU, output tensors: 8
+    Op 9: type OPERATOR_WEIGHT, output tensors: 9
+    Op 10: type OPERATOR_MATMUL, output tensors: 10
+    Op 11: type OPERATOR_AGGREGATION, output tensors: 11
+    Op 12: type OPERATOR_SOFTMAX, output tensors: 12
+Boundaries: 0 169343
+Fragments: [0, 169343)
+Chunks: 0-[0, 1322) 1-[1322, 2644) 2-[2644, 3966) 3-[3966, 5288) 4-[5288, 6610) 5-[6610, 7932) 6-[7932, 9254) 7-[9254, 10576) 8-[10576, 11898) ... 128-[169216, 169343)
+(Forwarding) Node 0 (fragment 0) depends on nodes:
+(Backwarding) Node 0 (fragment 0) depends on nodes:
+(I-link dependencies): node 0 should send activation to nodes:
+(I-link dependencies): node 0 should receive activation from nodes:
+(I-link dependencies): node 0 should send gradient to nodes:
+(I-link dependencies): node 0 should receive gradient from nodes:
+169343, 2484941, 2484941
+csr in-out ready !*** Node 0, setting up some other necessary information...
+*** Node 0, starting the helper threads...
++++++++++ Node 0 initializing the weights for op[0, 13)...
++++++++++ Node 0, mapping weight op 1
++++++++++ Node 0, mapping weight op 5
++++++++++ Node 0, mapping weight op 9
+*** Node 0, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.010000000
+
+********* Epoch 0: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.01250
+++++++++++ Valid Accuracy: 0.01020
+++++++++++ Test Accuracy: 0.00930
+++++++++++ Loss: 3.69448
+
+********* Epoch 1: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.17882
+++++++++++ Valid Accuracy: 0.07608
+++++++++++ Test Accuracy: 0.05860
+++++++++++ Loss: 3.35918
+
+********* Epoch 2: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.17906
+++++++++++ Valid Accuracy: 0.07628
+++++++++++ Test Accuracy: 0.05862
+++++++++++ Loss: 3.96564
+
+********* Epoch 3: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.11369
+++++++++++ Valid Accuracy: 0.19779
+++++++++++ Test Accuracy: 0.18159
+++++++++++ Loss: 3.63897
+
+********* Epoch 4: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.13712
+++++++++++ Valid Accuracy: 0.22048
+++++++++++ Test Accuracy: 0.21227
+++++++++++ Loss: 3.50506
+
+********* Epoch 5: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.11266
+++++++++++ Valid Accuracy: 0.12672
+++++++++++ Test Accuracy: 0.12365
+++++++++++ Loss: 3.44458
+
+********* Epoch 6: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.05239
+++++++++++ Valid Accuracy: 0.03329
+++++++++++ Test Accuracy: 0.03121
+++++++++++ Loss: 3.43105
+
+********* Epoch 7: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.10005
+++++++++++ Valid Accuracy: 0.04265
+++++++++++ Test Accuracy: 0.03407
+++++++++++ Loss: 3.26195
+
+********* Epoch 8: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.21141
+++++++++++ Valid Accuracy: 0.11396
+++++++++++ Test Accuracy: 0.09298
+++++++++++ Loss: 3.10581
+
+********* Epoch 9: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.21777
+++++++++++ Valid Accuracy: 0.17581
+++++++++++ Test Accuracy: 0.20431
+++++++++++ Loss: 3.08576
+
+********* Epoch 10: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.27824
+++++++++++ Valid Accuracy: 0.27605
+++++++++++ Test Accuracy: 0.27325
+++++++++++ Loss: 2.94728
+
+********* Epoch 11: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.24725
+++++++++++ Valid Accuracy: 0.28756
+++++++++++ Test Accuracy: 0.25708
+++++++++++ Loss: 3.07331
+
+********* Epoch 12: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.32766
+++++++++++ Valid Accuracy: 0.33699
+++++++++++ Test Accuracy: 0.30025
+++++++++++ Loss: 2.72870
+
+********* Epoch 13: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.32278
+++++++++++ Valid Accuracy: 0.33649
+++++++++++ Test Accuracy: 0.31027
+++++++++++ Loss: 2.68991
+
+********* Epoch 14: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.24120
+++++++++++ Valid Accuracy: 0.13933
+++++++++++ Test Accuracy: 0.11664
+++++++++++ Loss: 2.73658
+
+********* Epoch 15: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.27716
+++++++++++ Valid Accuracy: 0.17246
+++++++++++ Test Accuracy: 0.15701
+++++++++++ Loss: 2.63666
+
+********* Epoch 16: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.25278
+++++++++++ Valid Accuracy: 0.18944
+++++++++++ Test Accuracy: 0.19801
+++++++++++ Loss: 2.77591
+
+********* Epoch 17: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.26971
+++++++++++ Valid Accuracy: 0.23209
+++++++++++ Test Accuracy: 0.27869
+++++++++++ Loss: 2.79563
+
+********* Epoch 18: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.31870
+++++++++++ Valid Accuracy: 0.29897
+++++++++++ Test Accuracy: 0.34854
+++++++++++ Loss: 2.55087
+
+********* Epoch 19: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.31137
+++++++++++ Valid Accuracy: 0.30397
+++++++++++ Test Accuracy: 0.34259
+++++++++++ Loss: 2.54424
+
+********* Epoch 20: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.34345
+++++++++++ Valid Accuracy: 0.38414
+++++++++++ Test Accuracy: 0.36323
+++++++++++ Loss: 2.48087
+
+********* Epoch 21: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.35632
+++++++++++ Valid Accuracy: 0.36206
+++++++++++ Test Accuracy: 0.32134
+++++++++++ Loss: 2.38239
+
+********* Epoch 22: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.35085
+++++++++++ Valid Accuracy: 0.36307
+++++++++++ Test Accuracy: 0.32426
+++++++++++ Loss: 2.39380
+
+********* Epoch 23: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.32858
+++++++++++ Valid Accuracy: 0.36739
+++++++++++ Test Accuracy: 0.33669
+++++++++++ Loss: 2.42901
+
+********* Epoch 24: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.31978
+++++++++++ Valid Accuracy: 0.39233
+++++++++++ Test Accuracy: 0.36761
+++++++++++ Loss: 2.52426
+
+********* Epoch 25: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.35323
+++++++++++ Valid Accuracy: 0.40662
+++++++++++ Test Accuracy: 0.37878
+++++++++++ Loss: 2.48354
+
+********* Epoch 26: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.40699
+++++++++++ Valid Accuracy: 0.41777
+++++++++++ Test Accuracy: 0.38930
+++++++++++ Loss: 2.23627
+
+********* Epoch 27: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.35776
+++++++++++ Valid Accuracy: 0.36354
+++++++++++ Test Accuracy: 0.38368
+++++++++++ Loss: 2.22932
+
+********* Epoch 28: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.27781
+++++++++++ Valid Accuracy: 0.23685
+++++++++++ Test Accuracy: 0.27064
+++++++++++ Loss: 2.50168
+
+********* Epoch 29: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.31427
+++++++++++ Valid Accuracy: 0.29961
+++++++++++ Test Accuracy: 0.31654
+++++++++++ Loss: 2.46208
+
+********* Epoch 30: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.40201
+++++++++++ Valid Accuracy: 0.44834
+++++++++++ Test Accuracy: 0.45767
+++++++++++ Loss: 2.24576
+
+********* Epoch 31: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.39618
+++++++++++ Valid Accuracy: 0.44777
+++++++++++ Test Accuracy: 0.42471
+++++++++++ Loss: 2.19007
+
+********* Epoch 32: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.36021
+++++++++++ Valid Accuracy: 0.40199
+++++++++++ Test Accuracy: 0.37039
+++++++++++ Loss: 2.34522
+
+********* Epoch 33: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.33269
+++++++++++ Valid Accuracy: 0.38683
+++++++++++ Test Accuracy: 0.35710
+++++++++++ Loss: 2.48978
+
+********* Epoch 34: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.31827
+++++++++++ Valid Accuracy: 0.39662
+++++++++++ Test Accuracy: 0.36352
+++++++++++ Loss: 2.47794
+
+********* Epoch 35: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.30095
+++++++++++ Valid Accuracy: 0.36253
+++++++++++ Test Accuracy: 0.33379
+++++++++++ Loss: 2.44748
+
+********* Epoch 36: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.31538
+++++++++++ Valid Accuracy: 0.33947
+++++++++++ Test Accuracy: 0.30309
+++++++++++ Loss: 2.39713
+
+********* Epoch 37: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.36092
+++++++++++ Valid Accuracy: 0.36706
+++++++++++ Test Accuracy: 0.32975
+++++++++++ Loss: 2.29542
+
+********* Epoch 38: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.37980
+++++++++++ Valid Accuracy: 0.38636
+++++++++++ Test Accuracy: 0.35850
+++++++++++ Loss: 2.25108
+
+********* Epoch 39: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.37476
+++++++++++ Valid Accuracy: 0.40518
+++++++++++ Test Accuracy: 0.40781
+++++++++++ Loss: 2.29787
+
+********* Epoch 40: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.32852
+++++++++++ Valid Accuracy: 0.29783
+++++++++++ Test Accuracy: 0.31747
+++++++++++ Loss: 2.38546
+
+********* Epoch 41: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.32777
+++++++++++ Valid Accuracy: 0.25189
+++++++++++ Test Accuracy: 0.26583
+++++++++++ Loss: 2.44756
+
+********* Epoch 42: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.34972
+++++++++++ Valid Accuracy: 0.24947
+++++++++++ Test Accuracy: 0.25227
+++++++++++ Loss: 2.46217
+
+********* Epoch 43: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.35894
+++++++++++ Valid Accuracy: 0.24028
+++++++++++ Test Accuracy: 0.23379
+++++++++++ Loss: 2.44917
+
+********* Epoch 44: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.35474
+++++++++++ Valid Accuracy: 0.22853
+++++++++++ Test Accuracy: 0.21229
+++++++++++ Loss: 2.43234
+
+********* Epoch 45: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.33490
+++++++++++ Valid Accuracy: 0.21625
+++++++++++ Test Accuracy: 0.20159
+++++++++++ Loss: 2.39571
+
+********* Epoch 46: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.32849
+++++++++++ Valid Accuracy: 0.22356
+++++++++++ Test Accuracy: 0.22363
+++++++++++ Loss: 2.32486
+
+********* Epoch 47: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.33576
+++++++++++ Valid Accuracy: 0.25102
+++++++++++ Test Accuracy: 0.27227
+++++++++++ Loss: 2.24956
+
+********* Epoch 48: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.33283
+++++++++++ Valid Accuracy: 0.26860
+++++++++++ Test Accuracy: 0.30303
+++++++++++ Loss: 2.20972
+
+********* Epoch 49: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.34444
+++++++++++ Valid Accuracy: 0.31796
+++++++++++ Test Accuracy: 0.34261
+++++++++++ Loss: 2.20603
+
+********* Epoch 50: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.36289
+++++++++++ Valid Accuracy: 0.36713
+++++++++++ Test Accuracy: 0.34527
+++++++++++ Loss: 2.18896
+
+********* Epoch 51: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.37781
+++++++++++ Valid Accuracy: 0.36491
+++++++++++ Test Accuracy: 0.32706
+++++++++++ Loss: 2.13332
+
+********* Epoch 52: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.39997
+++++++++++ Valid Accuracy: 0.37921
+++++++++++ Test Accuracy: 0.33665
+++++++++++ Loss: 2.06471
+
+********* Epoch 53: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.41670
+++++++++++ Valid Accuracy: 0.39246
+++++++++++ Test Accuracy: 0.35025
+++++++++++ Loss: 2.02715
+
+********* Epoch 54: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.42522
+++++++++++ Valid Accuracy: 0.40649
+++++++++++ Test Accuracy: 0.36613
+++++++++++ Loss: 2.03170
+
+********* Epoch 55: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.43081
+++++++++++ Valid Accuracy: 0.42914
+++++++++++ Test Accuracy: 0.39508
+++++++++++ Loss: 2.04855
+
+********* Epoch 56: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.44220
+++++++++++ Valid Accuracy: 0.45283
+++++++++++ Test Accuracy: 0.41851
+++++++++++ Loss: 2.04088
+
+********* Epoch 57: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.45404
+++++++++++ Valid Accuracy: 0.46807
+++++++++++ Test Accuracy: 0.43073
+++++++++++ Loss: 2.00210
+
+********* Epoch 58: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.45730
+++++++++++ Valid Accuracy: 0.46471
+++++++++++ Test Accuracy: 0.42446
+++++++++++ Loss: 1.96157
+
+********* Epoch 59: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.45274
+++++++++++ Valid Accuracy: 0.45223
+++++++++++ Test Accuracy: 0.41226
+++++++++++ Loss: 1.94975
+
+********* Epoch 60: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.44278
+++++++++++ Valid Accuracy: 0.44042
+++++++++++ Test Accuracy: 0.40065
+++++++++++ Loss: 1.96629
+
+********* Epoch 61: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.43850
+++++++++++ Valid Accuracy: 0.44179
+++++++++++ Test Accuracy: 0.40187
+++++++++++ Loss: 1.97880
+
+********* Epoch 62: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.44437
+++++++++++ Valid Accuracy: 0.45317
+++++++++++ Test Accuracy: 0.41368
+++++++++++ Loss: 1.95742
+
+********* Epoch 63: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.46279
+++++++++++ Valid Accuracy: 0.46924
+++++++++++ Test Accuracy: 0.42901
+++++++++++ Loss: 1.90603
+
+********* Epoch 64: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.48440
+++++++++++ Valid Accuracy: 0.47773
+++++++++++ Test Accuracy: 0.44145
+++++++++++ Loss: 1.85032
+
+********* Epoch 65: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.49670
+++++++++++ Valid Accuracy: 0.47495
+++++++++++ Test Accuracy: 0.44532
+++++++++++ Loss: 1.82014
+
+********* Epoch 66: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.49065
+++++++++++ Valid Accuracy: 0.46082
+++++++++++ Test Accuracy: 0.43594
+++++++++++ Loss: 1.82530
+
+********* Epoch 67: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.47371
+++++++++++ Valid Accuracy: 0.45844
+++++++++++ Test Accuracy: 0.44682
+++++++++++ Loss: 1.85904
+
+********* Epoch 68: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.45958
+++++++++++ Valid Accuracy: 0.46314
+++++++++++ Test Accuracy: 0.46586
+++++++++++ Loss: 1.89877
+
+********* Epoch 69: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.45019
+++++++++++ Valid Accuracy: 0.45367
+++++++++++ Test Accuracy: 0.46561
+++++++++++ Loss: 1.90705
+
+********* Epoch 70: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.45687
+++++++++++ Valid Accuracy: 0.44354
+++++++++++ Test Accuracy: 0.45592
+++++++++++ Loss: 1.87553
+
+********* Epoch 71: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.47407
+++++++++++ Valid Accuracy: 0.45032
+++++++++++ Test Accuracy: 0.45900
+++++++++++ Loss: 1.82788
+
+********* Epoch 72: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.48561
+++++++++++ Valid Accuracy: 0.46616
+++++++++++ Test Accuracy: 0.47168
+++++++++++ Loss: 1.79780
+
+********* Epoch 73: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.49364
+++++++++++ Valid Accuracy: 0.48841
+++++++++++ Test Accuracy: 0.49071
+++++++++++ Loss: 1.79265
+
+********* Epoch 74: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.49837
+++++++++++ Valid Accuracy: 0.51250
+++++++++++ Test Accuracy: 0.51044
+++++++++++ Loss: 1.78786
+
+********* Epoch 75: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.50218
+++++++++++ Valid Accuracy: 0.51837
+++++++++++ Test Accuracy: 0.50569
+++++++++++ Loss: 1.76793
+
+********* Epoch 76: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.50768
+++++++++++ Valid Accuracy: 0.51706
+++++++++++ Test Accuracy: 0.49413
+++++++++++ Loss: 1.74341
+
+********* Epoch 77: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.51353
+++++++++++ Valid Accuracy: 0.51341
+++++++++++ Test Accuracy: 0.48199
+++++++++++ Loss: 1.73259
+
+********* Epoch 78: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.51289
+++++++++++ Valid Accuracy: 0.50810
+++++++++++ Test Accuracy: 0.47330
+++++++++++ Loss: 1.73803
+
+********* Epoch 79: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.51296
+++++++++++ Valid Accuracy: 0.50757
+++++++++++ Test Accuracy: 0.46954
+++++++++++ Loss: 1.74495
+
+********* Epoch 80: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.51839
+++++++++++ Valid Accuracy: 0.51143
+++++++++++ Test Accuracy: 0.47470
+++++++++++ Loss: 1.73336
+
+********* Epoch 81: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.52799
+++++++++++ Valid Accuracy: 0.51938
+++++++++++ Test Accuracy: 0.48411
+++++++++++ Loss: 1.70061
+
+********* Epoch 82: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.53587
+++++++++++ Valid Accuracy: 0.53250
+++++++++++ Test Accuracy: 0.50069
+++++++++++ Loss: 1.66212
+
+********* Epoch 83: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.53701
+++++++++++ Valid Accuracy: 0.54364
+++++++++++ Test Accuracy: 0.52085
+++++++++++ Loss: 1.64910
+
+********* Epoch 84: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.52948
+++++++++++ Valid Accuracy: 0.55160
+++++++++++ Test Accuracy: 0.53717
+++++++++++ Loss: 1.67357
+
+********* Epoch 85: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.52298
+++++++++++ Valid Accuracy: 0.55545
+++++++++++ Test Accuracy: 0.54723
+++++++++++ Loss: 1.70153
+
+********* Epoch 86: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.52756
+++++++++++ Valid Accuracy: 0.55985
+++++++++++ Test Accuracy: 0.55894
+++++++++++ Loss: 1.69599
+
+********* Epoch 87: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.53951
+++++++++++ Valid Accuracy: 0.56942
+++++++++++ Test Accuracy: 0.57208
+++++++++++ Loss: 1.65108
+
+********* Epoch 88: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55192
+++++++++++ Valid Accuracy: 0.58069
+++++++++++ Test Accuracy: 0.58005
+++++++++++ Loss: 1.60040
+
+********* Epoch 89: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55698
+++++++++++ Valid Accuracy: 0.58425
+++++++++++ Test Accuracy: 0.58173
+++++++++++ Loss: 1.57757
+
+********* Epoch 90: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55318
+++++++++++ Valid Accuracy: 0.57499
+++++++++++ Test Accuracy: 0.57081
+++++++++++ Loss: 1.59905
+
+********* Epoch 91: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.54334
+++++++++++ Valid Accuracy: 0.56005
+++++++++++ Test Accuracy: 0.55381
+++++++++++ Loss: 1.64252
+
+********* Epoch 92: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.53842
+++++++++++ Valid Accuracy: 0.54962
+++++++++++ Test Accuracy: 0.53672
+++++++++++ Loss: 1.65230
+
+********* Epoch 93: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55039
+++++++++++ Valid Accuracy: 0.55851
+++++++++++ Test Accuracy: 0.53984
+++++++++++ Loss: 1.60873
+
+********* Epoch 94: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56690
+++++++++++ Valid Accuracy: 0.57277
+++++++++++ Test Accuracy: 0.55435
+++++++++++ Loss: 1.55094
+
+********* Epoch 95: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57487
+++++++++++ Valid Accuracy: 0.57955
+++++++++++ Test Accuracy: 0.56293
+++++++++++ Loss: 1.52451
+
+********* Epoch 96: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56875
+++++++++++ Valid Accuracy: 0.56770
+++++++++++ Test Accuracy: 0.55719
+++++++++++ Loss: 1.54077
+
+********* Epoch 97: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55844
+++++++++++ Valid Accuracy: 0.55133
+++++++++++ Test Accuracy: 0.54281
+++++++++++ Loss: 1.57609
+
+********* Epoch 98: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55113
+++++++++++ Valid Accuracy: 0.53737
+++++++++++ Test Accuracy: 0.52982
+++++++++++ Loss: 1.60001
+
+********* Epoch 99: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55128
+++++++++++ Valid Accuracy: 0.53599
+++++++++++ Test Accuracy: 0.53172
+++++++++++ Loss: 1.59385
+
+********* Epoch 100: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55796
+++++++++++ Valid Accuracy: 0.55200
+++++++++++ Test Accuracy: 0.54947
+++++++++++ Loss: 1.56375
+
+********* Epoch 101: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57050
+++++++++++ Valid Accuracy: 0.57465
+++++++++++ Test Accuracy: 0.57287
+++++++++++ Loss: 1.53235
+
+********* Epoch 102: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57773
+++++++++++ Valid Accuracy: 0.59207
+++++++++++ Test Accuracy: 0.58601
+++++++++++ Loss: 1.51876
+
+********* Epoch 103: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57762
+++++++++++ Valid Accuracy: 0.59301
+++++++++++ Test Accuracy: 0.58435
+++++++++++ Loss: 1.52188
+
+********* Epoch 104: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57431
+++++++++++ Valid Accuracy: 0.58536
+++++++++++ Test Accuracy: 0.57719
+++++++++++ Loss: 1.52778
+
+********* Epoch 105: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57472
+++++++++++ Valid Accuracy: 0.58549
+++++++++++ Test Accuracy: 0.57626
+++++++++++ Loss: 1.52610
+
+********* Epoch 106: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57907
+++++++++++ Valid Accuracy: 0.59005
+++++++++++ Test Accuracy: 0.58215
+++++++++++ Loss: 1.52167
+
+********* Epoch 107: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57888
+++++++++++ Valid Accuracy: 0.58834
+++++++++++ Test Accuracy: 0.57803
+++++++++++ Loss: 1.52025
+
+********* Epoch 108: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57342
+++++++++++ Valid Accuracy: 0.58398
+++++++++++ Test Accuracy: 0.56776
+++++++++++ Loss: 1.52701
+
+********* Epoch 109: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56864
+++++++++++ Valid Accuracy: 0.57717
+++++++++++ Test Accuracy: 0.55776
+++++++++++ Loss: 1.53603
+
+********* Epoch 110: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56896
+++++++++++ Valid Accuracy: 0.57586
+++++++++++ Test Accuracy: 0.55229
+++++++++++ Loss: 1.53460
+
+********* Epoch 111: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57624
+++++++++++ Valid Accuracy: 0.57854
+++++++++++ Test Accuracy: 0.55682
+++++++++++ Loss: 1.50756
+
+********* Epoch 112: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58484
+++++++++++ Valid Accuracy: 0.58787
+++++++++++ Test Accuracy: 0.57038
+++++++++++ Loss: 1.46898
+
+********* Epoch 113: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58393
+++++++++++ Valid Accuracy: 0.59502
+++++++++++ Test Accuracy: 0.58838
+++++++++++ Loss: 1.46952
+
+********* Epoch 114: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56908
+++++++++++ Valid Accuracy: 0.57925
+++++++++++ Test Accuracy: 0.58118
+++++++++++ Loss: 1.52794
+
+********* Epoch 115: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55572
+++++++++++ Valid Accuracy: 0.56160
+++++++++++ Test Accuracy: 0.56196
+++++++++++ Loss: 1.58014
+
+********* Epoch 116: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56123
+++++++++++ Valid Accuracy: 0.56418
+++++++++++ Test Accuracy: 0.56332
+++++++++++ Loss: 1.55676
+
+********* Epoch 117: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58270
+++++++++++ Valid Accuracy: 0.59052
+++++++++++ Test Accuracy: 0.59107
+++++++++++ Loss: 1.49314
+
+********* Epoch 118: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59248
+++++++++++ Valid Accuracy: 0.61093
+++++++++++ Test Accuracy: 0.60959
+++++++++++ Loss: 1.46261
+
+********* Epoch 119: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58329
+++++++++++ Valid Accuracy: 0.59955
+++++++++++ Test Accuracy: 0.59114
+++++++++++ Loss: 1.48212
+
+********* Epoch 120: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57042
+++++++++++ Valid Accuracy: 0.57804
+++++++++++ Test Accuracy: 0.56104
+++++++++++ Loss: 1.51606
+
+********* Epoch 121: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55799
+++++++++++ Valid Accuracy: 0.56421
+++++++++++ Test Accuracy: 0.54449
+++++++++++ Loss: 1.54454
+
+********* Epoch 122: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55029
+++++++++++ Valid Accuracy: 0.56123
+++++++++++ Test Accuracy: 0.54264
+++++++++++ Loss: 1.57265
+
+********* Epoch 123: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55025
+++++++++++ Valid Accuracy: 0.56680
+++++++++++ Test Accuracy: 0.55420
+++++++++++ Loss: 1.57931
+
+********* Epoch 124: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56343
+++++++++++ Valid Accuracy: 0.58871
+++++++++++ Test Accuracy: 0.58340
+++++++++++ Loss: 1.54363
+
+********* Epoch 125: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58326
+++++++++++ Valid Accuracy: 0.60871
+++++++++++ Test Accuracy: 0.60887
+++++++++++ Loss: 1.48628
+
+********* Epoch 126: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58709
+++++++++++ Valid Accuracy: 0.60861
+++++++++++ Test Accuracy: 0.61000
+++++++++++ Loss: 1.45686
+
+********* Epoch 127: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57554
+++++++++++ Valid Accuracy: 0.58660
+++++++++++ Test Accuracy: 0.58192
+++++++++++ Loss: 1.48442
+
+********* Epoch 128: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55974
+++++++++++ Valid Accuracy: 0.56354
+++++++++++ Test Accuracy: 0.55106
+++++++++++ Loss: 1.54508
+
+********* Epoch 129: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55270
+++++++++++ Valid Accuracy: 0.55264
+++++++++++ Test Accuracy: 0.53628
+++++++++++ Loss: 1.58953
+
+********* Epoch 130: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55741
+++++++++++ Valid Accuracy: 0.55636
+++++++++++ Test Accuracy: 0.53612
+++++++++++ Loss: 1.58551
+
+********* Epoch 131: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57190
+++++++++++ Valid Accuracy: 0.57311
+++++++++++ Test Accuracy: 0.55040
+++++++++++ Loss: 1.54415
+
+********* Epoch 132: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58361
+++++++++++ Valid Accuracy: 0.59274
+++++++++++ Test Accuracy: 0.57134
+++++++++++ Loss: 1.49624
+
+********* Epoch 133: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58413
+++++++++++ Valid Accuracy: 0.60197
+++++++++++ Test Accuracy: 0.58155
+++++++++++ Loss: 1.46730
+
+********* Epoch 134: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58287
+++++++++++ Valid Accuracy: 0.59707
+++++++++++ Test Accuracy: 0.58015
+++++++++++ Loss: 1.46056
+
+********* Epoch 135: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57775
+++++++++++ Valid Accuracy: 0.58066
+++++++++++ Test Accuracy: 0.56589
+++++++++++ Loss: 1.47809
+
+********* Epoch 136: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56950
+++++++++++ Valid Accuracy: 0.55938
+++++++++++ Test Accuracy: 0.54785
+++++++++++ Loss: 1.51223
+
+********* Epoch 137: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56405
+++++++++++ Valid Accuracy: 0.55082
+++++++++++ Test Accuracy: 0.53838
+++++++++++ Loss: 1.53654
+
+********* Epoch 138: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56947
+++++++++++ Valid Accuracy: 0.55958
+++++++++++ Test Accuracy: 0.55023
+++++++++++ Loss: 1.52621
+
+********* Epoch 139: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58020
+++++++++++ Valid Accuracy: 0.57747
+++++++++++ Test Accuracy: 0.58062
+++++++++++ Loss: 1.49479
+
+********* Epoch 140: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58230
+++++++++++ Valid Accuracy: 0.59019
+++++++++++ Test Accuracy: 0.60091
+++++++++++ Loss: 1.47487
+
+********* Epoch 141: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57423
+++++++++++ Valid Accuracy: 0.58190
+++++++++++ Test Accuracy: 0.59439
+++++++++++ Loss: 1.48420
+
+********* Epoch 142: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56079
+++++++++++ Valid Accuracy: 0.55636
+++++++++++ Test Accuracy: 0.56577
+++++++++++ Loss: 1.51083
+
+********* Epoch 143: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.55531
+++++++++++ Valid Accuracy: 0.54710
+++++++++++ Test Accuracy: 0.54458
+++++++++++ Loss: 1.52995
+
+********* Epoch 144: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56008
+++++++++++ Valid Accuracy: 0.54827
+++++++++++ Test Accuracy: 0.53390
+++++++++++ Loss: 1.53314
+
+********* Epoch 145: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56665
+++++++++++ Valid Accuracy: 0.54515
+++++++++++ Test Accuracy: 0.52215
+++++++++++ Loss: 1.52435
+
+********* Epoch 146: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56981
+++++++++++ Valid Accuracy: 0.54871
+++++++++++ Test Accuracy: 0.52054
+++++++++++ Loss: 1.51156
+
+********* Epoch 147: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56977
+++++++++++ Valid Accuracy: 0.55854
+++++++++++ Test Accuracy: 0.53155
+++++++++++ Loss: 1.49908
+
+********* Epoch 148: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56812
+++++++++++ Valid Accuracy: 0.56878
+++++++++++ Test Accuracy: 0.53647
+++++++++++ Loss: 1.48695
+
+********* Epoch 149: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57139
+++++++++++ Valid Accuracy: 0.57311
+++++++++++ Test Accuracy: 0.54071
+++++++++++ Loss: 1.47891
+
+********* Epoch 150: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57140
+++++++++++ Valid Accuracy: 0.56999
+++++++++++ Test Accuracy: 0.53598
+++++++++++ Loss: 1.49316
+
+********* Epoch 151: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56708
+++++++++++ Valid Accuracy: 0.55673
+++++++++++ Test Accuracy: 0.52301
+++++++++++ Loss: 1.52622
+
+********* Epoch 152: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56714
+++++++++++ Valid Accuracy: 0.54529
+++++++++++ Test Accuracy: 0.51314
+++++++++++ Loss: 1.54288
+
+********* Epoch 153: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57262
+++++++++++ Valid Accuracy: 0.54163
+++++++++++ Test Accuracy: 0.50974
+++++++++++ Loss: 1.53197
+
+********* Epoch 154: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58012
+++++++++++ Valid Accuracy: 0.54411
+++++++++++ Test Accuracy: 0.51270
+++++++++++ Loss: 1.51000
+
+********* Epoch 155: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58455
+++++++++++ Valid Accuracy: 0.55297
+++++++++++ Test Accuracy: 0.52507
+++++++++++ Loss: 1.48417
+
+********* Epoch 156: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58913
+++++++++++ Valid Accuracy: 0.56868
+++++++++++ Test Accuracy: 0.55106
+++++++++++ Loss: 1.45753
+
+********* Epoch 157: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59436
+++++++++++ Valid Accuracy: 0.59291
+++++++++++ Test Accuracy: 0.58171
+++++++++++ Loss: 1.43469
+
+********* Epoch 158: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59807
+++++++++++ Valid Accuracy: 0.61532
+++++++++++ Test Accuracy: 0.61624
+++++++++++ Loss: 1.42297
+
+********* Epoch 159: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59701
+++++++++++ Valid Accuracy: 0.61784
+++++++++++ Test Accuracy: 0.62455
+++++++++++ Loss: 1.42673
+
+********* Epoch 160: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59023
+++++++++++ Valid Accuracy: 0.59955
+++++++++++ Test Accuracy: 0.60649
+++++++++++ Loss: 1.44261
+
+********* Epoch 161: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57924
+++++++++++ Valid Accuracy: 0.56639
+++++++++++ Test Accuracy: 0.57476
+++++++++++ Loss: 1.46455
+
+********* Epoch 162: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57170
+++++++++++ Valid Accuracy: 0.54985
+++++++++++ Test Accuracy: 0.55548
+++++++++++ Loss: 1.48719
+
+********* Epoch 163: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57238
+++++++++++ Valid Accuracy: 0.55713
+++++++++++ Test Accuracy: 0.55803
+++++++++++ Loss: 1.50391
+
+********* Epoch 164: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.57695
+++++++++++ Valid Accuracy: 0.57264
+++++++++++ Test Accuracy: 0.57153
+++++++++++ Loss: 1.51070
+
+********* Epoch 165: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58609
+++++++++++ Valid Accuracy: 0.59200
+++++++++++ Test Accuracy: 0.58992
+++++++++++ Loss: 1.50227
+
+********* Epoch 166: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59658
+++++++++++ Valid Accuracy: 0.60811
+++++++++++ Test Accuracy: 0.60675
+++++++++++ Loss: 1.47263
+
+********* Epoch 167: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60303
+++++++++++ Valid Accuracy: 0.61851
+++++++++++ Test Accuracy: 0.61718
+++++++++++ Loss: 1.42874
+
+********* Epoch 168: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60574
+++++++++++ Valid Accuracy: 0.62294
+++++++++++ Test Accuracy: 0.62323
+++++++++++ Loss: 1.40199
+
+********* Epoch 169: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60020
+++++++++++ Valid Accuracy: 0.61673
+++++++++++ Test Accuracy: 0.61860
+++++++++++ Loss: 1.41098
+
+********* Epoch 170: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59514
+++++++++++ Valid Accuracy: 0.61197
+++++++++++ Test Accuracy: 0.61449
+++++++++++ Loss: 1.43853
+
+********* Epoch 171: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59315
+++++++++++ Valid Accuracy: 0.60774
+++++++++++ Test Accuracy: 0.61114
+++++++++++ Loss: 1.45442
+
+********* Epoch 172: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59379
+++++++++++ Valid Accuracy: 0.60727
+++++++++++ Test Accuracy: 0.60614
+++++++++++ Loss: 1.45185
+
+********* Epoch 173: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59573
+++++++++++ Valid Accuracy: 0.60435
+++++++++++ Test Accuracy: 0.59655
+++++++++++ Loss: 1.44417
+
+********* Epoch 174: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59474
+++++++++++ Valid Accuracy: 0.59492
+++++++++++ Test Accuracy: 0.57694
+++++++++++ Loss: 1.43590
+
+********* Epoch 175: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59244
+++++++++++ Valid Accuracy: 0.58640
+++++++++++ Test Accuracy: 0.55647
+++++++++++ Loss: 1.43112
+
+********* Epoch 176: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58915
+++++++++++ Valid Accuracy: 0.57811
+++++++++++ Test Accuracy: 0.54470
+++++++++++ Loss: 1.43626
+
+********* Epoch 177: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58655
+++++++++++ Valid Accuracy: 0.57442
+++++++++++ Test Accuracy: 0.54058
+++++++++++ Loss: 1.45171
+
+********* Epoch 178: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58586
+++++++++++ Valid Accuracy: 0.57425
+++++++++++ Test Accuracy: 0.53904
+++++++++++ Loss: 1.46372
+
+********* Epoch 179: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59040
+++++++++++ Valid Accuracy: 0.58069
+++++++++++ Test Accuracy: 0.54581
+++++++++++ Loss: 1.45110
+
+********* Epoch 180: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60014
+++++++++++ Valid Accuracy: 0.59455
+++++++++++ Test Accuracy: 0.56424
+++++++++++ Loss: 1.41203
+
+********* Epoch 181: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61058
+++++++++++ Valid Accuracy: 0.61244
+++++++++++ Test Accuracy: 0.59605
+++++++++++ Loss: 1.37215
+
+********* Epoch 182: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61525
+++++++++++ Valid Accuracy: 0.62428
+++++++++++ Test Accuracy: 0.62225
+++++++++++ Loss: 1.35892
+
+********* Epoch 183: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60875
+++++++++++ Valid Accuracy: 0.61653
+++++++++++ Test Accuracy: 0.62239
+++++++++++ Loss: 1.38548
+
+********* Epoch 184: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58833
+++++++++++ Valid Accuracy: 0.58358
+++++++++++ Test Accuracy: 0.59688
+++++++++++ Loss: 1.43455
+
+********* Epoch 185: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56935
+++++++++++ Valid Accuracy: 0.54519
+++++++++++ Test Accuracy: 0.56717
+++++++++++ Loss: 1.47437
+
+********* Epoch 186: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.56499
+++++++++++ Valid Accuracy: 0.53079
+++++++++++ Test Accuracy: 0.55462
+++++++++++ Loss: 1.47636
+
+********* Epoch 187: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58134
+++++++++++ Valid Accuracy: 0.55542
+++++++++++ Test Accuracy: 0.57387
+++++++++++ Loss: 1.43773
+
+********* Epoch 188: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60464
+++++++++++ Valid Accuracy: 0.60264
+++++++++++ Test Accuracy: 0.60611
+++++++++++ Loss: 1.38974
+
+********* Epoch 189: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61841
+++++++++++ Valid Accuracy: 0.63076
+++++++++++ Test Accuracy: 0.62498
+++++++++++ Loss: 1.36706
+
+********* Epoch 190: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61452
+++++++++++ Valid Accuracy: 0.62495
+++++++++++ Test Accuracy: 0.60854
+++++++++++ Loss: 1.38151
+
+********* Epoch 191: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60296
+++++++++++ Valid Accuracy: 0.60465
+++++++++++ Test Accuracy: 0.57673
+++++++++++ Loss: 1.41905
+
+********* Epoch 192: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59073
+++++++++++ Valid Accuracy: 0.58777
+++++++++++ Test Accuracy: 0.55476
+++++++++++ Loss: 1.45597
+
+********* Epoch 193: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58586
+++++++++++ Valid Accuracy: 0.57687
+++++++++++ Test Accuracy: 0.54359
+++++++++++ Loss: 1.47034
+
+********* Epoch 194: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.58917
+++++++++++ Valid Accuracy: 0.57589
+++++++++++ Test Accuracy: 0.54233
+++++++++++ Loss: 1.45701
+
+********* Epoch 195: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59773
+++++++++++ Valid Accuracy: 0.58119
+++++++++++ Test Accuracy: 0.54855
+++++++++++ Loss: 1.42836
+
+********* Epoch 196: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60485
+++++++++++ Valid Accuracy: 0.59096
+++++++++++ Test Accuracy: 0.55799
+++++++++++ Loss: 1.40597
+
+********* Epoch 197: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60493
+++++++++++ Valid Accuracy: 0.59744
+++++++++++ Test Accuracy: 0.56682
+++++++++++ Loss: 1.40218
+
+********* Epoch 198: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60095
+++++++++++ Valid Accuracy: 0.60166
+++++++++++ Test Accuracy: 0.57243
+++++++++++ Loss: 1.41319
+
+********* Epoch 199: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59723
+++++++++++ Valid Accuracy: 0.60552
+++++++++++ Test Accuracy: 0.58221
+++++++++++ Loss: 1.42315
+
+********* Epoch 200: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.59629
+++++++++++ Valid Accuracy: 0.60774
+++++++++++ Test Accuracy: 0.59237
+++++++++++ Loss: 1.42096
+
+********* Epoch 201: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60051
+++++++++++ Valid Accuracy: 0.61267
+++++++++++ Test Accuracy: 0.59930
+++++++++++ Loss: 1.40039
+
+********* Epoch 202: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60933
+++++++++++ Valid Accuracy: 0.61861
+++++++++++ Test Accuracy: 0.60815
+++++++++++ Loss: 1.36965
+
+********* Epoch 203: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61896
+++++++++++ Valid Accuracy: 0.62724
+++++++++++ Test Accuracy: 0.62004
+++++++++++ Loss: 1.34092
+
+********* Epoch 204: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62482
+++++++++++ Valid Accuracy: 0.63546
+++++++++++ Test Accuracy: 0.63220
+++++++++++ Loss: 1.32430
+
+********* Epoch 205: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62135
+++++++++++ Valid Accuracy: 0.63975
+++++++++++ Test Accuracy: 0.64198
+++++++++++ Loss: 1.32659
+
+********* Epoch 206: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61686
+++++++++++ Valid Accuracy: 0.63928
+++++++++++ Test Accuracy: 0.64309
+++++++++++ Loss: 1.34434
+
+********* Epoch 207: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61278
+++++++++++ Valid Accuracy: 0.63509
+++++++++++ Test Accuracy: 0.64165
+++++++++++ Loss: 1.37096
+
+********* Epoch 208: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.60893
+++++++++++ Valid Accuracy: 0.63227
+++++++++++ Test Accuracy: 0.63951
+++++++++++ Loss: 1.39303
+
+********* Epoch 209: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61110
+++++++++++ Valid Accuracy: 0.63311
+++++++++++ Test Accuracy: 0.64068
+++++++++++ Loss: 1.39394
+
+********* Epoch 210: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61772
+++++++++++ Valid Accuracy: 0.63908
+++++++++++ Test Accuracy: 0.64436
+++++++++++ Loss: 1.36814
+
+********* Epoch 211: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62903
+++++++++++ Valid Accuracy: 0.64697
+++++++++++ Test Accuracy: 0.64951
+++++++++++ Loss: 1.32794
+
+********* Epoch 212: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63745
+++++++++++ Valid Accuracy: 0.65042
+++++++++++ Test Accuracy: 0.65060
+++++++++++ Loss: 1.29573
+
+********* Epoch 213: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63965
+++++++++++ Valid Accuracy: 0.64831
+++++++++++ Test Accuracy: 0.64364
+++++++++++ Loss: 1.28492
+
+********* Epoch 214: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63394
+++++++++++ Valid Accuracy: 0.63895
+++++++++++ Test Accuracy: 0.63227
+++++++++++ Loss: 1.29581
+
+********* Epoch 215: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62527
+++++++++++ Valid Accuracy: 0.63083
+++++++++++ Test Accuracy: 0.62052
+++++++++++ Loss: 1.31752
+
+********* Epoch 216: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61808
+++++++++++ Valid Accuracy: 0.62542
+++++++++++ Test Accuracy: 0.61262
+++++++++++ Loss: 1.33709
+
+********* Epoch 217: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61678
+++++++++++ Valid Accuracy: 0.62398
+++++++++++ Test Accuracy: 0.61167
+++++++++++ Loss: 1.34369
+
+********* Epoch 218: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62042
+++++++++++ Valid Accuracy: 0.62613
+++++++++++ Test Accuracy: 0.61439
+++++++++++ Loss: 1.33647
+
+********* Epoch 219: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62701
+++++++++++ Valid Accuracy: 0.63153
+++++++++++ Test Accuracy: 0.62323
+++++++++++ Loss: 1.31983
+
+********* Epoch 220: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63299
+++++++++++ Valid Accuracy: 0.63616
+++++++++++ Test Accuracy: 0.62819
+++++++++++ Loss: 1.30086
+
+********* Epoch 221: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63591
+++++++++++ Valid Accuracy: 0.63744
+++++++++++ Test Accuracy: 0.62949
+++++++++++ Loss: 1.28602
+
+********* Epoch 222: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63542
+++++++++++ Valid Accuracy: 0.63898
+++++++++++ Test Accuracy: 0.63029
+++++++++++ Loss: 1.28005
+
+********* Epoch 223: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63374
+++++++++++ Valid Accuracy: 0.64002
+++++++++++ Test Accuracy: 0.63255
+++++++++++ Loss: 1.28499
+
+********* Epoch 224: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63032
+++++++++++ Valid Accuracy: 0.64126
+++++++++++ Test Accuracy: 0.63486
+++++++++++ Loss: 1.29729
+
+********* Epoch 225: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62880
+++++++++++ Valid Accuracy: 0.64304
+++++++++++ Test Accuracy: 0.63854
+++++++++++ Loss: 1.30846
+
+********* Epoch 226: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62961
+++++++++++ Valid Accuracy: 0.64563
+++++++++++ Test Accuracy: 0.64296
+++++++++++ Loss: 1.30976
+
+********* Epoch 227: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63197
+++++++++++ Valid Accuracy: 0.64791
+++++++++++ Test Accuracy: 0.64506
+++++++++++ Loss: 1.29949
+
+********* Epoch 228: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63516
+++++++++++ Valid Accuracy: 0.65197
+++++++++++ Test Accuracy: 0.64403
+++++++++++ Loss: 1.28462
+
+********* Epoch 229: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63707
+++++++++++ Valid Accuracy: 0.64962
+++++++++++ Test Accuracy: 0.64029
+++++++++++ Loss: 1.27266
+
+********* Epoch 230: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63863
+++++++++++ Valid Accuracy: 0.64801
+++++++++++ Test Accuracy: 0.63922
+++++++++++ Loss: 1.26548
+
+********* Epoch 231: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63779
+++++++++++ Valid Accuracy: 0.64727
+++++++++++ Test Accuracy: 0.63803
+++++++++++ Loss: 1.26425
+
+********* Epoch 232: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63795
+++++++++++ Valid Accuracy: 0.64529
+++++++++++ Test Accuracy: 0.63926
+++++++++++ Loss: 1.26882
+
+********* Epoch 233: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63716
+++++++++++ Valid Accuracy: 0.64338
+++++++++++ Test Accuracy: 0.64103
+++++++++++ Loss: 1.27592
+
+********* Epoch 234: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63594
+++++++++++ Valid Accuracy: 0.64452
+++++++++++ Test Accuracy: 0.64257
+++++++++++ Loss: 1.28124
+
+********* Epoch 235: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63587
+++++++++++ Valid Accuracy: 0.64482
+++++++++++ Test Accuracy: 0.64445
+++++++++++ Loss: 1.28181
+
+********* Epoch 236: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63694
+++++++++++ Valid Accuracy: 0.64747
+++++++++++ Test Accuracy: 0.64685
+++++++++++ Loss: 1.27567
+
+********* Epoch 237: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64010
+++++++++++ Valid Accuracy: 0.64999
+++++++++++ Test Accuracy: 0.64936
+++++++++++ Loss: 1.26466
+
+********* Epoch 238: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64155
+++++++++++ Valid Accuracy: 0.65240
+++++++++++ Test Accuracy: 0.65074
+++++++++++ Loss: 1.25411
+
+********* Epoch 239: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64245
+++++++++++ Valid Accuracy: 0.65405
+++++++++++ Test Accuracy: 0.65224
+++++++++++ Loss: 1.24742
+
+********* Epoch 240: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64382
+++++++++++ Valid Accuracy: 0.65422
+++++++++++ Test Accuracy: 0.64914
+++++++++++ Loss: 1.24732
+
+********* Epoch 241: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64338
+++++++++++ Valid Accuracy: 0.65126
+++++++++++ Test Accuracy: 0.64527
+++++++++++ Loss: 1.25216
+
+********* Epoch 242: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64242
+++++++++++ Valid Accuracy: 0.64781
+++++++++++ Test Accuracy: 0.63809
+++++++++++ Loss: 1.25761
+
+********* Epoch 243: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64195
+++++++++++ Valid Accuracy: 0.64328
+++++++++++ Test Accuracy: 0.63224
+++++++++++ Loss: 1.26077
+
+********* Epoch 244: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64083
+++++++++++ Valid Accuracy: 0.64126
+++++++++++ Test Accuracy: 0.63120
+++++++++++ Loss: 1.26050
+
+********* Epoch 245: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64056
+++++++++++ Valid Accuracy: 0.64264
+++++++++++ Test Accuracy: 0.63344
+++++++++++ Loss: 1.25783
+
+********* Epoch 246: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64033
+++++++++++ Valid Accuracy: 0.64626
+++++++++++ Test Accuracy: 0.63844
+++++++++++ Loss: 1.25425
+
+********* Epoch 247: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64172
+++++++++++ Valid Accuracy: 0.65140
+++++++++++ Test Accuracy: 0.64582
+++++++++++ Loss: 1.24910
+
+********* Epoch 248: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64497
+++++++++++ Valid Accuracy: 0.65398
+++++++++++ Test Accuracy: 0.65126
+++++++++++ Loss: 1.24225
+
+********* Epoch 249: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64610
+++++++++++ Valid Accuracy: 0.65626
+++++++++++ Test Accuracy: 0.65373
+++++++++++ Loss: 1.23594
+
+********* Epoch 250: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64664
+++++++++++ Valid Accuracy: 0.65566
+++++++++++ Test Accuracy: 0.65072
+++++++++++ Loss: 1.23520
+
+********* Epoch 251: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64562
+++++++++++ Valid Accuracy: 0.65237
+++++++++++ Test Accuracy: 0.64708
+++++++++++ Loss: 1.24037
+
+********* Epoch 252: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64319
+++++++++++ Valid Accuracy: 0.64962
+++++++++++ Test Accuracy: 0.64010
+++++++++++ Loss: 1.24954
+
+********* Epoch 253: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64023
+++++++++++ Valid Accuracy: 0.64579
+++++++++++ Test Accuracy: 0.63342
+++++++++++ Loss: 1.25602
+
+********* Epoch 254: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64065
+++++++++++ Valid Accuracy: 0.64432
+++++++++++ Test Accuracy: 0.63251
+++++++++++ Loss: 1.25574
+
+********* Epoch 255: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64374
+++++++++++ Valid Accuracy: 0.64650
+++++++++++ Test Accuracy: 0.63408
+++++++++++ Loss: 1.24814
+
+********* Epoch 256: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64788
+++++++++++ Valid Accuracy: 0.64915
+++++++++++ Test Accuracy: 0.63498
+++++++++++ Loss: 1.23803
+
+********* Epoch 257: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64963
+++++++++++ Valid Accuracy: 0.64982
+++++++++++ Test Accuracy: 0.63856
+++++++++++ Loss: 1.23047
+
+********* Epoch 258: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65015
+++++++++++ Valid Accuracy: 0.65136
+++++++++++ Test Accuracy: 0.64146
+++++++++++ Loss: 1.22819
+
+********* Epoch 259: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64885
+++++++++++ Valid Accuracy: 0.65167
+++++++++++ Test Accuracy: 0.64338
+++++++++++ Loss: 1.23144
+
+********* Epoch 260: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64508
+++++++++++ Valid Accuracy: 0.64959
+++++++++++ Test Accuracy: 0.64550
+++++++++++ Loss: 1.23854
+
+********* Epoch 261: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64192
+++++++++++ Valid Accuracy: 0.64861
+++++++++++ Test Accuracy: 0.64912
+++++++++++ Loss: 1.24674
+
+********* Epoch 262: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63988
+++++++++++ Valid Accuracy: 0.64902
+++++++++++ Test Accuracy: 0.65387
+++++++++++ Loss: 1.25398
+
+********* Epoch 263: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63841
+++++++++++ Valid Accuracy: 0.64704
+++++++++++ Test Accuracy: 0.65597
+++++++++++ Loss: 1.25728
+
+********* Epoch 264: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63780
+++++++++++ Valid Accuracy: 0.64710
+++++++++++ Test Accuracy: 0.65531
+++++++++++ Loss: 1.25625
+
+********* Epoch 265: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64103
+++++++++++ Valid Accuracy: 0.64794
+++++++++++ Test Accuracy: 0.65348
+++++++++++ Loss: 1.24810
+
+********* Epoch 266: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64518
+++++++++++ Valid Accuracy: 0.65234
+++++++++++ Test Accuracy: 0.65167
+++++++++++ Loss: 1.23538
+
+********* Epoch 267: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64939
+++++++++++ Valid Accuracy: 0.65183
+++++++++++ Test Accuracy: 0.64531
+++++++++++ Loss: 1.22453
+
+********* Epoch 268: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65104
+++++++++++ Valid Accuracy: 0.64922
+++++++++++ Test Accuracy: 0.63708
+++++++++++ Loss: 1.22249
+
+********* Epoch 269: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64717
+++++++++++ Valid Accuracy: 0.64130
+++++++++++ Test Accuracy: 0.62373
+++++++++++ Loss: 1.23285
+
+********* Epoch 270: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64029
+++++++++++ Valid Accuracy: 0.63116
+++++++++++ Test Accuracy: 0.60688
+++++++++++ Loss: 1.25351
+
+********* Epoch 271: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63437
+++++++++++ Valid Accuracy: 0.62150
+++++++++++ Test Accuracy: 0.59410
+++++++++++ Loss: 1.27388
+
+********* Epoch 272: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63183
+++++++++++ Valid Accuracy: 0.61801
+++++++++++ Test Accuracy: 0.58920
+++++++++++ Loss: 1.28270
+
+********* Epoch 273: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63586
+++++++++++ Valid Accuracy: 0.62284
+++++++++++ Test Accuracy: 0.59644
+++++++++++ Loss: 1.27347
+
+********* Epoch 274: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64380
+++++++++++ Valid Accuracy: 0.63244
+++++++++++ Test Accuracy: 0.61268
+++++++++++ Loss: 1.24959
+
+********* Epoch 275: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64972
+++++++++++ Valid Accuracy: 0.64720
+++++++++++ Test Accuracy: 0.63414
+++++++++++ Loss: 1.22499
+
+********* Epoch 276: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65124
+++++++++++ Valid Accuracy: 0.65831
+++++++++++ Test Accuracy: 0.65323
+++++++++++ Loss: 1.21629
+
+********* Epoch 277: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64621
+++++++++++ Valid Accuracy: 0.65938
+++++++++++ Test Accuracy: 0.65856
+++++++++++ Loss: 1.23064
+
+********* Epoch 278: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63782
+++++++++++ Valid Accuracy: 0.64740
+++++++++++ Test Accuracy: 0.65161
+++++++++++ Loss: 1.26265
+
+********* Epoch 279: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62731
+++++++++++ Valid Accuracy: 0.63113
+++++++++++ Test Accuracy: 0.63615
+++++++++++ Loss: 1.29162
+
+********* Epoch 280: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62391
+++++++++++ Valid Accuracy: 0.62032
+++++++++++ Test Accuracy: 0.62529
+++++++++++ Loss: 1.29750
+
+********* Epoch 281: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62998
+++++++++++ Valid Accuracy: 0.62516
+++++++++++ Test Accuracy: 0.62714
+++++++++++ Loss: 1.27447
+
+********* Epoch 282: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64221
+++++++++++ Valid Accuracy: 0.64173
+++++++++++ Test Accuracy: 0.64019
+++++++++++ Loss: 1.24138
+
+********* Epoch 283: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65037
+++++++++++ Valid Accuracy: 0.65385
+++++++++++ Test Accuracy: 0.64759
+++++++++++ Loss: 1.22451
+
+********* Epoch 284: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64741
+++++++++++ Valid Accuracy: 0.64784
+++++++++++ Test Accuracy: 0.63642
+++++++++++ Loss: 1.23830
+
+********* Epoch 285: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63627
+++++++++++ Valid Accuracy: 0.63009
+++++++++++ Test Accuracy: 0.61344
+++++++++++ Loss: 1.27288
+
+********* Epoch 286: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62764
+++++++++++ Valid Accuracy: 0.61271
+++++++++++ Test Accuracy: 0.59085
+++++++++++ Loss: 1.30396
+
+********* Epoch 287: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62492
+++++++++++ Valid Accuracy: 0.60509
+++++++++++ Test Accuracy: 0.58105
+++++++++++ Loss: 1.31536
+
+********* Epoch 288: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62840
+++++++++++ Valid Accuracy: 0.60848
+++++++++++ Test Accuracy: 0.58371
+++++++++++ Loss: 1.30411
+
+********* Epoch 289: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63314
+++++++++++ Valid Accuracy: 0.61794
+++++++++++ Test Accuracy: 0.59770
+++++++++++ Loss: 1.28134
+
+********* Epoch 290: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63723
+++++++++++ Valid Accuracy: 0.62992
+++++++++++ Test Accuracy: 0.61502
+++++++++++ Loss: 1.26215
+
+********* Epoch 291: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63940
+++++++++++ Valid Accuracy: 0.64022
+++++++++++ Test Accuracy: 0.63056
+++++++++++ Loss: 1.25593
+
+********* Epoch 292: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63746
+++++++++++ Valid Accuracy: 0.64267
+++++++++++ Test Accuracy: 0.63399
+++++++++++ Loss: 1.26768
+
+********* Epoch 293: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63177
+++++++++++ Valid Accuracy: 0.63358
+++++++++++ Test Accuracy: 0.62194
+++++++++++ Loss: 1.28935
+
+********* Epoch 294: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62372
+++++++++++ Valid Accuracy: 0.62187
+++++++++++ Test Accuracy: 0.60996
+++++++++++ Loss: 1.31107
+
+********* Epoch 295: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61892
+++++++++++ Valid Accuracy: 0.61240
+++++++++++ Test Accuracy: 0.60272
+++++++++++ Loss: 1.31773
+
+********* Epoch 296: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62225
+++++++++++ Valid Accuracy: 0.61462
+++++++++++ Test Accuracy: 0.60795
+++++++++++ Loss: 1.30083
+
+********* Epoch 297: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63218
+++++++++++ Valid Accuracy: 0.62945
+++++++++++ Test Accuracy: 0.62523
+++++++++++ Loss: 1.26935
+
+********* Epoch 298: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64242
+++++++++++ Valid Accuracy: 0.64801
+++++++++++ Test Accuracy: 0.64663
+++++++++++ Loss: 1.24302
+
+********* Epoch 299: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64597
+++++++++++ Valid Accuracy: 0.65492
+++++++++++ Test Accuracy: 0.65747
+++++++++++ Loss: 1.23848
+
+********* Epoch 300: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63960
+++++++++++ Valid Accuracy: 0.64824
+++++++++++ Test Accuracy: 0.64940
+++++++++++ Loss: 1.25930
+
+********* Epoch 301: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62869
+++++++++++ Valid Accuracy: 0.62905
+++++++++++ Test Accuracy: 0.62192
+++++++++++ Loss: 1.29541
+
+********* Epoch 302: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61906
+++++++++++ Valid Accuracy: 0.60599
+++++++++++ Test Accuracy: 0.59233
+++++++++++ Loss: 1.32826
+
+********* Epoch 303: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61496
+++++++++++ Valid Accuracy: 0.59096
+++++++++++ Test Accuracy: 0.57346
+++++++++++ Loss: 1.34385
+
+********* Epoch 304: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61926
+++++++++++ Valid Accuracy: 0.59079
+++++++++++ Test Accuracy: 0.57023
+++++++++++ Loss: 1.33286
+
+********* Epoch 305: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62872
+++++++++++ Valid Accuracy: 0.60177
+++++++++++ Test Accuracy: 0.58083
+++++++++++ Loss: 1.30083
+
+********* Epoch 306: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63840
+++++++++++ Valid Accuracy: 0.62123
+++++++++++ Test Accuracy: 0.60056
+++++++++++ Loss: 1.26261
+
+********* Epoch 307: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64542
+++++++++++ Valid Accuracy: 0.64143
+++++++++++ Test Accuracy: 0.62290
+++++++++++ Loss: 1.23480
+
+********* Epoch 308: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64608
+++++++++++ Valid Accuracy: 0.65042
+++++++++++ Test Accuracy: 0.63432
+++++++++++ Loss: 1.22921
+
+********* Epoch 309: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63886
+++++++++++ Valid Accuracy: 0.64365
+++++++++++ Test Accuracy: 0.62683
+++++++++++ Loss: 1.24840
+
+********* Epoch 310: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62895
+++++++++++ Valid Accuracy: 0.62760
+++++++++++ Test Accuracy: 0.61041
+++++++++++ Loss: 1.28447
+
+********* Epoch 311: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61797
+++++++++++ Valid Accuracy: 0.60888
+++++++++++ Test Accuracy: 0.59112
+++++++++++ Loss: 1.32237
+
+********* Epoch 312: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61246
+++++++++++ Valid Accuracy: 0.59599
+++++++++++ Test Accuracy: 0.58097
+++++++++++ Loss: 1.34454
+
+********* Epoch 313: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61439
+++++++++++ Valid Accuracy: 0.59525
+++++++++++ Test Accuracy: 0.58478
+++++++++++ Loss: 1.33954
+
+********* Epoch 314: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62250
+++++++++++ Valid Accuracy: 0.60834
+++++++++++ Test Accuracy: 0.60165
+++++++++++ Loss: 1.31040
+
+********* Epoch 315: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63361
+++++++++++ Valid Accuracy: 0.62982
+++++++++++ Test Accuracy: 0.62912
+++++++++++ Loss: 1.26955
+
+********* Epoch 316: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64458
+++++++++++ Valid Accuracy: 0.65106
+++++++++++ Test Accuracy: 0.65286
+++++++++++ Loss: 1.23363
+
+********* Epoch 317: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65018
+++++++++++ Valid Accuracy: 0.66304
+++++++++++ Test Accuracy: 0.66492
+++++++++++ Loss: 1.21524
+
+********* Epoch 318: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64827
+++++++++++ Valid Accuracy: 0.66089
+++++++++++ Test Accuracy: 0.65823
+++++++++++ Loss: 1.22070
+
+********* Epoch 319: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64013
+++++++++++ Valid Accuracy: 0.64217
+++++++++++ Test Accuracy: 0.63426
+++++++++++ Loss: 1.24943
+
+********* Epoch 320: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62831
+++++++++++ Valid Accuracy: 0.61764
+++++++++++ Test Accuracy: 0.59799
+++++++++++ Loss: 1.29032
+
+********* Epoch 321: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61884
+++++++++++ Valid Accuracy: 0.59593
+++++++++++ Test Accuracy: 0.57254
+++++++++++ Loss: 1.32620
+
+********* Epoch 322: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61588
+++++++++++ Valid Accuracy: 0.58663
+++++++++++ Test Accuracy: 0.56009
+++++++++++ Loss: 1.34113
+
+********* Epoch 323: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.61923
+++++++++++ Valid Accuracy: 0.58707
+++++++++++ Test Accuracy: 0.56038
+++++++++++ Loss: 1.32927
+
+********* Epoch 324: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62953
+++++++++++ Valid Accuracy: 0.60049
+++++++++++ Test Accuracy: 0.57120
+++++++++++ Loss: 1.29579
+
+********* Epoch 325: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63999
+++++++++++ Valid Accuracy: 0.61794
+++++++++++ Test Accuracy: 0.59116
+++++++++++ Loss: 1.25476
+
+********* Epoch 326: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65011
+++++++++++ Valid Accuracy: 0.63435
+++++++++++ Test Accuracy: 0.61239
+++++++++++ Loss: 1.22235
+
+********* Epoch 327: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65254
+++++++++++ Valid Accuracy: 0.64918
+++++++++++ Test Accuracy: 0.63187
+++++++++++ Loss: 1.20891
+
+********* Epoch 328: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65004
+++++++++++ Valid Accuracy: 0.65167
+++++++++++ Test Accuracy: 0.64033
+++++++++++ Loss: 1.21897
+
+********* Epoch 329: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64264
+++++++++++ Valid Accuracy: 0.64646
+++++++++++ Test Accuracy: 0.63790
+++++++++++ Loss: 1.24478
+
+********* Epoch 330: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63471
+++++++++++ Valid Accuracy: 0.63509
+++++++++++ Test Accuracy: 0.62965
+++++++++++ Loss: 1.27343
+
+********* Epoch 331: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62988
+++++++++++ Valid Accuracy: 0.62633
+++++++++++ Test Accuracy: 0.62420
+++++++++++ Loss: 1.29042
+
+********* Epoch 332: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.62829
+++++++++++ Valid Accuracy: 0.62391
+++++++++++ Test Accuracy: 0.62297
+++++++++++ Loss: 1.29181
+
+********* Epoch 333: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63141
+++++++++++ Valid Accuracy: 0.62714
+++++++++++ Test Accuracy: 0.62737
+++++++++++ Loss: 1.27811
+
+********* Epoch 334: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.63859
+++++++++++ Valid Accuracy: 0.63767
+++++++++++ Test Accuracy: 0.63731
+++++++++++ Loss: 1.25723
+
+********* Epoch 335: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64517
+++++++++++ Valid Accuracy: 0.65063
+++++++++++ Test Accuracy: 0.64786
+++++++++++ Loss: 1.23723
+
+********* Epoch 336: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65045
+++++++++++ Valid Accuracy: 0.65650
+++++++++++ Test Accuracy: 0.65288
+++++++++++ Loss: 1.22317
+
+********* Epoch 337: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65307
+++++++++++ Valid Accuracy: 0.65828
+++++++++++ Test Accuracy: 0.65109
+++++++++++ Loss: 1.21684
+
+********* Epoch 338: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65196
+++++++++++ Valid Accuracy: 0.65489
+++++++++++ Test Accuracy: 0.64029
+++++++++++ Loss: 1.21822
+
+********* Epoch 339: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64802
+++++++++++ Valid Accuracy: 0.64620
+++++++++++ Test Accuracy: 0.62601
+++++++++++ Loss: 1.22403
+
+********* Epoch 340: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64445
+++++++++++ Valid Accuracy: 0.63613
+++++++++++ Test Accuracy: 0.61303
+++++++++++ Loss: 1.23238
+
+********* Epoch 341: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64274
+++++++++++ Valid Accuracy: 0.62734
+++++++++++ Test Accuracy: 0.60319
+++++++++++ Loss: 1.24025
+
+********* Epoch 342: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64169
+++++++++++ Valid Accuracy: 0.62274
+++++++++++ Test Accuracy: 0.59714
+++++++++++ Loss: 1.24486
+
+********* Epoch 343: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64257
+++++++++++ Valid Accuracy: 0.62230
+++++++++++ Test Accuracy: 0.59797
+++++++++++ Loss: 1.24413
+
+********* Epoch 344: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64546
+++++++++++ Valid Accuracy: 0.62663
+++++++++++ Test Accuracy: 0.60373
+++++++++++ Loss: 1.23920
+
+********* Epoch 345: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64760
+++++++++++ Valid Accuracy: 0.63267
+++++++++++ Test Accuracy: 0.61453
+++++++++++ Loss: 1.23092
+
+********* Epoch 346: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.64969
+++++++++++ Valid Accuracy: 0.64183
+++++++++++ Test Accuracy: 0.62852
+++++++++++ Loss: 1.22116
+
+********* Epoch 347: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65310
+++++++++++ Valid Accuracy: 0.65167
+++++++++++ Test Accuracy: 0.64089
+++++++++++ Loss: 1.21183
+
+********* Epoch 348: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65401
+++++++++++ Valid Accuracy: 0.65878
+++++++++++ Test Accuracy: 0.64988
+++++++++++ Loss: 1.20490
+
+********* Epoch 349: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65578
+++++++++++ Valid Accuracy: 0.66022
+++++++++++ Test Accuracy: 0.65348
+++++++++++ Loss: 1.20010
+
+********* Epoch 350: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65564
+++++++++++ Valid Accuracy: 0.65895
+++++++++++ Test Accuracy: 0.65317
+++++++++++ Loss: 1.19864
+
+********* Epoch 351: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65453
+++++++++++ Valid Accuracy: 0.65962
+++++++++++ Test Accuracy: 0.65200
+++++++++++ Loss: 1.19983
+
+********* Epoch 352: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65425
+++++++++++ Valid Accuracy: 0.65868
+++++++++++ Test Accuracy: 0.65019
+++++++++++ Loss: 1.20246
+
+********* Epoch 353: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65369
+++++++++++ Valid Accuracy: 0.65657
+++++++++++ Test Accuracy: 0.64914
+++++++++++ Loss: 1.20542
+
+********* Epoch 354: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65334
+++++++++++ Valid Accuracy: 0.65606
+++++++++++ Test Accuracy: 0.64984
+++++++++++ Loss: 1.20723
+
+********* Epoch 355: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65378
+++++++++++ Valid Accuracy: 0.65798
+++++++++++ Test Accuracy: 0.65105
+++++++++++ Loss: 1.20703
+
+********* Epoch 356: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65470
+++++++++++ Valid Accuracy: 0.65794
+++++++++++ Test Accuracy: 0.65243
+++++++++++ Loss: 1.20502
+
+********* Epoch 357: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65540
+++++++++++ Valid Accuracy: 0.65761
+++++++++++ Test Accuracy: 0.65286
+++++++++++ Loss: 1.20098
+
+********* Epoch 358: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65701
+++++++++++ Valid Accuracy: 0.65700
+++++++++++ Test Accuracy: 0.65113
+++++++++++ Loss: 1.19498
+
+********* Epoch 359: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65843
+++++++++++ Valid Accuracy: 0.65704
+++++++++++ Test Accuracy: 0.64868
+++++++++++ Loss: 1.18853
+
+********* Epoch 360: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65970
+++++++++++ Valid Accuracy: 0.65821
+++++++++++ Test Accuracy: 0.64710
+++++++++++ Loss: 1.18212
+
+********* Epoch 361: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66045
+++++++++++ Valid Accuracy: 0.65938
+++++++++++ Test Accuracy: 0.64782
+++++++++++ Loss: 1.17831
+
+********* Epoch 362: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66084
+++++++++++ Valid Accuracy: 0.65965
+++++++++++ Test Accuracy: 0.64844
+++++++++++ Loss: 1.17708
+
+********* Epoch 363: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66098
+++++++++++ Valid Accuracy: 0.65891
+++++++++++ Test Accuracy: 0.64930
+++++++++++ Loss: 1.17996
+
+********* Epoch 364: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66065
+++++++++++ Valid Accuracy: 0.65902
+++++++++++ Test Accuracy: 0.65039
+++++++++++ Loss: 1.18582
+
+********* Epoch 365: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65901
+++++++++++ Valid Accuracy: 0.65878
+++++++++++ Test Accuracy: 0.64963
+++++++++++ Loss: 1.19195
+
+********* Epoch 366: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65865
+++++++++++ Valid Accuracy: 0.65861
+++++++++++ Test Accuracy: 0.64932
+++++++++++ Loss: 1.19428
+
+********* Epoch 367: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65890
+++++++++++ Valid Accuracy: 0.65902
+++++++++++ Test Accuracy: 0.65194
+++++++++++ Loss: 1.19066
+
+********* Epoch 368: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66080
+++++++++++ Valid Accuracy: 0.66314
+++++++++++ Test Accuracy: 0.65523
+++++++++++ Loss: 1.18205
+
+********* Epoch 369: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66356
+++++++++++ Valid Accuracy: 0.66543
+++++++++++ Test Accuracy: 0.66021
+++++++++++ Loss: 1.17225
+
+********* Epoch 370: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66552
+++++++++++ Valid Accuracy: 0.66858
+++++++++++ Test Accuracy: 0.66358
+++++++++++ Loss: 1.16521
+
+********* Epoch 371: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66565
+++++++++++ Valid Accuracy: 0.66962
+++++++++++ Test Accuracy: 0.66525
+++++++++++ Loss: 1.16290
+
+********* Epoch 372: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66488
+++++++++++ Valid Accuracy: 0.66811
+++++++++++ Test Accuracy: 0.66409
+++++++++++ Loss: 1.16432
+
+********* Epoch 373: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66384
+++++++++++ Valid Accuracy: 0.66603
+++++++++++ Test Accuracy: 0.66121
+++++++++++ Loss: 1.16745
+
+********* Epoch 374: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66235
+++++++++++ Valid Accuracy: 0.66432
+++++++++++ Test Accuracy: 0.65889
+++++++++++ Loss: 1.17091
+
+********* Epoch 375: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66131
+++++++++++ Valid Accuracy: 0.66143
+++++++++++ Test Accuracy: 0.65467
+++++++++++ Loss: 1.17313
+
+********* Epoch 376: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66164
+++++++++++ Valid Accuracy: 0.65969
+++++++++++ Test Accuracy: 0.65109
+++++++++++ Loss: 1.17374
+
+********* Epoch 377: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66270
+++++++++++ Valid Accuracy: 0.65902
+++++++++++ Test Accuracy: 0.64856
+++++++++++ Loss: 1.17247
+
+********* Epoch 378: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66365
+++++++++++ Valid Accuracy: 0.65841
+++++++++++ Test Accuracy: 0.64615
+++++++++++ Loss: 1.16877
+
+********* Epoch 379: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66377
+++++++++++ Valid Accuracy: 0.65938
+++++++++++ Test Accuracy: 0.64710
+++++++++++ Loss: 1.16346
+
+********* Epoch 380: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66559
+++++++++++ Valid Accuracy: 0.66308
+++++++++++ Test Accuracy: 0.65064
+++++++++++ Loss: 1.15764
+
+********* Epoch 381: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66756
+++++++++++ Valid Accuracy: 0.66673
+++++++++++ Test Accuracy: 0.65624
+++++++++++ Loss: 1.15357
+
+********* Epoch 382: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66775
+++++++++++ Valid Accuracy: 0.66938
+++++++++++ Test Accuracy: 0.66210
+++++++++++ Loss: 1.15236
+
+********* Epoch 383: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66738
+++++++++++ Valid Accuracy: 0.67200
+++++++++++ Test Accuracy: 0.66753
+++++++++++ Loss: 1.15470
+
+********* Epoch 384: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66640
+++++++++++ Valid Accuracy: 0.67173
+++++++++++ Test Accuracy: 0.67066
+++++++++++ Loss: 1.15908
+
+********* Epoch 385: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66451
+++++++++++ Valid Accuracy: 0.67147
+++++++++++ Test Accuracy: 0.67243
+++++++++++ Loss: 1.16294
+
+********* Epoch 386: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66403
+++++++++++ Valid Accuracy: 0.67170
+++++++++++ Test Accuracy: 0.67169
+++++++++++ Loss: 1.16343
+
+********* Epoch 387: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66476
+++++++++++ Valid Accuracy: 0.67136
+++++++++++ Test Accuracy: 0.67222
+++++++++++ Loss: 1.15983
+
+********* Epoch 388: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66703
+++++++++++ Valid Accuracy: 0.67173
+++++++++++ Test Accuracy: 0.67074
+++++++++++ Loss: 1.15381
+
+********* Epoch 389: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66887
+++++++++++ Valid Accuracy: 0.67207
+++++++++++ Test Accuracy: 0.66825
+++++++++++ Loss: 1.14868
+
+********* Epoch 390: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66973
+++++++++++ Valid Accuracy: 0.67086
+++++++++++ Test Accuracy: 0.66286
+++++++++++ Loss: 1.14704
+
+********* Epoch 391: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66874
+++++++++++ Valid Accuracy: 0.66704
+++++++++++ Test Accuracy: 0.65214
+++++++++++ Loss: 1.14889
+
+********* Epoch 392: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66739
+++++++++++ Valid Accuracy: 0.66079
+++++++++++ Test Accuracy: 0.64303
+++++++++++ Loss: 1.15237
+
+********* Epoch 393: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66672
+++++++++++ Valid Accuracy: 0.65710
+++++++++++ Test Accuracy: 0.63858
+++++++++++ Loss: 1.15424
+
+********* Epoch 394: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66676
+++++++++++ Valid Accuracy: 0.65623
+++++++++++ Test Accuracy: 0.63811
+++++++++++ Loss: 1.15326
+
+********* Epoch 395: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66741
+++++++++++ Valid Accuracy: 0.65955
+++++++++++ Test Accuracy: 0.64103
+++++++++++ Loss: 1.15026
+
+********* Epoch 396: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66829
+++++++++++ Valid Accuracy: 0.66449
+++++++++++ Test Accuracy: 0.65017
+++++++++++ Loss: 1.14769
+
+********* Epoch 397: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66956
+++++++++++ Valid Accuracy: 0.66861
+++++++++++ Test Accuracy: 0.65953
+++++++++++ Loss: 1.14679
+
+********* Epoch 398: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66923
+++++++++++ Valid Accuracy: 0.67029
+++++++++++ Test Accuracy: 0.66578
+++++++++++ Loss: 1.14805
+
+********* Epoch 399: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66830
+++++++++++ Valid Accuracy: 0.67224
+++++++++++ Test Accuracy: 0.66930
+++++++++++ Loss: 1.14945
+
+********* Epoch 400: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66734
+++++++++++ Valid Accuracy: 0.67355
+++++++++++ Test Accuracy: 0.67027
+++++++++++ Loss: 1.14952
+
+********* Epoch 401: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66780
+++++++++++ Valid Accuracy: 0.67314
+++++++++++ Test Accuracy: 0.67111
+++++++++++ Loss: 1.14774
+
+********* Epoch 402: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66849
+++++++++++ Valid Accuracy: 0.67395
+++++++++++ Test Accuracy: 0.67179
+++++++++++ Loss: 1.14492
+
+********* Epoch 403: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66852
+++++++++++ Valid Accuracy: 0.67459
+++++++++++ Test Accuracy: 0.67082
+++++++++++ Loss: 1.14397
+
+********* Epoch 404: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66830
+++++++++++ Valid Accuracy: 0.67341
+++++++++++ Test Accuracy: 0.66796
+++++++++++ Loss: 1.14547
+
+********* Epoch 405: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66787
+++++++++++ Valid Accuracy: 0.67046
+++++++++++ Test Accuracy: 0.66029
+++++++++++ Loss: 1.14846
+
+********* Epoch 406: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66806
+++++++++++ Valid Accuracy: 0.66794
+++++++++++ Test Accuracy: 0.65424
+++++++++++ Loss: 1.14896
+
+********* Epoch 407: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67012
+++++++++++ Valid Accuracy: 0.66653
+++++++++++ Test Accuracy: 0.65054
+++++++++++ Loss: 1.14516
+
+********* Epoch 408: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67147
+++++++++++ Valid Accuracy: 0.66653
+++++++++++ Test Accuracy: 0.64883
+++++++++++ Loss: 1.13970
+
+********* Epoch 409: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67161
+++++++++++ Valid Accuracy: 0.66734
+++++++++++ Test Accuracy: 0.65027
+++++++++++ Loss: 1.13720
+
+********* Epoch 410: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67035
+++++++++++ Valid Accuracy: 0.66787
+++++++++++ Test Accuracy: 0.65512
+++++++++++ Loss: 1.14040
+
+********* Epoch 411: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66913
+++++++++++ Valid Accuracy: 0.66841
+++++++++++ Test Accuracy: 0.65912
+++++++++++ Loss: 1.14731
+
+********* Epoch 412: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66737
+++++++++++ Valid Accuracy: 0.66757
+++++++++++ Test Accuracy: 0.66183
+++++++++++ Loss: 1.15254
+
+********* Epoch 413: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66756
+++++++++++ Valid Accuracy: 0.67002
+++++++++++ Test Accuracy: 0.66541
+++++++++++ Loss: 1.15198
+
+********* Epoch 414: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66916
+++++++++++ Valid Accuracy: 0.67110
+++++++++++ Test Accuracy: 0.66872
+++++++++++ Loss: 1.14537
+
+********* Epoch 415: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67197
+++++++++++ Valid Accuracy: 0.67361
+++++++++++ Test Accuracy: 0.67016
+++++++++++ Loss: 1.13693
+
+********* Epoch 416: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67308
+++++++++++ Valid Accuracy: 0.67509
+++++++++++ Test Accuracy: 0.67165
+++++++++++ Loss: 1.13232
+
+********* Epoch 417: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67201
+++++++++++ Valid Accuracy: 0.67452
+++++++++++ Test Accuracy: 0.66928
+++++++++++ Loss: 1.13500
+
+********* Epoch 418: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66850
+++++++++++ Valid Accuracy: 0.67059
+++++++++++ Test Accuracy: 0.66329
+++++++++++ Loss: 1.14389
+
+********* Epoch 419: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66533
+++++++++++ Valid Accuracy: 0.66643
+++++++++++ Test Accuracy: 0.65607
+++++++++++ Loss: 1.15249
+
+********* Epoch 420: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66513
+++++++++++ Valid Accuracy: 0.66435
+++++++++++ Test Accuracy: 0.65333
+++++++++++ Loss: 1.15329
+
+********* Epoch 421: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66771
+++++++++++ Valid Accuracy: 0.66593
+++++++++++ Test Accuracy: 0.65352
+++++++++++ Loss: 1.14486
+
+********* Epoch 422: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67140
+++++++++++ Valid Accuracy: 0.67076
+++++++++++ Test Accuracy: 0.65751
+++++++++++ Loss: 1.13398
+
+********* Epoch 423: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67271
+++++++++++ Valid Accuracy: 0.67479
+++++++++++ Test Accuracy: 0.66385
+++++++++++ Loss: 1.12996
+
+********* Epoch 424: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67079
+++++++++++ Valid Accuracy: 0.67687
+++++++++++ Test Accuracy: 0.67004
+++++++++++ Loss: 1.13565
+
+********* Epoch 425: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66890
+++++++++++ Valid Accuracy: 0.67516
+++++++++++ Test Accuracy: 0.67128
+++++++++++ Loss: 1.14618
+
+********* Epoch 426: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66715
+++++++++++ Valid Accuracy: 0.67241
+++++++++++ Test Accuracy: 0.67068
+++++++++++ Loss: 1.15310
+
+********* Epoch 427: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66794
+++++++++++ Valid Accuracy: 0.67257
+++++++++++ Test Accuracy: 0.66872
+++++++++++ Loss: 1.15098
+
+********* Epoch 428: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66985
+++++++++++ Valid Accuracy: 0.67116
+++++++++++ Test Accuracy: 0.66739
+++++++++++ Loss: 1.14265
+
+********* Epoch 429: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67192
+++++++++++ Valid Accuracy: 0.67073
+++++++++++ Test Accuracy: 0.66619
+++++++++++ Loss: 1.13458
+
+********* Epoch 430: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67225
+++++++++++ Valid Accuracy: 0.66949
+++++++++++ Test Accuracy: 0.66148
+++++++++++ Loss: 1.13270
+
+********* Epoch 431: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67070
+++++++++++ Valid Accuracy: 0.66623
+++++++++++ Test Accuracy: 0.65584
+++++++++++ Loss: 1.13923
+
+********* Epoch 432: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66736
+++++++++++ Valid Accuracy: 0.66133
+++++++++++ Test Accuracy: 0.64694
+++++++++++ Loss: 1.14908
+
+********* Epoch 433: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66505
+++++++++++ Valid Accuracy: 0.65898
+++++++++++ Test Accuracy: 0.64196
+++++++++++ Loss: 1.15463
+
+********* Epoch 434: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66627
+++++++++++ Valid Accuracy: 0.65922
+++++++++++ Test Accuracy: 0.64212
+++++++++++ Loss: 1.15020
+
+********* Epoch 435: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66868
+++++++++++ Valid Accuracy: 0.66378
+++++++++++ Test Accuracy: 0.64763
+++++++++++ Loss: 1.13889
+
+********* Epoch 436: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67084
+++++++++++ Valid Accuracy: 0.66982
+++++++++++ Test Accuracy: 0.65582
+++++++++++ Loss: 1.13149
+
+********* Epoch 437: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66983
+++++++++++ Valid Accuracy: 0.67204
+++++++++++ Test Accuracy: 0.66619
+++++++++++ Loss: 1.13658
+
+********* Epoch 438: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66534
+++++++++++ Valid Accuracy: 0.66955
+++++++++++ Test Accuracy: 0.67016
+++++++++++ Loss: 1.15188
+
+********* Epoch 439: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66159
+++++++++++ Valid Accuracy: 0.66714
+++++++++++ Test Accuracy: 0.67070
+++++++++++ Loss: 1.16603
+
+********* Epoch 440: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66207
+++++++++++ Valid Accuracy: 0.66841
+++++++++++ Test Accuracy: 0.67198
+++++++++++ Loss: 1.16627
+
+********* Epoch 441: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66593
+++++++++++ Valid Accuracy: 0.67294
+++++++++++ Test Accuracy: 0.67411
+++++++++++ Loss: 1.15207
+
+********* Epoch 442: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67133
+++++++++++ Valid Accuracy: 0.67569
+++++++++++ Test Accuracy: 0.67545
+++++++++++ Loss: 1.13415
+
+********* Epoch 443: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67324
+++++++++++ Valid Accuracy: 0.67566
+++++++++++ Test Accuracy: 0.67185
+++++++++++ Loss: 1.12616
+
+********* Epoch 444: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67200
+++++++++++ Valid Accuracy: 0.67079
+++++++++++ Test Accuracy: 0.66263
+++++++++++ Loss: 1.13532
+
+********* Epoch 445: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66628
+++++++++++ Valid Accuracy: 0.66076
+++++++++++ Test Accuracy: 0.64568
+++++++++++ Loss: 1.15576
+
+********* Epoch 446: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66031
+++++++++++ Valid Accuracy: 0.64908
+++++++++++ Test Accuracy: 0.62825
+++++++++++ Loss: 1.17389
+
+********* Epoch 447: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65935
+++++++++++ Valid Accuracy: 0.64465
+++++++++++ Test Accuracy: 0.61955
+++++++++++ Loss: 1.17691
+
+********* Epoch 448: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66344
+++++++++++ Valid Accuracy: 0.64891
+++++++++++ Test Accuracy: 0.62253
+++++++++++ Loss: 1.16226
+
+********* Epoch 449: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66828
+++++++++++ Valid Accuracy: 0.65673
+++++++++++ Test Accuracy: 0.63550
+++++++++++ Loss: 1.14080
+
+********* Epoch 450: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67238
+++++++++++ Valid Accuracy: 0.66589
+++++++++++ Test Accuracy: 0.64755
+++++++++++ Loss: 1.12710
+
+********* Epoch 451: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67146
+++++++++++ Valid Accuracy: 0.67069
+++++++++++ Test Accuracy: 0.65973
+++++++++++ Loss: 1.13181
+
+********* Epoch 452: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66533
+++++++++++ Valid Accuracy: 0.66925
+++++++++++ Test Accuracy: 0.66572
+++++++++++ Loss: 1.15292
+
+********* Epoch 453: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65780
+++++++++++ Valid Accuracy: 0.66338
+++++++++++ Test Accuracy: 0.66473
+++++++++++ Loss: 1.17824
+
+********* Epoch 454: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65437
+++++++++++ Valid Accuracy: 0.65979
+++++++++++ Test Accuracy: 0.66426
+++++++++++ Loss: 1.19059
+
+********* Epoch 455: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65652
+++++++++++ Valid Accuracy: 0.66173
+++++++++++ Test Accuracy: 0.66576
+++++++++++ Loss: 1.18254
+
+********* Epoch 456: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66349
+++++++++++ Valid Accuracy: 0.66583
+++++++++++ Test Accuracy: 0.66955
+++++++++++ Loss: 1.15926
+
+********* Epoch 457: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66997
+++++++++++ Valid Accuracy: 0.67422
+++++++++++ Test Accuracy: 0.67397
+++++++++++ Loss: 1.13437
+
+********* Epoch 458: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67416
+++++++++++ Valid Accuracy: 0.67925
+++++++++++ Test Accuracy: 0.67578
+++++++++++ Loss: 1.12324
+
+********* Epoch 459: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67382
+++++++++++ Valid Accuracy: 0.67653
+++++++++++ Test Accuracy: 0.66998
+++++++++++ Loss: 1.13096
+
+********* Epoch 460: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66744
+++++++++++ Valid Accuracy: 0.66898
+++++++++++ Test Accuracy: 0.65714
+++++++++++ Loss: 1.15217
+
+********* Epoch 461: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66207
+++++++++++ Valid Accuracy: 0.65630
+++++++++++ Test Accuracy: 0.63751
+++++++++++ Loss: 1.17348
+
+********* Epoch 462: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65876
+++++++++++ Valid Accuracy: 0.64814
+++++++++++ Test Accuracy: 0.62529
+++++++++++ Loss: 1.18256
+
+********* Epoch 463: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66076
+++++++++++ Valid Accuracy: 0.64653
+++++++++++ Test Accuracy: 0.61984
+++++++++++ Loss: 1.17552
+
+********* Epoch 464: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66533
+++++++++++ Valid Accuracy: 0.65019
+++++++++++ Test Accuracy: 0.62498
+++++++++++ Loss: 1.15791
+
+********* Epoch 465: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66862
+++++++++++ Valid Accuracy: 0.65744
+++++++++++ Test Accuracy: 0.63576
+++++++++++ Loss: 1.14094
+
+********* Epoch 466: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67204
+++++++++++ Valid Accuracy: 0.66543
+++++++++++ Test Accuracy: 0.64969
+++++++++++ Loss: 1.13287
+
+********* Epoch 467: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67144
+++++++++++ Valid Accuracy: 0.67153
+++++++++++ Test Accuracy: 0.66224
+++++++++++ Loss: 1.13674
+
+********* Epoch 468: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66817
+++++++++++ Valid Accuracy: 0.67163
+++++++++++ Test Accuracy: 0.66743
+++++++++++ Loss: 1.14851
+
+********* Epoch 469: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66301
+++++++++++ Valid Accuracy: 0.66908
+++++++++++ Test Accuracy: 0.66755
+++++++++++ Loss: 1.16137
+
+********* Epoch 470: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66090
+++++++++++ Valid Accuracy: 0.66593
+++++++++++ Test Accuracy: 0.66506
+++++++++++ Loss: 1.16827
+
+********* Epoch 471: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66056
+++++++++++ Valid Accuracy: 0.66378
+++++++++++ Test Accuracy: 0.66340
+++++++++++ Loss: 1.16688
+
+********* Epoch 472: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66204
+++++++++++ Valid Accuracy: 0.66355
+++++++++++ Test Accuracy: 0.66148
+++++++++++ Loss: 1.15950
+
+********* Epoch 473: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66483
+++++++++++ Valid Accuracy: 0.66442
+++++++++++ Test Accuracy: 0.66385
+++++++++++ Loss: 1.15025
+
+********* Epoch 474: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66763
+++++++++++ Valid Accuracy: 0.66865
+++++++++++ Test Accuracy: 0.66535
+++++++++++ Loss: 1.14366
+
+********* Epoch 475: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66919
+++++++++++ Valid Accuracy: 0.67183
+++++++++++ Test Accuracy: 0.66597
+++++++++++ Loss: 1.13991
+
+********* Epoch 476: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67035
+++++++++++ Valid Accuracy: 0.67553
+++++++++++ Test Accuracy: 0.66667
+++++++++++ Loss: 1.13889
+
+********* Epoch 477: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67129
+++++++++++ Valid Accuracy: 0.67492
+++++++++++ Test Accuracy: 0.66527
+++++++++++ Loss: 1.13805
+
+********* Epoch 478: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67126
+++++++++++ Valid Accuracy: 0.67220
+++++++++++ Test Accuracy: 0.66148
+++++++++++ Loss: 1.13819
+
+********* Epoch 479: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67034
+++++++++++ Valid Accuracy: 0.66643
+++++++++++ Test Accuracy: 0.65523
+++++++++++ Loss: 1.14218
+
+********* Epoch 480: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66822
+++++++++++ Valid Accuracy: 0.66150
+++++++++++ Test Accuracy: 0.64924
+++++++++++ Loss: 1.15042
+
+********* Epoch 481: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66483
+++++++++++ Valid Accuracy: 0.65673
+++++++++++ Test Accuracy: 0.64428
+++++++++++ Loss: 1.15858
+
+********* Epoch 482: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66462
+++++++++++ Valid Accuracy: 0.65328
+++++++++++ Test Accuracy: 0.64173
+++++++++++ Loss: 1.16089
+
+********* Epoch 483: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66738
+++++++++++ Valid Accuracy: 0.65643
+++++++++++ Test Accuracy: 0.64552
+++++++++++ Loss: 1.15429
+
+********* Epoch 484: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67004
+++++++++++ Valid Accuracy: 0.66418
+++++++++++ Test Accuracy: 0.65412
+++++++++++ Loss: 1.14126
+
+********* Epoch 485: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67270
+++++++++++ Valid Accuracy: 0.67053
+++++++++++ Test Accuracy: 0.66335
+++++++++++ Loss: 1.12924
+
+********* Epoch 486: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67367
+++++++++++ Valid Accuracy: 0.67643
+++++++++++ Test Accuracy: 0.66788
+++++++++++ Loss: 1.12284
+
+********* Epoch 487: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67177
+++++++++++ Valid Accuracy: 0.67475
+++++++++++ Test Accuracy: 0.66403
+++++++++++ Loss: 1.12658
+
+********* Epoch 488: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66756
+++++++++++ Valid Accuracy: 0.66727
+++++++++++ Test Accuracy: 0.65385
+++++++++++ Loss: 1.14070
+
+********* Epoch 489: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66309
+++++++++++ Valid Accuracy: 0.65734
+++++++++++ Test Accuracy: 0.64364
+++++++++++ Loss: 1.15857
+
+********* Epoch 490: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65904
+++++++++++ Valid Accuracy: 0.65106
+++++++++++ Test Accuracy: 0.63692
+++++++++++ Loss: 1.17176
+
+********* Epoch 491: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.65812
+++++++++++ Valid Accuracy: 0.65113
+++++++++++ Test Accuracy: 0.63817
+++++++++++ Loss: 1.17287
+
+********* Epoch 492: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66170
+++++++++++ Valid Accuracy: 0.65791
+++++++++++ Test Accuracy: 0.64774
+++++++++++ Loss: 1.15999
+
+********* Epoch 493: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66869
+++++++++++ Valid Accuracy: 0.66710
+++++++++++ Test Accuracy: 0.66150
+++++++++++ Loss: 1.13762
+
+********* Epoch 494: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67526
+++++++++++ Valid Accuracy: 0.67751
+++++++++++ Test Accuracy: 0.67490
+++++++++++ Loss: 1.11699
+
+********* Epoch 495: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67784
+++++++++++ Valid Accuracy: 0.68234
+++++++++++ Test Accuracy: 0.68053
+++++++++++ Loss: 1.10858
+
+********* Epoch 496: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67614
+++++++++++ Valid Accuracy: 0.67865
+++++++++++ Test Accuracy: 0.67802
+++++++++++ Loss: 1.11617
+
+********* Epoch 497: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.67003
+++++++++++ Valid Accuracy: 0.66838
+++++++++++ Test Accuracy: 0.66770
+++++++++++ Loss: 1.13674
+
+********* Epoch 498: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66417
+++++++++++ Valid Accuracy: 0.65774
+++++++++++ Test Accuracy: 0.65272
+++++++++++ Loss: 1.15907
+
+********* Epoch 499: *********
+RANDOMLY DISPATCH THE CHUNKS...
+++++++++++ Train Accuracy: 0.66125
+++++++++++ Valid Accuracy: 0.64975
+++++++++++ Test Accuracy: 0.64196
+++++++++++ Loss: 1.17076
+------------------------node id 0,  total time 143.650902s---------------
+************ Profiling Results ************
+	Bubble: 0.000000 (s) (0.00 percentage)
+	Compute: 143.551713 (s) (100.00 percentage)
+	GraphComm: 0.005704 (s) (0.00 percentage)
+	Imbalance: 0.000332 (s) (0.00 percentage)
+	LayerComm: 0.000000 (s) (0.00 percentage)
+	Graph-level communication (cluster-wide, per epoch): 0.000 GB
+	Layer-level communication (cluster-wide, per epoch): 0.000 GB
+	Graph+Layer-level communication (cluster-wide, per epoch): 0.000 GB
+	Parameter-server communication (cluster-wide, per epoch): 0.000 GB
+	Graph-level dev2host communication time: 0.000 s, throughput: -nan GBps
+	Graph-level memcpy communication time: 0.000 s, throughput: -nan GBps
+	Graph-level net communication time: 0.000 s, throughput: -nan GBps
+	Graph-level network batch size: -nan Bytes
+Highest valid_acc: 0.6823
+Target test_acc: 0.6805
+Epoch to reach the target acc: 496
+[MPI Rank 0] Success 
