@@ -26,7 +26,8 @@ def get_test_acc(result_file):
                 return acc
 
 num_layers = [2, 3]
-hunits = [16, 64, 256]
+#hunits = [16, 64, 256] FIXME
+hunits = [16, 64]
 learning_rates = ["0.001", "0.003", "0.01", "0.03"]
 decays = ["0", "0.00001", "0.0001"]
 
