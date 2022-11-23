@@ -2535,6 +2535,178 @@ void CUDAPIPGraphDataGradientUpdateReceiver::thread_main() {
 
     delete [] comm_buff;
 }
+// determine whether all gpus agree on the same value
+template<typename T>
+static void check_consistency(T value) {
+    T max_value;
+    MPI_Allreduce(
+            &value, &max_value, 1, DistributedSys::get_mpi_data_type<T>(),
+            MPI_MAX, MPI_COMM_WORLD
+            );
+    assert(value == max_value);
+}
+
+template<typename T>
+static void check_consistency_gpu_array(T * value, size_t num_elements) {
+    // copy the data to the cpu memory
+    T value_cpu[num_elements];
+    cudaMemcpy(value_cpu, value, sizeof(T) * num_elements, cudaMemcpyDeviceToHost);
+    // validate the consistency
+    T max_value[num_elements];
+    MPI_Allreduce(
+            value_cpu, max_value, num_elements, DistributedSys::get_mpi_data_type<T>(),
+            MPI_MAX, MPI_COMM_WORLD
+            );
+    for (int i = 0; i < num_elements; ++ i) {
+        assert(value_cpu[i] == max_value[i]);
+    }
+}
+
+// CUDAPIPWeightAggregator
+CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
+                CUDAOperatorsAndTensorsManager * op_ten_manager,
+                AbstractLowerLevelOptimizer * optimizer,
+                DistributedPIPHybridParallelExecutionEngineGPU * engine
+                ): op_ten_manager_(op_ten_manager), optimizer_(optimizer) {
+    int num_operators = op_ten_manager->get_num_operators();
+    int num_weight_operators = 0;
+    // init op2idx_ && weight_ops_
+    op2idx_.clear();
+    weight_ops_.clear();
+    for (int i = 0; i < num_operators; ++ i) {
+        Operator * op = op_ten_manager_->get_operator(i);
+        assert(op != NULL);
+        if (op->get_type() == OPERATOR_WEIGHT) {
+            op2idx_[(WeightOperator*) op] = num_weight_operators ++;
+            weight_ops_.push_back((WeightOperator*) op);
+        }
+    }
+    // init the remained data structures
+    weight_op_num_elements_.clear();
+    weight_ops_data_.clear();
+    weight_ops_grad_.clear();
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        WeightOperator * op = weight_ops_[i];
+        assert(op != NULL);
+        assert(op->get_num_output_tensors() == 1);
+        Tensor * tensor = op->get_output_tensor(0);
+        assert(tensor != NULL);
+        size_t num_elements = 1;
+        for (int j = 0; j < tensor->num_dims; ++ j) {
+            num_elements *= tensor->dims[j];
+        }
+        weight_op_num_elements_.push_back(num_elements);
+        DataType * data = NULL;
+        DataType * grad = NULL;
+        AllocateCUDAMemory<DataType>(&data, num_elements, __FILE__, __LINE__);
+        AllocateCUDAMemory<DataType>(&grad, num_elements, __FILE__, __LINE__);
+        assert(data != NULL && grad != NULL);
+        weight_ops_data_.push_back(data);
+        weight_ops_grad_.push_back(grad);
+        // remember to initialize the weight data
+        // need to make sure that the initial weights are the same across all gpus
+        engine->hybrid_init_weight_tensor_data(data, num_elements, tensor->dims[0]);
+        check_consistency_gpu_array(data, num_elements);
+    }
+    // clear the communication volume
+    comm_ = 0;
+}
+
+CUDAPIPWeightAggregator::~CUDAPIPWeightAggregator() {
+    // release all GPU memory resources
+    for (DataType * data: weight_ops_data_) {
+        assert(data != NULL);
+        DeallocateCUDAMemory<DataType>(&data, __FILE__, __LINE__);
+    }
+    for (DataType * grad: weight_ops_grad_) {
+        assert(grad != NULL);
+        DeallocateCUDAMemory<DataType>(&grad, __FILE__, __LINE__);
+    }
+}
+
+// at the beginning of each epoch, call clear_gradients() 
+void CUDAPIPWeightAggregator::clear_gradients() {
+    int num_weight_operators = (int) weight_ops_.size();
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        size_t num_elements = weight_op_num_elements_[i];
+        DataType * grad = weight_ops_grad_[i];
+        assert(grad != NULL);
+        cudaMemset(grad, 0, sizeof(DataType) * num_elements);
+    }
+}
+
+// pull the latest weight data
+void CUDAPIPWeightAggregator::pull_weights(WeightOperator * weight_op, DataType * data) {
+    int idx = op2idx_[weight_op];
+    size_t num_elements = weight_op_num_elements_[idx];
+    DataType * src_data  = weight_ops_data_[idx];
+    assert(src_data != NULL);
+    cudaMemcpy(data, src_data, sizeof(DataType) * num_elements, cudaMemcpyDeviceToDevice);
+}
+
+// push the gradients of a chunk of vertices
+void CUDAPIPWeightAggregator::push_grad(WeightOperator * weight_op, DataType * grad) {
+    int idx = op2idx_[weight_op];
+    size_t num_elements = weight_op_num_elements_[idx];
+    DataType * dst_grad = weight_ops_grad_[idx];
+    assert(dst_grad != NULL);
+    // aggregate the gradients
+    element_wise_add_gpu(dst_grad, grad, dst_grad, num_elements);
+}
+
+// at the end of each epoch, call commit_grad() to reduce the gradients 
+// and apply them with the provided optimizer
+void CUDAPIPWeightAggregator::commit_grad() {
+    int num_weight_operators = (int) weight_ops_.size();
+    check_consistency(num_weight_operators);
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        size_t num_elements = weight_op_num_elements_[i];
+        check_consistency(num_elements);
+        DataType * grad = weight_ops_grad_[i];
+        assert(grad != NULL);
+        // move the grad to the CPU memory
+        DataType buff[num_elements];
+        cudaMemcpy(buff, grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+        // in-place allreduce
+        MPI_Allreduce(
+                MPI_IN_PLACE, buff, num_elements, 
+                DistributedSys::get_mpi_data_type<DataType>(),
+                MPI_SUM, MPI_COMM_WORLD
+                );
+        // copy the data back to the GPU memory
+        cudaMemcpy(grad, buff, sizeof(DataType) * num_elements, cudaMemcpyHostToDevice);
+        // update the volume
+        comm_ += sizeof(DataType) * num_elements;
+    }
+    // do the local optimization
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        WeightOperator * op = weight_ops_[i];
+        assert(op != NULL);
+        size_t num_elements = weight_op_num_elements_[i];
+        DataType * data = weight_ops_data_[i];
+        DataType * grad = weight_ops_grad_[i];
+        assert(data != NULL && grad != NULL);
+        // optimize the weight
+        optimizer_->optimize_weights(
+                op, grad, data, num_elements
+                );
+        cudaDeviceSynchronize();
+    }
+}
+
+void CUDAPIPWeightAggregator::check_weights_consistency() {
+    int num_weight_operators = (int) weight_ops_.size();
+    check_consistency(num_weight_operators);
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        size_t num_elements = weight_op_num_elements_[i];
+        check_consistency(num_elements);
+        DataType * data = weight_ops_data_[i];
+        assert(data != NULL);
+        check_consistency_gpu_array(data, num_elements);
+    }
+}
+
+// CUDAPIPParallelParameterServer
 
 void CUDAPIPParallelParameterServer::data_pulling_request_handling_thread_main() {
     CUDAPIPPSHeader header;

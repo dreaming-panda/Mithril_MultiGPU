@@ -14,7 +14,19 @@ __global__ void element_wise_add_kernel(
     }
 }
 
-void CUDAPIPParallelParameterServer::element_wise_add_kernel(
+void CUDAPIPWeightAggregator::element_wise_add_gpu(
+        DataType * src_0, DataType * src_1, DataType * dst,
+        size_t num_elements
+        ) {
+    const int block_size = 1024;
+    const int num_blocks = (num_elements + block_size - 1) / block_size;
+    element_wise_add_kernel<<<num_blocks, block_size>>>(
+            src_0, src_1, dst, num_elements
+            );
+    cudaDeviceSynchronize();
+}
+
+void CUDAPIPParallelParameterServer::element_wise_add_gpu(
         DataType * src_0, DataType * src_1, DataType * dst,
         size_t num_elements
         ) {
