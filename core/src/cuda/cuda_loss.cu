@@ -2,6 +2,7 @@
 #include<assert.h>
 #include<cuda_runtime.h>
 #include<math.h>
+
 __global__ void kernelx()
 {
     int x = threadIdx.x;

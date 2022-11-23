@@ -1397,25 +1397,33 @@ struct CUDAPIPPSHeader {
 
 class CUDAPIPParallelParameterServer {
     private:
+        // here is where the up-to-date weight data and gradients are actually stored
         std::unordered_map<WeightOperator*, std::pair<DataType*, DataType*>> weight_data_grad_;
+        // mapping a weight operator to its master node
         std::unordered_map<WeightOperator*, int> master_nodes_;
+        // the lock protecting gradient accumulation
         std::unordered_map<WeightOperator*, std::mutex*> locks_;
+        // threads who pull the up-to-date weights 
         std::thread * data_pulling_request_handling_thread_;
+        // threads who push the gradients
         std::thread * grad_pushing_handling_thread_;
+        // the optimizer
         AbstractLowerLevelOptimizer * optimizer_;
         CUDAOperatorsAndTensorsManager * op_ten_manager_;
         volatile bool is_terminated_;
 
-        void data_pulling_request_handling_thread_main();
-        void grad_pushing_handling_thread_main();
         DataType * data_buff;
         DataType * grad_buff;
         size_t data_len;
         size_t grad_len;
 
         double comm;
-
         std::unordered_map<WeightOperator*, DataType*> accum_buffer_;
+
+        void data_pulling_request_handling_thread_main();
+        void grad_pushing_handling_thread_main();
+
+        void element_wise_add_gpu(DataType * src_0, DataType * src_1, DataType * dst, size_t num_elements);
 
     public:
         CUDAPIPParallelParameterServer(

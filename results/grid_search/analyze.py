@@ -26,10 +26,9 @@ def get_test_acc(result_file):
                 return acc
 
 num_layers = [2, 3]
-#hunits = [16, 64, 256] FIXME
-hunits = [16, 64]
-learning_rates = ["0.001", "0.003", "0.01", "0.03"]
-decays = ["0", "0.00001", "0.0001"]
+hunits = [16, 64, 256] 
+learning_rates = ["0.0003", "0.001", "0.003", "0.01", "0.03"]
+decays = ["0", "0.00001", "0.0001", "0.001"]
 
 if __name__ == "__main__":
     for model in ["gcn"]:

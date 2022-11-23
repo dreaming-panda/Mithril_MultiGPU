@@ -662,11 +662,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         engine_->parameter_server_->clear_accum_buffer();
 
-        //if (epoch_id % 50 < 5) {
-        //    engine_->optimizer_->SetLearningRate(0);
-        //} else {
-        //    engine_->optimizer_->SetLearningRate(orignal_lr);
-        //}
 
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
         MPI_Barrier(MPI_COMM_WORLD);
@@ -1207,7 +1202,7 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
     assert(sum == num_global_vertices_);
 
     if (! node_id) {
-        printf("Chunks:");
+        printf("Chunks (number of global chunks: %d):", num_global_chunks_);
         int max_to_print = 10;
         if (num_global_chunks_ > max_to_print) {
             for (int i = 0; i < max_to_print - 1; ++ i) {
