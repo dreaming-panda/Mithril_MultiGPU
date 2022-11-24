@@ -1390,6 +1390,7 @@ class CUDAPIPGraphDataGradientUpdateReceiver {
             thread_ = NULL;
         }
 };
+
 struct CUDAPIPPSHeader {
     int type; // 0: activation pulling request; 1: grad pushing
     int weight_op_idx;
@@ -1532,8 +1533,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         CUDADataDependenciesTracker * data_dependencies_tracker_;
         CUDAShadowGradientsMasterVertices * shadow_gradients_;
         BPIPLocalGraph * local_graph_;
-        CUDAWeightStashingManager * weight_stashing_manager_;
-        CUDAPIPParallelParameterServer * parameter_server_;
+        //CUDAWeightStashingManager * weight_stashing_manager_;
+        //CUDAPIPParallelParameterServer * parameter_server_;
+        CUDAPIPWeightAggregator * weight_aggregator_;
 
         std::vector<int> local_chunk_ids_;
         std::vector<bool> backward_operator_mask_;
