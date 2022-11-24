@@ -633,7 +633,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     int num_local_chunks = local_chunk_ids.size();
     bool is_bottommost_node = engine_->is_bottommost_node();
 
-
     // task scheduling 
     MPI_Barrier(MPI_COMM_WORLD);
     usleep(1e6);
@@ -660,13 +659,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     int num_epoch = engine_->get_num_epoch();
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-        engine_->parameter_server_->clear_accum_buffer();
-
-        //if (epoch_id % 50 < 5) {
-        //    engine_->optimizer_->SetLearningRate(0);
-        //} else {
-        //    engine_->optimizer_->SetLearningRate(orignal_lr);
-        //}
+        //engine_->parameter_server_->clear_accum_buffer();
+        engine_->weight_aggregator_->clear_gradients();
+        // pull the latest weights
+        for (WeightOperator * op: engine_->local_weight_ops_) {
+            assert(op != NULL);
+            assert(op->get_num_output_tensors() == 1);
+            Tensor * tensor = op->get_output_tensor(0);
+            assert(tensor != NULL);
+            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+            assert(resource != NULL);
+            DataType * data = resource->get_gpu_data();
+            assert(data != NULL);
+            engine_->weight_aggregator_->pull_weights(op, data);
+        }
 
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
         MPI_Barrier(MPI_COMM_WORLD);
@@ -733,10 +739,18 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
 
         }
+        
+        Profiler::submit_main_thread_event(GPUSyncStartEvent);
+        MPI_Barrier(MPI_COMM_WORLD);
+        Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
         int num_startup_epoches = engine_->num_startup_epoches_;
-        if ((epoch_id + 1) % 10 == 0 || epoch_id >= num_startup_epoches * 10)
-            engine_->parameter_server_->commit_grad();
+        Profiler::submit_main_thread_event(GradSyncStartEvent);
+        if ((epoch_id + 1) % 10 == 0 || epoch_id >= num_startup_epoches * 10) {
+            //engine_->parameter_server_->commit_grad();
+            engine_->weight_aggregator_->commit_grad();
+        }
+        Profiler::submit_main_thread_event(GradSyncCompleteEvent);
 
         double train_acc;
         double valid_acc;
@@ -752,6 +766,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     }
     t += get_time();
     printf("------------------------node id %d,  total time %fs---------------\n", node_id, t);
+
+    // check the consistency of the distributed weights
+    engine_->weight_aggregator_->check_weights_consistency();
 
     Profiler::end_profiling();
     Profiler::breakdown_analysis();
@@ -787,7 +804,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             );
     avg_layer_comm /= double(num_epoch);
 
-    double ps_comm = engine_->parameter_server_->get_comm();
+    //double ps_comm = engine_->parameter_server_->get_comm();
+    double ps_comm = engine_->weight_aggregator_->get_comm();
     double avg_ps_comm;
     MPI_Allreduce(
             &ps_comm, &avg_ps_comm, 1, 
@@ -1207,7 +1225,7 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
     assert(sum == num_global_vertices_);
 
     if (! node_id) {
-        printf("Chunks:");
+        printf("Chunks (number of global chunks: %d):", num_global_chunks_);
         int max_to_print = 10;
         if (num_global_chunks_ > max_to_print) {
             for (int i = 0; i < max_to_print - 1; ++ i) {
@@ -2540,6 +2558,189 @@ void CUDAPIPGraphDataGradientUpdateReceiver::thread_main() {
 
     delete [] comm_buff;
 }
+// determine whether all gpus agree on the same value
+template<typename T>
+static void check_consistency(T value) {
+    T max_value;
+    MPI_Allreduce(
+            &value, &max_value, 1, DistributedSys::get_mpi_data_type<T>(),
+            MPI_MAX, MPI_COMM_WORLD
+            );
+    assert(value == max_value);
+}
+
+template<typename T>
+static void check_consistency_gpu_array(T * value, size_t num_elements) {
+    // copy the data to the cpu memory
+    T * value_cpu = new T[num_elements];
+    assert(value_cpu != NULL);
+    cudaMemcpy(value_cpu, value, sizeof(T) * num_elements, cudaMemcpyDeviceToHost);
+    // validate the consistency
+    T max_value[num_elements];
+    MPI_Allreduce(
+            value_cpu, max_value, num_elements, DistributedSys::get_mpi_data_type<T>(),
+            MPI_MAX, MPI_COMM_WORLD
+            );
+    for (int i = 0; i < num_elements; ++ i) {
+        assert(value_cpu[i] == max_value[i]);
+    }
+    // relase the memory
+    delete [] value_cpu;
+}
+
+// CUDAPIPWeightAggregator
+CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
+                CUDAOperatorsAndTensorsManager * op_ten_manager,
+                AbstractLowerLevelOptimizer * optimizer,
+                DistributedPIPHybridParallelExecutionEngineGPU * engine
+                ): op_ten_manager_(op_ten_manager), optimizer_(optimizer) {
+    int num_operators = op_ten_manager->get_num_operators();
+    int num_weight_operators = 0;
+    // init op2idx_ && weight_ops_
+    op2idx_.clear();
+    weight_ops_.clear();
+    for (int i = 0; i < num_operators; ++ i) {
+        Operator * op = op_ten_manager_->get_operator(i);
+        assert(op != NULL);
+        if (op->get_type() == OPERATOR_WEIGHT) {
+            op2idx_[(WeightOperator*) op] = num_weight_operators ++;
+            weight_ops_.push_back((WeightOperator*) op);
+        }
+    }
+    // init the remained data structures
+    weight_op_num_elements_.clear();
+    weight_ops_data_.clear();
+    weight_ops_grad_.clear();
+    size_t max_num_elements = 0;
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        WeightOperator * op = weight_ops_[i];
+        assert(op != NULL);
+        assert(op->get_num_output_tensors() == 1);
+        Tensor * tensor = op->get_output_tensor(0);
+        assert(tensor != NULL);
+        size_t num_elements = 1;
+        for (int j = 0; j < tensor->num_dims; ++ j) {
+            num_elements *= tensor->dims[j];
+        }
+        weight_op_num_elements_.push_back(num_elements);
+        max_num_elements = std::max(max_num_elements, num_elements);
+        DataType * data = NULL;
+        DataType * grad = NULL;
+        AllocateCUDAMemory<DataType>(&data, num_elements, __FILE__, __LINE__);
+        AllocateCUDAMemory<DataType>(&grad, num_elements, __FILE__, __LINE__);
+        assert(data != NULL && grad != NULL);
+        weight_ops_data_.push_back(data);
+        weight_ops_grad_.push_back(grad);
+        // remember to initialize the weight data
+        // need to make sure that the initial weights are the same across all gpus
+        engine->hybrid_init_weight_tensor_data(data, num_elements, tensor->dims[0]);
+        check_consistency_gpu_array(data, num_elements);
+    }
+    // clear the communication volume
+    comm_ = 0;
+    // allocate the reduce buffer
+    aggr_buffer_ = new DataType[max_num_elements];
+    assert(aggr_buffer_ != NULL);
+}
+
+CUDAPIPWeightAggregator::~CUDAPIPWeightAggregator() {
+    // release all GPU memory resources
+    for (DataType * data: weight_ops_data_) {
+        assert(data != NULL);
+        DeallocateCUDAMemory<DataType>(&data, __FILE__, __LINE__);
+    }
+    for (DataType * grad: weight_ops_grad_) {
+        assert(grad != NULL);
+        DeallocateCUDAMemory<DataType>(&grad, __FILE__, __LINE__);
+    }
+    assert(aggr_buffer_);
+    delete [] aggr_buffer_;
+}
+
+// at the beginning of each epoch, call clear_gradients() 
+void CUDAPIPWeightAggregator::clear_gradients() {
+    int num_weight_operators = (int) weight_ops_.size();
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        size_t num_elements = weight_op_num_elements_[i];
+        DataType * grad = weight_ops_grad_[i];
+        assert(grad != NULL);
+        cudaMemset(grad, 0, sizeof(DataType) * num_elements);
+    }
+}
+
+// pull the latest weight data
+void CUDAPIPWeightAggregator::pull_weights(WeightOperator * weight_op, DataType * data) {
+    int idx = op2idx_[weight_op];
+    size_t num_elements = weight_op_num_elements_[idx];
+    DataType * src_data  = weight_ops_data_[idx];
+    assert(src_data != NULL);
+    cudaMemcpy(data, src_data, sizeof(DataType) * num_elements, cudaMemcpyDeviceToDevice);
+}
+
+// push the gradients of a chunk of vertices
+void CUDAPIPWeightAggregator::push_grad(WeightOperator * weight_op, DataType * grad) {
+    int idx = op2idx_[weight_op];
+    size_t num_elements = weight_op_num_elements_[idx];
+    DataType * dst_grad = weight_ops_grad_[idx];
+    assert(dst_grad != NULL);
+    // aggregate the gradients
+    element_wise_add_gpu(dst_grad, grad, dst_grad, num_elements);
+}
+
+// at the end of each epoch, call commit_grad() to reduce the gradients 
+// and apply them with the provided optimizer
+void CUDAPIPWeightAggregator::commit_grad() {
+    int num_weight_operators = (int) weight_ops_.size();
+    check_consistency(num_weight_operators);
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        size_t num_elements = weight_op_num_elements_[i];
+        check_consistency(num_elements);
+        DataType * grad = weight_ops_grad_[i];
+        assert(grad != NULL);
+        // move the grad to the CPU memory
+        DataType * buff = aggr_buffer_;
+        assert(buff != NULL);
+        cudaMemcpy(buff, grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+        // in-place allreduce
+        MPI_Allreduce(
+                MPI_IN_PLACE, buff, num_elements, 
+                DistributedSys::get_mpi_data_type<DataType>(),
+                MPI_SUM, MPI_COMM_WORLD
+                );
+        // copy the data back to the GPU memory
+        cudaMemcpy(grad, buff, sizeof(DataType) * num_elements, cudaMemcpyHostToDevice);
+        // update the volume
+        comm_ += sizeof(DataType) * num_elements;
+    }
+    // do the local optimization
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        WeightOperator * op = weight_ops_[i];
+        assert(op != NULL);
+        size_t num_elements = weight_op_num_elements_[i];
+        DataType * data = weight_ops_data_[i];
+        DataType * grad = weight_ops_grad_[i];
+        assert(data != NULL && grad != NULL);
+        // optimize the weight
+        optimizer_->optimize_weights(
+                op, grad, data, num_elements
+                );
+        cudaDeviceSynchronize();
+    }
+}
+
+void CUDAPIPWeightAggregator::check_weights_consistency() {
+    int num_weight_operators = (int) weight_ops_.size();
+    check_consistency(num_weight_operators);
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        size_t num_elements = weight_op_num_elements_[i];
+        check_consistency(num_elements);
+        DataType * data = weight_ops_data_[i];
+        assert(data != NULL);
+        check_consistency_gpu_array(data, num_elements);
+    }
+}
+
+// CUDAPIPParallelParameterServer
 
 void CUDAPIPParallelParameterServer::data_pulling_request_handling_thread_main() {
     CUDAPIPPSHeader header;
@@ -2927,15 +3128,15 @@ DistributedPIPHybridParallelExecutionEngineGPU::~DistributedPIPHybridParallelExe
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPIPForwardTask task) {
     // pull the latest weights from the parameter servers and stash them 
     int chunk_id = task.chunk_id;
-    for (WeightOperator * op: local_weight_ops_) {
-        // pull the weight from the parameter server
-        Tensor * tensor = op->get_output_tensor(0);
-        assert(tensor != NULL);
-        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-        parameter_server_->pull_weight(op, resource->get_gpu_data()); 
-        // stash the weight
-        weight_stashing_manager_->stash_weight_data(op, chunk_id);
-    }
+    //for (WeightOperator * op: local_weight_ops_) { FIXME: no weight stashing needed
+    //    // pull the weight from the parameter server
+    //    Tensor * tensor = op->get_output_tensor(0);
+    //    assert(tensor != NULL);
+    //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+    //    parameter_server_->pull_weight(op, resource->get_gpu_data()); 
+    //    // stash the weight
+    //    weight_stashing_manager_->stash_weight_data(op, chunk_id);
+    //}
 
     int node_id = DistributedSys::get_instance()->get_node_id();
     VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
@@ -3002,11 +3203,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     VertexId local_vid_end = vid_translation_->get_local_vid_master_vertex(global_vid_end);
     int op_idx_begin = partitioning_.partition_op_begin[node_id];
     int op_idx_end = partitioning_.partition_op_end[node_id];
-    // copy the stashed weight data back 
-    for (WeightOperator * op: local_weight_ops_) {
-        weight_stashing_manager_->update_latest_data(op);
-        weight_stashing_manager_->restore_stashed_weight_data(op, chunk_id);
-    }
+    //// copy the stashed weight data back 
+    //for (WeightOperator * op: local_weight_ops_) {
+    //    weight_stashing_manager_->update_latest_data(op);
+    //    weight_stashing_manager_->restore_stashed_weight_data(op, chunk_id);
+    //}
+
     // copy the shadow gradients of tensor dependent on other nodes 
     // and zero out the gradients of other tensors
     const std::set<Tensor*> * all_backward_dependent_tensors = 
@@ -3107,7 +3309,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         Tensor * tensor = op->get_output_tensor(0);
         assert(tensor != NULL);
         TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-        parameter_server_->push_grad(op, resource->get_gpu_grad());
+        //parameter_server_->push_grad(op, resource->get_gpu_grad());
+        weight_aggregator_->push_grad(op, resource->get_gpu_grad());
     }
     //// apply the gradients locally to verify the correctness first
     //AbstractLowerLevelOptimizer * lower_level_optimizer = 
@@ -3532,7 +3735,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     
     
     local_graph_ = lgraph;
-    parameter_server_ = new CUDAPIPParallelParameterServer(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this);
+    //parameter_server_ = new CUDAPIPParallelParameterServer(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this);
+    weight_aggregator_ = new CUDAPIPWeightAggregator(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this);
     
     assert(op_ten_manager_ != NULL);
     assert(vid_translation_ != NULL);
@@ -3541,7 +3745,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     assert(data_dependencies_tracker_ != NULL);
     assert(shadow_gradients_ != NULL);
     assert(local_graph_ != NULL);
-    assert(parameter_server_ != NULL);
+    //assert(parameter_server_ != NULL);
+    assert(weight_aggregator_ != NULL);
 
     
     printf("*** Node %d, setting up some other necessary information...\n", node_id);
@@ -3638,8 +3843,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     this->gpu_training_mask_ = local_gpu_training_mask_;
     this->gpu_valid_mask_ = local_gpu_valid_mask_;
     this->gpu_test_mask_ = local_gpu_test_mask_;
-    weight_stashing_manager_ = new CUDAWeightStashingManager(local_weight_ops_);
-    assert(weight_stashing_manager_ != NULL);
+    //weight_stashing_manager_ = new CUDAWeightStashingManager(local_weight_ops_);
+    //assert(weight_stashing_manager_ != NULL);
 
     // start task scheduling
     scheduler_ = new CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(
@@ -3650,7 +3855,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     scheduler_->schedule_task();
     delete scheduler_;
 
-    delete weight_stashing_manager_;
+    //delete weight_stashing_manager_;
 
     //int num_tensors = op_ten_manager_->get_num_tensors();
     //for (int i = 0; i < num_tensors; ++ i) {
@@ -3692,7 +3897,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     delete data_dependencies_tracker_;
     delete shadow_gradients_;
     delete local_graph_;
-    delete parameter_server_;
+    //delete parameter_server_;
+    delete weight_aggregator_;
 
     // destroy the partitioning
     delete [] partitioning.partition_vid_begin;

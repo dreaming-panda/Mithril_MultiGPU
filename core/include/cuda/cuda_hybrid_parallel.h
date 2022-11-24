@@ -1390,32 +1390,92 @@ class CUDAPIPGraphDataGradientUpdateReceiver {
             thread_ = NULL;
         }
 };
+
 struct CUDAPIPPSHeader {
     int type; // 0: activation pulling request; 1: grad pushing
     int weight_op_idx;
 } __attribute__((packed));
 
+// There are three weight-optimization phases within a epoch:
+// 1) The gradient aggregation phase: 
+//    Once a chunk gets processed, it gradients will be sent to the local parameter server 
+//    object to be aggregated, no network traffic ocurs in this phase;
+// 2) The gradient synchronization phase:
+//    A few Allreduces are invoked to aggregated the gradients globally;
+// 3) At this point, the optimizer is invoked locally on each gpu to do the weight optimization;
+
+class CUDAPIPWeightAggregator {
+    private:
+        std::unordered_map<WeightOperator*, int> op2idx_;
+        std::vector<WeightOperator*> weight_ops_;
+        std::vector<size_t> weight_op_num_elements_;
+        std::vector<DataType*> weight_ops_data_;
+        std::vector<DataType*> weight_ops_grad_;
+        DataType * aggr_buffer_;
+
+        AbstractLowerLevelOptimizer * optimizer_;
+        CUDAOperatorsAndTensorsManager * op_ten_manager_;
+
+        // the communication volume
+        double comm_; 
+
+        // a helper function
+        void element_wise_add_gpu(DataType * src_0, DataType * src_1, DataType * dst, size_t num_elements);
+
+    public:
+        CUDAPIPWeightAggregator(
+                CUDAOperatorsAndTensorsManager * op_ten_manager,
+                AbstractLowerLevelOptimizer * optimizer,
+                DistributedPIPHybridParallelExecutionEngineGPU * engine
+                );
+        ~CUDAPIPWeightAggregator();
+
+        // at the beginning of each epoch, call clear_gradients() 
+        void clear_gradients();
+        // pull the latest weight data
+        void pull_weights(WeightOperator * weight_op, DataType * data);
+        // push the gradients of a chunk of vertices
+        void push_grad(WeightOperator * weight_op, DataType * grad);
+        // at the end of each epoch, call commit_grad() to reduce the gradients 
+        // and apply them with the provided optimizer
+        void commit_grad();
+        // check whether all weights are consistent across all GPUs
+        // this is expensive and only invokes at the end of the training
+        void check_weights_consistency();
+
+        // other helper functions
+        double get_comm() {return comm_;}
+};
+
 class CUDAPIPParallelParameterServer {
     private:
+        // here is where the up-to-date weight data and gradients are actually stored
         std::unordered_map<WeightOperator*, std::pair<DataType*, DataType*>> weight_data_grad_;
+        // mapping a weight operator to its master node
         std::unordered_map<WeightOperator*, int> master_nodes_;
+        // the lock protecting gradient accumulation
         std::unordered_map<WeightOperator*, std::mutex*> locks_;
+        // threads who pull the up-to-date weights 
         std::thread * data_pulling_request_handling_thread_;
+        // threads who push the gradients
         std::thread * grad_pushing_handling_thread_;
+        // the optimizer
         AbstractLowerLevelOptimizer * optimizer_;
         CUDAOperatorsAndTensorsManager * op_ten_manager_;
         volatile bool is_terminated_;
 
-        void data_pulling_request_handling_thread_main();
-        void grad_pushing_handling_thread_main();
         DataType * data_buff;
         DataType * grad_buff;
         size_t data_len;
         size_t grad_len;
 
         double comm;
-
         std::unordered_map<WeightOperator*, DataType*> accum_buffer_;
+
+        void data_pulling_request_handling_thread_main();
+        void grad_pushing_handling_thread_main();
+
+        void element_wise_add_gpu(DataType * src_0, DataType * src_1, DataType * dst, size_t num_elements);
 
     public:
         CUDAPIPParallelParameterServer(
@@ -1474,8 +1534,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         CUDADataDependenciesTracker * data_dependencies_tracker_;
         CUDAShadowGradientsMasterVertices * shadow_gradients_;
         BPIPLocalGraph * local_graph_;
-        CUDAWeightStashingManager * weight_stashing_manager_;
-        CUDAPIPParallelParameterServer * parameter_server_;
+        //CUDAWeightStashingManager * weight_stashing_manager_;
+        //CUDAPIPParallelParameterServer * parameter_server_;
+        CUDAPIPWeightAggregator * weight_aggregator_;
 
         std::vector<int> local_chunk_ids_;
         std::vector<bool> backward_operator_mask_;
@@ -1703,6 +1764,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         friend class CUDAPIPGraphDataGradientUpdateSender;
         friend class CUDAPIPGraphDataGradientUpdateReceiver;
         friend class CUDAPIPParallelParameterServer;
+        friend class CUDAPIPWeightAggregator;
     public:
         DistributedPIPHybridParallelExecutionEngineGPU();
         ~DistributedPIPHybridParallelExecutionEngineGPU();

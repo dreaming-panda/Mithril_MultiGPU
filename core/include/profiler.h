@@ -25,6 +25,8 @@ enum ProfilerEventType {
     ForwardTaskCompleteEvent,
     BackwardTaskStartEvent,
     BackwardTaskCompleteEvent,
+    GradSyncStartEvent,
+    GradSyncCompleteEvent,
     AccuracyCalculationTaskStartEvent,
     AccuracyCalculationTaskCompleteEvent,
     GPUSyncStartEvent,

@@ -41,33 +41,36 @@ def read_async_gpu_accc(num_epoch, graph, model, res_dir, num_startup_epoches = 
 
 if __name__ == "__main__":
 
-    graph = "arxiv"
-    model = "gcn"
+    for graph in ["reddit", "products", "arxiv"]:
+        
+        model = "gcn"
 
-    num_epoch = 500
-    epoches = [i for i in range(num_epoch)]
+        num_epoch = 500
+        epoches = [i for i in range(num_epoch)]
 
-    #for chunks in [1, 2, 8, 32, 128, 512]:
-    #    acc = read_async_gpu_accc(num_epoch, graph, model, "3-layer/%s" % (chunks))
-    #    plt.plot(epoches, acc, "-+", label = "%s-chunks" % (chunks))
+        #for chunks in [1, 2, 8, 32, 128, 512]:
+        #    acc = read_async_gpu_accc(num_epoch, graph, model, "3-layer/%s" % (chunks))
+        #    plt.plot(epoches, acc, "-+", label = "%s-chunks" % (chunks))
 
-    #plt.xlabel("epoch")
-    #plt.ylabel("test acc")
-    #plt.title("ogbn-arxiv 3-layer GCN")
-    #plt.legend()
-    #plt.show()
+        #plt.xlabel("epoch")
+        #plt.ylabel("test acc")
+        #plt.title("ogbn-arxiv 3-layer GCN")
+        #plt.legend()
+        #plt.show()
 
-    num_epoch = 2000
-    epoches = [i for i in range(num_epoch)]
+        num_epoch = 2000
+        epoches = [i for i in range(num_epoch)]
 
-    #for chunks in [1, 2, 8, 32, 128, 512]:
-    for chunks in [1, 2, 8, 32, 128, 512]:
-        acc = read_async_gpu_accc(num_epoch, graph, model, "2-layer/%s" % (chunks))
-        plt.plot(epoches, acc, "-", label = "%s-chunks" % (chunks))
-    plt.xlabel("epoch")
-    plt.ylabel("test acc")
-    plt.title("ogbn-arxiv 2-layer GCN")
-    plt.ylim([0.6, 0.75])
-    plt.legend()
-    plt.show()
+        #for chunks in [1, 2, 8, 32, 128, 512]:
+        for chunks in [1, 2, 8, 32, 128]:
+            acc = read_async_gpu_accc(num_epoch, graph, model, "2-layer/%s" % (chunks))
+            plt.plot(epoches, acc, "-", label = "%s-chunks" % (chunks))
+        plt.xlabel("epoch")
+        plt.ylabel("test acc")
+        plt.title("%s 2-layer GCN" % (graph))
+        max_acc = max(acc)
+        plt.ylim([max_acc - 0.005, max_acc + 0.002])
+        plt.legend()
+        plt.show()
+
 
