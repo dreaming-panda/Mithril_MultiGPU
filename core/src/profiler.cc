@@ -67,6 +67,7 @@ void Profiler::breakdown_analysis() {
     double bubble_time = 0;
     double compute_time = 0;
     double imbalance_time = 0;
+    double grad_sync_time = 0;
     // start simulation to collect performance metrics
     size_t main_thread_event_idx = 0;
     size_t forward_task_dispatcher_event_idx = 0;
@@ -158,6 +159,9 @@ void Profiler::breakdown_analysis() {
         } else if (event.get_type() == BackwardTaskStartEvent) {
             assert(next_event.get_type() == BackwardTaskCompleteEvent);
             compute_time += next_event.get_time() - event.get_time();
+        } else if (event.get_type() == GradSyncStartEvent) {
+            assert(next_event.get_type() == GradSyncCompleteEvent);
+            grad_sync_time += next_event.get_time() - event.get_time();
         } else if (event.get_type() == AccuracyCalculationTaskStartEvent) {
             assert(next_event.get_type() == AccuracyCalculationTaskCompleteEvent);
             compute_time += next_event.get_time() - event.get_time();
@@ -179,6 +183,7 @@ void Profiler::breakdown_analysis() {
     breakdown_manager.add_breakdown("Bubble", bubble_time);
     breakdown_manager.add_breakdown("Compute", compute_time);
     breakdown_manager.add_breakdown("Imbalance", imbalance_time);
+    breakdown_manager.add_breakdown("GradSync", grad_sync_time);
 
     int node_id = DistributedSys::get_instance()->get_node_id(); 
     if (breakdown_manager.get_breakdown_sum() / (end_time - start_time) <= 0.9) {

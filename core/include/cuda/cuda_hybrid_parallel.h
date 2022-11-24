@@ -1411,6 +1411,7 @@ class CUDAPIPWeightAggregator {
         std::vector<size_t> weight_op_num_elements_;
         std::vector<DataType*> weight_ops_data_;
         std::vector<DataType*> weight_ops_grad_;
+        DataType * aggr_buffer_;
 
         AbstractLowerLevelOptimizer * optimizer_;
         CUDAOperatorsAndTensorsManager * op_ten_manager_;

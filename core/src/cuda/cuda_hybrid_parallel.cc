@@ -739,12 +739,18 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
 
         }
+        
+        Profiler::submit_main_thread_event(GPUSyncStartEvent);
+        MPI_Barrier(MPI_COMM_WORLD);
+        Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
         int num_startup_epoches = engine_->num_startup_epoches_;
+        Profiler::submit_main_thread_event(GradSyncStartEvent);
         if ((epoch_id + 1) % 10 == 0 || epoch_id >= num_startup_epoches * 10) {
             //engine_->parameter_server_->commit_grad();
             engine_->weight_aggregator_->commit_grad();
         }
+        Profiler::submit_main_thread_event(GradSyncCompleteEvent);
 
         double train_acc;
         double valid_acc;
@@ -2566,7 +2572,8 @@ static void check_consistency(T value) {
 template<typename T>
 static void check_consistency_gpu_array(T * value, size_t num_elements) {
     // copy the data to the cpu memory
-    T value_cpu[num_elements];
+    T * value_cpu = new T[num_elements];
+    assert(value_cpu != NULL);
     cudaMemcpy(value_cpu, value, sizeof(T) * num_elements, cudaMemcpyDeviceToHost);
     // validate the consistency
     T max_value[num_elements];
@@ -2577,6 +2584,8 @@ static void check_consistency_gpu_array(T * value, size_t num_elements) {
     for (int i = 0; i < num_elements; ++ i) {
         assert(value_cpu[i] == max_value[i]);
     }
+    // relase the memory
+    delete [] value_cpu;
 }
 
 // CUDAPIPWeightAggregator
@@ -2602,6 +2611,7 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
     weight_op_num_elements_.clear();
     weight_ops_data_.clear();
     weight_ops_grad_.clear();
+    size_t max_num_elements = 0;
     for (int i = 0; i < num_weight_operators; ++ i) {
         WeightOperator * op = weight_ops_[i];
         assert(op != NULL);
@@ -2613,6 +2623,7 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
             num_elements *= tensor->dims[j];
         }
         weight_op_num_elements_.push_back(num_elements);
+        max_num_elements = std::max(max_num_elements, num_elements);
         DataType * data = NULL;
         DataType * grad = NULL;
         AllocateCUDAMemory<DataType>(&data, num_elements, __FILE__, __LINE__);
@@ -2627,6 +2638,9 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
     }
     // clear the communication volume
     comm_ = 0;
+    // allocate the reduce buffer
+    aggr_buffer_ = new DataType[max_num_elements];
+    assert(aggr_buffer_ != NULL);
 }
 
 CUDAPIPWeightAggregator::~CUDAPIPWeightAggregator() {
@@ -2639,6 +2653,8 @@ CUDAPIPWeightAggregator::~CUDAPIPWeightAggregator() {
         assert(grad != NULL);
         DeallocateCUDAMemory<DataType>(&grad, __FILE__, __LINE__);
     }
+    assert(aggr_buffer_);
+    delete [] aggr_buffer_;
 }
 
 // at the beginning of each epoch, call clear_gradients() 
@@ -2682,7 +2698,8 @@ void CUDAPIPWeightAggregator::commit_grad() {
         DataType * grad = weight_ops_grad_[i];
         assert(grad != NULL);
         // move the grad to the CPU memory
-        DataType buff[num_elements];
+        DataType * buff = aggr_buffer_;
+        assert(buff != NULL);
         cudaMemcpy(buff, grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
         // in-place allreduce
         MPI_Allreduce(
