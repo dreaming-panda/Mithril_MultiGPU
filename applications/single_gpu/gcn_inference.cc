@@ -27,7 +27,6 @@
 #include "cuda/cuda_single_cpu_engine.h"
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
-#include "partitioner.h"
 #include <fstream>
 
 using namespace std;
@@ -62,14 +61,12 @@ class GCN: public AbstractApplication {
                 if (i == num_layers_ - 1) { 
                     t = softmax(t);
                 } else {
-                    t = relu(t); 
+                    t = relu(t);
                 }
             }
             return t;
         }
 };
-
-
 
 int main(int argc, char ** argv) {
     // parse input arguments
@@ -80,13 +77,7 @@ int main(int argc, char ** argv) {
         ("graph", po::value<std::string>()->required(), "The directory of the graph dataset.")
         ("layers", po::value<int>()->required(), "The number of GCN layers.")
         ("hunits", po::value<int>()->required(), "The number of hidden units.")
-        ("epoch", po::value<int>()->required(), "The number of epoches.")
-        ("lr", po::value<double>()->required(), "The learning rate.")
-        ("decay", po::value<double>()->required(), "Weight decay.")
-        ("part", po::value<std::string>()->default_value("hybrid"), "The graph-model co-partition strategy: graph, model, hybrid.")
-        ("startup", po::value<int>()->default_value(0), "The number of startup epoches (i.e., epoches without any asynchrony).")
-        ("random", po::value<int>()->default_value(0), "Randomly dispatch the execution of the chunk? 1: Yes, 0: No.")
-        ("chunks", po::value<int>()->default_value(128), "The number of chunks.");
+        ("weight", po::value<std::string>()->required(), "The weight file.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -105,31 +96,24 @@ int main(int argc, char ** argv) {
     std::string graph_path = vm["graph"].as<std::string>();
     int num_layers = vm["layers"].as<int>();
     int num_hidden_units = vm["hunits"].as<int>();
-    int num_epoch = vm["epoch"].as<int>();
-    double learning_rate = vm["lr"].as<double>();
-    double weight_decay = vm["decay"].as<double>();
-    int num_startup_epoches = vm["startup"].as<int>();
-    std::string partition_strategy = vm["part"].as<std::string>();
-    bool random_dispatch = vm["random"].as<int>() == 1;
-    int num_chunks = vm["chunks"].as<int>();
+    int num_epoch = 1;
+    double learning_rate = 0;
+    double weight_decay = 0;
+    std::string weight_file = vm["weight"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
     printf("The number of hidden units: %d\n", num_hidden_units);
     printf("The number of training epoches: %d\n", num_epoch);
-    printf("The number of startup epoches: %d\n", num_startup_epoches);
     printf("Learning rate: %.6f\n", learning_rate);
-    printf("The partition strategy: %s\n", partition_strategy.c_str());
 
     volatile bool terminated = false;
+    cudaSetDevice(0);
     Context::init_context();
-    int node_id = DistributedSys::get_instance()->get_node_id();
-    int node_number = DistributedSys::get_instance()->get_num_nodes();
 
-    // loading graph
+    // load the graph dataset
     CUDAFullyStructualGraph * graph_structure;
     AbstractGraphNonStructualData * graph_non_structural_data;
-
     CUDAStructualGraphLoader graph_structure_loader;
     GraphNonStructualDataLoaderFullyReplicated graph_non_structural_data_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
@@ -144,15 +128,18 @@ int main(int argc, char ** argv) {
             graph_path + "/vertex_data_partition.txt"
             );
     graph_structure->SetCuda(true);
+    graph_structure->InitMemory();
+    graph_structure->InitCsrBuffer();
     int num_classes = graph_non_structural_data->get_num_labels();
     int num_features = graph_non_structural_data->get_num_feature_dimensions();
     printf("Number of classes: %d\n", num_classes);
     printf("Number of feature dimensions: %d\n", num_features);
 
-    // initialize the engine
+    // setup the execution engine
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
-    DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
+    SingleNodeExecutionEngineGPU * execution_engine = new SingleNodeExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay);
+    LearningRateScheduler * lr_scheduler = new LearningRateScheduler(0.005e-3, learning_rate, 0.8, 1e-8, 20000, 0);
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
     cublasHandle_t cublas;
     cublasCreate(&cublas);
@@ -162,6 +149,7 @@ int main(int argc, char ** argv) {
     cusparseCreate(&cusparse);
     executor->set_activation_size(num_hidden_units,num_classes);
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
+    executor->build_inner_csr_();
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
     int * training = new int[graph_structure->get_num_global_vertices()];
@@ -184,69 +172,49 @@ int main(int argc, char ** argv) {
        if(y==2){ntest++; test[x] = 1;}
     }
     in_mask.close();
-    // int * gpu_training_mask_;
-    // int * gpu_valid_mask_;
-    // int * gpu_test_mask_;
-    // AllocateCUDAMemory<int>(&gpu_training_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // AllocateCUDAMemory<int>(&gpu_valid_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // AllocateCUDAMemory<int>(&gpu_test_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // CopyFromHostToCUDADevice<int>(gpu_training_mask_, training, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // CopyFromHostToCUDADevice<int>(gpu_valid_mask_, valid, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // CopyFromHostToCUDADevice<int>(gpu_test_mask_, test, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    int * gpu_training_mask_;
+    int * gpu_valid_mask_;
+    int * gpu_test_mask_;
+    AllocateCUDAMemory<int>(&gpu_training_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    AllocateCUDAMemory<int>(&gpu_valid_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    AllocateCUDAMemory<int>(&gpu_test_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(gpu_training_mask_, training, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(gpu_valid_mask_, valid, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(gpu_test_mask_, test, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
     printf("train nodes %d, valid nodes %d, test nodes %d\n", ntrain, nvalid, ntest);
-
-    
-    //loss->set_mask(training, valid, test, gpu_training_mask_, gpu_valid_mask_, gpu_test_mask_, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
-    execution_engine->set_mask(training, valid, test, nullptr, nullptr, nullptr, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
+    loss->set_mask(training, valid, test, gpu_training_mask_, gpu_valid_mask_, gpu_test_mask_, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
+    execution_engine->set_mask(training, valid, test, gpu_training_mask_, gpu_valid_mask_, gpu_test_mask_, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
     execution_engine->setCuda(cudnn, graph_structure->get_num_global_vertices());
     execution_engine->set_graph_structure(graph_structure);
     execution_engine->set_graph_non_structural_data(graph_non_structural_data);
     execution_engine->set_optimizer(optimizer);
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
+    execution_engine->set_lr_scheduler(lr_scheduler);
 
-    // determine the partitioning 
-    if (partition_strategy == "hybrid") {
-        ParallelismDesigner parallelism_designer(graph_structure, 0.1);
-        int num_gpus = DistributedSys::get_instance()->get_num_nodes();
-        CUDAPIPPartitioning partition = parallelism_designer.co_partition_model_and_graph(
-                gcn, num_gpus, num_hidden_units
-                );
-        execution_engine->set_partition(partition);
-    } else {
-        // TODO: add model && graph strategy
-        fprintf(stderr, "Partition strategy %s is not supported\n",
-                partition_strategy.c_str());
-        exit(-1);
-    }
-
-    // model training
-    if (random_dispatch) {
-        execution_engine->enable_random_dispatch();
-    }
-    execution_engine->set_num_chunks(num_chunks);
-    execution_engine->set_num_startup_epoches(num_startup_epoches);
+    // train the model
+    execution_engine->set_weight_file(weight_file);
     execution_engine->execute_application(gcn, num_epoch);
 
-    // destroy the model and the engine
+    // destroy the model
     delete gcn;
     delete execution_engine;
     delete optimizer;
     delete executor;
     delete loss;
-    // DeallocateCUDAMemory<int>(&gpu_training_mask_, __FILE__, __LINE__);
-    // DeallocateCUDAMemory<int>(&gpu_valid_mask_, __FILE__, __LINE__);
-    // DeallocateCUDAMemory<int>(&gpu_test_mask_, __FILE__, __LINE__);
+    delete lr_scheduler;
+    DeallocateCUDAMemory<int>(&gpu_training_mask_, __FILE__, __LINE__);
+    DeallocateCUDAMemory<int>(&gpu_valid_mask_, __FILE__, __LINE__);
+    DeallocateCUDAMemory<int>(&gpu_test_mask_, __FILE__, __LINE__);
     // destroy the graph dataset
     graph_structure_loader.destroy_graph_structure(graph_structure);
     graph_non_structural_data_loader.destroy_graph_non_structural_data(graph_non_structural_data);
-    cublasDestroy(cublas);
-    cudnnDestroy(cudnn);
-    cusparseDestroy(cusparse);
 
     Context::finalize_context();
     terminated = true;
-    printf("[MPI Rank %d] Success \n", node_id);
+    cublasDestroy(cublas);
+    cudnnDestroy(cudnn);
+    cusparseDestroy(cusparse);
 
     return 0;
 }

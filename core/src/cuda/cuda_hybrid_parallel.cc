@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <random>
+
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_utils.h"
 #include "profiler.h"
@@ -5,6 +8,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
+
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
         pthread_barrier_t * barrier): 
@@ -23,7 +27,11 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
     int num_epoch = engine_->get_num_epoch();
-    const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
+    const std::vector<int>& local_chunk_ids_tmp = engine_->get_local_chunk_ids();
+    std::vector<int> local_chunk_ids;
+    for (int i: local_chunk_ids_tmp) 
+        local_chunk_ids.push_back(i);
+
     int num_local_chunks = local_chunk_ids.size();
     CUDAPIPForwardTask task;
     CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
@@ -40,6 +48,11 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
             // FIXME: a simple dispatching strategy of the topmost nodes not considering load balancing is used here
+            if (engine_->random_dispatch_) {
+                printf("RANDOMLY DISPATCH THE CHUNKS...\n");
+                auto rand_gen = std::default_random_engine{};
+                std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
+            }
             for (int chunk_id: local_chunk_ids) {
                 task.epoch_id = epoch_id;
                 task.chunk_id = chunk_id;
@@ -3428,11 +3441,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
 void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {
     FILE * fin = fopen(path.c_str(), "r");
     assert(fin != NULL);
-    fscanf(fin, "%d", &p.num_partitions); // the first line: the number of partitions
+    assert(fscanf(fin, "%d", &p.num_partitions) == 1); // the first line: the number of partitions
     for (int i = 0; i < p.num_partitions; ++ i) {
         VertexId vid_begin, vid_end;
         int op_begin, op_end;
-        fscanf(fin, "%u%u%d%d", &vid_begin, &vid_end, &op_begin, &op_end); //each following line: the range of the vertices and operators
+        assert(fscanf(fin, "%u%u%d%d", &vid_begin, &vid_end, &op_begin, &op_end) == 4); //each following line: the range of the vertices and operators
         p.partition_vid_begin[i] = vid_begin;
         p.partition_vid_end[i] = vid_end;
         p.partition_op_begin[i] = op_begin;
@@ -3503,7 +3516,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-             graph_structure_->get_num_global_vertices() / 128
+             graph_structure_->get_num_global_vertices() / user_specified_num_chunks_
             //graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new CUDADataDependenciesTracker(

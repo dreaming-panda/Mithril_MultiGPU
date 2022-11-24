@@ -1486,6 +1486,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         double accum_loss_;
 
         int num_startup_epoches_ = 0;
+        bool random_dispatch_ = false;
+        int user_specified_num_chunks_ = 128;
 
         // the threads responsible for communication and computation
         pthread_barrier_t barrier_;
@@ -1711,6 +1713,12 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         void set_num_startup_epoches(int num_startup_epoches) {
             num_startup_epoches_ = num_startup_epoches;
+        }
+        void enable_random_dispatch() {
+            random_dispatch_ = true;
+        }
+        void set_num_chunks(int num_chunks) {
+            user_specified_num_chunks_ = num_chunks;
         }
 };
 
