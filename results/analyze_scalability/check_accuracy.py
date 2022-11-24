@@ -48,6 +48,7 @@ if __name__ == "__main__":
         epoches = [i for i in range(num_epoch)]
         single_gpu_acc = read_async_gpu_accc(num_epoch, graph, model, "1")
         multi_gpu_acc = read_async_gpu_accc(num_epoch, graph, model, "12")
+        max_acc = max(single_gpu_acc)
 
         plt.plot(epoches, single_gpu_acc, "-", label = "single-gpu")
         plt.plot(epoches, multi_gpu_acc, "-", label = "12-gpu")
@@ -56,6 +57,7 @@ if __name__ == "__main__":
         plt.ylabel("Test Acc")
         plt.title(graph)
         plt.legend()
+        plt.ylim([max_acc - 0.05, max_acc + 0.01])
 
         plt.show()
 
