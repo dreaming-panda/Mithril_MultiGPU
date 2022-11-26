@@ -75,7 +75,7 @@ def read_async_gpu_accc(num_epoch, graph, model, num_startup_epoches):
     return acc
 
 if __name__ == "__main__":
-    num_epoch = 3000
+    num_epoch = 2000
 
     model = "gcn"
     for graph in ["reddit", "products", "arxiv"]:
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         print("Model = %s, Graph = %s, it takes sync %s epoches to reach the target accuracy %.4f." % (
             model, graph, highest_acc_epoch + 1, highest_acc
             ))
-        for num_startup_epoches in [0, 100]:
+        for num_startup_epoches in [0]:
             async_acc = read_async_gpu_accc(num_epoch, graph, model, num_startup_epoches)
             reached_same_acc = False
             for i in range(len(async_acc)):
@@ -109,7 +109,7 @@ if __name__ == "__main__":
                     ))
             plt.plot(epoches, async_acc, "-", label = "async (startup=%s)" % (num_startup_epoches))
         max_acc = max(sync_acc)
-        plt.ylim([max_acc - 0.05, max_acc + 0.02])
+        plt.ylim([max_acc - 0.1, max_acc + 0.02])
         plt.legend()
         plt.show()
 
