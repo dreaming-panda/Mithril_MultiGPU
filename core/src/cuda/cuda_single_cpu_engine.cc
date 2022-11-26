@@ -8,11 +8,13 @@
 #include <stdlib.h>
 #include <fstream>
 
-#define DUMP_WEGIHTS (true) // FIXME
+#define DUMP_WEGIHTS (false) 
 
 void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::vector<Operator*> &operators) {
     assert(executor_ != nullptr);
+    int op_idx = 0;
     for (Operator* op: operators) {
+        per_op_runtime_[op_idx] -= get_time();
         switch (op->get_type()) {
             case OPERATOR_INPUT:
                 // do nothing
@@ -44,6 +46,8 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
         }
+        per_op_runtime_[op_idx] += get_time();
+        op_idx ++;
     }
 }
 void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
@@ -77,6 +81,7 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
     for (size_t i = num_operators; i > 0; -- i) {
         if (operator_mask[i - 1] == false) continue;
         Operator * op = operators[i - 1];
+        per_op_runtime_[i - 1] -= get_time();
         switch (op->get_type()) {
             case OPERATOR_INPUT:
                 // do nothing
@@ -108,6 +113,7 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
         }
+        per_op_runtime_[i - 1] += get_time();
     }
 
 }
@@ -326,6 +332,9 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy_mask(Tensor * output_ten
 double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
     assert(application != NULL);
     const std::vector<Operator*>& operators = application->get_operators();
+    
+    per_op_runtime_ = new double[operators.size()];
+    memset(per_op_runtime_, 0, sizeof(double) * operators.size());
 
     // allocating resource for all tensors
     printf("*** Allocating resources for all tensors...\n");
@@ -554,5 +563,17 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         assert(fclose(weight_fout) == 0);
     }
 
+    delete [] per_op_runtime_;
+    printf("The runtime of each operator:\n");
+    for (int i = 0; i < num_operators; ++ i) {
+        printf("\tOp %d (%s),\tRumtime: %.6f s\n",
+                i, get_op_type_str(operators[i]->get_type()).c_str(),
+                per_op_runtime_[i]
+                );
+    }
+
     return train_accuracy;
 }
+
+
+

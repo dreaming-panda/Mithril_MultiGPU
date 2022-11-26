@@ -30,8 +30,8 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         bool usingsplit;
         std::string weight_file_;
         bool inference_mode_ = false;
-        
-        
+
+        double * per_op_runtime_;
         
 
     protected:
