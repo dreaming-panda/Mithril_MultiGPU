@@ -1206,6 +1206,7 @@ class CUDAPIPGraphDataActivationUpdateSender {
         int num_net_batches_;
 
         void thread_main();
+        void LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst);
 
     public:
         CUDAPIPGraphDataActivationUpdateSender(
@@ -1254,6 +1255,12 @@ class CUDAPIPGraphDataActivationUpdateSender {
         inline int get_num_net_batches() {
             return num_net_batches_;
         }
+        bool * cpu_has_incomming_mirrors;
+        bool * gpu_has_incomming_mirrors;
+        int num_master_vertices;
+        int local_partition_start;
+        
+
 };
 
 class CUDAPIPGraphDataActivationUpdateReceiver {
@@ -1309,6 +1316,7 @@ class CUDAPIPGraphDataGradientUpdateSender {
         int num_net_batches_;
 
         void thread_main();
+        void LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst);
 
     public:
         CUDAPIPGraphDataGradientUpdateSender(
@@ -1356,6 +1364,10 @@ class CUDAPIPGraphDataGradientUpdateSender {
         inline int get_num_net_batches() {
             return num_net_batches_;
         }
+        bool * cpu_has_incomming_mirrors;
+        bool * gpu_has_incomming_mirrors;
+        int num_master_vertices;
+        int local_partition_start;
 };
 class CUDAPIPGraphDataGradientUpdateReceiver {
     private:
@@ -1571,6 +1583,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int local_ntrain;
         int local_nvalid;
         int local_ntest;
+
+        bool * cpu_has_incomming_mirrors;
+        bool * gpu_has_incomming_mirrors;
         // the scheduler
         CUDAAbstractPIPScheduler * scheduler_;
         cudnnHandle_t * cudnn_;
