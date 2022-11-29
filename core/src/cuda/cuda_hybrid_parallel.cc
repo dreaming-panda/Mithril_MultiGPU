@@ -784,16 +784,24 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     engine_->grad_update_receiver_->wait_for_termination();
 
     // some communication-related metrics
-    double graph_comm = engine_->act_update_sender_->get_comm() 
-        + engine_->grad_update_sender_->get_comm();
+    double graph_comm_act = engine_->act_update_sender_->get_comm(); 
+    double graph_comm_grad =  engine_->grad_update_sender_->get_comm();
+    double avg_graph_comm_act;
+    double avg_graph_comm_grad;
     double avg_graph_comm;
     MPI_Allreduce(
-            &graph_comm, &avg_graph_comm, 1,
+            &graph_comm_act, &avg_graph_comm_act, 1,
             DistributedSys::get_mpi_data_type<double>(),
             MPI_SUM, MPI_COMM_WORLD
             );
-    avg_graph_comm /= double(num_epoch);
-
+    MPI_Allreduce(
+            &graph_comm_grad, &avg_graph_comm_grad, 1,
+            DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    avg_graph_comm_act /= double(num_epoch);
+    avg_graph_comm_grad /= double(num_epoch);
+    avg_graph_comm = avg_graph_comm_act + avg_graph_comm_grad;
     double layer_comm = forward_task_dispatcher_->get_comm() 
         + backward_task_dispatcher_->get_comm();
     double avg_layer_comm;
@@ -818,8 +826,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         + engine_->grad_update_sender_->get_graph_dev2host_time();
     double graph_memcpy_time = engine_->act_update_sender_->get_graph_memcpy_time()
         + engine_->grad_update_sender_->get_graph_memcpy_time();
-    double graph_net_time = engine_->act_update_sender_->get_graph_net_time()
-        + engine_->grad_update_sender_->get_graph_net_time();
+    double graph_net_time_act = engine_->act_update_sender_->get_graph_net_time();
+    double graph_net_time_grad = engine_->grad_update_sender_->get_graph_net_time();
     MPI_Allreduce(
             MPI_IN_PLACE, &graph_dev2host_time, 1,
             DistributedSys::get_mpi_data_type<double>(),
@@ -831,14 +839,19 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             MPI_SUM, MPI_COMM_WORLD
             );
     MPI_Allreduce(
-            MPI_IN_PLACE, &graph_net_time, 1,
+            MPI_IN_PLACE, &graph_net_time_act, 1,
+            DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    MPI_Allreduce(
+            MPI_IN_PLACE, &graph_net_time_grad, 1,
             DistributedSys::get_mpi_data_type<double>(),
             MPI_SUM, MPI_COMM_WORLD
             );
     graph_dev2host_time /= double(num_epoch);
     graph_memcpy_time /= double(num_epoch);
-    graph_net_time /= double(num_epoch);
-
+    graph_net_time_act /= double(num_epoch);
+    graph_net_time_grad /= double(num_epoch);
     int num_net_batches = engine_->act_update_sender_->get_num_net_batches()
         + engine_->grad_update_sender_->get_num_net_batches();
     MPI_Allreduce(
@@ -861,8 +874,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 graph_dev2host_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_dev2host_time);
         printf("\tGraph-level memcpy communication time: %.3f s, throughput: %.6f GBps\n",
                 graph_memcpy_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_memcpy_time);
-        printf("\tGraph-level net communication time: %.3f s, throughput: %.6f GBps\n",
-                graph_net_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_net_time);
+        printf("\tGraph-level net Activation communication time: %.3f s, throughput: %.6f GBps\n",
+                graph_net_time_act, avg_graph_comm_act / 1024. / 1024. / 1024. / graph_net_time_act);
+        printf("\tGraph-level net Gradient communication time: %.3f s, throughput: %.6f GBps\n",
+                graph_net_time_grad, avg_graph_comm_grad / 1024. / 1024. / 1024. / graph_net_time_grad);
         printf("\tGraph-level network batch size: %.3f Bytes\n",
                 avg_graph_comm / num_net_batches);
         printf("Highest valid_acc: %.4f\n", highest_valid_acc);
@@ -2128,9 +2143,21 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     int num_local_chunks = local_chunk_ids.size();
     CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
     assert(data_dependencies_tracker != NULL);
-
+    std::vector<std::vector<int>> cuda_mirrors_flag;
+    std::vector<std::vector<int*>> cuda_mirrors;
+    std::vector<std::vector<std::vector<int>>> mirrors;
+    cuda_mirrors_flag.resize(engine_->get_num_chunks());
+    cuda_mirrors.resize(engine_->get_num_chunks());
+    mirrors.resize(engine_->get_num_chunks());
+    for(int i = 0; i < cuda_mirrors_flag.size(); ++i){
+        cuda_mirrors_flag[i].resize(num_nodes, -1);
+        cuda_mirrors[i].resize(num_nodes, nullptr);
+        mirrors[i].resize(num_nodes);
+    }
     size_t comm_buff_size = 4 * 1024 * 1024; // 16 MB
     DataType * comm_buff = new DataType [comm_buff_size];
+    DataType * cuda_comm_buff = nullptr;
+    int cuda_buff_size = 0;
     assert(comm_buff != NULL);
     CUDAPIPForwardTask task;
 
@@ -2139,7 +2166,8 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     double graph_memcpy_time = 0;
     double graph_net_time = 0;
     int num_net_batches = 0;
-
+    // std::vector<int> mirror_vertices_list;
+    
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
 
@@ -2155,10 +2183,24 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
             for (int remote_node: *remote_nodes) {
                 assert(remote_node != node_id);
                 VertexId num_mirror_vertices = 0;
+                if(cuda_mirrors_flag[chunk_id][remote_node]  == -1){
                 for (VertexId vid = chunk_begin; vid < chunk_end; ++ vid) {
-                    num_mirror_vertices += engine_->has_incoming_mirror(vid, remote_node);
+                    if(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]){
+                        mirrors[chunk_id][remote_node].push_back(vid);
+                    }
+                    
+                    //num_mirror_vertices += int(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]);
                 }
-                if (num_mirror_vertices == 0) continue;
+                    cuda_mirrors_flag[chunk_id][remote_node]  == 0;
+                }
+                num_mirror_vertices = mirrors[chunk_id][remote_node].size();
+                if (num_mirror_vertices == 0) {
+                    continue;
+                }
+                if(cuda_mirrors_flag[chunk_id][remote_node]  < 1){
+                InitCUDAMemoryFromHostMemory<int>(&cuda_mirrors[chunk_id][remote_node], mirrors[chunk_id][remote_node].data(), mirrors[chunk_id][remote_node].size(), __FILE__, __LINE__);
+                cuda_mirrors_flag[chunk_id][remote_node]  = 1;
+                }
                 //printf("(I-link) Node %d is going to send the activation data of chunk %d to node %d.\n",
                 //        node_id, chunk_id, remote_node);
                 MPI_Send(
@@ -2184,33 +2226,36 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                     size_t num_elements_per_vertex = num_elements / (chunk_end - chunk_begin);
                     size_t num_sent_elements = 0;
                     size_t num_elements_should_be_sent = num_elements_per_vertex * num_mirror_vertices;
+                    if(num_elements_should_be_sent > cuda_buff_size){
+                        if(cuda_buff_size == 0){
+                            AllocateCUDAMemory<DataType>(&cuda_comm_buff, num_elements_should_be_sent, __FILE__, __LINE__);
+                            cuda_buff_size = num_elements_should_be_sent;
+                        }
+                        else {
+                            DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
+                            AllocateCUDAMemory<DataType>(&cuda_comm_buff, num_elements_should_be_sent, __FILE__, __LINE__);
+                            cuda_buff_size = num_elements_should_be_sent;
+                        }
+                    }
+                    assert(cuda_buff_size >= num_elements_should_be_sent);
+                    assert(cuda_comm_buff != nullptr);
                     //printf("(I-link) Node %d sending out %d elements (%d vertices) of tensor %d...\n",
                     //        node_id, (int) num_elements_should_be_sent, num_mirror_vertices,
                     //        engine_->op_ten_manager_->get_tensor_index(tensor));
-                    VertexId vid = chunk_begin;
+                    
                     assert(num_elements_per_vertex <= comm_buff_size);
-                    DataType * data_buff = new DataType[(chunk_end - chunk_begin) * num_elements_per_vertex];
-                    graph_dev2host_time -= get_time();
-                    CopyFromCUDADeviceToHost<DataType>(data_buff, data, (chunk_end - chunk_begin) * num_elements_per_vertex,__FILE__, __LINE__);
-                    graph_dev2host_time += get_time();
+                    graph_memcpy_time -= get_time();
+                    LauachBufferMirrors(num_mirror_vertices, cuda_mirrors[chunk_id][remote_node], num_elements_per_vertex, chunk_begin, data, cuda_comm_buff);
+                    graph_memcpy_time += get_time();
                     while (num_sent_elements < num_elements_should_be_sent) {
                         size_t num_elements_to_send = 0;
-                        graph_memcpy_time -= get_time();
-                        while (vid < chunk_end && 
-                                num_elements_to_send + num_elements_per_vertex <= comm_buff_size) {
-                            if (engine_->has_incoming_mirror(vid, remote_node)) {
-                                memcpy(
-                                        comm_buff + num_elements_to_send, 
-                                        data_buff + (vid - chunk_begin) * num_elements_per_vertex,
-                                        sizeof(DataType) * num_elements_per_vertex
-                                      );
-                                num_elements_to_send += num_elements_per_vertex;
-                            }
-                            ++ vid;
-                        }
-                        graph_memcpy_time += get_time();
-
+                        num_elements_to_send = std::min(num_elements_should_be_sent - num_sent_elements, comm_buff_size);
                         assert(num_elements_to_send > 0);
+
+                        graph_dev2host_time -= get_time();
+                        CopyFromCUDADeviceToHost<DataType>(comm_buff, cuda_comm_buff + num_sent_elements, num_elements_to_send, __FILE__, __LINE__);
+                        graph_dev2host_time += get_time();
+
                         graph_net_time -= get_time();
                         MPI_Send(
                                 &num_elements_to_send, 1, 
@@ -2230,11 +2275,13 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                         graph_net_time += get_time();
                         num_net_batches += 1;
                     }
-                    delete [] data_buff;
+        
                     assert(num_sent_elements == num_elements_should_be_sent);
                 }
+                
             }
         }
+        //printf("[NODE:%d]: %.6f\n", node_id, graph_net_time);
     }
 
     comm_ = graph_act_comm;
@@ -2242,14 +2289,6 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     graph_memcpy_time_ = graph_memcpy_time;
     graph_net_time_ = graph_net_time;
     num_net_batches_ = num_net_batches;
-    //double avg;
-    //MPI_Allreduce(&graph_act_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
-    //        MPI_SUM, MPI_COMM_WORLD);
-    //avg /= double(num_nodes);
-    //if (! node_id) {
-    //    printf("\tAmount of grpah-level activation communication (per node): %.3f MB\n",
-    //            avg / 1024. / 1024.);
-    //}
 
     delete [] comm_buff;
 }
@@ -2320,6 +2359,11 @@ void CUDAPIPGraphDataActivationUpdateReceiver::thread_main() {
                             remote_node, ActivationInterchanging,
                             MPI_COMM_WORLD, &status
                             );
+                    if(num_elements_to_receive > comm_buff_size){
+                        delete [] comm_buff;
+                        comm_buff = new DataType[num_elements_to_receive];
+                        comm_buff_size = num_elements_to_receive;
+                    }
                     assert(num_elements_to_receive <= comm_buff_size);
                     MPI_Recv(
                             comm_buff, num_elements_to_receive,
@@ -2351,9 +2395,22 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     int num_local_chunks = local_chunk_ids.size();
     CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
     assert(data_dependencies_tracker != NULL);
+    std::vector<std::vector<int>> cuda_mirrors_flag;
+    std::vector<std::vector<int*>> cuda_mirrors;
+    std::vector<std::vector<std::vector<int>>> mirrors;
+    cuda_mirrors_flag.resize(engine_->get_num_chunks());
+    cuda_mirrors.resize(engine_->get_num_chunks());
+    mirrors.resize(engine_->get_num_chunks());
+    for(int i = 0; i < cuda_mirrors_flag.size(); ++i){
+        cuda_mirrors_flag[i].resize(num_nodes, -1);
+        cuda_mirrors[i].resize(num_nodes, nullptr);
+        mirrors[i].resize(num_nodes);
+    }
 
     size_t comm_buff_size = 4 * 1024 * 1024; // 16 MB
     DataType * comm_buff = new DataType [comm_buff_size];
+    DataType * cuda_comm_buff = nullptr;
+    int cuda_buff_size = 0;
     assert(comm_buff != NULL);
     CUDAPIPBackwardTask task;
 
@@ -2378,12 +2435,27 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
             for (int remote_node: *remote_nodes) {
                 assert(remote_node != node_id);
                 VertexId num_mirror_vertices = 0;
+                // for (VertexId vid = chunk_begin; vid < chunk_end; ++ vid) {
+                //     num_mirror_vertices += engine_->has_outgoing_mirror(vid, remote_node);
+                // }
+                if(cuda_mirrors_flag[chunk_id][remote_node]  == -1){
                 for (VertexId vid = chunk_begin; vid < chunk_end; ++ vid) {
-                    num_mirror_vertices += engine_->has_outgoing_mirror(vid, remote_node);
+                    if(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]){
+                        mirrors[chunk_id][remote_node].push_back(vid);
+                    }
+                    
+                    //num_mirror_vertices += int(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]);
                 }
+                    cuda_mirrors_flag[chunk_id][remote_node]  == 0;
+                }
+                num_mirror_vertices = mirrors[chunk_id][remote_node].size();
                 if (num_mirror_vertices == 0) continue;
                 //printf("(I-link) Node %d is going to send the gradient data of chunk %d to node %d.\n",
                 //        node_id, chunk_id, remote_node);
+                 if(cuda_mirrors_flag[chunk_id][remote_node]  < 1){
+                InitCUDAMemoryFromHostMemory<int>(&cuda_mirrors[chunk_id][remote_node], mirrors[chunk_id][remote_node].data(), mirrors[chunk_id][remote_node].size(), __FILE__, __LINE__);
+                cuda_mirrors_flag[chunk_id][remote_node]  = 1;
+                }
                 MPI_Send(
                         &task, sizeof(CUDAPIPBackwardTask), MPI_CHAR,
                         remote_node, GradientInterchanging,
@@ -2409,33 +2481,37 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                         num_elements / (chunk_end - chunk_begin);
                     size_t num_sent_elements = 0;
                     size_t num_elements_should_be_sent = num_elements_per_vertex * num_mirror_vertices;
+                    if(num_elements_should_be_sent > cuda_buff_size){
+                        if(cuda_buff_size == 0){
+                            AllocateCUDAMemory<DataType>(&cuda_comm_buff, num_elements_should_be_sent, __FILE__, __LINE__);
+                            cuda_buff_size = num_elements_should_be_sent;
+                        }
+                        else {
+                            DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
+                            AllocateCUDAMemory<DataType>(&cuda_comm_buff, num_elements_should_be_sent, __FILE__, __LINE__);
+                            cuda_buff_size = num_elements_should_be_sent;
+                        }
+                    }
+                    assert(cuda_buff_size >= num_elements_should_be_sent);
+                    assert(cuda_comm_buff != nullptr);
                     //printf("(I-link) Node %d sending out %d elements (%d vertices) of tensor %d...\n",
                     //        node_id, (int) num_elements_should_be_sent, num_mirror_vertices,
                     //        engine_->op_ten_manager_->get_tensor_index(tensor));
-                    VertexId vid = chunk_begin;
+                    //VertexId vid = chunk_begin;
                     assert(num_elements_per_vertex <= comm_buff_size);
-                    DataType * grad_buff = new DataType[(chunk_end - chunk_begin) * num_elements_per_vertex];
-                    graph_dev2host_time -= get_time();
-                    CopyFromCUDADeviceToHost<DataType>(grad_buff, grad, (chunk_end - chunk_begin) * num_elements_per_vertex, __FILE__, __LINE__);
-                    graph_dev2host_time += get_time();
+                    graph_memcpy_time -= get_time();
+                    LauachBufferMirrors(num_mirror_vertices, cuda_mirrors[chunk_id][remote_node], num_elements_per_vertex, chunk_begin, grad, cuda_comm_buff);
+                    graph_memcpy_time += get_time();
                     while (num_sent_elements < num_elements_should_be_sent) {
-                        graph_memcpy_time -= get_time();
+                        
                         size_t num_elements_to_send = 0;
-                        while (vid < chunk_end && 
-                                num_elements_to_send + num_elements_per_vertex <= comm_buff_size) {
-                            if (engine_->has_outgoing_mirror(vid, remote_node)) {
-                                memcpy(
-                                        comm_buff + num_elements_to_send,
-                                        grad_buff + (vid - chunk_begin) * num_elements_per_vertex,
-                                        sizeof(DataType) * num_elements_per_vertex
-                                      );
-                                num_elements_to_send += num_elements_per_vertex;
-                            }
-                            ++ vid;
-                        }
-                        graph_memcpy_time += get_time();
+                        num_elements_to_send = std::min(num_elements_should_be_sent - num_sent_elements, comm_buff_size);
 
                         assert(num_elements_to_send > 0);
+
+                        graph_dev2host_time -= get_time();
+                        CopyFromCUDADeviceToHost<DataType>(comm_buff, cuda_comm_buff + num_sent_elements, num_elements_to_send, __FILE__, __LINE__);
+                        graph_dev2host_time += get_time();
                         graph_net_time -= get_time();
                         MPI_Send(
                                 &num_elements_to_send, 1,
@@ -2455,11 +2531,11 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                         graph_grad_comm += num_elements_to_send * sizeof(DataType);
                         num_net_batches += 1;
                     }
-                    delete [] grad_buff;
                     assert(num_sent_elements == num_elements_should_be_sent);
                 }
             }
         }
+        //printf("[NODE:%d]: %.6fs\n", node_id, graph_net_time);
     }
 
     comm_ = graph_grad_comm;
@@ -2537,6 +2613,11 @@ void CUDAPIPGraphDataGradientUpdateReceiver::thread_main() {
                             remote_node, GradientInterchanging,
                             MPI_COMM_WORLD, &status
                             );
+                    if(num_elements_to_receive > comm_buff_size){
+                        delete [] comm_buff;
+                        comm_buff = new DataType[num_elements_to_receive];
+                        comm_buff_size = num_elements_to_receive;
+                    }
                     assert(num_elements_to_receive <= comm_buff_size);
                     MPI_Recv(
                             comm_buff, num_elements_to_receive,
@@ -3120,6 +3201,8 @@ void CUDAPIPParallelParameterServer::commit_grad() {
 }
 
 DistributedPIPHybridParallelExecutionEngineGPU::DistributedPIPHybridParallelExecutionEngineGPU() {
+    cpu_has_incomming_mirrors = nullptr;
+    gpu_has_incomming_mirrors = nullptr;
 }
 
 DistributedPIPHybridParallelExecutionEngineGPU::~DistributedPIPHybridParallelExecutionEngineGPU() {
@@ -3843,6 +3926,20 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     this->gpu_training_mask_ = local_gpu_training_mask_;
     this->gpu_valid_mask_ = local_gpu_valid_mask_;
     this->gpu_test_mask_ = local_gpu_test_mask_;
+
+    cpu_has_incomming_mirrors = new bool [num_nodes * lgraph->get_num_master_vertices()];
+    for(int n_i = 0; n_i < num_nodes; ++n_i){
+        for(int v_i = 0; v_i < lgraph->get_num_master_vertices(); ++v_i){
+            cpu_has_incomming_mirrors[lgraph->get_num_master_vertices() * n_i + v_i] = this->has_incoming_mirror(vid_translation_->get_global_vid_master_vertex(v_i), n_i);
+        }
+    }
+    act_update_sender_->cpu_has_incomming_mirrors = cpu_has_incomming_mirrors;
+    act_update_sender_->num_master_vertices = lgraph->get_num_master_vertices();
+    act_update_sender_->local_partition_start = vid_translation_->get_global_vid_master_vertex(0);
+
+    grad_update_sender_->cpu_has_incomming_mirrors = cpu_has_incomming_mirrors;
+    grad_update_sender_->num_master_vertices = lgraph->get_num_master_vertices();
+    grad_update_sender_->local_partition_start = vid_translation_->get_global_vid_master_vertex(0);
     //weight_stashing_manager_ = new CUDAWeightStashingManager(local_weight_ops_);
     //assert(weight_stashing_manager_ != NULL);
 
@@ -3905,6 +4002,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     delete [] partitioning.partition_vid_end;
     delete [] partitioning.partition_op_begin;
     delete [] partitioning.partition_op_end;
+    delete [] cpu_has_incomming_mirrors;
     DeallocateCUDAMemory<int>(&local_gpu_training_mask_, __FILE__, __LINE__);
     DeallocateCUDAMemory<int>(&local_gpu_valid_mask_, __FILE__, __LINE__);
     DeallocateCUDAMemory<int>(&local_gpu_test_mask_, __FILE__, __LINE__);
