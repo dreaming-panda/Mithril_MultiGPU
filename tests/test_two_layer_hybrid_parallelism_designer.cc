@@ -89,9 +89,10 @@ int main(int argc, char ** argv) {
     GraphStructureLoaderFullyReplicated graph_structure_loader;
     graph_structure = graph_structure_loader.load_graph_structure(
             graph_path + "/meta_data.txt",
-            graph_path + "/edge_list.txt",
+            graph_path + "/edge_list.bin",
             graph_path + "/vertex_structure_partition.txt"
             );
+    printf("Graph Loaded\n");
     int num_classes;
     int num_features;
     {

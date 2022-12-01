@@ -219,14 +219,13 @@ class TwoLayerModelParallelismDesigner {
                                 );
                         comm += sizeof(DataType) * num_incoming_mirrors * (num_hidden_units + num_classes);
                         comm += sizeof(DataType) * num_outgoing_mirrors * (num_hidden_units + num_classes);
-                        printf("  GPU %u - Vertices [%u, %u)", gpu,
+                        printf("***  GPU %d - Vertices [%u, %u)\n", gpu,
                                 curr_partition_begin, curr_partition_end);
                         break;
                     }
                 }
                 curr_partition_begin = curr_partition_end;
             }
-            printf("\n");
             printf("    Communication Volume: %.3f MB\n", comm / 1024. / 1024.);
             return comm;
         }
@@ -294,13 +293,12 @@ class TwoLayerModelParallelismDesigner {
             }
             first_layer_graph_boundaries.push_back(num_vertices);
             // print the graph boundaries
-            printf("The partitioning of the first layer:");
+            printf("The partitioning of the first layer:\n");
             for (size_t i = 1; i < first_layer_graph_boundaries.size(); ++ i) {
-                printf("  GPU %u - Vertex [%u, %u)", 
-                        i, first_layer_graph_boundaries[i - 1], first_layer_graph_boundaries[i]
+                printf("***  GPU %lu - Vertex [%u, %u)\n", 
+                        i - 1, first_layer_graph_boundaries[i - 1], first_layer_graph_boundaries[i]
                         );
             }
-            printf("\n");
 
             // assign the second-layer computation workload to GPUs
             std::vector<VertexId> second_layer_graph_boundaries;
@@ -336,14 +334,13 @@ class TwoLayerModelParallelismDesigner {
             }
             second_layer_graph_boundaries.push_back(num_vertices);
             // print the graph boundaries
-            printf("The partitioning of the second layer:");
+            printf("The partitioning of the second layer:\n");
             for (size_t i = 1; i < second_layer_graph_boundaries.size(); ++ i) {
-                printf("  GPU %u - Vertex [%u, %u)", 
-                        i + second_layer_starting_gpu, 
+                printf("***  GPU %lu - Vertex [%u, %u)\n", 
+                        i - 1 + second_layer_starting_gpu, 
                         first_layer_graph_boundaries[i - 1], first_layer_graph_boundaries[i]
                         );
             }
-            printf("\n");
 
             // calculate the communication volume
             // the cost of passing activation and gradients between the two layers
@@ -389,8 +386,8 @@ class TwoLayerModelParallelismDesigner {
             size_t graph_comm = get_comm_graph_level_parallel(
                     operators, num_gpus, num_hidden_units, num_classes
                     );
-            printf("Hybrid parallelism reduce communication by %.3fx compared to graph parallelism.\n",
-                    graph_comm / hybrid_comm);
+            printf("Hybrid parallelism reduce communication by %.3fX compared to graph parallelism.\n",
+                    1. * graph_comm / hybrid_comm);
 
             return hybrid_comm;
         }
