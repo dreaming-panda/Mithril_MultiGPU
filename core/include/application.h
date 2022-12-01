@@ -40,7 +40,6 @@ class AbstractApplication {
         // we set these functions accessing the computation graph to be private
         // so that the user programs cannot invoke them
         // return the operators in topological order
-        const std::vector<Operator*>& get_operators();
         void construct_computation_graph();
         Tensor * get_input_tensor();
         Tensor * get_output_tensor();
@@ -60,6 +59,7 @@ class AbstractApplication {
         //friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
         friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU;
         friend class ParallelismDesigner;
+        friend class TwoLayerModelParallelismDesigner;
     protected:
         Tensor * relu(Tensor * t);
         Tensor * weight(int length);
@@ -72,6 +72,7 @@ class AbstractApplication {
         Tensor * identity(int height, int width);
         Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta);
     public:
+        const std::vector<Operator*>& get_operators();
         AbstractApplication(int num_features);
         virtual ~AbstractApplication();
         // users should symbolicly define the GNN model in this function
