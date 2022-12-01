@@ -30,14 +30,21 @@ class GCN: public AbstractApplication {
 
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
+            int input_size = input->dims[1];
             for (int i = 0; i < num_layers_; ++ i) {
                 int output_size = num_hidden_units_;
                 if (i == num_layers_ - 1) {
                     output_size = num_classes_;
                 }
-                t = fc(t, output_size);
 
-                t = aggregation(t, NORM_SUM);  
+                if (output_size < input_size) {
+                    t = fc(t, output_size);
+                    t = aggregation(t, NORM_SUM);  
+                } else {
+                    t = aggregation(t, NORM_SUM);  
+                    t = fc(t, output_size);
+                }
+                input_size = output_size;
 
                 if (i == num_layers_ - 1) { 
                     t = softmax(t);
@@ -124,7 +131,7 @@ int main(int argc, char ** argv) {
     assert(layer_boundary != -1);
 
     TwoLayerModelParallelismDesigner partitioner(graph_structure);
-    partitioner.co_partition_model_and_graph(gcn, num_gpus, num_hidden_units, num_classes, layer_boundary);
+    partitioner.co_partition_model_and_graph(gcn, num_gpus, layer_boundary);
 
     Context::finalize_context();
 

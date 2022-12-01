@@ -173,7 +173,8 @@ class TwoLayerModelParallelismDesigner {
 
         size_t get_comm_graph_level_parallel(
                 const std::vector<Operator*> &operators,
-                int num_gpus, int num_hidden_units, int num_classes
+                int num_gpus, 
+                const std::vector<int> &aggr_op_lengths
                 ) {
             printf("Calculating the communication volume when graph parallelism is adopted...\n");
             VertexId num_vertices = graph_structure_->get_num_global_vertices();
@@ -217,8 +218,8 @@ class TwoLayerModelParallelismDesigner {
                         VertexId num_outgoing_mirrors = num_mirror_vertices_calculator_->get_num_outgoing_mirrors(
                                 curr_partition_begin, curr_partition_end
                                 );
-                        comm += sizeof(DataType) * num_incoming_mirrors * (num_hidden_units + num_classes);
-                        comm += sizeof(DataType) * num_outgoing_mirrors * (num_hidden_units + num_classes);
+                        comm += sizeof(DataType) * num_incoming_mirrors * (aggr_op_lengths[0] + aggr_op_lengths[1]);
+                        comm += sizeof(DataType) * num_outgoing_mirrors * (aggr_op_lengths[0] + aggr_op_lengths[1]);
                         printf("***  GPU %d - Vertices [%u, %u)\n", gpu,
                                 curr_partition_begin, curr_partition_end);
                         break;
@@ -234,7 +235,7 @@ class TwoLayerModelParallelismDesigner {
         // strategy, in bytes
         size_t co_partition_model_and_graph(
                 AbstractApplication * application,
-                int num_gpus, int num_hidden_units, int num_classes,
+                int num_gpus, 
                 int layer_boundary, // the index of the op that separate the two layers
                 VertexId chunk_size = 4096 
                 ) {
@@ -243,6 +244,23 @@ class TwoLayerModelParallelismDesigner {
             const std::vector<Operator*> &operators = application->get_operators();
             int num_operators = (int) operators.size();
             VertexId num_vertices = graph_structure_->get_num_global_vertices();
+
+            std::vector<int> aggr_op_lengths;
+            aggr_op_lengths.clear();
+            for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
+                Operator * op = operators[op_idx];
+                assert(op);
+                if (op->get_type() == OPERATOR_AGGREGATION) {
+                    aggr_op_lengths.push_back(op->get_input_tensor(0)->dims[1]);
+                }
+            }
+            assert(aggr_op_lengths.size() == 2);
+            printf("First layer: The embedding size of the aggregation op: %d\n",
+                    aggr_op_lengths[0]);
+            printf("Second layer: The embedding size of the aggregation op: %d\n",
+                    aggr_op_lengths[1]);
+            int inter_layer_embedding_size = operators[layer_boundary - 1]->get_output_tensor(0)->dims[1];
+            printf("The inter-layer embedding size: %d\n", inter_layer_embedding_size);
 
             // find out the computation cost of the whole model
             double whole_model_cost = 0;
@@ -338,13 +356,13 @@ class TwoLayerModelParallelismDesigner {
             for (size_t i = 1; i < second_layer_graph_boundaries.size(); ++ i) {
                 printf("***  GPU %lu - Vertex [%u, %u)\n", 
                         i - 1 + second_layer_starting_gpu, 
-                        first_layer_graph_boundaries[i - 1], first_layer_graph_boundaries[i]
+                        second_layer_graph_boundaries[i - 1], second_layer_graph_boundaries[i]
                         );
             }
 
             // calculate the communication volume
             // the cost of passing activation and gradients between the two layers
-            size_t inter_layer_comm = sizeof(DataType) * num_vertices * num_hidden_units * 2; 
+            size_t inter_layer_comm = sizeof(DataType) * num_vertices * inter_layer_embedding_size * 2; 
             size_t first_layer_intra_layer_comm = 0;
             for (size_t i = 1; i < first_layer_graph_boundaries.size(); ++ i) {
                 VertexId v_begin = first_layer_graph_boundaries[i - 1];
@@ -355,10 +373,11 @@ class TwoLayerModelParallelismDesigner {
                 VertexId num_outgoing_mirrors = num_mirror_vertices_calculator_->get_num_outgoing_mirrors(
                         v_begin, v_end
                         );
+                //printf("GPU %lu, mirrors: %u\n", i, num_incoming_mirrors + num_outgoing_mirrors);
                 // the amount of activation received
-                first_layer_intra_layer_comm += sizeof(DataType) * num_incoming_mirrors * num_hidden_units;
+                first_layer_intra_layer_comm += sizeof(DataType) * num_incoming_mirrors * aggr_op_lengths[0];
                 // the amount of gradients received
-                first_layer_intra_layer_comm += sizeof(DataType) * num_outgoing_mirrors * num_hidden_units;
+                first_layer_intra_layer_comm += sizeof(DataType) * num_outgoing_mirrors * aggr_op_lengths[0];
             }
             size_t second_layer_intra_layer_comm = 0;
             for (size_t i = 1; i < second_layer_graph_boundaries.size(); ++ i) {
@@ -370,10 +389,11 @@ class TwoLayerModelParallelismDesigner {
                 VertexId num_outgoing_mirrors = num_mirror_vertices_calculator_->get_num_outgoing_mirrors(
                         v_begin, v_end
                         );
+                //printf("GPU %lu, mirrors: %u\n", i, num_incoming_mirrors + num_outgoing_mirrors);
                 // the amount of activation received
-                second_layer_intra_layer_comm += sizeof(DataType) * num_incoming_mirrors * num_classes;
+                second_layer_intra_layer_comm += sizeof(DataType) * num_incoming_mirrors * aggr_op_lengths[1];
                 // the amount of gradients received
-                second_layer_intra_layer_comm += sizeof(DataType) * num_outgoing_mirrors * num_classes;
+                second_layer_intra_layer_comm += sizeof(DataType) * num_outgoing_mirrors * aggr_op_lengths[1];
             }
             size_t hybrid_comm = inter_layer_comm + first_layer_intra_layer_comm + second_layer_intra_layer_comm;
             // print ot the results
@@ -384,7 +404,7 @@ class TwoLayerModelParallelismDesigner {
             printf("Total amount of communication: %.3f MB\n", hybrid_comm / 1024. / 1024.);
 
             size_t graph_comm = get_comm_graph_level_parallel(
-                    operators, num_gpus, num_hidden_units, num_classes
+                    operators, num_gpus, aggr_op_lengths
                     );
             printf("Hybrid parallelism reduce communication by %.3fX compared to graph parallelism.\n",
                     1. * graph_comm / hybrid_comm);
