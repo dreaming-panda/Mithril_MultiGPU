@@ -30,21 +30,14 @@ class GCN: public AbstractApplication {
 
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
-            int input_size = input->dims[1];
             for (int i = 0; i < num_layers_; ++ i) {
                 int output_size = num_hidden_units_;
                 if (i == num_layers_ - 1) {
                     output_size = num_classes_;
                 }
 
-                if (output_size < input_size) {
-                    t = fc(t, output_size);
-                    t = aggregation(t, NORM_SUM);  
-                } else {
-                    t = aggregation(t, NORM_SUM);  
-                    t = fc(t, output_size);
-                }
-                input_size = output_size;
+                t = fc(t, output_size);
+                t = aggregation(t, NORM_SUM);  
 
                 if (i == num_layers_ - 1) { 
                     t = softmax(t);

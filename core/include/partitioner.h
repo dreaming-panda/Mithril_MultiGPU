@@ -101,7 +101,7 @@ class NumMirrorVerticesCalculator {
             // do nothing
         }
 
-        VertexId get_num_outgoing_mirrors(VertexId begin, VertexId end) {
+        VertexId get_num_incoming_mirrors(VertexId begin, VertexId end) {
             // if the vertices [begin, end) are in a different partition with 
             // the remained vertices, what is the number of incoming mirrors 
             // vertices of the local partition [begin, end)?
@@ -125,7 +125,26 @@ class NumMirrorVerticesCalculator {
             }
             return num_mirrors;
         }
-        VertexId get_num_incoming_mirrors(VertexId begin, VertexId end) {
+        VertexId get_num_incoming_mirrors(const std::set<VertexId> &local_vertices) {
+            std::map<VertexId, int> in_nbrs;
+            in_nbrs.clear();
+            for (VertexId vid: local_vertices) {
+                InEdgeList in_edges = graph_structure_->get_in_edges(vid);
+                for (int e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
+                    VertexId src = in_edges.ptx[e_i].src;
+                    in_nbrs[src] = 1;
+                }
+            }
+            VertexId num_mirrors = 0;
+            for (std::pair<VertexId, int> p: in_nbrs) {
+                VertexId v = p.first;
+                if (local_vertices.find(v) == local_vertices.end()) {
+                    num_mirrors ++;
+                }
+            }
+            return num_mirrors;
+        }
+        VertexId get_num_outgoing_mirrors(VertexId begin, VertexId end) {
             // if the vertices [begin, end) are in a different partition with 
             // the remained vertices, what is the number of outgoing mirrors 
             // vertices of the local partition [begin, end)?
@@ -145,6 +164,25 @@ class NumMirrorVerticesCalculator {
                         mirrors[dst] = 1;
                         ++ num_mirrors;
                     }
+                }
+            }
+            return num_mirrors;
+        }
+        VertexId get_num_outgoing_mirrors(const std::set<VertexId> &local_vertices) {
+            std::map<VertexId, int> out_nbrs;
+            out_nbrs.clear();
+            for (VertexId vid: local_vertices) {
+                OutEdgeList out_edges = graph_structure_->get_out_edges(vid);
+                for (int e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
+                    VertexId src = out_edges.ptx[e_i].dst;
+                    out_nbrs[src] = 1;
+                }
+            }
+            VertexId num_mirrors = 0;
+            for (std::pair<VertexId, int> p: out_nbrs) {
+                VertexId v = p.first;
+                if (local_vertices.find(v) == local_vertices.end()) {
+                    num_mirrors ++;
                 }
             }
             return num_mirrors;
