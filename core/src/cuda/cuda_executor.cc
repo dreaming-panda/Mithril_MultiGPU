@@ -1487,18 +1487,17 @@ void OperatorExecutorGPUV2::relu_forward(ReluOperator * op)
      reluforward_time += t;
     #endif
 
-     {
-         // FIXME
-         DataType *cpu_data = new DataType[num_elements];
-         assert(cpu_data);
-         cudaMemcpy(cpu_data, d_output, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
-         int num_zero_elements = 0;
-         for (int i = 0; i < num_elements; ++ i) {
-             num_zero_elements += cpu_data[i] < 1e-20;
-         }
-         printf("The sparsity after the relu op: %.6f\n", num_zero_elements * 1. / num_elements);
-         delete [] cpu_data;
-     }
+     //{
+     //    DataType *cpu_data = new DataType[num_elements];
+     //    assert(cpu_data);
+     //    cudaMemcpy(cpu_data, d_output, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+     //    int num_zero_elements = 0;
+     //    for (int i = 0; i < num_elements; ++ i) {
+     //        num_zero_elements += cpu_data[i] < 1e-20;
+     //    }
+     //    printf("The sparsity after the relu op: %.6f\n", num_zero_elements * 1. / num_elements);
+     //    delete [] cpu_data;
+     //}
 }
 void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op)
 {   

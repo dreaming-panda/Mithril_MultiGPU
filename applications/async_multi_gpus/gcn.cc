@@ -74,7 +74,7 @@ class GCN: public AbstractApplication {
 int main(int argc, char ** argv) {
     // parse input arguments
     namespace po = boost::program_options;
-    po::variables_map vm
+    po::variables_map vm;
     po::options_description desc("Allowed options");
     desc.add_options()
         ("graph", po::value<std::string>()->required(), "The directory of the graph dataset.")
