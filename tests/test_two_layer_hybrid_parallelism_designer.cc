@@ -126,6 +126,7 @@ int main(int argc, char ** argv) {
     TwoLayerModelParallelismDesigner partitioner(graph_structure);
     partitioner.co_partition_model_and_graph(gcn, num_gpus, layer_boundary);
 
+
     Context::finalize_context();
 
     return 0;

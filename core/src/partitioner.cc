@@ -37,11 +37,15 @@ double NaiveCostModel::get_operator_cost(VertexId v_begin, VertexId v_end, Opera
     } else if (op_type == OPERATOR_WEIGHT) {
         return 0;
     } else if (op_type == OPERATOR_RELU) {
+        // FIXME
+        return 0;
         Tensor * input_tensor = op->get_input_tensor(0);
         assert(input_tensor != NULL);
         int hunits = input_tensor->dims[1];
         return 1. * hunits * (v_end - v_begin);
     } else if (op_type == OPERATOR_MATMUL) {
+        // FIXME
+        return 0;
         Tensor * input_tensor = op->get_input_tensor(0);
         Tensor * output_tensor = op->get_output_tensor(0);
         assert(input_tensor != NULL);
@@ -58,6 +62,8 @@ double NaiveCostModel::get_operator_cost(VertexId v_begin, VertexId v_end, Opera
         double flops = 1. * (v_end - v_begin) * hunits_input * hunits_output;
         return flops;
     } else if (op_type == OPERATOR_SOFTMAX) {
+        // FIXME
+        return 0;
         Tensor * input_tensor = op->get_input_tensor(0);
         assert(input_tensor != NULL);
         int hunits = input_tensor->dims[1];
@@ -71,7 +77,9 @@ double NaiveCostModel::get_operator_cost(VertexId v_begin, VertexId v_end, Opera
         assert(num_in_edges_prefix_sum_[v_end] >= num_in_edges_prefix_sum_[v_begin]);
         EdgeId num_in_edges = num_in_edges_prefix_sum_[v_end] - num_in_edges_prefix_sum_[v_begin];
         double flops = num_in_edges * hunits;
-        return flops * 100.; // we use 100xflops as the cost for AGGR since it has significantly worse locality
+        //return flops * 100.; // we use 100xflops as the cost for AGGR since it has significantly worse locality
+        //FIXME
+        return v_end - v_begin;
     } else {
         fprintf(stderr, "The operator is not supported: %d", (int) op_type);
         assert(false);

@@ -3211,15 +3211,6 @@ DistributedPIPHybridParallelExecutionEngineGPU::~DistributedPIPHybridParallelExe
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPIPForwardTask task) {
     // pull the latest weights from the parameter servers and stash them 
     int chunk_id = task.chunk_id;
-    //for (WeightOperator * op: local_weight_ops_) { FIXME: no weight stashing needed
-    //    // pull the weight from the parameter server
-    //    Tensor * tensor = op->get_output_tensor(0);
-    //    assert(tensor != NULL);
-    //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-    //    parameter_server_->pull_weight(op, resource->get_gpu_data()); 
-    //    // stash the weight
-    //    weight_stashing_manager_->stash_weight_data(op, chunk_id);
-    //}
 
     int node_id = DistributedSys::get_instance()->get_node_id();
     VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
@@ -3228,6 +3219,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     VertexId local_vid_end = vid_translation_->get_local_vid_master_vertex(global_vid_end);
     int op_idx_begin = partitioning_.partition_op_begin[node_id];
     int op_idx_end = partitioning_.partition_op_end[node_id];
+
+    //EdgeId num_edges = 0;
+    //for (VertexId v_i = global_vid_begin; v_i < global_vid_end; ++ v_i) {
+    //    num_edges += graph_structure_->get_in_degree(v_i);
+    //}
+    //double chunk_time = - get_time();
+
     for (int op_idx = op_idx_begin; op_idx < op_idx_end; op_idx ++) {
         Operator * op = op_ten_manager_->get_operator(op_idx);
         assert(op != NULL);
@@ -3275,6 +3273,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 );
         accum_loss_ += loss;
     }
+
+    //chunk_time += get_time();
+    //fprintf(stderr, "Vertices: %u, Edges: %lu, ForwardRuntime: %.3f (ms)\n", global_vid_end - global_vid_begin, num_edges, chunk_time * 1000.);
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAPIPBackwardTask task) {
