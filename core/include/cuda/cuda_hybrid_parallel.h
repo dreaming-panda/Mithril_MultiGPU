@@ -47,6 +47,13 @@ enum CUDAPIPParallelMessageType {
     WeightPullingResponse
 };
 
+enum DispatchAlgorithm {
+    RandomDispatch,
+    HighDegreeFirstDispatch,
+    LowDegreeFirstDispatch,
+    DefaultOrderDispatch
+};
+
 template<typename T>
 class CUDAAbstractTaskDispatcher {
     protected:
@@ -54,6 +61,7 @@ class CUDAAbstractTaskDispatcher {
         DistributedPIPHybridParallelExecutionEngineGPU * engine_;
         std::thread * dispatcher_thread_;
         pthread_barrier_t * barrier_; // used to synchronize the communication and computation threads across epoches
+        DispatchAlgorithm dispatch_algorithm_ = DefaultOrderDispatch;
 
         virtual void thread_main() = 0;
 

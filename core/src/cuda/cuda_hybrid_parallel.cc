@@ -40,6 +40,83 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     size_t len = 0;
     double comm = 0;
     if (engine_->is_topmost_node()) {
+
+        // FIXME: a simple dispatching strategy of the topmost nodes not considering load balancing is used here
+        dispatch_algorithm_ = HighDegreeFirstDispatch; // TODO
+        if (dispatch_algorithm_ == RandomDispatch) {
+            printf("RANDOMLY DISPATCH THE CHUNKS...\n");
+            auto rand_gen = std::default_random_engine{};
+            std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
+        } else if (dispatch_algorithm_ == HighDegreeFirstDispatch) {
+            printf("DISPATCH THE HIGH-DEGREE CHUNKS FIRST...\n");
+            // TODO
+            std::vector<std::pair<int, EdgeId>> degree_sum_each_chunk;
+            for (int chunk_id: local_chunk_ids) {
+                EdgeId degree_sum = 0;
+                VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
+                VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
+                for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
+                    degree_sum += engine_->graph_structure_->get_in_degree(v_i);
+                }
+                degree_sum_each_chunk.push_back(std::make_pair(
+                            chunk_id, degree_sum
+                            ));
+            }
+            std::sort(degree_sum_each_chunk.begin(), degree_sum_each_chunk.end(), 
+                    [](const std::pair<int, EdgeId> &a,
+                        const std::pair<int, EdgeId> &b) {
+                        return a.second > b.second;
+                    }
+                    );
+            for (size_t i = 1; i < degree_sum_each_chunk.size(); ++ i) {
+                assert(degree_sum_each_chunk[i - 1].second >= degree_sum_each_chunk[i].second);
+            }
+            local_chunk_ids.clear();
+            for (size_t i = 0; i < degree_sum_each_chunk.size(); ++ i) {
+                local_chunk_ids.push_back(degree_sum_each_chunk[i].first);
+                if (i < 10) {
+                    printf("DegreeSum of chunk %d is %lu\n", i, 
+                            degree_sum_each_chunk[i].second);
+                }
+            }
+        } else if (dispatch_algorithm_ == LowDegreeFirstDispatch) {
+            printf("DISPATCH THE LOW-DEGREE CHUNKS FIRST...\n");
+            // TODO
+            std::vector<std::pair<int, EdgeId>> degree_sum_each_chunk;
+            for (int chunk_id: local_chunk_ids) {
+                EdgeId degree_sum = 0;
+                VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
+                VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
+                for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
+                    degree_sum += engine_->graph_structure_->get_in_degree(v_i);
+                }
+                degree_sum_each_chunk.push_back(std::make_pair(
+                            chunk_id, degree_sum
+                            ));
+            }
+            std::sort(degree_sum_each_chunk.begin(), degree_sum_each_chunk.end(), 
+                    [](const std::pair<int, EdgeId> &a,
+                        const std::pair<int, EdgeId> &b) {
+                        return a.second < b.second;
+                    }
+                    );
+            for (size_t i = 1; i < degree_sum_each_chunk.size(); ++ i) {
+                assert(degree_sum_each_chunk[i - 1].second <= degree_sum_each_chunk[i].second);
+            }
+            local_chunk_ids.clear();
+            for (size_t i = 0; i < degree_sum_each_chunk.size(); ++ i) {
+                local_chunk_ids.push_back(degree_sum_each_chunk[i].first);
+                if (i < 10) {
+                    printf("DegreeSum of chunk %d is %lu\n", i, 
+                            degree_sum_each_chunk[i].second);
+                }
+            }
+        } else {
+            assert(dispatch_algorithm_ == DefaultOrderDispatch);
+            // do nothing
+            // keep the default ordering
+        }
+
         // doesn't need to receive activation from dependent nodes
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             // synchronization between all threads 
@@ -47,12 +124,6 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             pthread_barrier_wait(barrier_);
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
-            // FIXME: a simple dispatching strategy of the topmost nodes not considering load balancing is used here
-            if (engine_->random_dispatch_) {
-                printf("RANDOMLY DISPATCH THE CHUNKS...\n");
-                auto rand_gen = std::default_random_engine{};
-                std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
-            }
             for (int chunk_id: local_chunk_ids) {
                 task.epoch_id = epoch_id;
                 task.chunk_id = chunk_id;
