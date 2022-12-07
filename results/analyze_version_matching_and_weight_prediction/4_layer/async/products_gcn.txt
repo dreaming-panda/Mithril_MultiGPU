@@ -1,0 +1,74 @@
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
+The number of hidden units: 256
+The number of training epoches: 5000
+The number of startup epoches: 0
+Learning rate: 0.001000
+The partition strategy: hybrid
+Initialized node g010.anvil.rcac.purdue.edu
+Building the CSR structure...
+        It takes 1.981 seconds.
+Building the CSC structure...
+        It takes 1.920 seconds.
+Building the Feature Vector...
+        It takes 0.668 seconds.
+Building the Label Vector...
+        It takes 0.569 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Using dynamic programming to discover a good hybrid parallelism strategy.
+Number of operators: 17
+The 0-th operator (type OPERATOR_INPUT) has cost 0.000 (ratio: 0.000000)
+The 1-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 2-th operator (type OPERATOR_MATMUL) has cost 0.000 (ratio: 0.000000)
+The 3-th operator (type OPERATOR_AGGREGATION) has cost 2449029.000 (ratio: 0.250000)
+The 4-th operator (type OPERATOR_RELU) has cost 0.000 (ratio: 0.000000)
+The 5-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 6-th operator (type OPERATOR_MATMUL) has cost 0.000 (ratio: 0.000000)
+The 7-th operator (type OPERATOR_AGGREGATION) has cost 2449029.000 (ratio: 0.250000)
+The 8-th operator (type OPERATOR_RELU) has cost 0.000 (ratio: 0.000000)
+The 9-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 10-th operator (type OPERATOR_MATMUL) has cost 0.000 (ratio: 0.000000)
+The 11-th operator (type OPERATOR_AGGREGATION) has cost 2449029.000 (ratio: 0.250000)
+The 12-th operator (type OPERATOR_RELU) has cost 0.000 (ratio: 0.000000)
+The 13-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 14-th operator (type OPERATOR_MATMUL) has cost 0.000 (ratio: 0.000000)
+The 15-th operator (type OPERATOR_AGGREGATION) has cost 2449029.000 (ratio: 0.250000)
+The 16-th operator (type OPERATOR_SOFTMAX) has cost 0.000 (ratio: 0.000000)
+Pure graph-level partition:
+0 2449029 0 17
+2449029 2449029
+The communication cost of partitioning vertices [0, 0) into 0 parts: 0.000000 GB
+The communication cost of partitioning vertices [0, 2449029) into 1 parts: 0.000000 GB
+(vertical stripping) The minimum amount of communication volume (DP): 0.000000 GB
+Solution:
+Vertices [0, 2449029) vertically partitioned into 1 parts
+The minimum amount of communication volume (model parallel): 0.000000 GB (-nanx)
+The minimum amount of communication volume (graph parallel): 0.000000 GB (-nanx)
+Graph parallel boundaries: 
+0 2449029 
+The dynamic programming algorithm takes 1.214 seconds
+*** Node 0, starting model training...
+Number of operators: 17
+0 2449029 0 17
+*** Node 0 owns the partition [0, 17) x [0, 2449029)
+*** Node 0, constructing the helper classes...
+Operators:
+    Op 0: type OPERATOR_INPUT, output tensors: 0
+    Op 1: type OPERATOR_WEIGHT, output tensors: 1
+    Op 2: type OPERATOR_MATMUL, output tensors: 2
+    Op 3: type OPERATOR_AGGREGATION, output tensors: 3
+    Op 4: type OPERATOR_RELU, output tensors: 4
+    Op 5: type OPERATOR_WEIGHT, output tensors: 5
+    Op 6: type OPERATOR_MATMUL, output tensors: 6
+    Op 7: type OPERATOR_AGGREGATION, output tensors: 7
+    Op 8: type OPERATOR_RELU, output tensors: 8
+    Op 9: type OPERATOR_WEIGHT, output tensors: 9
+    Op 10: type OPERATOR_MATMUL, output tensors: 10
+    Op 11: type OPERATOR_AGGREGATION, output tensors: 11
+    Op 12: type OPERATOR_RELU, output tensors: 12
+    Op 13: type OPERATOR_WEIGHT, output tensors: 13
+    Op 14: type OPERATOR_MATMUL, output tensors: 14
+    Op 15: type OPERATOR_AGGREGATION, output tensors: 15
+    Op 16: type OPERATOR_SOFTMAX, output tensors: 16

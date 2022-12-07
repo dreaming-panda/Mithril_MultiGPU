@@ -432,6 +432,17 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     }
 
     // FIXME
+    int num_weight_ops = 0;
+    for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
+        Operator * op = operators[op_idx];
+        assert(op);
+        if (op->get_type() == OPERATOR_WEIGHT) {
+            ++ num_weight_ops;
+        }
+    }
+    printf("There are %d weight operators, %d of them will suffer from async.\n",
+            num_weight_ops, num_weight_ops / 2);
+
     std::vector<WeightOperator*> weight_ops;
     std::map<WeightOperator*, size_t> weight_op_2_num_elements;
     std::map<WeightOperator*, DataType*> tmp_buffers;
@@ -464,7 +475,10 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             assert(data);
             prev_prev_epoch_weights[(WeightOperator*) op] = data;
             // FIXME
-            break;
+            // roughly a half of the weights are predicted
+            if (weight_ops.size() >= (num_weight_ops / 2)) {
+                break;
+            }
         }
     }
 
@@ -492,7 +506,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         printf("    Epoch %d:", epoch);
 
         // FIXME
-        int startup = 0;
+        int startup = 100000;
         if (epoch == startup) {
             // store W(0)
             for (WeightOperator* op: weight_ops) {
