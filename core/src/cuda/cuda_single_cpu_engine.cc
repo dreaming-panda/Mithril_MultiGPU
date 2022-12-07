@@ -490,7 +490,8 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         printf("    Epoch %d:", epoch);
 
         // FIXME
-        if (epoch == 0) {
+        int startup = 10;
+        if (epoch == startup) {
             // store W(0)
             for (WeightOperator* op: weight_ops) {
                 Tensor * tensor = op->get_output_tensor(0);
@@ -507,7 +508,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                         cudaMemcpyDeviceToHost
                         );
             }
-        } else if (epoch == 1) {
+        } else if (epoch == startup + 1) {
             // store W(1)
             for (WeightOperator* op: weight_ops) {
                 Tensor * tensor = op->get_output_tensor(0);
@@ -524,7 +525,8 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                         cudaMemcpyDeviceToHost
                         );
             }
-        } else {
+        } else if (epoch >= startup + 2) {
+            assert(epoch >= startup + 2);
             // store W(i) and use 2 * W(i-1) - W(i-2) to generate the gradients
             for (WeightOperator* op: weight_ops) {
                 Tensor * tensor = op->get_output_tensor(0);
@@ -547,7 +549,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                         cpu_curr_data, gpu_data, sizeof(DataType) * num_elements,
                         cudaMemcpyDeviceToHost
                         );
-                // use 2 * W(i - 1) + W(i - 2)
+                // use 2 * W(i - 1) - W(i - 2)
                 for (size_t i = 0; i < num_elements; ++ i) {
                     tmp[i] = 2 * cpu_prev_data[i] - cpu_prev_prev_data[i];
                     cpu_prev_prev_data[i] = cpu_prev_data[i];
@@ -593,21 +595,23 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         cb_time += cb;
 
         // FIXME
-        for (WeightOperator * op: weight_ops) {
-            Tensor * tensor = op->get_output_tensor(0);
-            assert(tensor);
-            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-            assert(resource);
-            DataType * gpu_data = resource->get_gpu_data();
-            assert(gpu_data);
-            DataType * cpu_curr_data = current_weights[op];
-            assert(cpu_curr_data);
-            size_t num_elements = weight_op_2_num_elements[op];
-            // put W(i) back
-            cudaMemcpy(
-                    gpu_data, cpu_curr_data, sizeof(DataType) * num_elements,
-                    cudaMemcpyHostToDevice
-                    );
+        if (epoch >= startup + 2) {
+            for (WeightOperator * op: weight_ops) {
+                Tensor * tensor = op->get_output_tensor(0);
+                assert(tensor);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                assert(resource);
+                DataType * gpu_data = resource->get_gpu_data();
+                assert(gpu_data);
+                DataType * cpu_curr_data = current_weights[op];
+                assert(cpu_curr_data);
+                size_t num_elements = weight_op_2_num_elements[op];
+                // put W(i) back
+                cudaMemcpy(
+                        gpu_data, cpu_curr_data, sizeof(DataType) * num_elements,
+                        cudaMemcpyHostToDevice
+                        );
+            }
         }
         // use the optimizer to calculate W(i + 1)
         
