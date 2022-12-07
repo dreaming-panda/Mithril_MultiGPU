@@ -465,14 +465,14 @@ class TwoLayerModelParallelismDesigner {
                 degree_dist[degree] ++;
             }
             std::sort(possible_degree.begin(), possible_degree.end());
-            fprintf(stderr, "Degree, NumVertices, VCDF, ECDF\n");
+            //fprintf(stderr, "Degree, NumVertices, VCDF, ECDF\n");
             double vcdf = 0;
             double ecdf = 0;
             int degree_threshold = -1;
             for (VertexId degree: possible_degree) {
                 vcdf += 1. * degree_dist[degree] / num_vertices;
                 ecdf += 1. * (degree_dist[degree] * degree) / num_edges;
-                fprintf(stderr, "%u, %u, %.6f, %.6f\n", degree, degree_dist[degree], vcdf, ecdf);
+                //fprintf(stderr, "%u, %u, %.6f, %.6f\n", degree, degree_dist[degree], vcdf, ecdf);
                 if (degree_threshold == -1 && vcdf >= 0.99) {
                     degree_threshold = degree;
                 }
