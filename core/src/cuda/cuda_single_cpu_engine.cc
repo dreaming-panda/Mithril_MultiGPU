@@ -463,6 +463,8 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             data = new DataType[num_elements];
             assert(data);
             prev_prev_epoch_weights[(WeightOperator*) op] = data;
+            // FIXME
+            break;
         }
     }
 
