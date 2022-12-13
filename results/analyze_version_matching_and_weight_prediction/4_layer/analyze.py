@@ -86,11 +86,12 @@ def read_async_pred_accc(num_epoch, graph, model):
     return acc
 
 if __name__ == "__main__":
-    num_epoch = 1000
+    num_epoch = 3000
 
     model = "gcn"
 
     for graph in ["reddit", "products", "arxiv", "citeseer", "cora", "pubmed"]:
+    #for graph in ["reddit", "arxiv"]:
         epoches = [i for i in range(num_epoch)]
         sync_acc = read_sync_acc(num_epoch, graph, model)
         #async_acc = read_async_accc(num_epoch, graph, model)
@@ -111,7 +112,8 @@ if __name__ == "__main__":
         plt.title("%s-%s" % (graph, model))
         plt.savefig("%s-%s.pdf" % (graph, model))
         max_acc = max(sync_acc)
-        #plt.ylim([max_acc - 0.2, max_acc + 0.05])
+        plt.ylim([max_acc - 0.05, max_acc + 0.05])
+        #plt.xlim([4000, 5000])
         plt.show()
 
 
