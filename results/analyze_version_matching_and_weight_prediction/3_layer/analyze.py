@@ -90,10 +90,11 @@ if __name__ == "__main__":
 
     model = "gcn"
 
-    for graph in ["reddit", "products", "arxiv", "citeseer", "cora", "pubmed"]:
+    #for graph in ["reddit", "products", "arxiv", "citeseer", "cora", "pubmed"]:
+    for graph in ["reddit", "products", "arxiv"]:
         epoches = [i for i in range(num_epoch)]
         sync_acc = read_sync_acc(num_epoch, graph, model)
-        #async_acc = read_async_accc(num_epoch, graph, model)
+        async_acc = read_async_accc(num_epoch, graph, model)
         #async_matching_acc = read_async_matching_accc(num_epoch, graph, model)
         async_pred = read_async_pred_accc(num_epoch, graph, model)
 
@@ -101,7 +102,7 @@ if __name__ == "__main__":
         #print(single_gpu_acc)
 
         plt.plot(epoches, sync_acc, "-", label = "sync")
-        #plt.plot(epoches, async_acc, "-", label = "async")
+        plt.plot(epoches, async_acc, "-", label = "async")
         #plt.plot(epoches, async_matching_acc, "-", label = "async_matching")
         plt.plot(epoches, async_pred, "-", label = "async_pred")
 
