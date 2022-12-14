@@ -3852,3 +3852,136 @@ void OperatorExecutorGPUV2::matmuladd_backward(MatmulAddOperator * op, VertexId 
     SetCUDAMemory<DataType>(tp_grad, 0, hidden_units * hidden_units, __FILE__, __LINE__);
     SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
 }
+
+void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
+#ifdef TIMETAG
+    cudaDeviceSynchronize();
+#endif
+    assert(op);
+    assert(op->get_num_input_tensors() == 1);
+    assert(op->get_num_output_tensors() == 1);
+
+    Tensor * input_tensor = op->get_input_tensor(0);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor);
+    assert(output_tensor);
+
+    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    size_t num_elements = input_tensor_resource->get_num_elements();
+    assert(num_elements == output_tensor_resource->get_num_elements());
+
+    DataType * d_input = input_tensor_resource->get_gpu_data();
+    DataType * d_output = output_tensor_resource->get_gpu_data();
+    assert(d_input);
+    assert(d_output);
+
+    if (dropout_op_descriptor.find(op) == dropout_op_descriptor.end()) {
+        // get the state size
+        size_t states_size = 0;
+        checkCUDNN(cudnnDropoutGetStatesSize(*cudnn_handle_, &states_size));
+        void * states = NULL;
+        checkCUDA(cudaMalloc(&states, states_size));
+        assert(states);
+        // the operator hasn't been setup before
+        cudnnDropoutDescriptor_t dropout_descriptor;
+        checkCUDNN(cudnnCreateDropoutDescriptor(&dropout_descriptor));
+        checkCUDNN(cudnnSetDropoutDescriptor(
+                    dropout_descriptor, *cudnn_handle_,
+                    op->dropout_rate_,
+                    states, states_size,
+                    1234
+                    ));
+        // set up the tensor descriptor
+        cudnnTensorDescriptor_t tensor_descriptor;
+        checkCUDNN(cudnnCreateTensorDescriptor(&tensor_descriptor));
+        checkCUDNN(cudnnSetTensor4dDescriptor(
+                    tensor_descriptor, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT,
+                    1, 1, 1, 
+                    (size_t) input_tensor->dims[1] * graph_->get_num_global_vertices()
+                    ));
+        // allocate reserve space
+        size_t reserve_space_size = 0;
+        checkCUDNN(cudnnDropoutGetReserveSpaceSize(tensor_descriptor, &reserve_space_size));
+        void * reserve_space = NULL;
+        checkCUDA(cudaMalloc(&reserve_space, reserve_space_size));
+        // cache the results
+        dropout_op_descriptor[op] = dropout_descriptor;
+        dropout_op_tensor_descriptor[op] = tensor_descriptor;
+        dropout_op_reserve_space[op] = reserve_space;
+        dropout_op_reserve_space_size[op] = reserve_space_size;
+    } 
+
+    cudnnDropoutDescriptor_t dropout_descriptor = dropout_op_descriptor[op];
+    cudnnTensorDescriptor_t tensor_descriptor = dropout_op_tensor_descriptor[op];
+    void * reserve_space = dropout_op_reserve_space[op];
+    size_t reserve_space_size = dropout_op_reserve_space_size[op];
+    assert(reserve_space);
+
+    checkCUDNN(cudnnDropoutForward(
+            *cudnn_handle_,
+            dropout_descriptor,
+            tensor_descriptor,
+            (const void*) d_input,
+            tensor_descriptor,
+            (void*) d_output,
+            (void*) reserve_space,
+            reserve_space_size
+            ));
+
+#ifdef TIMETAG
+    cudaDeviceSynchronize();
+#endif
+}
+
+void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op) {
+#ifdef TIMETAG
+    cudaDeviceSynchronize();
+#endif
+
+    assert(op);
+    assert(op->get_num_input_tensors() == 1);
+    assert(op->get_num_output_tensors() == 1);
+
+    Tensor * input_tensor = op->get_input_tensor(0);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor);
+    assert(output_tensor);
+
+    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    size_t num_elements = input_tensor_resource->get_num_elements();
+    assert(num_elements == output_tensor_resource->get_num_elements());
+
+    DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+
+    assert(d_input_grad);
+    assert(d_output_grad);
+
+    cudnnDropoutDescriptor_t dropout_descriptor = dropout_op_descriptor[op];
+    cudnnTensorDescriptor_t tensor_descriptor = dropout_op_tensor_descriptor[op];
+    void * reserve_space = dropout_op_reserve_space[op];
+    size_t reserve_space_size = dropout_op_reserve_space_size[op];
+    assert(reserve_space);
+
+    checkCUDNN(cudnnDropoutBackward(
+                &cudnn_handle_,
+                dropout_descriptor,
+                tensor_descriptor,
+                (const void*) d_output_grad,
+                tensor_descriptor,
+                (void*) d_input_grad,
+                (void*) reserve_space,
+                reserve_space_size
+                ));
+
+#ifdef TIMETAG
+    cudaDeviceSynchronize();
+#endif
+}
+
+
+
+
+

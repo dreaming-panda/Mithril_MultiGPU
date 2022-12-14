@@ -286,6 +286,24 @@ AggregationType AggregationOperator::get_aggregation_type() {
     return type_;
 }
 
+// DropoutOperator
+
+DropoutOperator::DropoutOperator(Tensor * a, double dropout_rate): Operator(a, 1, OPERATOR_DROPOUT) {
+    assert(a->type == VERTEX_TENSOR);
+    assert(a->num_dims == 2);
+    assert(a->dims[0] == -1);
+    assert(a->dims[1] > 0);
+
+    output_tensors_[0].type = VERTEX_TENSOR;
+    output_tensors_[0].num_dims = 2;
+    output_tensors_[0].dims[0] = -1;
+    output_tensors_[0].dims[1] = t->dims[1];
+}
+
+
+
+
+
 
 
 

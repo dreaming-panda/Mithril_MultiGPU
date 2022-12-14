@@ -228,6 +228,10 @@ class AbstractOperatorExecutor {
         virtual void matmuladd_backward(MatmulAddOperator * op) = 0;
         virtual void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right) = 0;
         virtual void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right) = 0;
+
+        // the dropout op
+        virtual void dropout_forward(DropoutOperator * op) {assert(false);}
+        virtual void dropout_backward(DropoutOperator * op) {assert(false);}
 };
 
 // note that all CPU-version executor/optimizer/loss is not tuned and hence the performance is sub-optimal

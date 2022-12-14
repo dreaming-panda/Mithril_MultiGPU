@@ -31,27 +31,9 @@ def read_sync_acc(num_epoch, graph, model):
     assert(len(acc) == num_epoch)
     return acc
 
-def read_async_accc(num_epoch, graph, model):
+def read_async_no_pred_accc(num_epoch, graph, model):
     acc = []
-    with open("./async/%s_%s.txt" % (graph, model), "r") as f:
-        while len(acc) < num_epoch:
-            line = f.readline()
-            if line == None or len(line) == 0:
-                break
-            if "********* Epoch" in line:
-                while "++++++++++ Test Accuracy:" not in line:
-                    line = f.readline()
-                    if line == None or len(line) == 0:
-                        assert(False)
-                #print("'%s'" % (line))
-                line = line.strip().split(" ")
-                acc.append(float(line[-1]))
-    assert(len(acc) == num_epoch)
-    return acc
-
-def read_async_matching_accc(num_epoch, graph, model):
-    acc = []
-    with open("./async_matching/%s_%s.txt" % (graph, model), "r") as f:
+    with open("./async_no_pred/%s_%s.txt" % (model, graph), "r") as f:
         while len(acc) < num_epoch:
             line = f.readline()
             if line == None or len(line) == 0:
@@ -94,7 +76,7 @@ if __name__ == "__main__":
     #for graph in ["reddit", "arxiv"]:
         epoches = [i for i in range(num_epoch)]
         sync_acc = read_sync_acc(num_epoch, graph, model)
-        #async_acc = read_async_accc(num_epoch, graph, model)
+        async_no_pred_acc = read_async_no_pred_accc(num_epoch, graph, model)
         #async_matching_acc = read_async_matching_accc(num_epoch, graph, model)
         async_pred = read_async_pred_accc(num_epoch, graph, model)
 
@@ -102,7 +84,7 @@ if __name__ == "__main__":
         #print(single_gpu_acc)
 
         plt.plot(epoches, sync_acc, "-", label = "sync")
-        #plt.plot(epoches, async_acc, "-", label = "async")
+        plt.plot(epoches, async_no_pred_acc, "-", label = "async_no_pred")
         #plt.plot(epoches, async_matching_acc, "-", label = "async_matching")
         plt.plot(epoches, async_pred, "-", label = "async_pred")
 
@@ -112,7 +94,7 @@ if __name__ == "__main__":
         plt.title("%s-%s" % (graph, model))
         plt.savefig("%s-%s.pdf" % (graph, model))
         max_acc = max(sync_acc)
-        #plt.ylim([max_acc - 0.05, max_acc + 0.05])
+        plt.ylim([max_acc - 0.1, max_acc + 0.05])
         #plt.xlim([4000, 5000])
         plt.show()
 

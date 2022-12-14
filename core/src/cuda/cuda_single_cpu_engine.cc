@@ -42,6 +42,9 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::
             case OPERATOR_MATMULADD:
                 executor_->matmuladd_forward((MatmulAddOperator*) op, 0, graph_structure_->get_num_global_vertices());
                 break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_forward((DropoutOperator*) op);
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -108,6 +111,9 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
                 break;
             case OPERATOR_MATMULADD:
                 executor_->matmuladd_backward((MatmulAddOperator*) op, 0, graph_structure_->get_num_global_vertices());
+                break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_backward((DropoutOperator*) op);
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());

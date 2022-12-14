@@ -36,11 +36,12 @@ class GCN: public AbstractApplication {
         int num_layers_;
         int num_hidden_units_;
         int num_classes_;
+        double dropout_rate_;
 
     public:
-        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features): 
+        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate): 
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes) {
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate) {
             assert(num_layers >= 1);
             assert(num_hidden_units >= 1);
             assert(num_classes >= 1);
@@ -62,6 +63,7 @@ class GCN: public AbstractApplication {
                     t = softmax(t);
                 } else {
                     t = relu(t);
+                    t = dropout(t, dropout_rate_);
                 }
             }
             return t;

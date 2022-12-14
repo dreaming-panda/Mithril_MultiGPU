@@ -14,6 +14,23 @@
 #include <iostream>
 #include "utilities.h"
 #include "distributed_sys.h"
+
+#define checkCUDNN(status) do {                                        \
+    std::stringstream _error;                                          \
+    if (status != CUDNN_STATUS_SUCCESS) {                              \
+      _error << "CUDNN failure: " << cudnnGetErrorString(status);      \
+      FatalError(_error.str());                                        \
+    }                                                                  \
+} while(0)
+
+#define checkCUDA(status) do {                                         \
+    std::stringstream _error;                                          \
+    if (status != 0) {                                                 \
+      _error << "Cuda failure: " << status;                            \
+      FatalError(_error.str());                                        \
+    }                                                                  \
+} while(0)
+
 class OperatorExecutorGPU:public AbstractOperatorExecutor
 {
     private: 
@@ -163,6 +180,12 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         cudnnTensorDescriptor_t data_descriptor_relu_forward;
         cudnnTensorDescriptor_t data_descriptor_softmax_forward;
         cudnnActivationDescriptor_t relu_descriptor_forward;
+
+        std::map<DropoutOperator*, cudnnDropoutDescriptor_t> dropout_op_descriptor;
+        std::map<DropoutOperator*, cudnnTensorDescriptor_t> dropout_op_tensor_descriptor;
+        std::map<DropoutOperator*, void*> dropout_op_reserve_space; 
+        std::map<DropoutOperator*, size_t> dropout_op_reserve_space_size;
+
         cusparseSpMatDescr_t SpCsr_;
         cusparseSpMatDescr_t SpCsr_T;
         bool has_Spcsr_;
@@ -374,6 +397,10 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         void matmuladd_backward(MatmulAddOperator * op);
         void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right);
         void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right);
+
+        void dropout_forward(DropoutOperator * op);
+        void dropout_backward(DropoutOperator * op);
+
         void Print(){
             std::cout << "relu forward :"<<reluforward_time<<std::endl;
             std::cout << "relu backward :"<<relubackward_time<<std::endl;
