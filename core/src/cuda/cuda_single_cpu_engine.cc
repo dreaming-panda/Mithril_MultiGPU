@@ -440,20 +440,33 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             ++ num_weight_ops;
         }
     }
-    printf("There are %d weight operators, %d of them will suffer from async.\n",
-            num_weight_ops, num_weight_ops / 2);
+    printf("There are %d weight operators.\n", num_weight_ops);
+    const int num_stages = 4;
+    assert(num_weight_ops >= num_stages);
+    printf("The %d lyaers will be divided into %d pipeline stages.\n",
+            num_weight_ops, num_stages);
+    int weight_ops_per_stage = num_weight_ops / num_stages;
+    assert(weight_ops_per_stage > 0);
 
+    // simulate a 4-stage pipeline
     std::vector<WeightOperator*> weight_ops;
     std::map<WeightOperator*, size_t> weight_op_2_num_elements;
     std::map<WeightOperator*, DataType*> tmp_buffers;
-    std::map<WeightOperator*, DataType*> current_weights;
-    std::map<WeightOperator*, DataType*> prev_epoch_weights;
-    std::map<WeightOperator*, DataType*> prev_prev_epoch_weights;
+    std::map<WeightOperator*, DataType*> current_weights; // W(i)
+    std::map<WeightOperator*, DataType*> prev_epoch_weights; // W(i - 1)
+    std::map<WeightOperator*, DataType*> prev_prev_epoch_weights; // W(i - 2)
+    std::map<WeightOperator*, DataType*> prev_prev_prev_epoch_weights; // W(i - 3)
+    std::map<WeightOperator*, DataType*> prev_4_epoch_weights; // W(i - 4)
+    std::map<WeightOperator*, int> weight_op_to_stages; 
     weight_ops.clear();
+    int weight_op_idx = 0;
     for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
         Operator * op = operators[op_idx];
         assert(op);
         if (op->get_type() == OPERATOR_WEIGHT) {
+            weight_op_to_stages[(WeightOperator*) op] = weight_op_idx / weight_ops_per_stage + 1;
+            weight_op_idx ++;
+
             weight_ops.push_back((WeightOperator*) op);
             Tensor * tensor = op->get_output_tensor(0);
             assert(tensor);
@@ -474,11 +487,12 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             data = new DataType[num_elements];
             assert(data);
             prev_prev_epoch_weights[(WeightOperator*) op] = data;
-            // FIXME
-            // roughly a half of the weights are predicted
-            if (weight_ops.size() >= (num_weight_ops / 2)) {
-                break;
-            }
+            data = new DataType[num_elements];
+            assert(data);
+            prev_prev_prev_epoch_weights[(WeightOperator*) op] = data;
+            data = new DataType[num_elements];
+            assert(data);
+            prev_4_epoch_weights[(WeightOperator*) op] = data;
         }
     }
 
@@ -508,7 +522,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         // FIXME
         int startup = 0;
         if (epoch == startup) {
-            // store W(0)
+            // store W(0) 
             for (WeightOperator* op: weight_ops) {
                 Tensor * tensor = op->get_output_tensor(0);
                 assert(tensor);
@@ -516,7 +530,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                 assert(resource);
                 DataType * gpu_data = resource->get_gpu_data();
                 assert(gpu_data);
-                DataType * cpu_data = prev_prev_epoch_weights[op];
+                DataType * cpu_data = prev_4_epoch_weights[op];
                 assert(cpu_data);
                 size_t num_elements = weight_op_2_num_elements[op];
                 cudaMemcpy(
@@ -533,6 +547,40 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                 assert(resource);
                 DataType * gpu_data = resource->get_gpu_data();
                 assert(gpu_data);
+                DataType * cpu_data = prev_prev_prev_epoch_weights[op];
+                assert(cpu_data);
+                size_t num_elements = weight_op_2_num_elements[op];
+                cudaMemcpy(
+                        cpu_data, gpu_data, sizeof(DataType) * num_elements,
+                        cudaMemcpyDeviceToHost
+                        );
+            }
+        } else if (epoch == startup + 2) {
+            // store W(2)
+            for (WeightOperator* op: weight_ops) {
+                Tensor * tensor = op->get_output_tensor(0);
+                assert(tensor);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                assert(resource);
+                DataType * gpu_data = resource->get_gpu_data();
+                assert(gpu_data);
+                DataType * cpu_data = prev_prev_epoch_weights[op];
+                assert(cpu_data);
+                size_t num_elements = weight_op_2_num_elements[op];
+                cudaMemcpy(
+                        cpu_data, gpu_data, sizeof(DataType) * num_elements,
+                        cudaMemcpyDeviceToHost
+                        );
+            }
+        } else if (epoch == startup + 3) {
+            // store W(3)
+            for (WeightOperator* op: weight_ops) {
+                Tensor * tensor = op->get_output_tensor(0);
+                assert(tensor);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                assert(resource);
+                DataType * gpu_data = resource->get_gpu_data();
+                assert(gpu_data);
                 DataType * cpu_data = prev_epoch_weights[op];
                 assert(cpu_data);
                 size_t num_elements = weight_op_2_num_elements[op];
@@ -541,40 +589,80 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                         cudaMemcpyDeviceToHost
                         );
             }
-        } else if (epoch >= startup + 2) {
-            assert(epoch >= startup + 2);
-            // store W(i) and use 2 * W(i-1) - W(i-2) to generate the gradients
-            for (WeightOperator* op: weight_ops) {
+        } else if (epoch >= startup + 4) {
+            assert(epoch >= startup + 4);
+            // currently, we already have W(i - 4), W(i - 3), W(i - 2) and W(i - 1)
+            // W(i) is in the dataflow graph, we can use them to calculate 
+            // W(i + 1)
+
+            // for stage-1 operators, use W1_hat(i) = W1(i - 3) + (W1(i - 3) - W1(i - 4)) * 3
+            // for stage-2 operators, use W2_hat(i) = W2(i - 2) + (W2(i - 2) - W2(i - 3)) * 2
+            // for stage-3 operators, use W3_hat(i) = W3(i - 1) + (W2(i - 1) - W2(i - 2)) * 1
+            // for stage-4 operators, directly use W4(i) (the latest weight)
+            // (W1_hat(i), W2_hat(i), W3_hat(i), W4(i)) will be used to calculate the gradients 
+            // and produces the latest weights W(i + 1) = W(i) - grad 
+            for (int weight_op_idx = 0; weight_op_idx < weight_ops.size(); ++ weight_op_idx) {
+                WeightOperator * op = weight_ops[weight_op_idx];
+                assert(op);
                 Tensor * tensor = op->get_output_tensor(0);
                 assert(tensor);
                 TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
                 assert(resource);
+                size_t num_elements = weight_op_2_num_elements[op];
+                // getting the data
                 DataType * gpu_data = resource->get_gpu_data();
                 assert(gpu_data);
                 DataType * cpu_curr_data = current_weights[op];
                 assert(cpu_curr_data);
-                DataType * cpu_prev_data = prev_epoch_weights[op];
-                assert(cpu_prev_data);
-                DataType * cpu_prev_prev_data = prev_prev_epoch_weights[op];
-                assert(cpu_prev_prev_data);
-                DataType * tmp = tmp_buffers[op];
-                assert(tmp);
-                size_t num_elements = weight_op_2_num_elements[op];
-                // store W(i)
                 cudaMemcpy(
                         cpu_curr_data, gpu_data, sizeof(DataType) * num_elements,
                         cudaMemcpyDeviceToHost
                         );
-                // use 2 * W(i - 1) - W(i - 2)
-                for (size_t i = 0; i < num_elements; ++ i) {
-                    tmp[i] = 2 * cpu_prev_data[i] - cpu_prev_prev_data[i];
-                    cpu_prev_prev_data[i] = cpu_prev_data[i];
-                    cpu_prev_data[i] = cpu_curr_data[i];
+                DataType * cpu_prev_data = prev_epoch_weights[op];
+                assert(cpu_prev_data);
+                DataType * cpu_prev_prev_data = prev_prev_epoch_weights[op];
+                assert(cpu_prev_prev_data);
+                DataType * cpu_prev_prev_prev_data = prev_prev_prev_epoch_weights[op];
+                assert(cpu_prev_prev_prev_data);
+                DataType * cpu_prev_4_data = prev_4_epoch_weights[op];
+                assert(cpu_prev_4_data);
+                // start constructing the weights (with asynchrony + prediction) used for training
+                DataType * tmp = tmp_buffers[op];
+                assert(tmp);
+                // store W_hat(i)
+                if (weight_op_to_stages[op] == 1) {
+                    for (size_t i = 0; i < num_elements; ++ i) {
+                        DataType delta = cpu_prev_prev_prev_data[i] - cpu_prev_4_data[i];
+                        tmp[i] = cpu_prev_prev_prev_data[i] + delta * 3.;
+                    }
+                } else if (weight_op_to_stages[op] == 2) {
+                    for (size_t i = 0; i < num_elements; ++ i) {
+                        DataType delta = cpu_prev_prev_data[i] - cpu_prev_prev_prev_data[i];
+                        tmp[i] = cpu_prev_prev_data[i] + delta * 2.;
+                    }
+                } else if (weight_op_to_stages[op] == 3) {
+                    for (size_t i = 0; i < num_elements; ++ i) {
+                        DataType delta = cpu_prev_data[i] - cpu_prev_prev_data[i];
+                        tmp[i] = cpu_prev_data[i] + delta * 1.;
+                    }
+                } else if (weight_op_to_stages[op] == 4) {
+                    for (size_t i = 0; i < num_elements; ++ i) {
+                        tmp[i] = cpu_curr_data[i];
+                    }
+                } else {
+                    assert(false);
                 }
                 cudaMemcpy(
                         gpu_data, tmp, sizeof(DataType) * num_elements,
                         cudaMemcpyHostToDevice
                         );
+                // update the historical weights
+                for (size_t i = 0; i < num_elements; ++ i) {
+                    cpu_prev_4_data[i] = cpu_prev_prev_prev_data[i];
+                    cpu_prev_prev_prev_data[i] = cpu_prev_prev_data[i];
+                    cpu_prev_prev_data[i] = cpu_prev_data[i];
+                    cpu_prev_data[i] = cpu_curr_data[i];
+                }
             }
         }
 
@@ -611,7 +699,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         cb_time += cb;
 
         // FIXME
-        if (epoch >= startup + 2) {
+        if (epoch >= startup + 4) {
             for (WeightOperator * op: weight_ops) {
                 Tensor * tensor = op->get_output_tensor(0);
                 assert(tensor);
@@ -622,7 +710,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                 DataType * cpu_curr_data = current_weights[op];
                 assert(cpu_curr_data);
                 size_t num_elements = weight_op_2_num_elements[op];
-                // put W(i) back
+                // put W(i) back since W(i) is available when the graidents are calculated
                 cudaMemcpy(
                         gpu_data, cpu_curr_data, sizeof(DataType) * num_elements,
                         cudaMemcpyHostToDevice
