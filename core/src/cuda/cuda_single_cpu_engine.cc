@@ -520,7 +520,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         printf("    Epoch %d:", epoch);
 
         // FIXME
-        int startup = 0;
+        int startup = 100000;
         if (epoch == startup) {
             // store W(0) 
             for (WeightOperator* op: weight_ops) {
@@ -601,6 +601,8 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             // for stage-4 operators, directly use W4(i) (the latest weight)
             // (W1_hat(i), W2_hat(i), W3_hat(i), W4(i)) will be used to calculate the gradients 
             // and produces the latest weights W(i + 1) = W(i) - grad 
+            double diff_norm = 0;
+            double weight_norm = 0;
             for (int weight_op_idx = 0; weight_op_idx < weight_ops.size(); ++ weight_op_idx) {
                 WeightOperator * op = weight_ops[weight_op_idx];
                 assert(op);
@@ -656,6 +658,12 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                         gpu_data, tmp, sizeof(DataType) * num_elements,
                         cudaMemcpyHostToDevice
                         );
+                // calculate the Frobenius norm
+                for (size_t i = 0; i < num_elements; ++ i) {
+                    double diff = tmp[i] - cpu_curr_data[i];
+                    diff_norm += diff * diff;
+                    weight_norm += cpu_curr_data[i] * cpu_curr_data[i];
+                }
                 // update the historical weights
                 for (size_t i = 0; i < num_elements; ++ i) {
                     cpu_prev_4_data[i] = cpu_prev_prev_prev_data[i];
@@ -664,6 +672,11 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                     cpu_prev_data[i] = cpu_curr_data[i];
                 }
             }
+            diff_norm = sqrt(diff_norm);
+            weight_norm = sqrt(weight_norm);
+            printf(" diff/weight norm: %.3f/%.3f=%.6f", 
+                    diff_norm, weight_norm, diff_norm / weight_norm
+                    );
         }
 
         double epoch_time = - get_time();
