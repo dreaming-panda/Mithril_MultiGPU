@@ -42,7 +42,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     if (engine_->is_topmost_node()) {
 
         // FIXME: a simple dispatching strategy of the topmost nodes not considering load balancing is used here
-        dispatch_algorithm_ = DefaultOrderDispatch;
+        dispatch_algorithm_ = RandomDispatch;
         if (dispatch_algorithm_ == RandomDispatch) {
             printf("RANDOMLY DISPATCH THE CHUNKS...\n");
             auto rand_gen = std::default_random_engine{};
@@ -124,15 +124,23 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             pthread_barrier_wait(barrier_);
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
-            for (int chunk_id: local_chunk_ids) {
-                task.epoch_id = epoch_id;
-                task.chunk_id = chunk_id;
-                double time_elapsed = (get_time() - start_time) * 1000;    
+            if (true) { // FIXME
+                for (int chunk_id: local_chunk_ids) {
+                    task.epoch_id = epoch_id;
+                    task.chunk_id = chunk_id;
+                    double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_DISPATCH_DETAILS
-                printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
-                        time_elapsed, node_id, task.epoch_id, task.chunk_id);
+                    printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
+                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
 #endif
-                task_queue_->push(task);
+                    task_queue_->push(task);
+                }
+            } else {
+                for (size_t i = local_chunk_ids.size(); i > 0; -- i) {
+                    task.epoch_id = epoch_id;
+                    task.chunk_id = local_chunk_ids[i - 1];
+                    task_queue_->push(task);
+                }
             }
         }
     } else {
@@ -817,7 +825,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         int num_startup_epoches = engine_->num_startup_epoches_;
         Profiler::submit_main_thread_event(GradSyncStartEvent);
-        if ((epoch_id + 1) % 10 == 0 || epoch_id >= num_startup_epoches * 10) {
+        if (true) {
             //engine_->parameter_server_->commit_grad();
             engine_->weight_aggregator_->commit_grad();
         }
