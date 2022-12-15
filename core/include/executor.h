@@ -232,6 +232,8 @@ class AbstractOperatorExecutor {
         // the dropout op
         virtual void dropout_forward(DropoutOperator * op) {assert(false);}
         virtual void dropout_backward(DropoutOperator * op) {assert(false);}
+        virtual void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {assert(false);}
+        virtual void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {assert(false);}
 };
 
 // note that all CPU-version executor/optimizer/loss is not tuned and hence the performance is sub-optimal

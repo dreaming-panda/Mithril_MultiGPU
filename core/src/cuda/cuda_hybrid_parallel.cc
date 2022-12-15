@@ -3327,6 +3327,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
             case OPERATOR_AGGREGATION:
                 executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -3452,6 +3455,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 break;
             case OPERATOR_AGGREGATION:
                 executor_->aggregation_backward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_backward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());

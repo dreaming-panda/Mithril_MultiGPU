@@ -190,10 +190,22 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         cudnnTensorDescriptor_t data_descriptor_softmax_forward;
         cudnnActivationDescriptor_t relu_descriptor_forward;
 
+        // used for single-node GPU training
         std::map<DropoutOperator*, cudnnDropoutDescriptor_t> dropout_op_descriptor;
         std::map<DropoutOperator*, cudnnTensorDescriptor_t> dropout_op_tensor_descriptor;
         std::map<DropoutOperator*, void*> dropout_op_reserve_space; 
         std::map<DropoutOperator*, size_t> dropout_op_reserve_space_size;
+
+        // used for chunk-based GPU training
+        struct DropoutOpState {
+            cudnnDropoutDescriptor_t dropout_descriptor;
+            cudnnTensorDescriptor_t tensor_descriptor;
+            void * reserved_space;
+            size_t reserved_space_size;
+            void * random_state;
+            size_t random_state_size;
+        };
+        std::map<DropoutOperator*, std::map<int, DropoutOpState>*> dropout_op_states; // mapping from (op, chunk_id) to the state
 
         cusparseSpMatDescr_t SpCsr_;
         cusparseSpMatDescr_t SpCsr_T;
@@ -409,6 +421,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
 
         void dropout_forward(DropoutOperator * op);
         void dropout_backward(DropoutOperator * op);
+        void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
+        void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
 
         void Print(){
             std::cout << "relu forward :"<<reluforward_time<<std::endl;

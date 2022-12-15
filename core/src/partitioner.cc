@@ -80,6 +80,9 @@ double NaiveCostModel::get_operator_cost(VertexId v_begin, VertexId v_end, Opera
         //return flops * 100.; // we use 100xflops as the cost for AGGR since it has significantly worse locality
         //FIXME
         return v_end - v_begin;
+    } else if (op_type == OPERATOR_DROPOUT) {
+        // FIXME
+        return 0;
     } else {
         fprintf(stderr, "The operator is not supported: %d", (int) op_type);
         assert(false);

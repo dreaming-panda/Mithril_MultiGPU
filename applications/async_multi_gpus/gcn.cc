@@ -37,11 +37,12 @@ class GCN: public AbstractApplication {
         int num_layers_;
         int num_hidden_units_;
         int num_classes_;
+        double dropout_rate_;
 
     public:
-        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features): 
+        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate): 
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes) {
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate) {
             assert(num_layers >= 1);
             assert(num_hidden_units >= 1);
             assert(num_classes >= 1);
@@ -63,6 +64,7 @@ class GCN: public AbstractApplication {
                     t = softmax(t);
                 } else {
                     t = relu(t); 
+                    t = dropout(t, dropout_rate_);
                 }
             }
             return t;
@@ -86,7 +88,8 @@ int main(int argc, char ** argv) {
         ("part", po::value<std::string>()->default_value("hybrid"), "The graph-model co-partition strategy: graph, model, hybrid.")
         ("startup", po::value<int>()->default_value(0), "The number of startup epoches (i.e., epoches without any asynchrony).")
         ("random", po::value<int>()->default_value(0), "Randomly dispatch the execution of the chunk? 1: Yes, 0: No.")
-        ("chunks", po::value<int>()->default_value(128), "The number of chunks.");
+        ("chunks", po::value<int>()->default_value(32), "The number of chunks.")
+        ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -112,6 +115,7 @@ int main(int argc, char ** argv) {
     std::string partition_strategy = vm["part"].as<std::string>();
     bool random_dispatch = vm["random"].as<int>() == 1;
     int num_chunks = vm["chunks"].as<int>();
+    double dropout = vm["dropout"].as<double>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -120,6 +124,7 @@ int main(int argc, char ** argv) {
     printf("The number of startup epoches: %d\n", num_startup_epoches);
     printf("Learning rate: %.6f\n", learning_rate);
     printf("The partition strategy: %s\n", partition_strategy.c_str());
+    printf("The dropout rate: %.3f\n", dropout);
 
     volatile bool terminated = false;
     Context::init_context();
@@ -150,7 +155,7 @@ int main(int argc, char ** argv) {
     printf("Number of feature dimensions: %d\n", num_features);
 
     // initialize the engine
-    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
+    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features, dropout);
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay);
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
