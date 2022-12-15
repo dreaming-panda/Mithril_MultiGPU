@@ -641,20 +641,20 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                 if (weight_op_to_stages[op] == 1) {
                     for (size_t i = 0; i < num_elements; ++ i) {
                         DataType delta = cpu_prev_prev_prev_data[i] - cpu_prev_4_data[i];
-                        //tmp[i] = cpu_prev_prev_prev_data[i] + delta * 3.; TODO
-                        tmp[i] = cpu_prev_prev_prev_data[i];
+                        tmp[i] = cpu_prev_prev_prev_data[i] + delta * 3.; 
+                        //tmp[i] = cpu_prev_prev_prev_data[i];
                     }
                 } else if (weight_op_to_stages[op] == 2) {
                     for (size_t i = 0; i < num_elements; ++ i) {
                         DataType delta = cpu_prev_prev_data[i] - cpu_prev_prev_prev_data[i];
-                        //tmp[i] = cpu_prev_prev_data[i] + delta * 2.;
-                        tmp[i] = cpu_prev_prev_data[i]; // TODO
+                        tmp[i] = cpu_prev_prev_data[i] + delta * 2.;
+                        //tmp[i] = cpu_prev_prev_data[i]; 
                     }
                 } else if (weight_op_to_stages[op] == 3) {
                     for (size_t i = 0; i < num_elements; ++ i) {
                         DataType delta = cpu_prev_data[i] - cpu_prev_prev_data[i];
-                        //tmp[i] = cpu_prev_data[i] + delta * 1.;
-                        tmp[i] = cpu_prev_data[i]; // TODO
+                        tmp[i] = cpu_prev_data[i] + delta * 1.;
+                        //tmp[i] = cpu_prev_data[i]; 
                     }
                 } else if (weight_op_to_stages[op] == 4) {
                     for (size_t i = 0; i < num_elements; ++ i) {
@@ -683,9 +683,9 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             }
             diff_norm = sqrt(diff_norm);
             weight_norm = sqrt(weight_norm);
-            printf(" diff/weight norm: %.3f/%.3f=%.6f", 
-                    diff_norm, weight_norm, diff_norm / weight_norm
-                    );
+            //printf(" diff/weight norm: %.3f/%.3f=%.6f",  
+            //        diff_norm, weight_norm, diff_norm / weight_norm
+            //        );
         }
 
         double epoch_time = - get_time();

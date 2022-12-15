@@ -81,7 +81,8 @@ int main(int argc, char ** argv) {
         ("hunits", po::value<int>()->required(), "The number of hidden units.")
         ("epoch", po::value<int>()->required(), "The number of epoches (-1: train until converge).")
         ("lr", po::value<double>()->required(), "The learning rate.")
-        ("decay", po::value<double>()->required(), "Weight decay.");
+        ("decay", po::value<double>()->required(), "Weight decay.")
+        ("dropout", po::value<double>()->default_value(0.5), "Dropout.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -103,12 +104,14 @@ int main(int argc, char ** argv) {
     int num_epoch = vm["epoch"].as<int>();
     double learning_rate = vm["lr"].as<double>();
     double weight_decay = vm["decay"].as<double>();
+    double dropout = vm["dropout"].as<double>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
     printf("The number of hidden units: %d\n", num_hidden_units);
     printf("The number of training epoches: %d\n", num_epoch);
     printf("Learning rate: %.6f\n", learning_rate);
+    printf("Dropout rate: %.6f\n", dropout);
 
     volatile bool terminated = false;
     cudaSetDevice(0);
@@ -139,7 +142,7 @@ int main(int argc, char ** argv) {
     printf("Number of feature dimensions: %d\n", num_features);
 
     // setup the execution engine
-    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
+    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features, dropout);
     SingleNodeExecutionEngineGPU * execution_engine = new SingleNodeExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay);
     LearningRateScheduler * lr_scheduler = new LearningRateScheduler(0.005e-3, learning_rate, 0.8, 1e-8, 20000, 0);

@@ -12,8 +12,17 @@
 #include"cusparse.h"
 #include"graph.h"
 #include <iostream>
+#include <sstream>
 #include "utilities.h"
 #include "distributed_sys.h"
+
+#define FatalError(s) do {                                             \
+    std::stringstream _where, _message;                                \
+    _where << __FILE__ << ':' << __LINE__;                             \
+    _message << std::string(s) + "\n" << __FILE__ << ':' << __LINE__;  \
+    std::cerr << _message.str() << "\nAborting...\n";                  \
+    exit(1);                                                           \
+} while(0)
 
 #define checkCUDNN(status) do {                                        \
     std::stringstream _error;                                          \

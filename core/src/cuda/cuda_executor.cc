@@ -3876,6 +3876,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
     assert(d_input);
     assert(d_output);
 
+    //printf("Dropout Rate: %.3f\n", op->dropout_rate_);
     if (dropout_op_descriptor.find(op) == dropout_op_descriptor.end()) {
         // get the state size
         size_t states_size = 0;
@@ -3932,6 +3933,18 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
 #ifdef TIMETAG
     cudaDeviceSynchronize();
 #endif
+
+     //{  
+     //    DataType *cpu_data = new DataType[num_elements];
+     //    assert(cpu_data);
+     //    cudaMemcpy(cpu_data, d_output, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+     //    int num_zero_elements = 0;
+     //    for (int i = 0; i < num_elements; ++ i) {
+     //        num_zero_elements += cpu_data[i] < 1e-20;
+     //    }
+     //    printf("The sparsity after the dropout op: %.6f\n", num_zero_elements * 1. / num_elements);
+     //    delete [] cpu_data;
+     //}
 }
 
 void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op) {
@@ -3966,7 +3979,7 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op) {
     assert(reserve_space);
 
     checkCUDNN(cudnnDropoutBackward(
-                &cudnn_handle_,
+                *cudnn_handle_,
                 dropout_descriptor,
                 tensor_descriptor,
                 (const void*) d_output_grad,
