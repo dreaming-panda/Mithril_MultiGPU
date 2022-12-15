@@ -42,7 +42,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     if (engine_->is_topmost_node()) {
 
         // FIXME: a simple dispatching strategy of the topmost nodes not considering load balancing is used here
-        dispatch_algorithm_ = HighDegreeFirstDispatch; // TODO
+        dispatch_algorithm_ = DefaultOrderDispatch;
         if (dispatch_algorithm_ == RandomDispatch) {
             printf("RANDOMLY DISPATCH THE CHUNKS...\n");
             auto rand_gen = std::default_random_engine{};

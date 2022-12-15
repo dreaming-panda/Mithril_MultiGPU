@@ -204,6 +204,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             size_t reserved_space_size;
             void * random_state;
             size_t random_state_size;
+            VertexId left;
+            VertexId right;
         };
         std::map<DropoutOperator*, std::map<int, DropoutOpState>*> dropout_op_states; // mapping from (op, chunk_id) to the state
 

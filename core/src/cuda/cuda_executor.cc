@@ -4039,7 +4039,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
     d_output_data += start_idx;
 
     if (dropout_op_states.find(op) == dropout_op_states.end()) {
-        std::map<int, DropoutOpState> * mapping = new std::map<int, DropoutOpState>;
+        std::map<int, DropoutOpState> * mapping = new std::map<int, DropoutOpState>();
         assert(mapping);
         dropout_op_states[op] = mapping;
     }
@@ -4075,6 +4075,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
         checkCUDNN(cudnnDropoutGetReserveSpaceSize(tensor_descriptor, &reserve_space_size));
         void * reserve_space = NULL;
         checkCUDA(cudaMalloc(&reserve_space, reserve_space_size));
+        assert(reserve_space);
         // cache the result
         DropoutOpState dropout_op_state;
         dropout_op_state.dropout_descriptor = dropout_descriptor;
@@ -4083,6 +4084,8 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
         dropout_op_state.reserved_space_size = reserve_space_size;
         dropout_op_state.random_state = states;
         dropout_op_state.random_state_size = states_size;
+        dropout_op_state.left = left;
+        dropout_op_state.right = right;
         (*chunk2state)[chunk_id] = dropout_op_state;
     }
     DropoutOpState dropout_op_state = (*chunk2state)[chunk_id];
@@ -4092,6 +4095,8 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
     void * reserved_space = dropout_op_state.reserved_space;
     size_t reserved_space_size = dropout_op_state.reserved_space_size;
     assert(reserved_space);
+    assert(dropout_op_state.left == left);
+    assert(dropout_op_state.right == right);
 
     // use the state to perform forwarding
     checkCUDNN(cudnnDropoutForward(
@@ -4150,10 +4155,11 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
     size_t num_elements = input_tensor_resource->get_num_elements();
     assert(num_elements == output_tensor_resource->get_num_elements());
     assert(num_elements % num_vertices == 0);
-    size_t num_elements_per_vertex = num_elements_per_vertex / num_vertices;
+    size_t num_elements_per_vertex = num_elements / num_vertices;
 
     size_t start_idx = num_elements_per_vertex * left;
     size_t end_idx = num_elements_per_vertex * right;
+    assert(start_idx < end_idx);
 
     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
