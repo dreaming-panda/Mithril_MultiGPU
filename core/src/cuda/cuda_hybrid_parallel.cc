@@ -756,7 +756,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
         MPI_Barrier(MPI_COMM_WORLD);
         if (node_id == 0) {
-            printf("\n********* Epoch %d: *********\n", epoch_id);
+            //printf("\n********* Epoch %d: *********\n", epoch_id);
+            printf("    Epoch %d:", epoch_id);
         }
         pthread_barrier_wait(barrier_);
         MPI_Barrier(MPI_COMM_WORLD);
@@ -3796,10 +3797,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
     if (DistributedSys::get_instance()->is_master_node()) {
-        printf("++++++++++ Train Accuracy: %.5f\n", accuracy_);
-        printf("++++++++++ Valid Accuracy: %.5f\n", valid_accuracy_);
-        printf("++++++++++ Test Accuracy: %.5f\n", test_accuracy_);
-        printf("++++++++++ Loss: %.5f\n", accum_loss_);
+        //printf("++++++++++ Train Accuracy: %.5f\n", accuracy_);
+        //printf("++++++++++ Valid Accuracy: %.5f\n", valid_accuracy_);
+        //printf("++++++++++ Test Accuracy: %.5f\n", test_accuracy_);
+        //printf("++++++++++ Loss: %.5f\n", accum_loss_);
+        printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", 
+                accum_loss_, accuracy_, valid_accuracy_, test_accuracy_);
     }
     train_acc = accuracy_;
     valid_acc = valid_accuracy_;
