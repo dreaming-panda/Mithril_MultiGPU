@@ -1,0 +1,287 @@
+g001.anvil.rcac.purdue.edu
+Thu Dec 22 21:11:54 2022       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  NVIDIA A100-SXM...  On   | 00000000:81:00.0 Off |                    0 |
+| N/A   33C    P0    72W / 400W |      0MiB / 40536MiB |      0%      Default |
+|                               |                      |             Disabled |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+
+Currently Loaded Modules:
+  1) modtree/gpu            5) mpfr/4.0.2    9) numactl/2.0.14
+  2) nccl/cuda-11.2_2.8.4   6) mpc/1.1.0    10) cuda/11.4.2
+  3) cudnn/cuda-11.2_8.1    7) gcc/11.2.0   11) openmpi/4.0.6
+  4) gmp/6.2.1              8) zlib/1.2.11  12) boost/1.74.0
+
+ 
+
+[  4%] Built target context
+[ 16%] Built target core
+[ 20%] Built target parallel
+[ 39%] Built target cudahelp
+[ 44%] Built target test_graph
+[ 44%] Built target test_mpi_gpu_pipelined_model_parallel
+[ 55%] Built target test_mpi_gpu_model_parallel
+[ 55%] Built target test_trivial
+[ 55%] Built target test_cuda_graph
+[ 55%] Built target test_mpi_gpu_hybrid
+[ 68%] Built target test_cuda_pipeline_parallel
+[ 82%] Built target test_full_structual_graph
+[ 84%] Built target test_nccl_thread
+[ 68%] Built target test_cuda_model_parallel
+[ 84%] Built target test_full_non_structual_graph
+[ 84%] Built target test_mpi_loader
+[ 84%] Built target test_hello_world
+[ 84%] Built target test_cuda
+[ 84%] Built target test_mpi_combined
+[ 84%] Built target test_single_node_fullgpu_training
+[ 84%] Built target test_mpi_structual_graph
+[ 88%] Built target test_nccl_mpi
+[ 91%] Built target test_mpi_non_structual_graph
+[ 91%] Built target test_mpi_model_parallel
+[ 91%] Built target estimate_comm_volume
+[ 91%] Built target test_single_node_training
+[ 91%] Built target test_mpi_pipelined_model_parallel
+[ 91%] Built target test_single_node_gpu_training
+[ 93%] Built target OSDI2023_MULTI_NODES_gcn
+[ 98%] Built target test_two_layer_hybrid_parallelism_designer
+[ 98%] Built target OSDI2023_SINGLE_NODE_gcn_inference
+[100%] Built target OSDI2023_SINGLE_NODE_gcn
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/reddit
+The number of GCN layers: 4
+The number of hidden units: 128
+The number of training epoches: 100
+The number of startup epoches: 0
+Learning rate: 0.001000
+The partition strategy: hybrid
+The dropout rate: 0.500
+Initialized node g001.anvil.rcac.purdue.edu
+Building the CSR structure...
+        It takes 2.237 seconds.
+Building the CSC structure...
+        It takes 1.674 seconds.
+Building the Feature Vector...
+        It takes 0.360 seconds.
+Building the Label Vector...
+        It takes 0.069 seconds.
+Number of classes: 41
+Number of feature dimensions: 602
+train nodes 153431, valid nodes 23831, test nodes 55703
+Using dynamic programming to discover a good hybrid parallelism strategy.
+Number of operators: 20
+The 0-th operator (type OPERATOR_INPUT) has cost 0.000 (ratio: 0.000000)
+The 1-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 2-th operator (type OPERATOR_MATMUL) has cost 0.000 (ratio: 0.000000)
+The 3-th operator (type OPERATOR_AGGREGATION) has cost 232965.000 (ratio: 0.250000)
+The 4-th operator (type OPERATOR_RELU) has cost 0.000 (ratio: 0.000000)
+The 5-th operator (type OPERATOR_DROPOUT) has cost 0.000 (ratio: 0.000000)
+The 6-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 7-th operator (type OPERATOR_MATMUL) has cost 0.000 (ratio: 0.000000)
+The 8-th operator (type OPERATOR_AGGREGATION) has cost 232965.000 (ratio: 0.250000)
+The 9-th operator (type OPERATOR_RELU) has cost 0.000 (ratio: 0.000000)
+The 10-th operator (type OPERATOR_DROPOUT) has cost 0.000 (ratio: 0.000000)
+The 11-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 12-th operator (type OPERATOR_MATMUL) has cost 0.000 (ratio: 0.000000)
+The 13-th operator (type OPERATOR_AGGREGATION) has cost 232965.000 (ratio: 0.250000)
+The 14-th operator (type OPERATOR_RELU) has cost 0.000 (ratio: 0.000000)
+The 15-th operator (type OPERATOR_DROPOUT) has cost 0.000 (ratio: 0.000000)
+The 16-th operator (type OPERATOR_WEIGHT) has cost 0.000 (ratio: 0.000000)
+The 17-th operator (type OPERATOR_MATMUL) has cost 0.000 (ratio: 0.000000)
+The 18-th operator (type OPERATOR_AGGREGATION) has cost 232965.000 (ratio: 0.250000)
+The 19-th operator (type OPERATOR_SOFTMAX) has cost 0.000 (ratio: 0.000000)
+Pure graph-level partition:
+0 232965 0 20
+232965 232965
+The communication cost of partitioning vertices [0, 0) into 0 parts: 0.000000 GB
+The communication cost of partitioning vertices [0, 232965) into 1 parts: 0.000000 GB
+(vertical stripping) The minimum amount of communication volume (DP): 0.000000 GB
+Solution:
+Vertices [0, 232965) vertically partitioned into 1 parts
+The minimum amount of communication volume (model parallel): 0.000000 GB (-nanx)
+The minimum amount of communication volume (graph parallel): 0.000000 GB (-nanx)
+Graph parallel boundaries: 
+0 232965 
+The dynamic programming algorithm takes 0.805 seconds
+*** Node 0, starting model training...
+Number of operators: 20
+0 232965 0 20
+*** Node 0 owns the partition [0, 20) x [0, 232965)
+*** Node 0, constructing the helper classes...
+Operators:
+    Op 0: type OPERATOR_INPUT, output tensors: 0
+    Op 1: type OPERATOR_WEIGHT, output tensors: 1
+    Op 2: type OPERATOR_MATMUL, output tensors: 2
+    Op 3: type OPERATOR_AGGREGATION, output tensors: 3
+    Op 4: type OPERATOR_RELU, output tensors: 4
+    Op 5: type OPERATOR_DROPOUT, output tensors: 5
+    Op 6: type OPERATOR_WEIGHT, output tensors: 6
+    Op 7: type OPERATOR_MATMUL, output tensors: 7
+    Op 8: type OPERATOR_AGGREGATION, output tensors: 8
+    Op 9: type OPERATOR_RELU, output tensors: 9
+    Op 10: type OPERATOR_DROPOUT, output tensors: 10
+    Op 11: type OPERATOR_WEIGHT, output tensors: 11
+    Op 12: type OPERATOR_MATMUL, output tensors: 12
+    Op 13: type OPERATOR_AGGREGATION, output tensors: 13
+    Op 14: type OPERATOR_RELU, output tensors: 14
+    Op 15: type OPERATOR_DROPOUT, output tensors: 15
+    Op 16: type OPERATOR_WEIGHT, output tensors: 16
+    Op 17: type OPERATOR_MATMUL, output tensors: 17
+    Op 18: type OPERATOR_AGGREGATION, output tensors: 18
+    Op 19: type OPERATOR_SOFTMAX, output tensors: 19
+Boundaries: 0 232965
+Fragments: [0, 232965)
+Chunks (number of global chunks: 17): 0-[0, 14560) 1-[14560, 29120) 2-[29120, 43680) 3-[43680, 58240) 4-[58240, 72800) 5-[72800, 87360) 6-[87360, 101920) 7-[101920, 116480) 8-[116480, 131040) ... 16-[232960, 232965)
+(Forwarding) Node 0 (fragment 0) depends on nodes:
+(Backwarding) Node 0 (fragment 0) depends on nodes:
+(I-link dependencies): node 0 should send activation to nodes:
+(I-link dependencies): node 0 should receive activation from nodes:
+(I-link dependencies): node 0 should send gradient to nodes:
+(I-link dependencies): node 0 should receive gradient from nodes:
+232965, 114848857, 114848857
+csr in-out ready !*** Node 0, setting up some other necessary information...
+*** Node 0, starting the helper threads...
++++++++++ Node 0 initializing the weights for op[0, 20)...
++++++++++ Node 0, mapping weight op 1
++++++++++ Node 0, mapping weight op 6
++++++++++ Node 0, mapping weight op 11
++++++++++ Node 0, mapping weight op 16
+RANDOMLY DISPATCH THE CHUNKS...
+*** Node 0, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.001000000
+    Epoch 0:	Loss 3.71478	TrainAcc 0.0169	ValidAcc 0.0174	TestAcc 0.0171
+    Epoch 1:	Loss 3.64032	TrainAcc 0.1234	ValidAcc 0.1660	TestAcc 0.1622
+    Epoch 2:	Loss 3.50650	TrainAcc 0.1980	ValidAcc 0.2141	TestAcc 0.2082
+    Epoch 3:	Loss 3.40886	TrainAcc 0.2858	ValidAcc 0.2931	TestAcc 0.2879
+    Epoch 4:	Loss 3.31295	TrainAcc 0.3219	ValidAcc 0.3252	TestAcc 0.3175
+    Epoch 5:	Loss 3.22372	TrainAcc 0.3299	ValidAcc 0.3316	TestAcc 0.3254
+    Epoch 6:	Loss 3.13499	TrainAcc 0.3363	ValidAcc 0.3455	TestAcc 0.3401
+    Epoch 7:	Loss 3.04274	TrainAcc 0.3866	ValidAcc 0.4223	TestAcc 0.4186
+    Epoch 8:	Loss 2.94042	TrainAcc 0.4151	ValidAcc 0.4531	TestAcc 0.4506
+    Epoch 9:	Loss 2.83588	TrainAcc 0.4356	ValidAcc 0.4734	TestAcc 0.4681
+    Epoch 10:	Loss 2.72729	TrainAcc 0.4451	ValidAcc 0.4841	TestAcc 0.4783
+    Epoch 11:	Loss 2.61352	TrainAcc 0.4607	ValidAcc 0.4975	TestAcc 0.4911
+    Epoch 12:	Loss 2.49994	TrainAcc 0.4800	ValidAcc 0.5144	TestAcc 0.5106
+    Epoch 13:	Loss 2.38234	TrainAcc 0.5257	ValidAcc 0.5583	TestAcc 0.5553
+    Epoch 14:	Loss 2.27104	TrainAcc 0.5593	ValidAcc 0.5967	TestAcc 0.5923
+    Epoch 15:	Loss 2.18044	TrainAcc 0.5609	ValidAcc 0.6000	TestAcc 0.5953
+    Epoch 16:	Loss 2.10452	TrainAcc 0.5705	ValidAcc 0.6108	TestAcc 0.6054
+    Epoch 17:	Loss 2.02791	TrainAcc 0.5548	ValidAcc 0.5964	TestAcc 0.5865
+    Epoch 18:	Loss 1.94826	TrainAcc 0.5391	ValidAcc 0.5790	TestAcc 0.5702
+    Epoch 19:	Loss 1.85898	TrainAcc 0.5692	ValidAcc 0.6032	TestAcc 0.5964
+    Epoch 20:	Loss 1.77134	TrainAcc 0.6056	ValidAcc 0.6326	TestAcc 0.6259
+    Epoch 21:	Loss 1.69220	TrainAcc 0.6376	ValidAcc 0.6612	TestAcc 0.6535
+    Epoch 22:	Loss 1.63380	TrainAcc 0.6519	ValidAcc 0.6735	TestAcc 0.6690
+    Epoch 23:	Loss 1.58807	TrainAcc 0.6675	ValidAcc 0.6906	TestAcc 0.6845
+    Epoch 24:	Loss 1.54025	TrainAcc 0.6750	ValidAcc 0.6969	TestAcc 0.6939
+    Epoch 25:	Loss 1.48522	TrainAcc 0.6756	ValidAcc 0.6986	TestAcc 0.6966
+    Epoch 26:	Loss 1.42813	TrainAcc 0.6886	ValidAcc 0.7121	TestAcc 0.7076
+    Epoch 27:	Loss 1.38270	TrainAcc 0.6984	ValidAcc 0.7255	TestAcc 0.7200
+    Epoch 28:	Loss 1.33008	TrainAcc 0.7106	ValidAcc 0.7383	TestAcc 0.7339
+    Epoch 29:	Loss 1.28582	TrainAcc 0.7186	ValidAcc 0.7434	TestAcc 0.7363
+    Epoch 30:	Loss 1.24259	TrainAcc 0.7128	ValidAcc 0.7358	TestAcc 0.7275
+    Epoch 31:	Loss 1.20795	TrainAcc 0.7158	ValidAcc 0.7352	TestAcc 0.7298
+    Epoch 32:	Loss 1.18063	TrainAcc 0.7215	ValidAcc 0.7434	TestAcc 0.7352
+    Epoch 33:	Loss 1.14862	TrainAcc 0.7248	ValidAcc 0.7446	TestAcc 0.7391
+    Epoch 34:	Loss 1.11355	TrainAcc 0.7462	ValidAcc 0.7638	TestAcc 0.7591
+    Epoch 35:	Loss 1.06952	TrainAcc 0.7570	ValidAcc 0.7734	TestAcc 0.7711
+    Epoch 36:	Loss 1.02550	TrainAcc 0.7707	ValidAcc 0.7872	TestAcc 0.7818
+    Epoch 37:	Loss 0.98197	TrainAcc 0.7888	ValidAcc 0.8028	TestAcc 0.8013
+    Epoch 38:	Loss 0.97385	TrainAcc 0.8155	ValidAcc 0.8315	TestAcc 0.8260
+    Epoch 39:	Loss 0.98962	TrainAcc 0.8075	ValidAcc 0.8233	TestAcc 0.8174
+    Epoch 40:	Loss 0.99819	TrainAcc 0.7822	ValidAcc 0.8003	TestAcc 0.7910
+    Epoch 41:	Loss 0.96505	TrainAcc 0.7896	ValidAcc 0.8087	TestAcc 0.7992
+    Epoch 42:	Loss 0.90424	TrainAcc 0.8163	ValidAcc 0.8329	TestAcc 0.8267
+    Epoch 43:	Loss 0.85754	TrainAcc 0.8283	ValidAcc 0.8433	TestAcc 0.8389
+    Epoch 44:	Loss 0.86061	TrainAcc 0.8033	ValidAcc 0.8172	TestAcc 0.8130
+    Epoch 45:	Loss 0.90823	TrainAcc 0.7761	ValidAcc 0.7901	TestAcc 0.7860
+    Epoch 46:	Loss 0.95665	TrainAcc 0.7621	ValidAcc 0.7789	TestAcc 0.7748
+    Epoch 47:	Loss 0.94188	TrainAcc 0.7653	ValidAcc 0.7793	TestAcc 0.7759
+    Epoch 48:	Loss 0.86919	TrainAcc 0.7899	ValidAcc 0.8046	TestAcc 0.8012
+    Epoch 49:	Loss 0.80882	TrainAcc 0.8198	ValidAcc 0.8371	TestAcc 0.8326
+    Epoch 50:	Loss 0.79032	TrainAcc 0.8365	ValidAcc 0.8511	TestAcc 0.8483
+    Epoch 51:	Loss 0.81018	TrainAcc 0.8237	ValidAcc 0.8372	TestAcc 0.8339
+    Epoch 52:	Loss 0.85183	TrainAcc 0.8017	ValidAcc 0.8174	TestAcc 0.8113
+    Epoch 53:	Loss 0.88413	TrainAcc 0.7964	ValidAcc 0.8115	TestAcc 0.8059
+    Epoch 54:	Loss 0.88504	TrainAcc 0.7826	ValidAcc 0.7968	TestAcc 0.7900
+    Epoch 55:	Loss 0.84784	TrainAcc 0.7881	ValidAcc 0.8065	TestAcc 0.7973
+    Epoch 56:	Loss 0.77514	TrainAcc 0.8153	ValidAcc 0.8325	TestAcc 0.8259
+    Epoch 57:	Loss 0.72989	TrainAcc 0.8337	ValidAcc 0.8465	TestAcc 0.8426
+    Epoch 58:	Loss 0.72126	TrainAcc 0.8418	ValidAcc 0.8543	TestAcc 0.8491
+    Epoch 59:	Loss 0.74588	TrainAcc 0.8198	ValidAcc 0.8351	TestAcc 0.8325
+    Epoch 60:	Loss 0.79281	TrainAcc 0.8056	ValidAcc 0.8205	TestAcc 0.8167
+    Epoch 61:	Loss 0.83061	TrainAcc 0.8017	ValidAcc 0.8155	TestAcc 0.8112
+    Epoch 62:	Loss 0.82428	TrainAcc 0.8022	ValidAcc 0.8154	TestAcc 0.8119
+    Epoch 63:	Loss 0.79334	TrainAcc 0.8100	ValidAcc 0.8258	TestAcc 0.8189
+    Epoch 64:	Loss 0.74593	TrainAcc 0.8134	ValidAcc 0.8271	TestAcc 0.8226
+    Epoch 65:	Loss 0.70565	TrainAcc 0.8270	ValidAcc 0.8415	TestAcc 0.8373
+    Epoch 66:	Loss 0.68682	TrainAcc 0.8388	ValidAcc 0.8519	TestAcc 0.8488
+    Epoch 67:	Loss 0.68154	TrainAcc 0.8410	ValidAcc 0.8521	TestAcc 0.8503
+    Epoch 68:	Loss 0.68657	TrainAcc 0.8419	ValidAcc 0.8544	TestAcc 0.8497
+    Epoch 69:	Loss 0.69443	TrainAcc 0.8483	ValidAcc 0.8604	TestAcc 0.8547
+    Epoch 70:	Loss 0.70526	TrainAcc 0.8527	ValidAcc 0.8646	TestAcc 0.8600
+    Epoch 71:	Loss 0.70768	TrainAcc 0.8451	ValidAcc 0.8590	TestAcc 0.8533
+    Epoch 72:	Loss 0.71415	TrainAcc 0.8366	ValidAcc 0.8511	TestAcc 0.8456
+    Epoch 73:	Loss 0.71163	TrainAcc 0.8327	ValidAcc 0.8479	TestAcc 0.8411
+    Epoch 74:	Loss 0.69055	TrainAcc 0.8384	ValidAcc 0.8530	TestAcc 0.8482
+    Epoch 75:	Loss 0.67155	TrainAcc 0.8552	ValidAcc 0.8670	TestAcc 0.8649
+    Epoch 76:	Loss 0.65232	TrainAcc 0.8620	ValidAcc 0.8749	TestAcc 0.8723
+    Epoch 77:	Loss 0.64594	TrainAcc 0.8616	ValidAcc 0.8757	TestAcc 0.8708
+    Epoch 78:	Loss 0.64041	TrainAcc 0.8574	ValidAcc 0.8699	TestAcc 0.8675
+    Epoch 79:	Loss 0.63533	TrainAcc 0.8534	ValidAcc 0.8666	TestAcc 0.8624
+    Epoch 80:	Loss 0.64010	TrainAcc 0.8492	ValidAcc 0.8605	TestAcc 0.8574
+    Epoch 81:	Loss 0.64532	TrainAcc 0.8468	ValidAcc 0.8597	TestAcc 0.8549
+    Epoch 82:	Loss 0.64811	TrainAcc 0.8482	ValidAcc 0.8611	TestAcc 0.8558
+    Epoch 83:	Loss 0.64698	TrainAcc 0.8506	ValidAcc 0.8631	TestAcc 0.8581
+    Epoch 84:	Loss 0.64293	TrainAcc 0.8478	ValidAcc 0.8627	TestAcc 0.8570
+    Epoch 85:	Loss 0.63165	TrainAcc 0.8505	ValidAcc 0.8638	TestAcc 0.8597
+    Epoch 86:	Loss 0.61960	TrainAcc 0.8548	ValidAcc 0.8696	TestAcc 0.8636
+    Epoch 87:	Loss 0.61016	TrainAcc 0.8632	ValidAcc 0.8776	TestAcc 0.8731
+    Epoch 88:	Loss 0.60144	TrainAcc 0.8725	ValidAcc 0.8852	TestAcc 0.8800
+    Epoch 89:	Loss 0.59928	TrainAcc 0.8781	ValidAcc 0.8898	TestAcc 0.8860
+    Epoch 90:	Loss 0.59997	TrainAcc 0.8821	ValidAcc 0.8943	TestAcc 0.8913
+    Epoch 91:	Loss 0.59572	TrainAcc 0.8843	ValidAcc 0.8945	TestAcc 0.8924
+    Epoch 92:	Loss 0.59657	TrainAcc 0.8803	ValidAcc 0.8915	TestAcc 0.8875
+    Epoch 93:	Loss 0.58996	TrainAcc 0.8769	ValidAcc 0.8860	TestAcc 0.8846
+    Epoch 94:	Loss 0.58929	TrainAcc 0.8744	ValidAcc 0.8850	TestAcc 0.8822
+    Epoch 95:	Loss 0.58407	TrainAcc 0.8742	ValidAcc 0.8865	TestAcc 0.8837
+    Epoch 96:	Loss 0.58111	TrainAcc 0.8773	ValidAcc 0.8887	TestAcc 0.8861
+    Epoch 97:	Loss 0.57548	TrainAcc 0.8809	ValidAcc 0.8906	TestAcc 0.8885
+    Epoch 98:	Loss 0.57675	TrainAcc 0.8800	ValidAcc 0.8913	TestAcc 0.8901
+    Epoch 99:	Loss 0.58317	TrainAcc 0.8704	ValidAcc 0.8826	TestAcc 0.8812
+------------------------node id 0,  total time 13.447618s (per-epoch: 0.134476s)---------------
+************ Profiling Results ************
+	Bubble: 0.000000 (s) (0.00 percentage)
+	Compute: 13.420710 (s) (99.83 percentage)
+	GradSync: 0.020512 (s) (0.15 percentage)
+	GraphComm: 0.001773 (s) (0.01 percentage)
+	Imbalance: 0.000433 (s) (0.00 percentage)
+	LayerComm: 0.000000 (s) (0.00 percentage)
+	Graph-level communication (cluster-wide, per epoch): 0.000 GB
+	Layer-level communication (cluster-wide, per epoch): 0.000 GB
+	Graph+Layer-level communication (cluster-wide, per epoch): 0.000 GB
+	Parameter-server communication (cluster-wide, per epoch): 0.000 GB
+	Graph-level dev2host communication time: 0.000 s, throughput: -nan GBps
+	Graph-level memcpy communication time: 0.000 s, throughput: -nan GBps
+	Graph-level net Activation communication time: 0.000 s, throughput: -nan GBps
+	Graph-level net Gradient communication time: 0.000 s, throughput: -nan GBps
+	Graph-level network batch size: -nan Bytes
+Highest valid_acc: 0.8945
+Target test_acc: 0.8924
+Epoch to reach the target acc: 92
+[MPI Rank 0] Success 

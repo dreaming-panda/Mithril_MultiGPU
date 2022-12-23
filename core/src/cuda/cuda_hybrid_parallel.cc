@@ -780,8 +780,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 if (success) {
                     Profiler::submit_main_thread_event(ForwardTaskStartEvent);
                     assert(task.epoch_id == epoch_id);
-                    double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_SCHEDULE_DETAILS
+                    double time_elapsed = (get_time() - start_time) * 1000;    
                     printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
                             time_elapsed, node_id, task.chunk_id);
 #endif
@@ -805,8 +805,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 if (success) {
                     Profiler::submit_main_thread_event(BackwardTaskStartEvent);
                     assert(task.epoch_id == epoch_id);
-                    double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_SCHEDULE_DETAILS
+                    double time_elapsed = (get_time() - start_time) * 1000;    
                     printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
                             time_elapsed, node_id, task.chunk_id);
 #endif
@@ -845,7 +845,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         //engine_->parameter_server_->print_weights();
     }
     t += get_time();
-    printf("------------------------node id %d,  total time %fs---------------\n", node_id, t);
+    printf("------------------------node id %d,  total time %fs (per-epoch: %fs)---------------\n", node_id, t, t / num_epoch);
 
     // check the consistency of the distributed weights
     engine_->weight_aggregator_->check_weights_consistency();

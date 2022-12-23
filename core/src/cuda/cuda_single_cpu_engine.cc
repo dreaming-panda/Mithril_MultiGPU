@@ -526,7 +526,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         printf("    Epoch %d:", epoch);
 
         // FIXME
-        int startup = 0;
+        int startup = 1000000000;
         if (epoch == startup) {
             // store W(0) 
             for (WeightOperator* op: weight_ops) {
