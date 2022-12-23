@@ -71,7 +71,65 @@ class GCN: public AbstractApplication {
         }
 };
 
-
+CUDAPIPPartitioning get_model_parallel_partition(
+        AbstractApplication * application,
+        int num_gpus, 
+        int num_layers,
+        const std::vector<double>& cost_each_layer,
+        VertexId num_vertices
+        ) {
+    const std::vector<Operator*>& operators = application->get_operators();
+    int num_operators = (int) operators.size();
+    std::vector<std::pair<int, int>> operators_each_layer;
+    operators_each_layer.clear();
+    int op_begin = 0;
+    for (int i = 0; i < num_operators; ++ i) {
+        Operator * op = operators[i];
+        assert(op);
+        if (op->get_type() == OPERATOR_DROPOUT ||
+                op->get_type() == OPERATOR_SOFTMAX) {
+            operators_each_layer.push_back(
+                    std::make_pair(op_begin, i + 1)
+                    );
+            op_begin = i + 1;
+        }
+    }
+    assert(num_layers == operators_each_layer.size());
+    // partition the layers
+    double remained_cost = 0.;
+    for (int i = 0; i < num_layers; ++ i) {
+        remained_cost += cost_each_layer[i];
+    }
+    CUDAPIPPartitioning partition;
+    partition.num_partitions = num_gpus;
+    partition.partition_vid_begin = new VertexId [num_gpus];
+    partition.partition_vid_end = new VertexId [num_gpus];
+    partition.partition_op_begin = new VertexId [num_gpus];
+    partition.partition_op_end = new VertexId [num_gpus];
+    assert(partition.partition_vid_begin && partition.partition_vid_end);
+    assert(partition.partition_op_begin && partition.partition_op_end);
+    int layer_begin = 0;
+    for (int i = 0; i < num_gpus; ++ i) {
+        double mean_cost = remained_cost / (num_gpus - i);
+        double cost = 0;
+        int j = layer_begin;
+        while (j < num_layers) {
+            cost += cost_each_layer[j];
+            ++ j;
+            if (cost >= mean_cost) {
+                break;
+            }
+        }
+        partition.partition_vid_begin[i] = 0;
+        partition.partition_vid_end[i] = num_vertices;
+        std::pair<int, int> beginning_layer = operators_each_layer[layer_begin];
+        partition.partition_op_begin[i] = beginning_layer.first;
+        std::pair<int, int> ending_layer = operators_each_layer[j - 1];
+        partition.partition_op_end[i] = ending_layer.second;
+        layer_begin = j;
+    }
+    return partition;
+}
 
 int main(int argc, char ** argv) {
     // parse input arguments
@@ -211,11 +269,22 @@ int main(int argc, char ** argv) {
     execution_engine->set_loss(loss);
 
     // determine the partitioning 
+    int num_gpus = DistributedSys::get_instance()->get_num_nodes();
+    printf("Number of GPUs: %d\n", num_gpus);
     if (partition_strategy == "hybrid") {
         ParallelismDesigner parallelism_designer(graph_structure, 0.1);
-        int num_gpus = DistributedSys::get_instance()->get_num_nodes();
         CUDAPIPPartitioning partition = parallelism_designer.co_partition_model_and_graph(
                 gcn, num_gpus, num_hidden_units
+                );
+        execution_engine->set_partition(partition);
+    } else if (partition_strategy == "model") {
+        std::vector<double> cost_each_layer;
+        for (int i = 0; i < num_layers; ++ i) {
+            // assume that the cost of each layer is the same
+            cost_each_layer.push_back(1.);
+        }
+        CUDAPIPPartitioning partition = get_model_parallel_partition(
+                gcn, num_gpus, num_layers
                 );
         execution_engine->set_partition(partition);
     } else {
