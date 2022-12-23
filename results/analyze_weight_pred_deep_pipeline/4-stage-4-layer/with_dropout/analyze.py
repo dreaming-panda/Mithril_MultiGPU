@@ -31,6 +31,24 @@ def read_sync_acc(num_epoch, graph, model):
     assert(len(acc) == num_epoch)
     return acc
 
+def read_async_chunk_acc(num_epoch, graph, model):
+    acc = []
+    with open("./async_chunk/%s_%s.txt" % (model, graph), "r") as f:
+        while len(acc) < num_epoch:
+            line = f.readline()
+            if line == None or len(line) == 0:
+                break
+            line = line.strip()
+            if "Epoch" in line:
+                #print(line)
+                line = line.split(" ")
+                acc.append(
+                        float(line[-1])
+                        )
+    #print(len(acc))
+    assert(len(acc) == num_epoch)
+    return acc
+
 def read_async_no_pred_accc(num_epoch, graph, model):
     acc = []
     with open("./async_no_pred/%s_%s.txt" % (model, graph), "r") as f:
@@ -75,19 +93,21 @@ if __name__ == "__main__":
     for graph in ["reddit", "products", "arxiv"]:
     #for graph in ["reddit", "arxiv"]:
         epoches = [i for i in range(num_epoch)]
-        small_epoches = [i for i in range(num_epoch)]
+        scaled_epoches = [i / 4. for i in range(num_epoch)]
         sync_acc = read_sync_acc(num_epoch, graph, model)
         async_no_pred_acc = read_async_no_pred_accc(num_epoch, graph, model)
         #async_matching_acc = read_async_matching_accc(num_epoch, graph, model)
         async_pred = read_async_pred_accc(num_epoch, graph, model)
+        async_chunk = read_async_chunk_acc(num_epoch, graph, model)
 
         #print(epoches)
         #print(single_gpu_acc)
 
-        plt.plot(epoches, sync_acc, "-", label = "sync")
-        plt.plot(small_epoches, async_no_pred_acc, "-", label = "async_no_pred")
+        #plt.plot(scaled_epoches, async_no_pred_acc, "-", label = "async_no_pred")
         #plt.plot(epoches, async_matching_acc, "-", label = "async_matching")
-        plt.plot(small_epoches, async_pred, "-", label = "async_pred")
+        #plt.plot(scaled_epoches, async_pred, "+", label = "async_pred")
+        plt.plot(scaled_epoches, async_chunk, "+", label = "async_chunk")
+        plt.plot(epoches, sync_acc, "+", label = "sync")
 
         plt.legend()
         plt.ylabel("TestAcc")
@@ -95,7 +115,7 @@ if __name__ == "__main__":
         plt.title("%s-%s" % (graph, model))
         plt.savefig("%s-%s.pdf" % (graph, model))
         max_acc = max(sync_acc)
-        plt.ylim([max_acc - 0.05, max_acc + 0.02])
+        plt.ylim([max_acc - 0.1, max_acc + 0.03])
         #plt.xlim([4000, 5000])
         plt.show()
 
