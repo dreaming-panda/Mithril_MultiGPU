@@ -104,8 +104,8 @@ CUDAPIPPartitioning get_model_parallel_partition(
     partition.num_partitions = num_gpus;
     partition.partition_vid_begin = new VertexId [num_gpus];
     partition.partition_vid_end = new VertexId [num_gpus];
-    partition.partition_op_begin = new VertexId [num_gpus];
-    partition.partition_op_end = new VertexId [num_gpus];
+    partition.partition_op_begin = new int [num_gpus];
+    partition.partition_op_end = new int [num_gpus];
     assert(partition.partition_vid_begin && partition.partition_vid_end);
     assert(partition.partition_op_begin && partition.partition_op_end);
     int layer_begin = 0;
@@ -120,6 +120,8 @@ CUDAPIPPartitioning get_model_parallel_partition(
                 break;
             }
         }
+        remained_cost -= cost;
+        printf("GPU %d, layer [%d, %d)\n", i, layer_begin, j);
         partition.partition_vid_begin[i] = 0;
         partition.partition_vid_end[i] = num_vertices;
         std::pair<int, int> beginning_layer = operators_each_layer[layer_begin];
@@ -209,8 +211,10 @@ int main(int argc, char ** argv) {
     graph_structure->SetCuda(true);
     int num_classes = graph_non_structural_data->get_num_labels();
     int num_features = graph_non_structural_data->get_num_feature_dimensions();
+    VertexId num_vertices = graph_structure->get_num_global_vertices();
     printf("Number of classes: %d\n", num_classes);
     printf("Number of feature dimensions: %d\n", num_features);
+    printf("Number of vertices: %u\n", num_vertices);
 
     // initialize the engine
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features, dropout);
@@ -284,7 +288,7 @@ int main(int argc, char ** argv) {
             cost_each_layer.push_back(1.);
         }
         CUDAPIPPartitioning partition = get_model_parallel_partition(
-                gcn, num_gpus, num_layers
+                gcn, num_gpus, num_layers, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
     } else {
