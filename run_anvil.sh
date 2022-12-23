@@ -6,6 +6,7 @@
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node 1 
 #SBATCH --cpus-per-task 32
+#SBATCH --output output.txt
 
 hostname
 nvidia-smi
@@ -17,6 +18,8 @@ make -j
 num_layers=3
 hunits=128
 
+mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/citeseer --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/citeseer_gcn.txt
+
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/reddit --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/sync/reddit_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_products --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/sync/products_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_arxiv --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/sync/arxiv_gcn.txt
@@ -27,10 +30,11 @@ hunits=128
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/reddit --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/reddit_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_products --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/products_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_arxiv --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/arxiv_gcn.txt
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/citeseer --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/citeseer_gcn.txt
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/cora --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/cora_gcn.txt
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/pubmed --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/pubmed_gcn.txt
 
+#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/citeseer --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/citeseer_gcn.txt
+#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/cora --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/cora_gcn.txt
+#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/pubmed --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/pubmed_gcn.txt
+#
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/reddit --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async/reddit_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_products --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async/products_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_arxiv --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async/arxiv_gcn.txt
