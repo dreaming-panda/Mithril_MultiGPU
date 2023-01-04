@@ -768,8 +768,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         int num_scheduled_forward_tasks = 0;
         int num_scheduled_backward_tasks = 0;
         bool success;
-        while (num_scheduled_forward_tasks < num_local_chunks || 
-                num_scheduled_backward_tasks < num_local_chunks) {
+        while (num_scheduled_forward_tasks < num_local_chunks) {
 #ifdef BOOST_ARCH_X86
             __asm volatile ("pause" ::: "memory");
 #endif
@@ -778,14 +777,16 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 CUDAPIPForwardTask task;
                 forward_task_dispatcher_queue_->pop(task, success);
                 if (success) {
-                    Profiler::submit_main_thread_event(ForwardTaskStartEvent);
                     assert(task.epoch_id == epoch_id);
 #ifdef SHOW_SCHEDULE_DETAILS
                     double time_elapsed = (get_time() - start_time) * 1000;    
                     printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
                             time_elapsed, node_id, task.chunk_id);
 #endif
+                    Profiler::submit_main_thread_event(ForwardTaskStartEvent);
                     engine_->perform_forward_task(task);
+                    Profiler::submit_main_thread_event(ForwardTaskCompleteEvent);
+
                     forward_task_committer_queue_->push(task);
                     if (is_bottommost_node) {
                         CUDAPIPBackwardTask back_task;
@@ -795,29 +796,34 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     }
                     engine_->act_update_sender_->insert_new_task(task);
                     ++ num_scheduled_forward_tasks;
-                    Profiler::submit_main_thread_event(ForwardTaskCompleteEvent);
                 }
             }
+        }
+
+        while (num_scheduled_backward_tasks < num_local_chunks) {
+#ifdef BOOST_ARCH_X86
+            __asm volatile ("pause" ::: "memory");
+#endif
 
             if (num_scheduled_backward_tasks < num_local_chunks) {
                 CUDAPIPBackwardTask task;
                 backward_task_dispatcher_queue_->pop(task, success);
                 if (success) {
-                    Profiler::submit_main_thread_event(BackwardTaskStartEvent);
                     assert(task.epoch_id == epoch_id);
 #ifdef SHOW_SCHEDULE_DETAILS
                     double time_elapsed = (get_time() - start_time) * 1000;    
                     printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
                             time_elapsed, node_id, task.chunk_id);
 #endif
-                    engine_->perform_backward_task(task);
+                    Profiler::submit_main_thread_event(BackwardTaskStartEvent);
+                    engine_->perform_backward_task(task); 
+                    Profiler::submit_main_thread_event(BackwardTaskCompleteEvent);
+
                     backward_task_committer_queue_->push(task);
                     engine_->grad_update_sender_->insert_new_task(task); 
                     ++ num_scheduled_backward_tasks;
-                    Profiler::submit_main_thread_event(BackwardTaskCompleteEvent);
                 }
             }
-
         }
         
         Profiler::submit_main_thread_event(GPUSyncStartEvent);
