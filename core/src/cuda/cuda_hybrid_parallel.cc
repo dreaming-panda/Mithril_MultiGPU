@@ -37,6 +37,11 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
     assert(data_dependencies_tracker != NULL);
     DataType * data_buff = nullptr;
+
+    // the compressed data structure
+    uint64_t * compressed_data_hdr = nullptr;
+    DataType * compressed_data_payload = nullptr;
+
     size_t len = 0;
     double comm = 0;
     if (engine_->is_topmost_node()) {
@@ -195,20 +200,57 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                     assert(num_elements_this_chunk > 0);
                     if(len == 0){
                         data_buff = new DataType[num_elements_this_chunk];
-                    len = num_elements_this_chunk;
+                        compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
+                        compressed_data_payload = new DataType [num_elements_this_chunk];
+                        len = num_elements_this_chunk;
                     } else if(len < num_elements_this_chunk){
                         delete [] data_buff;
+                        delete [] compressed_data_hdr;
+                        delete [] compressed_data_payload;
                         data_buff = new DataType[num_elements_this_chunk];
+                        compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
+                        compressed_data_payload = new DataType [num_elements_this_chunk];
                         len = num_elements_this_chunk;
                     }
                     assert(data_buff != nullptr);
+                    //MPI_Recv(
+                    //        data_buff, num_elements_this_chunk, 
+                    //        DistributedSys::get_mpi_data_type<DataType>(),
+                    //        remote_node, ForwardActivationPassing,
+                    //        MPI_COMM_WORLD, &status
+                    //        );
+                    //comm += num_elements_this_chunk * sizeof(DataType);
+                    //TODO
+                    //receive compressed data
                     MPI_Recv(
-                            data_buff, num_elements_this_chunk, 
+                            compressed_data_hdr, num_elements_this_chunk / sizeof(uint64_t) + 1,
+                            DistributedSys::get_mpi_data_type<uint64_t>(),
+                            remote_node, ForwardActivationPassing,
+                            MPI_COMM_WORLD, &status
+                            );
+                    comm += (num_elements_this_chunk / sizeof(uint64_t) + 1) * sizeof(uint64_t);
+                    MPI_Recv(
+                            compressed_data_payload, num_elements_this_chunk, 
                             DistributedSys::get_mpi_data_type<DataType>(),
                             remote_node, ForwardActivationPassing,
                             MPI_COMM_WORLD, &status
                             );
-                    comm += num_elements_this_chunk * sizeof(DataType);
+                    int num_non_zero_elements;
+                    MPI_Get_count(
+                            &status, DistributedSys::get_mpi_data_type<DataType>(), 
+                            &num_non_zero_elements
+                            );
+                    uint64_t * data_hdr_ptx = compressed_data_hdr;
+                    int idx = 0;
+                    for (size_t i = 0; i < num_elements_this_chunk; ++ i) {
+                        size_t offset = i & 63;
+                        size_t mask = (uint64_t) 1 << offset;
+                        data_buff[i] = (*data_hdr_ptx & mask) > 0 ? compressed_data_payload[idx]: 0; 
+                        idx += ((*data_hdr_ptx & mask) > 0);
+                        data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
+                    }
+                    assert(idx == num_non_zero_elements);
+
                     CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements_this_chunk, __FILE__, __LINE__);
                     //delete [] data_buff;
                 }
@@ -232,7 +274,9 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     }
     comm_ = comm;
     if(len > 0) {
-    delete [] data_buff;
+        delete [] data_buff;
+        delete [] compressed_data_hdr;
+        delete [] compressed_data_payload;
     }
 }
 
@@ -465,8 +509,11 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
             }
         }
     } else {
-
         DataType * data_buff = nullptr;
+        // the compressed data structure
+        uint64_t * compressed_data_hdr = nullptr;
+        DataType * compressed_data_payload = nullptr;
+
         size_t len = 0;
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
@@ -506,21 +553,52 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                         assert(num_elements_this_chunk > 0);
                         if(len == 0){
                             data_buff = new DataType[num_elements_this_chunk];
+                            compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
+                            compressed_data_payload = new DataType [num_elements_this_chunk];
                             len = num_elements_this_chunk;
                         } else if(len < num_elements_this_chunk){
                             delete [] data_buff;
+                            delete [] compressed_data_hdr;
+                            delete [] compressed_data_payload;
                             data_buff = new DataType[num_elements_this_chunk];
+                            compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
+                            compressed_data_payload = new DataType [num_elements_this_chunk];
                             len = num_elements_this_chunk;
                         }
                         assert(data_buff != nullptr);
                         CopyFromCUDADeviceToHost<DataType>(data_buff, data, num_elements_this_chunk, __FILE__, __LINE__);
+                        //MPI_Send(
+                        //        data_buff, num_elements_this_chunk,
+                        //        DistributedSys::get_mpi_data_type<DataType>(),
+                        //        remote_node, ForwardActivationPassing,
+                        //        MPI_COMM_WORLD
+                        //        );
+                        // compress the data
+                        assert(sizeof(uint64_t) == 64);
+                        size_t num_non_zero_elements = 0;
+                        memset(compressed_data_hdr, 0, num_elements_this_chunk / sizeof(uint64_t) + 1);
+                        uint64_t * data_hdr_ptx = compressed_data_hdr;
+                        for (size_t i = 0; i < num_elements_this_chunk; ++ i) {
+                            size_t offset = i & 63;
+                            size_t mask = data_buff[i] == 0 ? 0: ((uint64_t) 1 << offset);
+                            *data_hdr_ptx ^= mask;
+                            data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
+                            compressed_data_payload[num_non_zero_elements] = data_buff[i];
+                            num_non_zero_elements += data_buff[i] != 0;
+                        }
+                        // transfer the compressed data
                         MPI_Send(
-                                data_buff, num_elements_this_chunk,
+                                compressed_data_hdr, num_elements_this_chunk / sizeof(uint64_t) + 1,
+                                DistributedSys::get_mpi_data_type<uint64_t>(),
+                                remote_node, ForwardActivationPassing,
+                                MPI_COMM_WORLD
+                                );
+                        MPI_Send(
+                                compressed_data_payload, num_non_zero_elements,
                                 DistributedSys::get_mpi_data_type<DataType>(),
                                 remote_node, ForwardActivationPassing,
                                 MPI_COMM_WORLD
                                 );
-                        
                     }
                 }
             }
