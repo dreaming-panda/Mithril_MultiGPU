@@ -1259,7 +1259,8 @@ class CUDAPIPGraphDataActivationUpdateSender {
         bool * gpu_has_incomming_mirrors;
         int num_master_vertices;
         int local_partition_start;
-        
+        DataType * cuda_values;
+        int * cuda_indices;
 
 };
 
@@ -1368,6 +1369,8 @@ class CUDAPIPGraphDataGradientUpdateSender {
         bool * gpu_has_incomming_mirrors;
         int num_master_vertices;
         int local_partition_start;
+        DataType * cuda_values;
+        int * cuda_indices;
 };
 class CUDAPIPGraphDataGradientUpdateReceiver {
     private:

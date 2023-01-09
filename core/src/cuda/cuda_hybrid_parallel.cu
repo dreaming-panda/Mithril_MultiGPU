@@ -22,10 +22,10 @@ __global__ void buffer_mirrors(
     DataType * dst
 ){
     size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int s2 = (mirror_vertices_list[idx] - begin) * elements_per_vertex; 
+    int s2 = (mirror_vertices_list[idx]) * elements_per_vertex; 
     int s1 = idx * elements_per_vertex;
     if(idx < mirror_vertieces_number){
-        memcpy(dst + s1, src + s2, elements_per_vertex);
+        memcpy(dst + s1, src + s2, elements_per_vertex * sizeof(DataType));
     }
 }
 void CUDAPIPWeightAggregator::element_wise_add_gpu(

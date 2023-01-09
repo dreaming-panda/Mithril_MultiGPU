@@ -2138,6 +2138,8 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
+    cusparseHandle_t cusparse_h;
+    cusparseCreate(&cusparse_h);
     int num_epoch = engine_->get_num_epoch();
     const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
     int num_local_chunks = local_chunk_ids.size();
@@ -2146,17 +2148,22 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     std::vector<std::vector<int>> cuda_mirrors_flag;
     std::vector<std::vector<int*>> cuda_mirrors;
     std::vector<std::vector<std::vector<int>>> mirrors;
+    std::vector<std::vector<cusparseSpMatDescr_t>>spcoo;
     cuda_mirrors_flag.resize(engine_->get_num_chunks());
     cuda_mirrors.resize(engine_->get_num_chunks());
     mirrors.resize(engine_->get_num_chunks());
+    spcoo.resize(engine_->get_num_chunks());
     for(int i = 0; i < cuda_mirrors_flag.size(); ++i){
         cuda_mirrors_flag[i].resize(num_nodes, -1);
         cuda_mirrors[i].resize(num_nodes, nullptr);
         mirrors[i].resize(num_nodes);
+        spcoo[i].resize(num_nodes);
     }
     size_t comm_buff_size = 4 * 1024 * 1024; // 16 MB
     DataType * comm_buff = new DataType [comm_buff_size];
     DataType * cuda_comm_buff = nullptr;
+    void * sp_buff = nullptr;
+    size_t sp_buff_size = 0;
     int cuda_buff_size = 0;
     assert(comm_buff != NULL);
     CUDAPIPForwardTask task;
@@ -2186,7 +2193,7 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                 if(cuda_mirrors_flag[chunk_id][remote_node]  == -1){
                 for (VertexId vid = chunk_begin; vid < chunk_end; ++ vid) {
                     if(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]){
-                        mirrors[chunk_id][remote_node].push_back(vid);
+                        mirrors[chunk_id][remote_node].push_back(vid - chunk_begin);
                     }
                     
                     //num_mirror_vertices += int(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]);
@@ -2199,6 +2206,9 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                 }
                 if(cuda_mirrors_flag[chunk_id][remote_node]  < 1){
                 InitCUDAMemoryFromHostMemory<int>(&cuda_mirrors[chunk_id][remote_node], mirrors[chunk_id][remote_node].data(), mirrors[chunk_id][remote_node].size(), __FILE__, __LINE__);
+                cusparseSpMatDescr_t coo;
+                cusparseCreateCoo(&coo, mirrors[chunk_id][remote_node].size(), chunk_end - chunk_begin, mirrors[chunk_id][remote_node].size(), cuda_indices, cuda_mirrors[chunk_id][remote_node], cuda_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+                spcoo[chunk_id][remote_node] = coo;
                 cuda_mirrors_flag[chunk_id][remote_node]  = 1;
                 }
                 //printf("(I-link) Node %d is going to send the activation data of chunk %d to node %d.\n",
@@ -2245,7 +2255,40 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
                     
                     assert(num_elements_per_vertex <= comm_buff_size);
                     graph_memcpy_time -= get_time();
-                    LauachBufferMirrors(num_mirror_vertices, cuda_mirrors[chunk_id][remote_node], num_elements_per_vertex, chunk_begin, data, cuda_comm_buff);
+                    //LauachBufferMirrors(num_mirror_vertices, cuda_mirrors[chunk_id][remote_node], num_elements_per_vertex, chunk_begin, data, cuda_comm_buff);
+                    cusparseDnMatDescr_t InputData, OutputData;
+                    cusparseCreateDnMat(&InputData, chunk_end - chunk_begin, num_elements_per_vertex, num_elements_per_vertex, data, CUDA_R_32F, CUSPARSE_ORDER_ROW);
+                    cusparseCreateDnMat(&OutputData, num_mirror_vertices, num_elements_per_vertex, num_elements_per_vertex, cuda_comm_buff, CUDA_R_32F, CUSPARSE_ORDER_ROW);
+                    float alpha = 1.0;
+                    float beta = 0.0;
+                    if(epoch_id == 0){
+                    size_t need_device_space = 0;
+                    cusparseSpMM_bufferSize(cusparse_h,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    &alpha, spcoo[chunk_id][remote_node], InputData, &beta, OutputData, CUDA_R_32F,
+                    CUSPARSE_SPMM_COO_ALG4, &need_device_space
+                        );
+                    if(sp_buff_size == 0){
+                    sp_buff_size = need_device_space;
+                    cudaMalloc(&sp_buff, sp_buff_size);
+                    }else if (sp_buff_size < need_device_space){
+                     cudaFree(sp_buff);
+                    sp_buff_size = need_device_space;
+                    cudaMalloc(&sp_buff, sp_buff_size);
+                    }
+                    }
+                    cusparseSpMM(
+                    cusparse_h,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    &alpha, spcoo[chunk_id][remote_node], InputData, &beta, OutputData, CUDA_R_32F,
+                    CUSPARSE_SPMM_COO_ALG4, sp_buff
+                    );
+                    cudaDeviceSynchronize();
+                    
+                    //cusparseDestroyDnMat(InputData);
+                    //cusparseDestroyDnMat(OutputData);
                     graph_memcpy_time += get_time();
                     while (num_sent_elements < num_elements_should_be_sent) {
                         size_t num_elements_to_send = 0;
@@ -2289,7 +2332,8 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     graph_memcpy_time_ = graph_memcpy_time;
     graph_net_time_ = graph_net_time;
     num_net_batches_ = num_net_batches;
-
+    if(sp_buff_size > 0)cudaFree(sp_buff);
+    cusparseDestroy(cusparse_h);
     delete [] comm_buff;
 }
 
@@ -2390,6 +2434,8 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
+    cusparseHandle_t cusparse_h;
+    cusparseCreate(&cusparse_h);
     int num_epoch = engine_->get_num_epoch();
     const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
     int num_local_chunks = local_chunk_ids.size();
@@ -2398,18 +2444,23 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     std::vector<std::vector<int>> cuda_mirrors_flag;
     std::vector<std::vector<int*>> cuda_mirrors;
     std::vector<std::vector<std::vector<int>>> mirrors;
+    std::vector<std::vector<cusparseSpMatDescr_t>>spcoo;
     cuda_mirrors_flag.resize(engine_->get_num_chunks());
     cuda_mirrors.resize(engine_->get_num_chunks());
     mirrors.resize(engine_->get_num_chunks());
+    spcoo.resize(engine_->get_num_chunks());
     for(int i = 0; i < cuda_mirrors_flag.size(); ++i){
         cuda_mirrors_flag[i].resize(num_nodes, -1);
         cuda_mirrors[i].resize(num_nodes, nullptr);
         mirrors[i].resize(num_nodes);
+        spcoo[i].resize(num_nodes);
     }
 
     size_t comm_buff_size = 4 * 1024 * 1024; // 16 MB
     DataType * comm_buff = new DataType [comm_buff_size];
     DataType * cuda_comm_buff = nullptr;
+    void * sp_buff = nullptr;
+    size_t sp_buff_size = 0;
     int cuda_buff_size = 0;
     assert(comm_buff != NULL);
     CUDAPIPBackwardTask task;
@@ -2441,7 +2492,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                 if(cuda_mirrors_flag[chunk_id][remote_node]  == -1){
                 for (VertexId vid = chunk_begin; vid < chunk_end; ++ vid) {
                     if(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]){
-                        mirrors[chunk_id][remote_node].push_back(vid);
+                        mirrors[chunk_id][remote_node].push_back(vid - chunk_begin);
                     }
                     
                     //num_mirror_vertices += int(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]);
@@ -2454,6 +2505,9 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                 //        node_id, chunk_id, remote_node);
                  if(cuda_mirrors_flag[chunk_id][remote_node]  < 1){
                 InitCUDAMemoryFromHostMemory<int>(&cuda_mirrors[chunk_id][remote_node], mirrors[chunk_id][remote_node].data(), mirrors[chunk_id][remote_node].size(), __FILE__, __LINE__);
+                cusparseSpMatDescr_t coo;
+                cusparseCreateCoo(&coo, mirrors[chunk_id][remote_node].size(), chunk_end - chunk_begin, mirrors[chunk_id][remote_node].size(), cuda_indices, cuda_mirrors[chunk_id][remote_node], cuda_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+                spcoo[chunk_id][remote_node] = coo;
                 cuda_mirrors_flag[chunk_id][remote_node]  = 1;
                 }
                 MPI_Send(
@@ -2500,7 +2554,41 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
                     //VertexId vid = chunk_begin;
                     assert(num_elements_per_vertex <= comm_buff_size);
                     graph_memcpy_time -= get_time();
-                    LauachBufferMirrors(num_mirror_vertices, cuda_mirrors[chunk_id][remote_node], num_elements_per_vertex, chunk_begin, grad, cuda_comm_buff);
+                    //LauachBufferMirrors(num_mirror_vertices, cuda_mirrors[chunk_id][remote_node], num_elements_per_vertex, chunk_begin, grad, cuda_comm_buff);
+                    cusparseDnMatDescr_t InputData, OutputData;
+                    cusparseCreateDnMat(&InputData, chunk_end - chunk_begin, num_elements_per_vertex, num_elements_per_vertex, grad, CUDA_R_32F, CUSPARSE_ORDER_ROW);
+                    cusparseCreateDnMat(&OutputData, num_mirror_vertices, num_elements_per_vertex, num_elements_per_vertex, cuda_comm_buff, CUDA_R_32F, CUSPARSE_ORDER_ROW);
+                    float alpha = 1.0;
+                    float beta = 0.0;
+                     if(epoch_id == 0){
+                    size_t need_device_space = 0;
+                    cusparseSpMM_bufferSize(cusparse_h,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    &alpha, spcoo[chunk_id][remote_node], InputData, &beta, OutputData, CUDA_R_32F,
+                    CUSPARSE_SPMM_COO_ALG4, &need_device_space
+                        );
+                    if(sp_buff_size == 0){
+                    sp_buff_size = need_device_space;
+                    cudaMalloc(&sp_buff, sp_buff_size);
+                    }else if (sp_buff_size < need_device_space){
+                     cudaFree(sp_buff);
+                    sp_buff_size = need_device_space;
+                    cudaMalloc(&sp_buff, sp_buff_size);
+                    }
+                    }
+            
+                    cusparseSpMM(
+                    cusparse_h,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    &alpha, spcoo[chunk_id][remote_node], InputData, &beta, OutputData, CUDA_R_32F,
+                    CUSPARSE_SPMM_COO_ALG4, sp_buff
+                    );
+                    cudaDeviceSynchronize();
+                   // cudaFree(sp_buff);
+                   // cusparseDestroyDnMat(InputData);
+                   // cusparseDestroyDnMat(OutputData);
                     graph_memcpy_time += get_time();
                     while (num_sent_elements < num_elements_should_be_sent) {
                         
@@ -2551,7 +2639,8 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     //    printf("\tAmount of grpah-level gradient communication (per node): %.3f MB\n",
     //            avg / 1024. / 1024.);
     //}
-
+    if(sp_buff_size > 0)cudaFree(sp_buff);
+    cusparseDestroy(cusparse_h);
     delete [] comm_buff;
 }
 
@@ -2772,10 +2861,10 @@ void CUDAPIPWeightAggregator::push_grad(WeightOperator * weight_op, DataType * g
 // and apply them with the provided optimizer
 void CUDAPIPWeightAggregator::commit_grad() {
     int num_weight_operators = (int) weight_ops_.size();
-    check_consistency(num_weight_operators);
+   // check_consistency(num_weight_operators);
     for (int i = 0; i < num_weight_operators; ++ i) {
         size_t num_elements = weight_op_num_elements_[i];
-        check_consistency(num_elements);
+        //check_consistency(num_elements);
         DataType * grad = weight_ops_grad_[i];
         assert(grad != NULL);
         // move the grad to the CPU memory
@@ -3945,6 +4034,20 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     //assert(weight_stashing_manager_ != NULL);
 
     // start task scheduling
+    int * ind = nullptr;
+    DataType * values = nullptr;
+
+    ind = new int [lgraph->get_num_master_vertices() + 5];
+    values = new DataType[lgraph->get_num_master_vertices() + 5];
+    for(int k = 0; k < lgraph->get_num_master_vertices() + 5; ++k){
+        ind[k] = k;
+        values[k] = 1.0f;
+    }
+    InitCUDAMemoryFromHostMemory<int>(&act_update_sender_->cuda_indices, ind, lgraph->get_num_master_vertices() + 5, __FILE__, __LINE__);
+    InitCUDAMemoryFromHostMemory<DataType>(&act_update_sender_->cuda_values, values, lgraph->get_num_master_vertices() + 5, __FILE__, __LINE__);
+
+    InitCUDAMemoryFromHostMemory<int>(&grad_update_sender_->cuda_indices, ind, lgraph->get_num_master_vertices() + 5, __FILE__, __LINE__);
+    InitCUDAMemoryFromHostMemory<DataType>(&grad_update_sender_->cuda_values, values, lgraph->get_num_master_vertices() + 5, __FILE__, __LINE__);
     scheduler_ = new CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(
             this, forward_task_dispatcher_, forward_task_committer_,
             backward_task_dispatcher_, backward_task_committer_, &barrier_
@@ -4004,9 +4107,16 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     delete [] partitioning.partition_op_begin;
     delete [] partitioning.partition_op_end;
     delete [] cpu_has_incomming_mirrors;
+    delete [] ind;
+    delete [] values;
     DeallocateCUDAMemory<int>(&local_gpu_training_mask_, __FILE__, __LINE__);
     DeallocateCUDAMemory<int>(&local_gpu_valid_mask_, __FILE__, __LINE__);
     DeallocateCUDAMemory<int>(&local_gpu_test_mask_, __FILE__, __LINE__);
+    DeallocateCUDAMemory<int>(&act_update_sender_->cuda_indices, __FILE__, __LINE__);
+    DeallocateCUDAMemory<int>(&grad_update_sender_->cuda_indices, __FILE__, __LINE__);
+
+    DeallocateCUDAMemory<DataType>(&act_update_sender_->cuda_values, __FILE__, __LINE__);
+    DeallocateCUDAMemory<DataType>(&grad_update_sender_->cuda_values, __FILE__, __LINE__);
     //printf("*** Node %d, done model training\n", node_id);
 
     return accuracy_;

@@ -13,6 +13,7 @@
 #include "cuda/cuda_single_cpu_engine.h"
 #include <vector>
 #include "nccl.h"
+#include "cusparse_v2.h"
 class CUDAGraphParallelEngine : public AbstractExecutionEngine
 {
 private:
@@ -24,6 +25,17 @@ private:
       std::vector<int*> cuda_in_recv_vertices_;
       std::vector<int*> cuda_out_send_vertices_;
       std::vector<int*> cuda_out_recv_vertices_;
+      std::vector<cusparseSpMatDescr_t>in_send_spcsr_;
+      std::vector<cusparseSpMatDescr_t>in_recv_spcsc_;
+      std::vector<cusparseSpMatDescr_t>out_send_spcsr_;
+      std::vector<cusparseSpMatDescr_t>out_recv_spcsc_;
+      void * dbuffer;
+      size_t dbuffer_size;
+      DataType * values;
+      int * row_offset;
+      DataType * cuda_values;
+      int * cuda_row_offset;
+      cusparseHandle_t cusparse_h;
       VertexId start_vertex_;
       VertexId end_vertex_;
       VertexId * local_start_;
@@ -98,6 +110,7 @@ public:
                   delete[] vertices_hosts_;
             }
             cudaStreamDestroy(nccl_stream_);
+            cusparseDestroy(cusparse_h);
       }
       void setCuda(cudnnHandle_t cudnn, VertexId num_vertices, ncclComm_t *comm)
       {
@@ -114,6 +127,7 @@ public:
             vertices_ = num_vertices;
             cudaStreamCreate(&nccl_stream_);
             nccl_comm_ = comm;
+            cusparseCreate(&cusparse_h);
       }
       void set_mask(int *training, int *valid, int *test, int *gpu_training, int *gpu_valid, int *gpu_test, int num_vertices, int ntrain, int nvalid, int ntest)
       {

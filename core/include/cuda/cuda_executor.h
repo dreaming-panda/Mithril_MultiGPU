@@ -9,7 +9,7 @@
 #include"cuda_runtime.h"
 #include"cublas_v2.h"
 #include"cudnn.h"
-#include"cusparse.h"
+#include"cusparse_v2.h"
 #include"graph.h"
 #include <iostream>
 #include "utilities.h"

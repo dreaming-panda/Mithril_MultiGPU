@@ -12,6 +12,10 @@ void CUDAGraphParallelEngine::prepare_distributed_graph()
     this->in_recv_vertices_.resize(num_nodes);
     this->out_send_vertices_.resize(num_nodes);
     this->out_recv_vertices_.resize(num_nodes);
+    this->in_send_spcsr_.resize(num_nodes);
+    this->in_recv_spcsc_.resize(num_nodes);
+    this->out_send_spcsr_.resize(num_nodes);
+    this->out_recv_spcsc_.resize(num_nodes);
     this->cuda_in_send_vertices_.resize(num_nodes);
     this->cuda_in_recv_vertices_.resize(num_nodes);
     this->cuda_out_send_vertices_.resize(num_nodes);
@@ -64,6 +68,9 @@ void CUDAGraphParallelEngine::prepare_distributed_graph()
         std::set<int> s1(in_recv_vertices_[n].begin(),in_recv_vertices_[n].end());
         in_recv_vertices_[n].assign(s1.begin(), s1.end());
         std::sort(in_recv_vertices_[n].begin(),in_recv_vertices_[n].end());
+        for(int k = 0; k < in_recv_vertices_[n].size(); ++k){
+            in_recv_vertices_[n][k] = in_recv_vertices_[n][k] - local_start_[n];
+        }
         InitCUDAMemoryFromHostMemory<int>(&cuda_in_recv_vertices_[n], in_recv_vertices_[n].data(), in_recv_vertices_[n].size(), __FILE__, __LINE__);
 
         std::set<int> s2(out_send_vertices_[n].begin(),out_send_vertices_[n].end());
@@ -74,6 +81,9 @@ void CUDAGraphParallelEngine::prepare_distributed_graph()
         std::set<int> s3(out_recv_vertices_[n].begin(),out_recv_vertices_[n].end());
         out_recv_vertices_[n].assign(s3.begin(), s3.end());
         std::sort(out_recv_vertices_[n].begin(),out_recv_vertices_[n].end());
+        for(int k = 0; k < out_recv_vertices_[n].size(); ++k){
+            out_recv_vertices_[n][k] = out_recv_vertices_[n][k] - local_start_[n];
+        }
         InitCUDAMemoryFromHostMemory<int>(&cuda_out_recv_vertices_[n], out_recv_vertices_[n].data(), out_recv_vertices_[n].size(), __FILE__, __LINE__);
 
         assert(cuda_in_send_vertices_[n] != nullptr);
@@ -96,6 +106,38 @@ void CUDAGraphParallelEngine::prepare_distributed_graph()
     printf("[Node %d]: distributed graph prepared: start: %d, end: %d , send vertices: %d.\n", node_id, start_vertex_, end_vertex_, max_send_vertices);
     AllocateCUDAMemory<DataType>(&send_buffer_, max_send_vertices * max_dim, __FILE__, __LINE__);
     AllocateCUDAMemory<DataType>(&recv_buffer_, max_recv_vertices * max_dim, __FILE__, __LINE__);    
+    int max_vertices = std::max<int>(max_send_vertices, max_recv_vertices);
+    row_offset = new int[max_vertices + 5];
+    values = new DataType[max_vertices + 5];
+    for(int i = 0; i < max_vertices + 5; ++i){
+        row_offset[i] = i;
+        values[i] = 1.0;
+    }
+    InitCUDAMemoryFromHostMemory<int>(&cuda_row_offset, row_offset, max_vertices + 5, __FILE__, __LINE__);
+    InitCUDAMemoryFromHostMemory<DataType>(&cuda_values, values, max_vertices + 5, __FILE__, __LINE__);
+
+    for(int n = 0; n < num_nodes; ++n){
+        if(n == node_id) continue;
+        cusparseSpMatDescr_t in_send;
+        cusparseCreateCsr(&in_send, in_send_vertices_[n].size(), graph_structure_->get_num_global_vertices(), in_send_vertices_[n].size(), cuda_row_offset, cuda_in_send_vertices_[n], cuda_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+        in_send_spcsr_[n] = in_send;
+
+        cusparseSpMatDescr_t in_recv;
+        cusparseCreateCoo(&in_recv, local_end_[n] - local_start_[n], in_recv_vertices_[n].size(),  in_recv_vertices_[n].size(), cuda_in_recv_vertices_[n], cuda_row_offset, cuda_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+        in_recv_spcsc_[n] = in_recv;
+
+        cusparseSpMatDescr_t out_send;
+        cusparseCreateCsr(&out_send, out_send_vertices_[n].size(), graph_structure_->get_num_global_vertices(), out_send_vertices_[n].size(), cuda_row_offset, cuda_out_send_vertices_[n], cuda_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+        out_send_spcsr_[n] = out_send;
+
+        cusparseSpMatDescr_t out_recv;
+        cusparseCreateCoo(&out_recv, local_end_[n] - local_start_[n],out_recv_vertices_[n].size(),  out_recv_vertices_[n].size(), cuda_out_recv_vertices_[n], cuda_row_offset,cuda_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+        out_recv_spcsc_[n] = out_recv;
+
+
+    }
+    dbuffer_size = 0;
+
 }
 void CUDAGraphParallelEngine::optimize_weights(const std::vector<Operator *> &operators, const std::vector<bool> &operator_mask){
     assert(optimizer_ != nullptr);
@@ -285,22 +327,73 @@ void CUDAGraphParallelEngine::SyncTensorNCCLP2P(Tensor * tensor, int type){
     int output_size = tensor->dims[1];
     TensorResourceGPU * resource =  (TensorResourceGPU*)tensor->resource;
     DataType * cuda_data = nullptr;
+    
     //ncclGroupStart();
     if(type == 0){
         cuda_data = resource->get_gpu_data();
+        
         for(int i = 0; i < num_nodes; ++i){
         for(int j = 0; j < num_nodes; ++j){
             if(i == j)continue;
             if(node_id == i){
-              collect_mirrors(in_send_vertices_[j].size(), cuda_in_send_vertices_[j], output_size, cuda_data, send_buffer_);
-              ncclSend(send_buffer_, in_send_vertices_[j].size() * output_size, ncclFloat32, j, *nccl_comm_, nccl_stream_);
-                //ncclSend(cuda_data + start_vertex_ * output_size, (end_vertex_ - start_vertex_) * output_size, ncclFloat32, j, *nccl_comm_, nccl_stream_);
+             
+              cusparseDnMatDescr_t InputData, OutputData;
+              cusparseCreateDnMat(&InputData, graph_structure_->get_num_global_vertices(), output_size, output_size, (void*)cuda_data, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+              cusparseCreateDnMat(&OutputData, in_send_vertices_[j].size(), output_size, output_size, (void*)send_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+              float alpha = 1.0;
+              float beta = 0.0;
+              
+               cusparseSpMM_bufferSize(cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, in_send_spcsr_[j], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, &dbuffer_size
+                );
+                cudaMalloc(&dbuffer, dbuffer_size);
+            
+                cusparseSpMM(
+                cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                 &alpha, in_send_spcsr_[j], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, dbuffer
+                 );
                 cudaDeviceSynchronize();
+                cudaFree(dbuffer);
+            
+              ncclSend(send_buffer_, in_send_vertices_[j].size() * output_size, ncclFloat32, j, *nccl_comm_, nccl_stream_);
+               
+              cudaDeviceSynchronize();
             }
             if(node_id == j){
               ncclRecv(recv_buffer_, in_recv_vertices_[i].size() * output_size, ncclFloat32, i, *nccl_comm_, nccl_stream_);
-                scatter_mirrors(in_recv_vertices_[i].size(), cuda_in_recv_vertices_[i], output_size, recv_buffer_, cuda_data);
-              //ncclRecv(cuda_data + local_start_[i] * output_size, (local_end_[i] - local_start_[i]) * output_size, ncclFloat32, i, *nccl_comm_, nccl_stream_);
+            
+              cusparseDnMatDescr_t InputData, OutputData;
+              cusparseCreateDnMat(&InputData, in_recv_vertices_[i].size(), output_size, output_size, (void*)recv_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+              cusparseCreateDnMat(&OutputData, local_end_[i] - local_start_[i], output_size, output_size, (void*)(cuda_data + local_start_[i] * output_size), CUDA_R_32F,CUSPARSE_ORDER_ROW);
+              float alpha = 1.0;
+              float beta = 0.0;
+              
+               cusparseSpMM_bufferSize(cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, in_recv_spcsc_[i], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_COO_ALG4, &dbuffer_size
+                );
+                cudaMalloc(&dbuffer, dbuffer_size);
+            
+                cusparseSpMM(
+                cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                 &alpha, in_recv_spcsc_[i], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_COO_ALG4, dbuffer
+                 );
+                cudaDeviceSynchronize();
+                cudaFree(dbuffer);
+
+            
+            //  ncclRecv(cuda_data ,  graph_->get_num_global_vertices()* output_size, ncclFloat32, i, *nccl_comm_, nccl_stream_);
                 cudaDeviceSynchronize();
             }
 
@@ -313,14 +406,61 @@ void CUDAGraphParallelEngine::SyncTensorNCCLP2P(Tensor * tensor, int type){
         for(int j = 0; j < num_nodes; ++j){
             if(i == j)continue;
             if(node_id == i){
-              collect_mirrors(out_send_vertices_[j].size(), cuda_out_send_vertices_[j], output_size, cuda_data, send_buffer_);
+              cusparseDnMatDescr_t InputData, OutputData;
+              cusparseCreateDnMat(&InputData, graph_structure_->get_num_global_vertices(), output_size, output_size, (void*)cuda_data, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+              cusparseCreateDnMat(&OutputData, out_send_vertices_[j].size(), output_size, output_size, (void*)send_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+              float alpha = 1.0;
+              float beta = 0.0;
+              
+               cusparseSpMM_bufferSize(cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, out_send_spcsr_[j], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, &dbuffer_size
+                );
+                cudaMalloc(&dbuffer, dbuffer_size);
+            
+                cusparseSpMM(
+                cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                 &alpha, out_send_spcsr_[j], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, dbuffer
+                 );
+                cudaDeviceSynchronize();
+                cudaFree(dbuffer);
+    
                ncclSend(send_buffer_, out_send_vertices_[j].size() * output_size, ncclFloat32, j, *nccl_comm_, nccl_stream_);
                 //ncclSend(cuda_data + start_vertex_ * output_size, (end_vertex_ - start_vertex_) * output_size, ncclFloat32, j, *nccl_comm_, nccl_stream_);
                 cudaDeviceSynchronize();
             }
             if(node_id == j){
-                ncclRecv(recv_buffer_, out_recv_vertices_[i].size() * output_size, ncclFloat32, i, *nccl_comm_, nccl_stream_);
-                scatter_mirrors(out_recv_vertices_[i].size(), cuda_out_recv_vertices_[i], output_size, recv_buffer_, cuda_data);
+            ncclRecv(recv_buffer_, out_recv_vertices_[i].size() * output_size, ncclFloat32, i, *nccl_comm_, nccl_stream_);
+                cusparseDnMatDescr_t InputData, OutputData;
+              cusparseCreateDnMat(&InputData, out_recv_vertices_[i].size(), output_size, output_size, (void*)recv_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+              cusparseCreateDnMat(&OutputData, local_end_[i] - local_start_[i], output_size, output_size, (void*)(cuda_data + local_start_[i] * output_size), CUDA_R_32F,CUSPARSE_ORDER_ROW);
+              float alpha = 1.0;
+              float beta = 0.0;
+              
+               cusparseSpMM_bufferSize(cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, out_recv_spcsc_[i], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_COO_ALG4, &dbuffer_size
+                );
+                cudaMalloc(&dbuffer, dbuffer_size);
+            
+                cusparseSpMM(
+                cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                 &alpha, out_recv_spcsc_[i], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_COO_ALG4, dbuffer
+                 );
+                cudaDeviceSynchronize();
+                cudaFree(dbuffer);
+
+                
                 //ncclRecv(cuda_data + local_start_[i] * output_size, (local_end_[i] - local_start_[i]) * output_size, ncclFloat32, i, *nccl_comm_, nccl_stream_);
                 cudaDeviceSynchronize();
             }
