@@ -5,4 +5,5 @@ function (add_application application_name)
 endfunction()
 
 add_application(gcn)
+add_application(gcn_graph_parallel)
 #add_application(gcnii)

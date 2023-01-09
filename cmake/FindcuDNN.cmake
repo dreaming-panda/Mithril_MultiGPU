@@ -23,11 +23,10 @@
 
 # Sets the possible install locations
 set(CUDNN_HINTS
-  /opt/apps/cuda11_3/cudnn/8.2.1/
-  /usr/local/cuda-11.6/
+  /home/zhuomingchen/cuda112/
 )
 set(CUDNN_PATHS
-  /opt/apps/cuda11_3/cudnn/8.2.1/
+  /home/zhuomingchen/cuda112/
 )
 
 # Finds the include directories

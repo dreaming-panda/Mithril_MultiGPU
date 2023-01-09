@@ -14,6 +14,7 @@
 #include <iostream>
 #include "utilities.h"
 #include "distributed_sys.h"
+#include <assert.h>
 class OperatorExecutorGPU:public AbstractOperatorExecutor
 {
     private: 
@@ -327,6 +328,26 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             cusparseCreateCsr(&SpCsr_T, num_vertices, num_vertices, nnz, (void *)t_cols, (void *)t_rows,(void *)t_values, 
             CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
             has_Spcsr_ = true;
+            
+        }
+        void graph_parallel_set_csr(){
+            this->set_cpu_csr(graph_->get_host_cscColOffsets(), graph_->get_host_csrRowOffsets());
+            this->set_csr(graph_->get_cuda_cscRowInd(), graph_->get_cuda_cscValues(),graph_->get_cuda_cscColOffsets(),
+            graph_->get_nnz(),graph_->get_cuda_csrColInd(), graph_->get_cuda_csrValues(),graph_->get_cuda_csrRowOffsets(),graph_->get_nnz(), 
+            graph_->get_num_global_vertices(), graph_->get_num_global_vertices(), graph_->get_num_global_vertices());
+            assert(this->cpu_csr_.host_rowoffsets_in != nullptr);
+            assert(this->cpu_csr_.host_rowoffsets_out != nullptr);
+            assert(this->csr_.cuda_col_in != nullptr);
+            assert(this->csr_.cuda_col_out != nullptr);
+            assert(this->csr_.nnz_out == this->csr_.nnz_in);
+            assert(this->csr_.num_master_vertices == this->csr_.inMatrixSize);
+            assert(this->csr_.num_master_vertices == this->csr_.outMatrixSize);
+            for(int v = 0; v < graph_->get_num_global_vertices(); ++v){
+                VertexId n_in = graph_->get_in_degree(v);
+                VertexId n_out = graph_->get_out_degree(v);
+                assert((n_in + 1) == this->cpu_csr_.host_rowoffsets_in[v+1] - this->cpu_csr_.host_rowoffsets_in[v]);
+                assert((n_out + 1) == this->cpu_csr_.host_rowoffsets_out[v+1] - this->cpu_csr_.host_rowoffsets_out[v]);
+            }
         }
         void init_identity(int hidden_units){
             assert(id_init == false);
@@ -393,6 +414,7 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             }
             int node_id = DistributedSys::get_instance()->get_node_id();
             int num_master_vertices_ = csr_.num_master_vertices;
+            printf("%d\n", num_master_vertices_);
             int * row_offsets_in = new int[num_master_vertices_ + 1];
             memset(row_offsets_in, 0, sizeof(int) * (num_master_vertices_ + 1));
             for(VertexId i = left + 1; i < right + 1; ++i){
@@ -406,8 +428,14 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
            
            
             assert(local_nnz == row_offsets_in[right]);
+
+            //sleep(100);
             AllocateCUDAMemory<int>(&cuda_rows, num_master_vertices_ + 1, __FILE__, __LINE__);
+           
             
+
+            //sleep(100);
+            assert(cuda_rows != nullptr);
             CopyFromHostToCUDADevice<int>(cuda_rows, row_offsets_in, num_master_vertices_ + 1, __FILE__, __LINE__);
             int skip = cpu_csr_.host_rowoffsets_in[left];
             DataType * global_values = csr_.cuda_value_in;

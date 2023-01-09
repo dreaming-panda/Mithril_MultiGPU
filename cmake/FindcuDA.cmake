@@ -1,9 +1,8 @@
 set(CUDA_HINTS
-   /opt/apps/cuda/11.3/
-   /usr/local/cuda-11.6/
+   /home/zhuomingchen/cuda112/
 )
 set(CUDAPATHS
-  /opt/apps/cuda/11.3/
+  /home/zhuomingchen/cuda112/
 )
 
 # Finds the include directories

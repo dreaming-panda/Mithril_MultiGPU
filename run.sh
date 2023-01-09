@@ -1,4 +1,4 @@
-#!/bin/bash
+
 #----------------------------------------------------
 # Example Slurm job script
 # for TACC Stampede2 SKX nodes
@@ -42,24 +42,23 @@
 
 # Other commands must follow all #SBATCH directives...
 
-mkdir -p build
-bash prepare.sh
-module load boost/1.66
-cd build
-cmake ..
-make -j
-cd ..
+#mkdir -p build
+#bash prepare.sh
+#module load boost/1.66
+#cd build
+#cmake ..
+#make -j
+#cd ..
 
-module list
-pwd
-date
+#module list
+#pwd
+#date
 # Set thread count (default value is 1)...
 
-export OMP_NUM_THREADS=12
 
 # Launch MPI code... 
 
 #ibrun ./build/tests/test_cuda_pipeline_parallel         # Use ibrun instead of mpirun or mpiexec
-ibrun ./build/applications/async_multi_gpus/gcn --graph /work/03924/xuehaiq/maverick2/jingji/gnn_datasets/with_splitting/Citeseer --layers 2 --hunits 128 --epoch 500 --lr 1e-2 --decay 5e-4 --part hybrid
-
+mpirun -np 4 ./build/applications/async_multi_gpus/gcn_graph_parallel --graph ../dataset/Products --layers 2 --hunits 128 --epoch 50 --lr 1e-2 --decay 5e-4
+#./build/applications/single_gpu/gcn --graph ../dataset/APRO --layers 2 --hunits 128 --epoch 1000 --lr 1e-2 --decay 5e-4
 # ---------------------------------------------------

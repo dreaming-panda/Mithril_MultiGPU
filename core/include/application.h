@@ -26,6 +26,7 @@ limitations under the License.
 class SingleNodeExecutionEngineCPU;
 class SingleNodeExecutionEngineGPU;
 class ParallelismDesigner;
+class CUDAGraphParallelEngine;
 //class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
 class AbstractApplication {
     private:
@@ -60,6 +61,7 @@ class AbstractApplication {
         friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU;
         friend class ParallelismDesigner;
         friend class TwoLayerModelParallelismDesigner;
+        friend class CUDAGraphParallelEngine;
     protected:
         Tensor * relu(Tensor * t);
         Tensor * weight(int length);

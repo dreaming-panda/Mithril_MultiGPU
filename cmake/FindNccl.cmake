@@ -52,11 +52,11 @@ endif (BUILD_WITH_SHARED_NCCL)
 
 find_path(NCCL_INCLUDE_DIR
   NAMES nccl.h
-  PATHS /opt/apps/cuda11_3/nccl/2.9.9/include)
+  PATHS /home/zhuomingchen/nccl-install/include)
 
 find_library(NCCL_LIBRARY
   NAMES ${NCCL_LIB_NAME}
-  PATHS /opt/apps/cuda11_3/nccl/2.9.9/lib)
+  PATHS /home/zhuomingchen/nccl-install/lib)
 
 message(STATUS "Using nccl library: ${NCCL_LIBRARY}")
 

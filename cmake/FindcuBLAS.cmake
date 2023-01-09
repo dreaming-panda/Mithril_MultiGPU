@@ -1,4 +1,4 @@
-# ==================================================================================================
+#==================================================================================================
 # This file is part of the cuBLASt project. The project is licensed under Apache Version 2.0. This
 # project loosely follows the Google C++ styleguide and uses a tab-size of two spaces and a max-
 # width of 100 characters per line.
@@ -23,11 +23,11 @@
 
 # Sets the possible install locations
 set(CUBLAS_HINTS
-  /opt/apps/cuda/11.3/
-  /usr/local/cuda-11.6/
+  /home/zhuomingchen/cuda112/
+  
 )
 set(CUBLAS_PATHS
-    /opt/apps/cuda/11.3/
+    /home/zhuomingchen/cuda112/
 )
 
 # Finds the include directories

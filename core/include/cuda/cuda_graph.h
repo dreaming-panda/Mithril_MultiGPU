@@ -98,6 +98,10 @@ class CUDAFullyStructualGraph:public GraphStructureFullyReplicatedV2
         {
             return cuda_csrRowOffsets_;
         };
+        int* get_host_csrRowOffsets()
+        {
+            return host_csrRowOffsets_;
+        };
         int* get_cuda_csrColInd()
         {
             return cuda_csrColInd_;
@@ -110,6 +114,10 @@ class CUDAFullyStructualGraph:public GraphStructureFullyReplicatedV2
         int* get_cuda_cscColOffsets()
         {
             return cuda_cscColOffsets_;
+        };
+        int* get_host_cscColOffsets()
+        {
+            return host_cscColOffsets_;
         };
         int* get_cuda_cscRowInd()
         {
