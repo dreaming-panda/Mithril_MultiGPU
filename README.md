@@ -109,7 +109,7 @@ graphs.
 
 If we notice that the system is computation bounded, we will consider adding GPU support for better efficiency.
 
-### Step 7: Perrormance Tuning
+### Step 7: Performance Tuning
 
 Profile the system to check whether there is some unnecessary performance overhead and try to eliminate them.
 
