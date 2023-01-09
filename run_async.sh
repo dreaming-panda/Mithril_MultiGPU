@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 01:00:00 
+#SBATCH -t 00:10:00 
 #SBATCH --nodes 1
 #SBATCH --gpus-per-node 4
 #SBATCH --ntasks-per-node 4
@@ -22,7 +22,7 @@ lr=1e-3
 graph=reddit
 epoch=100
 decay=0
-chunks=32 
+chunks=32
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks
 

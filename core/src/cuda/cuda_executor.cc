@@ -2360,12 +2360,26 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, Vertex
 
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    int activation_size = input_tensor->dims[1];
 
+    //{
+    //    DataType * d_input_data_cpu = new DataType[(right - left) * activation_size];
+    //    assert(d_input_data_cpu);
+    //    checkCUDA(cudaMemcpy(d_input_data_cpu, d_input_data, sizeof(DataType) * (right - left) * activation_size,
+    //            cudaMemcpyDeviceToHost));
+    //    size_t num_elements = (right - left) * activation_size;
+    //    size_t num_zero_elements = 0;
+    //    for (size_t i = 0; i < num_elements; ++ i) {
+    //        num_zero_elements += d_input_data_cpu[i] == 0;
+    //    }
+    //    printf("The sparsity of the activation before aggregation is: %.3f\n",
+    //            1. * num_zero_elements / num_elements);
+    //    delete [] d_input_data_cpu;
+    //}
 
     AbstractGraphStructure * graph = graph_;
     assert(graph != NULL);
 
-    int activation_size = input_tensor->dims[1];
     assert(output_tensor->dims[1] == activation_size);
     //VertexId num_vertices = graph_->get_num_global_vertices();
     // VertexId K = num_vertices;

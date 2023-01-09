@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <random>
 
+#include <math.h>
+
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_utils.h"
 #include "profiler.h"
@@ -349,8 +351,11 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
         }
     } else {
         // 16 MB communication buffer
-        const size_t comm_buff_size = 4 * 1024 * 1024;
+        const size_t comm_buff_size = 8 * 1024 * 1024;
         DataType * comm_buff = new DataType [comm_buff_size + 16];
+        uint64_t * compressed_data_hdr = new uint64_t [comm_buff_size / sizeof(uint64_t) + 1];
+        DataType * compressed_data_payload = new DataType [comm_buff_size + 16];
+
         DataType * cuda_comm_buff = nullptr;
         AllocateCUDAMemory<DataType>(&cuda_comm_buff, comm_buff_size + 16, __FILE__, __LINE__);
         assert(comm_buff != NULL);
@@ -416,13 +421,47 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                                 num_elements_this_chunk - num_received_elements,
                                 comm_buff_size
                                 );
-                        MPI_Recv(
-                                comm_buff, num_elements_to_receive, 
-                                DistributedSys::get_mpi_data_type<DataType>(),
-                                remote_node, BackwardGradientPassing,
-                                MPI_COMM_WORLD, &status
-                              );
-                        comm += num_elements_to_receive * sizeof(DataType);
+                        if (! COMPRESS_DATA) {
+                            MPI_Recv(
+                                    comm_buff, num_elements_to_receive, 
+                                    DistributedSys::get_mpi_data_type<DataType>(),
+                                    remote_node, BackwardGradientPassing,
+                                    MPI_COMM_WORLD, &status
+                                  );
+                            comm += num_elements_to_receive * sizeof(DataType);
+                        } else {
+                            // receive the compressed data
+                            MPI_Recv(
+                                    compressed_data_hdr, num_elements_to_receive / sizeof(uint64_t) + 1,
+                                    DistributedSys::get_mpi_data_type<uint64_t>(),
+                                    remote_node, BackwardGradientPassing,
+                                    MPI_COMM_WORLD, &status
+                                    );
+                            comm += (num_elements_to_receive / sizeof(uint64_t) + 1) * sizeof(uint64_t);
+                            MPI_Recv(
+                                    compressed_data_payload, num_elements_to_receive,
+                                    DistributedSys::get_mpi_data_type<DataType>(),
+                                    remote_node, BackwardGradientPassing,
+                                    MPI_COMM_WORLD, &status
+                                    );
+                            int num_non_zero_elements;
+                            MPI_Get_count(
+                                    &status, DistributedSys::get_mpi_data_type<DataType>(), &num_non_zero_elements
+                                    );
+                            comm += num_non_zero_elements * sizeof(DataType);
+                            // de-compress the data
+                            uint64_t * data_hdr_ptx = compressed_data_hdr;
+                            int idx = 0;
+                            for (size_t i = 0; i < num_elements_to_receive; ++ i) {
+                                size_t offset = i & 63;
+                                size_t mask = (uint64_t) 1 << offset;
+                                bool non_zero = (*data_hdr_ptx & mask) > 0;
+                                comm_buff[i] = non_zero ? compressed_data_payload[idx]: 0;
+                                idx += non_zero;
+                                data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
+                            }
+                            assert(idx == num_non_zero_elements);
+                        }
 #ifdef SHADOW_CPU
                         #pragma omp parallel for 
                         for(size_t i = 0; i < num_elements_to_receive; ++ i) {
@@ -474,6 +513,8 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
         }
 
         delete [] comm_buff;
+        delete [] compressed_data_hdr;
+        delete [] compressed_data_payload;
         DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
     }
     comm_ = comm;
@@ -587,7 +628,7 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                             //printf("The size of uint64_t is %lu\n", sizeof(uint64_t));
                             assert(sizeof(uint64_t) == 8);
                             size_t num_non_zero_elements = 0;
-                            memset(compressed_data_hdr, 0, num_elements_this_chunk / sizeof(uint64_t) + 1);
+                            memset(compressed_data_hdr, 0, (num_elements_this_chunk / sizeof(uint64_t) + 1) * sizeof(uint64_t));
                             uint64_t * data_hdr_ptx = compressed_data_hdr;
                             for (size_t i = 0; i < num_elements_this_chunk; ++ i) {
                                 size_t offset = i & 63;
@@ -610,6 +651,7 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                                     remote_node, ForwardActivationPassing,
                                     MPI_COMM_WORLD
                                     );
+                            //printf("Forward density: %.3f\n", 1. * num_non_zero_elements / num_elements_this_chunk);
                         }
                     }
                 }
@@ -657,8 +699,11 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
             }
         }
     } else {
-        const size_t comm_buff_size = 4 * 1024 * 1024;
+        const size_t comm_buff_size = 8 * 1024 * 1024;
         DataType * grad_buff = nullptr;
+        DataType * data_buff = nullptr;
+        uint64_t * compressed_data_hdr = new uint64_t [comm_buff_size / sizeof(uint64_t) + 1];
+        DataType * compressed_data_payload = new DataType [comm_buff_size + 16];
         size_t len = 0;
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
@@ -698,28 +743,77 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                         assert(num_elements_this_chunk > 0);
                         if(len == 0){
                             grad_buff = new DataType[num_elements_this_chunk];
+                            if (COMPRESS_DATA) {
+                                data_buff = new DataType [num_elements_this_chunk];
+                            }
                             len = num_elements_this_chunk;
                         }else if(len < num_elements_this_chunk){
                             delete [] grad_buff;
                             grad_buff = new DataType[num_elements_this_chunk];
+                            if (COMPRESS_DATA) {
+                                delete [] data_buff;
+                                data_buff = new DataType [num_elements_this_chunk];
+                            }
                             len = num_elements_this_chunk;
                         }
                         assert(grad_buff != nullptr);
                         CopyFromCUDADeviceToHost<DataType>(grad_buff, grad, num_elements_this_chunk, __FILE__, __LINE__);
+                        if (COMPRESS_DATA) {
+                            assert(data_buff != nullptr);
+                            size_t x;
+                            DataType * data = nullptr;
+                            engine_->get_vertex_tensor_data_by_chunk(
+                                    tensor, task.chunk_id, data, x
+                                    );
+                            assert(x == num_elements_this_chunk);
+                            assert(data != nullptr);
+                            CopyFromCUDADeviceToHost<DataType>(data_buff, data, num_elements_this_chunk, __FILE__, __LINE__);
+                        }
                         size_t num_sent_elements = 0;
+                        size_t total_num_non_zero_elements = 0;
                         while (num_sent_elements < num_elements_this_chunk) {
                             size_t num_elements_to_send = std::min(
                                     num_elements_this_chunk - num_sent_elements,
                                     comm_buff_size
                                     );
-                            MPI_Send(
-                                    grad_buff + num_sent_elements, num_elements_to_send,
-                                    DistributedSys::get_mpi_data_type<DataType>(),
-                                    remote_node, BackwardGradientPassing,
-                                    MPI_COMM_WORLD
-                                    );
+                            if (! COMPRESS_DATA) {
+                                MPI_Send(
+                                        grad_buff + num_sent_elements, num_elements_to_send,
+                                        DistributedSys::get_mpi_data_type<DataType>(),
+                                        remote_node, BackwardGradientPassing,
+                                        MPI_COMM_WORLD
+                                        );
+                            } else {
+                                // compress the data
+                                size_t num_non_zero_elements = 0;
+                                memset(compressed_data_hdr, 0, (num_elements_to_send / sizeof(uint64_t) + 1) * sizeof(uint64_t));
+                                uint64_t * data_hdr_ptx = compressed_data_hdr;
+                                for (size_t i = 0; i < num_elements_to_send; ++ i) {
+                                    size_t offset = i & 63;
+                                    size_t mask = data_buff[i + num_sent_elements] == 0 ? 0: ((uint64_t) 1 << offset);
+                                    *data_hdr_ptx ^= mask;
+                                    data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
+                                    compressed_data_payload[num_non_zero_elements] = grad_buff[i + num_sent_elements];
+                                    num_non_zero_elements += data_buff[i + num_sent_elements] != 0;
+                                }
+                                // transfer the compressed data
+                                MPI_Send(
+                                        compressed_data_hdr, num_elements_to_send / sizeof(uint64_t) + 1,
+                                        DistributedSys::get_mpi_data_type<uint64_t>(),
+                                        remote_node, BackwardGradientPassing,
+                                        MPI_COMM_WORLD
+                                        );
+                                MPI_Send(
+                                        compressed_data_payload, num_non_zero_elements,
+                                        DistributedSys::get_mpi_data_type<DataType>(),
+                                        remote_node, BackwardGradientPassing,
+                                        MPI_COMM_WORLD
+                                        );
+                                total_num_non_zero_elements += num_non_zero_elements;
+                            }
                             num_sent_elements += num_elements_to_send;
                         }
+                        //printf("Backward density: %.3f\n", 1. * total_num_non_zero_elements / num_sent_elements);
                         
                     }
                 }
@@ -728,6 +822,8 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
         if(len > 0){
             delete [] grad_buff;
         }
+        delete [] compressed_data_hdr;
+        delete [] compressed_data_payload;
     }
 }
 
