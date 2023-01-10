@@ -188,6 +188,8 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                             task.chunk_id, remote_node
                             );
                 assert(dependent_tensors != NULL);
+                assert(dependent_tensors->size() == 1); // FIXME: only applies to pipeline
+                assert(dependent_tensors->at(0) == engine_->pipeline_input_tensor_);
                 for (Tensor * tensor: *dependent_tensors) {
                     assert(tensor != NULL);
                     DataType * data = NULL;
