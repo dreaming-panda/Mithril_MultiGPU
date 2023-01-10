@@ -15,10 +15,12 @@ module list
 cd build 
 make -j
 
-num_layers=3
-hunits=128
+./tests/test_cuda_data_compression
 
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/citeseer --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/citeseer_gcn.txt
+#num_layers=3
+#hunits=128
+#
+#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/citeseer --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/async_pred/citeseer_gcn.txt
 
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/reddit --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/sync/reddit_gcn.txt
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_products --layers $num_layers --hunits $hunits --epoch 5000 --lr 1e-3 --decay 0 | tee ../results/analyze_version_matching_and_weight_prediction/${num_layers}_layer/sync/products_gcn.txt

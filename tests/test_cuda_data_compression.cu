@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <cuda.h>
+#include <chrono>
 
 #include "cuda/cuda_data_compressor.h"
 #include "types.h"
@@ -33,6 +34,7 @@ int main(int argc, char ** argv) {
 
     for (size_t data_size = min_data_size; data_size <= max_data_size; 
             data_size *= 2) {
+        printf("Checking the correctness (data size: %lu floats)...", data_size);
         cudaMemcpy(data_gpu, data_cpu, sizeof(DataType) * data_size, 
                 cudaMemcpyHostToDevice);
         DataCompressor compressor(data_size);
@@ -45,7 +47,7 @@ int main(int argc, char ** argv) {
         cudaMemset(data_gpu, 0, sizeof(DataType) * data_size);
         decompressor.receive_compressed_data(
                 [&](uint8_t * buff) {
-                    memcpy(buff, compressed_data, sizeof(DataType) * data_size);
+                    memcpy(buff, compressed_data, compressed_data_size);
                     return compressed_data_size;
                 }, true
                 );
@@ -55,6 +57,36 @@ int main(int argc, char ** argv) {
         for (size_t i = 0; i < data_size; ++ i) {
             assert(decompressed_data_cpu[i] == data_cpu[i]);
         }
+        printf("\tPassed\n");
+    }
+
+    cudaMemcpy(data_gpu, data_cpu, sizeof(DataType) * max_data_size,
+            cudaMemcpyHostToDevice);
+    for (size_t data_size = min_data_size; data_size <= max_data_size; 
+            data_size *= 2) {
+        printf("Benchmarking the performance (data size: %lu floats)...", data_size);
+        DataCompressor compressor(data_size);
+        DataDecompressor decompressor(data_size);
+        auto start = std::chrono::system_clock::now();
+        for (int i = 0; i < count; ++ i) {
+            compressor.compress_data(data_gpu, false);
+            DataType * compressed_data;
+            size_t compressed_data_size;
+            compressor.get_compressed_data(compressed_data, compressed_data_size);
+            decompressor.receive_compressed_data(
+                    [&](uint8_t * buff) {
+                        cudaMemcpy(buff, compressed_data, compressed_data_size, 
+                                cudaMemcpyDeviceToDevice);
+                        return compressed_data_size;
+                    }, false
+                    );
+            decompressor.decompress_data(data_gpu);
+        }
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        double t = elapsed_seconds.count() / count;
+        double throughput = sizeof(DataType) * data_size / 1024. / 1024. / 1024. * 8. / t;
+        printf("\tThroughput: %.3f Gbps\n", throughput);
     }
     return 0;
 }
