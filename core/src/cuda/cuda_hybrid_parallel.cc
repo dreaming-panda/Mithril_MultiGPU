@@ -699,8 +699,8 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
         // the compressed data structure
         uint64_t * compressed_data_hdr = nullptr;
         DataType * compressed_data_payload = nullptr;
-
         size_t len = 0;
+
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
             double start_time = get_time();
@@ -795,6 +795,56 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                 }
             }
         }
+
+        for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+            pthread_barrier_wait(barrier_);
+            for (int num_sent_chunks = 0; num_sent_chunks < num_local_chunks;
+                    ++ num_sent_chunks) {
+                task_queue_->pop_blocking(task);
+                int remote_node = node_id + 1;
+                Tensor * tensor = engine_->pipeline_output_tensor_;
+                assert(tensor);
+
+                MPI_Send(
+                        &task, sizeof(CUDAPIPForwardTask), MPI_CHAR,
+                        remote_node, ForwardActivationPassing,
+                        MPI_COMM_WORLD
+                        );
+
+                DataType * data = NULL;
+                size_t num_elements_this_chunk = 0;
+                engine_->get_vertex_tensor_data_by_chunk(
+                        tensor, task.chunk_id, data, num_elements_this_chunk
+                        );
+                assert(data != NULL);
+                assert(num_elements_this_chunk > 0);
+
+                if (! COMPRESS_DATA) {
+                    if (len == 0) {
+                        len = num_elements_this_chunk;
+                        data_buff = new DataType [num_elements_this_chunk];
+                        assert(data_buff);
+                    } else if (len < num_elements_this_chunk) {
+                        len = num_elements_this_chunk;
+                        delete [] data_buff;
+                        data_buff = new DataType [num_elements_this_chunk];
+                        assert(data_buff);
+                    }
+                    CopyFromCUDADeviceToHost<DataType>(data_buff, data, 
+                            num_elements_this_chunk, __FILE__, __LINE__);
+                    MPI_Send(
+                            data_buff, num_elements_this_chunk,
+                            DistributedSys::get_mpi_data_type<DataType>(),
+                            remote_node, ForwardActivationPassing,
+                            MPI_COMM_WORLD
+                            );
+                } else {
+                    // TODO
+                    assert(false);
+                }
+            }
+        }
+
         if(len > 0){
             delete [] data_buff;
         }
