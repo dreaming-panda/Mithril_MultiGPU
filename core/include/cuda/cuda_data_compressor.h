@@ -7,7 +7,7 @@
 
 #include "types.h"
 
-class DataCompressorGPU {
+class DataCompressor {
     private:
         size_t data_size_; // in floats
         size_t compressed_data_size_; // in bytes
