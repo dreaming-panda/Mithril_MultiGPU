@@ -11,7 +11,7 @@
 #define OPTIMIZE
 #define FIXPART
 
-#define COMPRESS_DATA (true)
+#define COMPRESS_DATA (false)
 
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
