@@ -650,10 +650,10 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
             }
         }
 
-        delete [] comm_buff;
-        delete [] compressed_data_hdr;
-        delete [] compressed_data_payload;
-        DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
+        //delete [] comm_buff;
+        //delete [] compressed_data_hdr;
+        //delete [] compressed_data_payload;
+        //DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
     }
     comm_ = comm;
 }
