@@ -17,6 +17,7 @@
 #include "distributed_sys.h"
 #include "context.h"
 #include "parallel/pipelined_model_parallel.h"
+#include "cuda/cuda_data_compressor.h"
 
 #include <assert.h>
 #include <pthread.h>
@@ -1561,6 +1562,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         Tensor * pipeline_input_tensor_;
         Tensor * pipeline_output_tensor_;
+        DataCompressor ** data_compressors_;
+        DataDecompressor ** data_decompressors_;
+        DataCompressor ** grad_compressors_;
+        DataDecompressor ** grad_decompressors_;
 
         std::vector<int> local_chunk_ids_;
         std::vector<bool> backward_operator_mask_;

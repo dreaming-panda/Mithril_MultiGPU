@@ -150,17 +150,140 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             }
         }
     } else {
-        // should receive activation from dependent nodes first
+//        // should receive activation from dependent nodes first
+//        for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+//            // no cross-epoch parallelism is leverage due to the non-tolerable statistical inefficiency
+//            pthread_barrier_wait(barrier_);
+//            double start_time = get_time();
+//            // recieve dependent tensor data from remote nodes 
+//            // and dispatch tasks accordingly
+//            int num_dispatched_chunks = 0;
+//            for (int chunk_id: local_chunk_ids) {
+//                (*num_ready_remote_nodes_)[chunk_id] = 0;
+//            }
+//            while (num_dispatched_chunks < num_local_chunks) {
+//                // waiting for communication from remote nodes
+//                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartWaitForNewTask);
+//                MPI_Status status;
+//                MPI_Recv(
+//                        &task, sizeof(CUDAPIPForwardTask), MPI_CHAR, 
+//                        MPI_ANY_SOURCE, ForwardActivationPassing,
+//                        MPI_COMM_WORLD, &status
+//                        );
+//                comm += sizeof(CUDAPIPForwardTask);
+//                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteWaitForNewTask);
+//
+//                // receiving the activation data
+//                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartReceiveData);
+//                int remote_node = status.MPI_SOURCE;
+//                const std::set<int> * dependent_remote_nodes = data_dependencies_tracker->get_dependent_remote_nodes_forward(
+//                        task.chunk_id
+//                        );
+//                assert(dependent_remote_nodes != NULL);
+//                // the communication should respect the trakced data dependencies
+//                assert(dependent_remote_nodes->find(remote_node) != dependent_remote_nodes->end());
+//                // receive the remote tensors
+//                const std::vector<Tensor*> * dependent_tensors = 
+//                    data_dependencies_tracker->get_forwarding_dependencies(
+//                            task.chunk_id, remote_node
+//                            );
+//                assert(dependent_tensors != NULL);
+//                assert(dependent_tensors->size() == 1); // FIXME: only applies to pipeline
+//                assert(dependent_tensors->at(0) == engine_->pipeline_input_tensor_);
+//                for (Tensor * tensor: *dependent_tensors) {
+//                    assert(tensor != NULL);
+//                    DataType * data = NULL;
+//                    
+//                    size_t num_elements_this_chunk = 0;
+//                    engine_->get_vertex_tensor_data_by_chunk(
+//                            tensor, task.chunk_id, data, num_elements_this_chunk
+//                            );
+//                    
+//                    assert(data != NULL);
+//                    assert(num_elements_this_chunk > 0);
+//                    if(len == 0){
+//                        data_buff = new DataType[num_elements_this_chunk];
+//                        compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
+//                        compressed_data_payload = new DataType [num_elements_this_chunk];
+//                        len = num_elements_this_chunk;
+//                    } else if(len < num_elements_this_chunk){
+//                        delete [] data_buff;
+//                        delete [] compressed_data_hdr;
+//                        delete [] compressed_data_payload;
+//                        data_buff = new DataType[num_elements_this_chunk];
+//                        compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
+//                        compressed_data_payload = new DataType [num_elements_this_chunk];
+//                        len = num_elements_this_chunk;
+//                    }
+//                    assert(data_buff != nullptr);
+//
+//                    if (! COMPRESS_DATA) {
+//                        MPI_Recv(
+//                                data_buff, num_elements_this_chunk, 
+//                                DistributedSys::get_mpi_data_type<DataType>(),
+//                                remote_node, ForwardActivationPassing,
+//                                MPI_COMM_WORLD, &status
+//                                );
+//                        comm += num_elements_this_chunk * sizeof(DataType);
+//                    } else {
+//                        //receive compressed data
+//                        MPI_Recv(
+//                                compressed_data_hdr, num_elements_this_chunk / sizeof(uint64_t) + 1,
+//                                DistributedSys::get_mpi_data_type<uint64_t>(),
+//                                remote_node, ForwardActivationPassing,
+//                                MPI_COMM_WORLD, &status
+//                                );
+//                        comm += (num_elements_this_chunk / sizeof(uint64_t) + 1) * sizeof(uint64_t);
+//                        MPI_Recv(
+//                                compressed_data_payload, num_elements_this_chunk, 
+//                                DistributedSys::get_mpi_data_type<DataType>(),
+//                                remote_node, ForwardActivationPassing,
+//                                MPI_COMM_WORLD, &status
+//                                );
+//                        int num_non_zero_elements;
+//                        MPI_Get_count(
+//                                &status, DistributedSys::get_mpi_data_type<DataType>(), 
+//                                &num_non_zero_elements
+//                                );
+//                        comm += num_non_zero_elements * sizeof(DataType);
+//
+//                        uint64_t * data_hdr_ptx = compressed_data_hdr;
+//                        int idx = 0;
+//                        for (size_t i = 0; i < num_elements_this_chunk; ++ i) {
+//                            size_t offset = i & 63;
+//                            size_t mask = (uint64_t) 1 << offset;
+//                            data_buff[i] = (*data_hdr_ptx & mask) > 0 ? compressed_data_payload[idx]: 0; 
+//                            idx += ((*data_hdr_ptx & mask) > 0);
+//                            data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
+//                        }
+//                        assert(idx == num_non_zero_elements);
+//                    }
+//
+//                    CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements_this_chunk, __FILE__, __LINE__);
+//                    //delete [] data_buff;
+//                }
+//                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteReceiveData);
+//
+//                int ready_nodes = (*num_ready_remote_nodes_)[task.chunk_id];
+//                (*num_ready_remote_nodes_)[task.chunk_id] = (++ ready_nodes);
+//                assert(ready_nodes <= dependent_remote_nodes->size());
+//                if (ready_nodes == dependent_remote_nodes->size()) {
+//                    // dispatch the ready task
+//                    double time_elapsed = (get_time() - start_time) * 1000;    
+//#ifdef SHOW_DISPATCH_DETAILS
+//                    printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
+//                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
+//#endif
+//                    task_queue_->push(task);
+//                    ++ num_dispatched_chunks;
+//                }
+//            }
+//        }
+        // FIXME: only works for pipeline parallel
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-            // no cross-epoch parallelism is leverage due to the non-tolerable statistical inefficiency
             pthread_barrier_wait(barrier_);
-            double start_time = get_time();
-            // recieve dependent tensor data from remote nodes 
-            // and dispatch tasks accordingly
+            // TODO
             int num_dispatched_chunks = 0;
-            for (int chunk_id: local_chunk_ids) {
-                (*num_ready_remote_nodes_)[chunk_id] = 0;
-            }
             while (num_dispatched_chunks < num_local_chunks) {
                 // waiting for communication from remote nodes
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartWaitForNewTask);
@@ -175,108 +298,48 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
 
                 // receiving the activation data
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartReceiveData);
+                assert(engine_->pipeline_input_tensor_);
                 int remote_node = status.MPI_SOURCE;
-                const std::set<int> * dependent_remote_nodes = data_dependencies_tracker->get_dependent_remote_nodes_forward(
-                        task.chunk_id
+                assert(remote_node == node_id - 1);
+                DataType * data = NULL;
+                size_t num_elements_this_chunk = 0;
+                engine_->get_vertex_tensor_data_by_chunk(
+                        engine_->pipeline_input_tensor_, 
+                        task.chunk_id, data, num_elements_this_chunk
                         );
-                assert(dependent_remote_nodes != NULL);
-                // the communication should respect the trakced data dependencies
-                assert(dependent_remote_nodes->find(remote_node) != dependent_remote_nodes->end());
-                // receive the remote tensors
-                const std::vector<Tensor*> * dependent_tensors = 
-                    data_dependencies_tracker->get_forwarding_dependencies(
-                            task.chunk_id, remote_node
-                            );
-                assert(dependent_tensors != NULL);
-                assert(dependent_tensors->size() == 1); // FIXME: only applies to pipeline
-                assert(dependent_tensors->at(0) == engine_->pipeline_input_tensor_);
-                for (Tensor * tensor: *dependent_tensors) {
-                    assert(tensor != NULL);
-                    DataType * data = NULL;
-                    
-                    size_t num_elements_this_chunk = 0;
-                    engine_->get_vertex_tensor_data_by_chunk(
-                            tensor, task.chunk_id, data, num_elements_this_chunk
-                            );
-                    
-                    assert(data != NULL);
-                    assert(num_elements_this_chunk > 0);
-                    if(len == 0){
-                        data_buff = new DataType[num_elements_this_chunk];
-                        compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
-                        compressed_data_payload = new DataType [num_elements_this_chunk];
+                assert(data);
+                assert(num_elements_this_chunk);
+
+                if (! COMPRESS_DATA) {
+                    if (len == 0) {
+                        data_buff = new DataType [num_elements_this_chunk];
+                        assert(data_buff);
+                    } else if (len < num_elements_this_chunk) {
                         len = num_elements_this_chunk;
-                    } else if(len < num_elements_this_chunk){
                         delete [] data_buff;
-                        delete [] compressed_data_hdr;
-                        delete [] compressed_data_payload;
-                        data_buff = new DataType[num_elements_this_chunk];
-                        compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
-                        compressed_data_payload = new DataType [num_elements_this_chunk];
-                        len = num_elements_this_chunk;
+                        data_buff = new DataType [num_elements_this_chunk];
+                        assert(data_buff);
                     }
-                    assert(data_buff != nullptr);
-
-                    if (! COMPRESS_DATA) {
-                        MPI_Recv(
-                                data_buff, num_elements_this_chunk, 
-                                DistributedSys::get_mpi_data_type<DataType>(),
-                                remote_node, ForwardActivationPassing,
-                                MPI_COMM_WORLD, &status
-                                );
-                        comm += num_elements_this_chunk * sizeof(DataType);
-                    } else {
-                        //receive compressed data
-                        MPI_Recv(
-                                compressed_data_hdr, num_elements_this_chunk / sizeof(uint64_t) + 1,
-                                DistributedSys::get_mpi_data_type<uint64_t>(),
-                                remote_node, ForwardActivationPassing,
-                                MPI_COMM_WORLD, &status
-                                );
-                        comm += (num_elements_this_chunk / sizeof(uint64_t) + 1) * sizeof(uint64_t);
-                        MPI_Recv(
-                                compressed_data_payload, num_elements_this_chunk, 
-                                DistributedSys::get_mpi_data_type<DataType>(),
-                                remote_node, ForwardActivationPassing,
-                                MPI_COMM_WORLD, &status
-                                );
-                        int num_non_zero_elements;
-                        MPI_Get_count(
-                                &status, DistributedSys::get_mpi_data_type<DataType>(), 
-                                &num_non_zero_elements
-                                );
-                        comm += num_non_zero_elements * sizeof(DataType);
-
-                        uint64_t * data_hdr_ptx = compressed_data_hdr;
-                        int idx = 0;
-                        for (size_t i = 0; i < num_elements_this_chunk; ++ i) {
-                            size_t offset = i & 63;
-                            size_t mask = (uint64_t) 1 << offset;
-                            data_buff[i] = (*data_hdr_ptx & mask) > 0 ? compressed_data_payload[idx]: 0; 
-                            idx += ((*data_hdr_ptx & mask) > 0);
-                            data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
-                        }
-                        assert(idx == num_non_zero_elements);
-                    }
-
-                    CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements_this_chunk, __FILE__, __LINE__);
-                    //delete [] data_buff;
+                    MPI_Recv(
+                            data_buff, num_elements_this_chunk,
+                            DistributedSys::get_mpi_data_type<DataType>(),
+                            remote_node, ForwardActivationPassing,
+                            MPI_COMM_WORLD, &status
+                            );
+                    CopyFromHostToCUDADevice<DataType>(
+                            data, data_buff, num_elements_this_chunk, 
+                            __FILE__, __LINE__
+                            );
+                    comm += num_elements_this_chunk * sizeof(DataType);
+                } else {
+                    // TODO
+                    assert(false);
                 }
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteReceiveData);
 
-                int ready_nodes = (*num_ready_remote_nodes_)[task.chunk_id];
-                (*num_ready_remote_nodes_)[task.chunk_id] = (++ ready_nodes);
-                assert(ready_nodes <= dependent_remote_nodes->size());
-                if (ready_nodes == dependent_remote_nodes->size()) {
-                    // dispatch the ready task
-                    double time_elapsed = (get_time() - start_time) * 1000;    
-#ifdef SHOW_DISPATCH_DETAILS
-                    printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
-                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
-#endif
-                    task_queue_->push(task);
-                    ++ num_dispatched_chunks;
-                }
+                // dispatch the received task
+                task_queue_->push(task);
+                ++ num_dispatched_chunks;
             }
         }
     }
@@ -4159,6 +4222,44 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     partition_end_ = partitioning.partition_vid_end[node_id];
     num_chunks_ = chunk_manager_->get_num_global_chunks();
 
+    {
+        // initialize the data compressors
+        data_compressors_ = new DataCompressor* [num_chunks_];
+        data_decompressors_ = new DataDecompressor* [num_chunks_];
+        grad_compressors_ = new DataCompressor* [num_chunks_];
+        grad_decompressors_ = new DataDecompressor* [num_chunks_];
+        assert(data_compressors_);
+        assert(data_decompressors_);
+        assert(grad_compressors_);
+        assert(grad_decompressors_);
+        // the input side
+        if (pipeline_input_tensor_ != NULL) {
+            size_t num_elements_per_vertex = pipeline_input_tensor_->dims[1];
+            for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+                VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
+                VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
+                size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
+                data_decompressors_[chunk_id] = new DataDecompressor(num_elements);
+                grad_compressors_[chunk_id] = new DataCompressor(num_elements);
+                assert(data_decompressors_[chunk_id]);
+                assert(grad_compressors_[chunk_id]);
+            }
+        }
+        // the output side
+        if (pipeline_output_tensor_ != NULL) {
+            size_t num_elements_per_vertex = pipeline_output_tensor_->dims[1];
+            for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+                VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
+                VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
+                size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
+                data_compressors_[chunk_id] = new DataCompressor(num_elements);
+                grad_decompressors_[chunk_id] = new DataDecompressor(num_elements);
+                assert(data_compressors_[chunk_id]);
+                assert(grad_decompressors_[chunk_id]);
+            }
+        }
+    }
+
     
     // create the helper threads 
     printf("*** Node %d, starting the helper threads...\n", node_id);
@@ -4288,6 +4389,23 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     //}
 
     release_resources();
+
+    {
+        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+            if (pipeline_input_tensor_) {
+                delete data_decompressors_[chunk_id];
+                delete grad_compressors_[chunk_id];
+            }
+            if (pipeline_output_tensor_) {
+                delete data_compressors_[chunk_id];
+                delete grad_decompressors_[chunk_id];
+            }
+        }
+        delete [] data_compressors_;
+        delete [] data_decompressors_;
+        delete [] grad_compressors_;
+        delete [] grad_decompressors_;
+    }
 
     // destroy the threads
     delete forward_task_dispatcher_;
