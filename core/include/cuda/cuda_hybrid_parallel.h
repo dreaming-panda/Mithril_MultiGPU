@@ -33,6 +33,7 @@
 
 #define LOW_LEARNING_RATE (0)
 #define NUM_STARTUP_EPOCH (10)
+#define COMPRESS_DATA (true)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDADataDependenciesTracker;
@@ -1557,6 +1558,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         //CUDAWeightStashingManager * weight_stashing_manager_;
         //CUDAPIPParallelParameterServer * parameter_server_;
         CUDAPIPWeightAggregator * weight_aggregator_;
+
+        Tensor * pipeline_input_tensor_;
+        Tensor * pipeline_output_tensor_;
 
         std::vector<int> local_chunk_ids_;
         std::vector<bool> backward_operator_mask_;

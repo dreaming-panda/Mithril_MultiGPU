@@ -5,13 +5,12 @@
 
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_utils.h"
+#include "cuda/cuda_data_compressor.h"
 #include "profiler.h"
 
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-
-#define COMPRESS_DATA (true)
 
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
@@ -58,7 +57,6 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
         } else if (dispatch_algorithm_ == HighDegreeFirstDispatch) {
             printf("DISPATCH THE HIGH-DEGREE CHUNKS FIRST...\n");
-            // TODO
             std::vector<std::pair<int, EdgeId>> degree_sum_each_chunk;
             for (int chunk_id: local_chunk_ids) {
                 EdgeId degree_sum = 0;
@@ -90,7 +88,6 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             }
         } else if (dispatch_algorithm_ == LowDegreeFirstDispatch) {
             printf("DISPATCH THE LOW-DEGREE CHUNKS FIRST...\n");
-            // TODO
             std::vector<std::pair<int, EdgeId>> degree_sum_each_chunk;
             for (int chunk_id: local_chunk_ids) {
                 EdgeId degree_sum = 0;
@@ -4022,6 +4019,8 @@ void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {
 }
 
 double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
+    fprintf(stderr, "WARNING: the current version only applies to linear GNN models!\n");
+
     num_epoch += 10 * num_startup_epoches_;
     num_epoch -= num_startup_epoches_;
 
@@ -4061,6 +4060,37 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         assert(op_begin < op_end);
         assert(op_begin >= 0);
         assert(op_end <= num_operators);
+    }
+
+    {
+        VertexId vid_begin = partitioning.partition_vid_begin[node_id];
+        VertexId vid_end = partitioning.partition_vid_end[node_id];
+        assert(vid_begin == 0);
+        assert(vid_end == num_global_vertices);
+        int op_begin = partitioning.partition_op_begin[node_id];
+        int op_end = partitioning.partition_op_end[node_id];
+        // set the pipeline input tensor
+        if (node_id == 0) {
+            pipeline_input_tensor_ = NULL;
+            printf("Node %d, Pipeline Input Tensor: NULL\n", node_id);
+        } else {
+            assert(operators[op_begin - 1]->get_num_output_tensors() == 1);
+            pipeline_input_tensor_ = operators[op_begin - 1]->get_output_tensor(0);
+            assert(pipeline_input_tensor_->get_type() == VERTEX_TENSOR);
+            printf("Node %d, Pipeline Input Tensor: %s\n", node_id,
+                    get_op_type_str(operators[op_begin - 1]->get_type()).c_str());
+        }
+        // set the pipeline output tensor
+        if (node_id == num_nodes - 1) {
+            pipeline_output_tensor_ = NULL;
+            printf("Node %d, Pipeline Output Tensor: NULL\n", node_id);
+        } else {
+            assert(operators[op_end - 1]->get_num_output_tensors() == 1);
+            pipeline_output_tensor_ = operators[op_end - 1]->get_output_tensor(0);
+            assert(pipeline_output_tensor_->get_type() == VERTEX_TENSOR);
+            printf("Node %d, Pipeline Output Tensor: %s\n", node_id,
+                    get_op_type_str(operators[op_end - 1]->get_type()).c_str());
+        }
     }
 
     printf("*** Node %d owns the partition [%d, %d) x [%u, %u)\n", 
