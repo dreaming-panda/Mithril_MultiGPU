@@ -747,7 +747,8 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                                 data_buff = new DataType [num_elements_this_chunk];
                             }
                             len = num_elements_this_chunk;
-                        }else if(len < num_elements_this_chunk){
+ git@github.com:AmadeusChan/DataCompression.git                       }else if(len < num_elements_this_chunk){
+
                             delete [] grad_buff;
                             grad_buff = new DataType[num_elements_this_chunk];
                             if (COMPRESS_DATA) {
