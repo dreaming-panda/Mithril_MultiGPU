@@ -4076,7 +4076,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         } else {
             assert(operators[op_begin - 1]->get_num_output_tensors() == 1);
             pipeline_input_tensor_ = operators[op_begin - 1]->get_output_tensor(0);
-            assert(pipeline_input_tensor_->get_type() == VERTEX_TENSOR);
+            assert(pipeline_input_tensor_->type == VERTEX_TENSOR);
             printf("Node %d, Pipeline Input Tensor: %s\n", node_id,
                     get_op_type_str(operators[op_begin - 1]->get_type()).c_str());
         }
@@ -4087,7 +4087,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         } else {
             assert(operators[op_end - 1]->get_num_output_tensors() == 1);
             pipeline_output_tensor_ = operators[op_end - 1]->get_output_tensor(0);
-            assert(pipeline_output_tensor_->get_type() == VERTEX_TENSOR);
+            assert(pipeline_output_tensor_->type == VERTEX_TENSOR);
             printf("Node %d, Pipeline Output Tensor: %s\n", node_id,
                     get_op_type_str(operators[op_end - 1]->get_type()).c_str());
         }
