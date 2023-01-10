@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <cuda.h>
 
-#include "cuda_data_compression.h"
+#include "cuda/cuda_data_compressor.h"
 #include "types.h"
 
 void gen_data(float * data, size_t data_size) {
@@ -28,7 +29,7 @@ int main(int argc, char ** argv) {
     data_cpu = new DataType [max_data_size];
     decompressed_data_cpu = new DataType [max_data_size];
     cudaMalloc(&data_gpu, sizeof(DataType) * max_data_size);
-    gen_data(data_cpu, data_size);
+    gen_data(data_cpu, max_data_size);
 
     for (size_t data_size = min_data_size; data_size <= max_data_size; 
             data_size *= 2) {
