@@ -313,6 +313,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                 if (! COMPRESS_DATA) {
                     if (len == 0) {
                         data_buff = new DataType [num_elements_this_chunk];
+                        len = num_elements_this_chunk;
                         assert(data_buff);
                     } else if (len < num_elements_this_chunk) {
                         len = num_elements_this_chunk;
@@ -412,30 +413,181 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
             }
         }
     } else {
-        // 16 MB communication buffer
-        const size_t comm_buff_size = 8 * 1024 * 1024;
-        DataType * comm_buff = new DataType [comm_buff_size + 16];
-        uint64_t * compressed_data_hdr = new uint64_t [comm_buff_size / sizeof(uint64_t) + 1];
-        DataType * compressed_data_payload = new DataType [comm_buff_size + 16];
+//        // 16 MB communication buffer
+//        const size_t comm_buff_size = 8 * 1024 * 1024;
+//        DataType * comm_buff = new DataType [comm_buff_size + 16];
+//        uint64_t * compressed_data_hdr = new uint64_t [comm_buff_size / sizeof(uint64_t) + 1];
+//        DataType * compressed_data_payload = new DataType [comm_buff_size + 16];
+//
+//        DataType * cuda_comm_buff = nullptr;
+//        AllocateCUDAMemory<DataType>(&cuda_comm_buff, comm_buff_size + 16, __FILE__, __LINE__);
+//        assert(comm_buff != NULL);
+//        assert(cuda_comm_buff != NULL);
+//
+//        // should receive gradients from dependent remote nodes first
+//        for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+//            pthread_barrier_wait(barrier_);
+//            double start_time = get_time();
+//
+//            // the shadow gradients will be automatically zero out 
+//            CUDAShadowGradientsMasterVertices * shadow_gradients = 
+//                engine_->get_shadow_gradients_master_vertices();
+//            assert(shadow_gradients != NULL);
+//
+//            int num_dispatched_chunks = 0;
+//            for (int chunk_id: local_chunk_ids) {
+//                (*num_ready_remote_nodes_)[chunk_id] = 0;
+//            }
+//            while (num_dispatched_chunks < num_local_chunks) {
+//                // receive the meta data
+//                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherStartWaitForNewTask);
+//                MPI_Status status;
+//                MPI_Recv(
+//                        &task, sizeof(CUDAPIPBackwardTask), MPI_CHAR,
+//                        MPI_ANY_SOURCE, BackwardGradientPassing,
+//                        MPI_COMM_WORLD, &status
+//                        );
+//                comm += sizeof(CUDAPIPBackwardTask);
+//                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteWaitForNewTask);
+//
+//                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherStartReceiveData);
+//                int remote_node = status.MPI_SOURCE;
+//                // resolve the dependencies
+//                const std::set<int> * dependent_remote_nodes = 
+//                    data_dependencies_tracker->get_dependent_remote_nodes_backward(
+//                            task.chunk_id
+//                            );
+//                assert(dependent_remote_nodes != NULL);
+//                assert(dependent_remote_nodes->find(remote_node) !=
+//                        dependent_remote_nodes->end());
+//                const std::vector<Tensor*> * dependent_tensors = 
+//                    data_dependencies_tracker->get_backwarding_dependencies(
+//                            task.chunk_id, remote_node
+//                            );
+//                // receive the remote tensors
+//                for (Tensor * tensor: *dependent_tensors) {
+//                    assert(tensor != NULL);
+//                    DataType * grad = NULL;
+//                    size_t num_elements_this_chunk = 0;
+//                    engine_->get_vertex_tensor_grad_by_chunk(
+//                            tensor, task.chunk_id, grad, num_elements_this_chunk
+//                            );
+//                    assert(grad != NULL);
+//                    assert(num_elements_this_chunk > 0);
+//                    DataType * shadow_grad = shadow_gradients->get_shadow_grad(
+//                            tensor, task.chunk_id
+//                            );
+//                   // DataType * s_buffer = new DataType[num_elements_this_chunk];
+//                   // CopyFromCUDADeviceToHost<DataType>(s_buffer, shadow_grad, num_elements_this_chunk, __FILE__, __LINE__);
+//                    size_t num_received_elements = 0;
+//                    while (num_received_elements < num_elements_this_chunk) {
+//                        size_t num_elements_to_receive = std::min(
+//                                num_elements_this_chunk - num_received_elements,
+//                                comm_buff_size
+//                                );
+//                        if (! COMPRESS_DATA) {
+//                            MPI_Recv(
+//                                    comm_buff, num_elements_to_receive, 
+//                                    DistributedSys::get_mpi_data_type<DataType>(),
+//                                    remote_node, BackwardGradientPassing,
+//                                    MPI_COMM_WORLD, &status
+//                                  );
+//                            comm += num_elements_to_receive * sizeof(DataType);
+//                        } else {
+//                            // receive the compressed data
+//                            MPI_Recv(
+//                                    compressed_data_hdr, num_elements_to_receive / sizeof(uint64_t) + 1,
+//                                    DistributedSys::get_mpi_data_type<uint64_t>(),
+//                                    remote_node, BackwardGradientPassing,
+//                                    MPI_COMM_WORLD, &status
+//                                    );
+//                            comm += (num_elements_to_receive / sizeof(uint64_t) + 1) * sizeof(uint64_t);
+//                            MPI_Recv(
+//                                    compressed_data_payload, num_elements_to_receive,
+//                                    DistributedSys::get_mpi_data_type<DataType>(),
+//                                    remote_node, BackwardGradientPassing,
+//                                    MPI_COMM_WORLD, &status
+//                                    );
+//                            int num_non_zero_elements;
+//                            MPI_Get_count(
+//                                    &status, DistributedSys::get_mpi_data_type<DataType>(), &num_non_zero_elements
+//                                    );
+//                            comm += num_non_zero_elements * sizeof(DataType);
+//                            // de-compress the data
+//                            uint64_t * data_hdr_ptx = compressed_data_hdr;
+//                            int idx = 0;
+//                            for (size_t i = 0; i < num_elements_to_receive; ++ i) {
+//                                size_t offset = i & 63;
+//                                size_t mask = (uint64_t) 1 << offset;
+//                                bool non_zero = (*data_hdr_ptx & mask) > 0;
+//                                comm_buff[i] = non_zero ? compressed_data_payload[idx]: 0;
+//                                idx += non_zero;
+//                                data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
+//                            }
+//                            assert(idx == num_non_zero_elements);
+//                        }
+//#ifdef SHADOW_CPU
+//                        #pragma omp parallel for 
+//                        for(size_t i = 0; i < num_elements_to_receive; ++ i) {
+//                            shadow_grad[num_received_elements + i] += comm_buff[i];
+//                        }
+//#endif
+//#ifdef SHADOW_GPU
+//                        assert(cuda_comm_buff != nullptr);
+//                        CopyFromHostToCUDADevice<DataType>(cuda_comm_buff, comm_buff, num_elements_to_receive, __FILE__, __LINE__);
+//                        cudnnTensorDescriptor_t data_descriptor;
+//                        cudnnCreateTensorDescriptor(&data_descriptor);
+//                        cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements_to_receive);
+//                        float alpha = 1.0;
+//                        float beta = 1.0;
+//                        cudnnAddTensor(
+//                            cudnn_,
+//                            &alpha,
+//                            data_descriptor,
+//                            cuda_comm_buff,
+//                            &beta,
+//                            data_descriptor,
+//                            shadow_grad + num_received_elements
+//                        );
+//                        cudaDeviceSynchronize();  
+//#endif
+//                        num_received_elements += num_elements_to_receive;
+//                    }
+//                    assert(num_received_elements == num_elements_this_chunk);
+//                    //CopyFromHostToCUDADevice<DataType>(shadow_grad, s_buffer, num_elements_this_chunk, __FILE__, __LINE__);
+//                    //delete [] s_buffer;
+//                    //printf("num_received_elements: %lu\n", num_received_elements);
+//                }
+//                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteReceiveData);
+//
+//                int ready_nodes = (*num_ready_remote_nodes_)[task.chunk_id];
+//                (*num_ready_remote_nodes_)[task.chunk_id] = (++ ready_nodes);
+//                assert(ready_nodes <= dependent_remote_nodes->size());
+//                if (ready_nodes == dependent_remote_nodes->size()) {
+//                    // dispatch the ready task
+//                    double time_elapsed = (get_time() - start_time) * 1000;    
+//#ifdef SHOW_DISPATCH_DETAILS
+//                    printf("%.3f ms: Node %d, dispatched a backward task (epoch_id = %d, chunk_id = %d)\n",
+//                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
+//#endif
+//                    task_queue_->push(task);
+//                    ++ num_dispatched_chunks;
+//                }
+//            }
+//        }
 
-        DataType * cuda_comm_buff = nullptr;
-        AllocateCUDAMemory<DataType>(&cuda_comm_buff, comm_buff_size + 16, __FILE__, __LINE__);
-        assert(comm_buff != NULL);
-        assert(cuda_comm_buff != NULL);
-        // should receive gradients from dependent remote nodes first
+        // FIXME: only works for pipeline parallel
+        size_t len = 0;
+        DataType * data_buff = NULL;
+
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
-            double start_time = get_time();
 
             // the shadow gradients will be automatically zero out 
             CUDAShadowGradientsMasterVertices * shadow_gradients = 
                 engine_->get_shadow_gradients_master_vertices();
-            assert(shadow_gradients != NULL);
 
             int num_dispatched_chunks = 0;
-            for (int chunk_id: local_chunk_ids) {
-                (*num_ready_remote_nodes_)[chunk_id] = 0;
-            }
             while (num_dispatched_chunks < num_local_chunks) {
                 // receive the meta data
                 Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherStartWaitForNewTask);
@@ -448,129 +600,53 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                 comm += sizeof(CUDAPIPBackwardTask);
                 Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteWaitForNewTask);
 
+                // receive the gradient
                 Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherStartReceiveData);
                 int remote_node = status.MPI_SOURCE;
-                // resolve the dependencies
-                const std::set<int> * dependent_remote_nodes = 
-                    data_dependencies_tracker->get_dependent_remote_nodes_backward(
-                            task.chunk_id
-                            );
-                assert(dependent_remote_nodes != NULL);
-                assert(dependent_remote_nodes->find(remote_node) !=
-                        dependent_remote_nodes->end());
-                const std::vector<Tensor*> * dependent_tensors = 
-                    data_dependencies_tracker->get_backwarding_dependencies(
-                            task.chunk_id, remote_node
-                            );
-                // receive the remote tensors
-                for (Tensor * tensor: *dependent_tensors) {
-                    assert(tensor != NULL);
-                    DataType * grad = NULL;
-                    size_t num_elements_this_chunk = 0;
-                    engine_->get_vertex_tensor_grad_by_chunk(
-                            tensor, task.chunk_id, grad, num_elements_this_chunk
-                            );
-                    assert(grad != NULL);
-                    assert(num_elements_this_chunk > 0);
-                    DataType * shadow_grad = shadow_gradients->get_shadow_grad(
-                            tensor, task.chunk_id
-                            );
-                   // DataType * s_buffer = new DataType[num_elements_this_chunk];
-                   // CopyFromCUDADeviceToHost<DataType>(s_buffer, shadow_grad, num_elements_this_chunk, __FILE__, __LINE__);
-                    size_t num_received_elements = 0;
-                    while (num_received_elements < num_elements_this_chunk) {
-                        size_t num_elements_to_receive = std::min(
-                                num_elements_this_chunk - num_received_elements,
-                                comm_buff_size
-                                );
-                        if (! COMPRESS_DATA) {
-                            MPI_Recv(
-                                    comm_buff, num_elements_to_receive, 
-                                    DistributedSys::get_mpi_data_type<DataType>(),
-                                    remote_node, BackwardGradientPassing,
-                                    MPI_COMM_WORLD, &status
-                                  );
-                            comm += num_elements_to_receive * sizeof(DataType);
-                        } else {
-                            // receive the compressed data
-                            MPI_Recv(
-                                    compressed_data_hdr, num_elements_to_receive / sizeof(uint64_t) + 1,
-                                    DistributedSys::get_mpi_data_type<uint64_t>(),
-                                    remote_node, BackwardGradientPassing,
-                                    MPI_COMM_WORLD, &status
-                                    );
-                            comm += (num_elements_to_receive / sizeof(uint64_t) + 1) * sizeof(uint64_t);
-                            MPI_Recv(
-                                    compressed_data_payload, num_elements_to_receive,
-                                    DistributedSys::get_mpi_data_type<DataType>(),
-                                    remote_node, BackwardGradientPassing,
-                                    MPI_COMM_WORLD, &status
-                                    );
-                            int num_non_zero_elements;
-                            MPI_Get_count(
-                                    &status, DistributedSys::get_mpi_data_type<DataType>(), &num_non_zero_elements
-                                    );
-                            comm += num_non_zero_elements * sizeof(DataType);
-                            // de-compress the data
-                            uint64_t * data_hdr_ptx = compressed_data_hdr;
-                            int idx = 0;
-                            for (size_t i = 0; i < num_elements_to_receive; ++ i) {
-                                size_t offset = i & 63;
-                                size_t mask = (uint64_t) 1 << offset;
-                                bool non_zero = (*data_hdr_ptx & mask) > 0;
-                                comm_buff[i] = non_zero ? compressed_data_payload[idx]: 0;
-                                idx += non_zero;
-                                data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
-                            }
-                            assert(idx == num_non_zero_elements);
-                        }
-#ifdef SHADOW_CPU
-                        #pragma omp parallel for 
-                        for(size_t i = 0; i < num_elements_to_receive; ++ i) {
-                            shadow_grad[num_received_elements + i] += comm_buff[i];
-                        }
-#endif
-#ifdef SHADOW_GPU
-                        assert(cuda_comm_buff != nullptr);
-                        CopyFromHostToCUDADevice<DataType>(cuda_comm_buff, comm_buff, num_elements_to_receive, __FILE__, __LINE__);
-                        cudnnTensorDescriptor_t data_descriptor;
-                        cudnnCreateTensorDescriptor(&data_descriptor);
-                        cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements_to_receive);
-                        float alpha = 1.0;
-                        float beta = 1.0;
-                        cudnnAddTensor(
-                            cudnn_,
-                            &alpha,
-                            data_descriptor,
-                            cuda_comm_buff,
-                            &beta,
-                            data_descriptor,
-                            shadow_grad + num_received_elements
+                assert(remote_node == node_id + 1);
+                assert(engine_->pipeline_output_tensor_);
+                DataType * grad = NULL;
+                size_t num_elements_this_chunk = 0;
+                engine_->get_vertex_tensor_grad_by_chunk(
+                        engine_->pipeline_output_tensor_,
+                        task.chunk_id, grad, num_elements_this_chunk
                         );
-                        cudaDeviceSynchronize();  
-#endif
-                        num_received_elements += num_elements_to_receive;
-                    }
-                    assert(num_received_elements == num_elements_this_chunk);
-                    //CopyFromHostToCUDADevice<DataType>(shadow_grad, s_buffer, num_elements_this_chunk, __FILE__, __LINE__);
-                    //delete [] s_buffer;
-                    //printf("num_received_elements: %lu\n", num_received_elements);
-                }
-                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteReceiveData);
+                assert(grad != NULL);
+                assert(num_elements_this_chunk > 0);
+                DataType * shadow_grad = shadow_gradients->get_shadow_grad(
+                        engine_->pipeline_output_tensor_, task.chunk_id
+                        );
 
-                int ready_nodes = (*num_ready_remote_nodes_)[task.chunk_id];
-                (*num_ready_remote_nodes_)[task.chunk_id] = (++ ready_nodes);
-                assert(ready_nodes <= dependent_remote_nodes->size());
-                if (ready_nodes == dependent_remote_nodes->size()) {
-                    // dispatch the ready task
-                    double time_elapsed = (get_time() - start_time) * 1000;    
-#ifdef SHOW_DISPATCH_DETAILS
-                    printf("%.3f ms: Node %d, dispatched a backward task (epoch_id = %d, chunk_id = %d)\n",
-                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
-#endif
-                    task_queue_->push(task);
-                    ++ num_dispatched_chunks;
+                if (! COMPRESS_DATA) {
+                    if (len == 0) {
+                        data_buff = new DataType [num_elements_this_chunk];
+                        assert(data_buff);
+                        len = num_elements_this_chunk;
+                    } else if (len < num_elements_this_chunk) {
+                        delete [] data_buff;
+                        data_buff = new DataType [num_elements_this_chunk];
+                        assert(data_buff);
+                        len = num_elements_this_chunk;
+                    }
+                    MPI_Recv(
+                            data_buff, num_elements_this_chunk,
+                            DistributedSys::get_mpi_data_type<DataType>(),
+                            remote_node, BackwardGradientPassing,
+                            MPI_COMM_WORLD, &status
+                            );
+                    CopyFromHostToCUDADevice<DataType>(
+                            shadow_grad, data_buff, num_elements_this_chunk,
+                            __FILE__, __LINE__
+                            );
+                    comm += num_elements_this_chunk * sizeof(DataType);
+                } else {
+                    // TODO
+                    assert(false);
                 }
+
+                Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteReceiveData);
+                task_queue_->push(task);
+                ++ num_dispatched_chunks;
             }
         }
 
@@ -831,50 +907,56 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                             assert(data != nullptr);
                             CopyFromCUDADeviceToHost<DataType>(data_buff, data, num_elements_this_chunk, __FILE__, __LINE__);
                         }
-                        size_t num_sent_elements = 0;
-                        size_t total_num_non_zero_elements = 0;
-                        while (num_sent_elements < num_elements_this_chunk) {
-                            size_t num_elements_to_send = std::min(
-                                    num_elements_this_chunk - num_sent_elements,
-                                    comm_buff_size
-                                    );
-                            if (! COMPRESS_DATA) {
-                                MPI_Send(
-                                        grad_buff + num_sent_elements, num_elements_to_send,
-                                        DistributedSys::get_mpi_data_type<DataType>(),
-                                        remote_node, BackwardGradientPassing,
-                                        MPI_COMM_WORLD
-                                        );
-                            } else {
-                                // compress the data
-                                size_t num_non_zero_elements = 0;
-                                memset(compressed_data_hdr, 0, (num_elements_to_send / sizeof(uint64_t) + 1) * sizeof(uint64_t));
-                                uint64_t * data_hdr_ptx = compressed_data_hdr;
-                                for (size_t i = 0; i < num_elements_to_send; ++ i) {
-                                    size_t offset = i & 63;
-                                    size_t mask = data_buff[i + num_sent_elements] == 0 ? 0: ((uint64_t) 1 << offset);
-                                    *data_hdr_ptx ^= mask;
-                                    data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
-                                    compressed_data_payload[num_non_zero_elements] = grad_buff[i + num_sent_elements];
-                                    num_non_zero_elements += data_buff[i + num_sent_elements] != 0;
-                                }
-                                // transfer the compressed data
-                                MPI_Send(
-                                        compressed_data_hdr, num_elements_to_send / sizeof(uint64_t) + 1,
-                                        DistributedSys::get_mpi_data_type<uint64_t>(),
-                                        remote_node, BackwardGradientPassing,
-                                        MPI_COMM_WORLD
-                                        );
-                                MPI_Send(
-                                        compressed_data_payload, num_non_zero_elements,
-                                        DistributedSys::get_mpi_data_type<DataType>(),
-                                        remote_node, BackwardGradientPassing,
-                                        MPI_COMM_WORLD
-                                        );
-                                total_num_non_zero_elements += num_non_zero_elements;
-                            }
-                            num_sent_elements += num_elements_to_send;
-                        }
+                        MPI_Send(
+                                grad_buff, num_elements_this_chunk,
+                                DistributedSys::get_mpi_data_type<DataType>(),
+                                remote_node, BackwardGradientPassing,
+                                MPI_COMM_WORLD
+                                );
+                        //size_t num_sent_elements = 0;
+                        //size_t total_num_non_zero_elements = 0;
+                        //while (num_sent_elements < num_elements_this_chunk) {
+                        //    size_t num_elements_to_send = std::min(
+                        //            num_elements_this_chunk - num_sent_elements,
+                        //            comm_buff_size
+                        //            );
+                        //    if (! COMPRESS_DATA) {
+                        //        MPI_Send(
+                        //                grad_buff + num_sent_elements, num_elements_to_send,
+                        //                DistributedSys::get_mpi_data_type<DataType>(),
+                        //                remote_node, BackwardGradientPassing,
+                        //                MPI_COMM_WORLD
+                        //                );
+                        //    } else {
+                        //        // compress the data
+                        //        size_t num_non_zero_elements = 0;
+                        //        memset(compressed_data_hdr, 0, (num_elements_to_send / sizeof(uint64_t) + 1) * sizeof(uint64_t));
+                        //        uint64_t * data_hdr_ptx = compressed_data_hdr;
+                        //        for (size_t i = 0; i < num_elements_to_send; ++ i) {
+                        //            size_t offset = i & 63;
+                        //            size_t mask = data_buff[i + num_sent_elements] == 0 ? 0: ((uint64_t) 1 << offset);
+                        //            *data_hdr_ptx ^= mask;
+                        //            data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
+                        //            compressed_data_payload[num_non_zero_elements] = grad_buff[i + num_sent_elements];
+                        //            num_non_zero_elements += data_buff[i + num_sent_elements] != 0;
+                        //        }
+                        //        // transfer the compressed data
+                        //        MPI_Send(
+                        //                compressed_data_hdr, num_elements_to_send / sizeof(uint64_t) + 1,
+                        //                DistributedSys::get_mpi_data_type<uint64_t>(),
+                        //                remote_node, BackwardGradientPassing,
+                        //                MPI_COMM_WORLD
+                        //                );
+                        //        MPI_Send(
+                        //                compressed_data_payload, num_non_zero_elements,
+                        //                DistributedSys::get_mpi_data_type<DataType>(),
+                        //                remote_node, BackwardGradientPassing,
+                        //                MPI_COMM_WORLD
+                        //                );
+                        //        total_num_non_zero_elements += num_non_zero_elements;
+                        //    }
+                        //    num_sent_elements += num_elements_to_send;
+                        //}
                         //printf("Backward density: %.3f\n", 1. * total_num_non_zero_elements / num_sent_elements);
                         
                     }
