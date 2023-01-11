@@ -34,7 +34,7 @@
 
 #define LOW_LEARNING_RATE (0)
 #define NUM_STARTUP_EPOCH (10)
-#define COMPRESS_DATA (true)
+#define COMPRESS_DATA (false)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDADataDependenciesTracker;
@@ -1784,6 +1784,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
     delete [] data_buff;
 
     }
+        void zero_out_unnecessary_grad(DataType* grad, DataType* data, size_t num_elements_this_chunk);
+
         friend class CUDAPIPForwardTaskDispatcher;
         friend class CUDAPIPBackwardTaskDispatcher;
         friend class CUDAPIPGraphDataActivationUpdateTaskDispatcher;

@@ -3882,14 +3882,14 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     //    weight_stashing_manager_->restore_stashed_weight_data(op, chunk_id);
     //}
 
-        // copy the shadow gradients of tensor dependent on other nodes 
-        // and zero out the gradients of other tensors
-        const std::set<Tensor*> * all_backward_dependent_tensors = 
-            data_dependencies_tracker_->get_all_backward_dependent_tensors(chunk_id);
-        const std::set<Tensor*> * all_non_backward_dependent_tensors = 
-            data_dependencies_tracker_->get_all_non_backward_dependent_tensors(chunk_id);
-        assert(all_backward_dependent_tensors != NULL);
-        assert(all_non_backward_dependent_tensors != NULL);
+    // copy the shadow gradients of tensor dependent on other nodes 
+    // and zero out the gradients of other tensors
+    const std::set<Tensor*> * all_backward_dependent_tensors = 
+        data_dependencies_tracker_->get_all_backward_dependent_tensors(chunk_id);
+    const std::set<Tensor*> * all_non_backward_dependent_tensors = 
+        data_dependencies_tracker_->get_all_non_backward_dependent_tensors(chunk_id);
+    assert(all_backward_dependent_tensors != NULL);
+    assert(all_non_backward_dependent_tensors != NULL);
 
     if (! COMPRESS_DATA) {
         for (Tensor * dependent_tensor: *all_backward_dependent_tensors) {
@@ -4034,6 +4034,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     // compress the gradients if necessary
     if (pipeline_input_tensor_ != NULL && COMPRESS_DATA) {
         DataType * grad = NULL;
+        DataType * data = NULL;
         size_t num_elements_this_chunk = 0;
         get_vertex_tensor_grad_by_chunk(
                 pipeline_input_tensor_, chunk_id, 
@@ -4041,7 +4042,14 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 );
         assert(grad);
         assert(num_elements_this_chunk);
+        get_vertex_tensor_data_by_chunk(
+                pipeline_input_tensor_, chunk_id,
+                data, num_elements_this_chunk
+                );
+        assert(data);
+        assert(num_elements_this_chunk);
         // compress the gradients
+        zero_out_unnecessary_grad(grad, data, num_elements_this_chunk);
         grad_compressors_[chunk_id]->compress_data(grad, true);
     }
 }

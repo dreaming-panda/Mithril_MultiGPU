@@ -68,4 +68,27 @@ void  CUDAPIPGraphDataGradientUpdateSender::LauachBufferMirrors(int mirror_verti
 
 }
 
+__global__ void zero_out_grad_kernel(
+        DataType * grad, DataType * data, size_t num_elements_this_chunk
+        ) {
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < num_elements_this_chunk) {
+        DataType g = grad[idx];
+        DataType d = data[idx];
+        DataType new_g = (d == 0 ? 0: g);
+        grad[idx] = new_g;
+    }
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::zero_out_unnecessary_grad(DataType * grad, DataType * data, size_t num_elements_this_chunk) {
+    int block_size = 1024;
+    int num_blocks = (num_elements_this_chunk + block_size - 1) / block_size;
+    zero_out_grad_kernel<<<num_blocks, block_size>>>(
+            grad, data, num_elements_this_chunk
+            );
+    cudaDeviceSynchronize();
+}
+
+
+
 
