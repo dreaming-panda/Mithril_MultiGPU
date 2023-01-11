@@ -342,6 +342,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                                         );
                                 int count = 0;
                                 MPI_Get_count(&status, MPI_CHAR, &count);
+                                assert(count > 0);
                                 comm += count;
                                 return (size_t) count;
                             }, true
@@ -628,8 +629,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                         engine_->pipeline_output_tensor_, task.chunk_id
                         );
 
-                //if (! COMPRESS_DATA) { FIXME
-                if (true) {
+                if (! COMPRESS_DATA) { 
                     if (len == 0) {
                         data_buff = new DataType [num_elements_this_chunk];
                         assert(data_buff);
@@ -652,8 +652,20 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                             );
                     comm += num_elements_this_chunk * sizeof(DataType);
                 } else {
-                    // TODO
-                    assert(false);
+                    engine_->grad_decompressors_[task.chunk_id]->receive_compressed_data(
+                            [&](uint8_t * buff, size_t buff_size) {
+                                MPI_Recv(
+                                        buff, buff_size, MPI_CHAR,
+                                        remote_node, BackwardGradientPassing,
+                                        MPI_COMM_WORLD, &status
+                                        );
+                                int count = 0;
+                                MPI_Get_count(&status, MPI_CHAR, &count);
+                                assert(count > 0);
+                                comm += count;
+                                return (size_t) count;
+                            }, true // buff in CPU
+                            );
                 }
 
                 Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteReceiveData);
@@ -1060,8 +1072,7 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                 assert(grad != NULL);
                 assert(num_elements_this_chunk > 0);
 
-                //if (! COMPRESS_DATA) {  FIXME
-                if (true) {
+                if (! COMPRESS_DATA) {  
                     if (len == 0) {
                         grad_buff = new DataType [num_elements_this_chunk];
                         len = num_elements_this_chunk;
@@ -1080,8 +1091,18 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                             MPI_COMM_WORLD
                             );
                 } else {
-                    // TODO
-                    assert(false);
+                    DataType * compressed_data = NULL;
+                    size_t compressed_data_size = 0;
+                    engine_->grad_compressors_[task.chunk_id]->get_compressed_data(
+                            compressed_data, compressed_data_size
+                            );
+                    assert(compressed_data);
+                    assert(compressed_data_size);
+                    MPI_Send(
+                            compressed_data, compressed_data_size, MPI_CHAR,
+                            remote_node, BackwardGradientPassing,
+                            MPI_COMM_WORLD
+                            );
                 }
             }
         }
@@ -3861,36 +3882,53 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     //    weight_stashing_manager_->restore_stashed_weight_data(op, chunk_id);
     //}
 
-    // copy the shadow gradients of tensor dependent on other nodes 
-    // and zero out the gradients of other tensors
-    const std::set<Tensor*> * all_backward_dependent_tensors = 
-        data_dependencies_tracker_->get_all_backward_dependent_tensors(chunk_id);
-    const std::set<Tensor*> * all_non_backward_dependent_tensors = 
-        data_dependencies_tracker_->get_all_non_backward_dependent_tensors(chunk_id);
-    assert(all_backward_dependent_tensors != NULL);
-    assert(all_non_backward_dependent_tensors != NULL);
-    for (Tensor * dependent_tensor: *all_backward_dependent_tensors) {
-        DataType * grad = NULL;
-        DataType * shadow_grad = NULL;
-        size_t num_elements_this_chunk = 0;
-        get_vertex_tensor_grad_by_chunk(
-                dependent_tensor, chunk_id, grad, num_elements_this_chunk
-                );
-        assert(grad != NULL);
-        assert(num_elements_this_chunk > 0);
-        shadow_grad = shadow_gradients_->get_shadow_grad(dependent_tensor, chunk_id);
-        assert(shadow_grad != NULL);
-        // memcpy(
-        //         grad, shadow_grad, sizeof(DataType) * num_elements_this_chunk
-        //       );
+        // copy the shadow gradients of tensor dependent on other nodes 
+        // and zero out the gradients of other tensors
+        const std::set<Tensor*> * all_backward_dependent_tensors = 
+            data_dependencies_tracker_->get_all_backward_dependent_tensors(chunk_id);
+        const std::set<Tensor*> * all_non_backward_dependent_tensors = 
+            data_dependencies_tracker_->get_all_non_backward_dependent_tensors(chunk_id);
+        assert(all_backward_dependent_tensors != NULL);
+        assert(all_non_backward_dependent_tensors != NULL);
+
+    if (! COMPRESS_DATA) {
+        for (Tensor * dependent_tensor: *all_backward_dependent_tensors) {
+            DataType * grad = NULL;
+            DataType * shadow_grad = NULL;
+            size_t num_elements_this_chunk = 0;
+            get_vertex_tensor_grad_by_chunk(
+                    dependent_tensor, chunk_id, grad, num_elements_this_chunk
+                    );
+            assert(grad != NULL);
+            assert(num_elements_this_chunk > 0);
+            shadow_grad = shadow_gradients_->get_shadow_grad(dependent_tensor, chunk_id);
+            assert(shadow_grad != NULL);
+            // memcpy(
+            //         grad, shadow_grad, sizeof(DataType) * num_elements_this_chunk
+            //       );
 #ifdef SHADOW_CPU
-        CopyFromHostToCUDADevice<DataType>(grad, shadow_grad,num_elements_this_chunk,__FILE__, __LINE__);
+            CopyFromHostToCUDADevice<DataType>(grad, shadow_grad,num_elements_this_chunk,__FILE__, __LINE__);
 #endif
 #ifdef SHADOW_GPU
-        CopyFromCUDADeviceToCUDADevice<DataType>(grad, shadow_grad,num_elements_this_chunk,__FILE__, __LINE__);
+            CopyFromCUDADeviceToCUDADevice<DataType>(grad, shadow_grad,num_elements_this_chunk,__FILE__, __LINE__);
 #endif
+        }
+        shadow_gradients_->release_shadow_grad(chunk_id);
+    } else {
+        // decompress the gradients if necessary
+        if (pipeline_output_tensor_ != NULL) {
+            DataType * grad = NULL;
+            size_t num_elements_this_chunk = 0;
+            get_vertex_tensor_grad_by_chunk(
+                    pipeline_output_tensor_, chunk_id, 
+                    grad, num_elements_this_chunk
+                    );
+            assert(grad);
+            assert(num_elements_this_chunk);
+            grad_decompressors_[chunk_id]->decompress_data(grad);
+        }
     }
-    shadow_gradients_->release_shadow_grad(chunk_id);
+
     for (Tensor * tensor: *all_non_backward_dependent_tensors) {
         if (tensor == output_tensor_) {
             continue;
@@ -3918,6 +3956,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         //memset(grad, 0, sizeof(DataType) * num_elements);
         SetCUDAMemory<DataType>(grad, 0, num_elements, __FILE__, __LINE__);
     }
+
     // backward the gradients
     for (int op_idx = op_idx_end - 1; op_idx >= op_idx_begin; -- op_idx) {
         if (! backward_operator_mask_[op_idx]) {
@@ -3991,6 +4030,20 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     //            op, grad, data, num_elements
     //            );
     //}
+
+    // compress the gradients if necessary
+    if (pipeline_input_tensor_ != NULL && COMPRESS_DATA) {
+        DataType * grad = NULL;
+        size_t num_elements_this_chunk = 0;
+        get_vertex_tensor_grad_by_chunk(
+                pipeline_input_tensor_, chunk_id, 
+                grad, num_elements_this_chunk
+                );
+        assert(grad);
+        assert(num_elements_this_chunk);
+        // compress the gradients
+        grad_compressors_[chunk_id]->compress_data(grad, true);
+    }
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::generate_backward_operator_mask(
