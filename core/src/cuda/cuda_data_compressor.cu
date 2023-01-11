@@ -141,14 +141,14 @@ DataDecompressor::~DataDecompressor() {
     delete [] cpu_buff_;
 }
 
-void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * buff)> recv_data, bool recv_on_cpu) {
+void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data, bool recv_on_cpu) {
     assert(! compressed_data_set_);
     compressed_data_on_cpu_ = recv_on_cpu;
 
     if (recv_on_cpu) {
-        compressed_data_size_ = recv_data(cpu_buff_);
+        compressed_data_size_ = recv_data(cpu_buff_, cpu_buff_size_);
     } else {
-        compressed_data_size_ = recv_data(gpu_buff_);
+        compressed_data_size_ = recv_data(gpu_buff_, gpu_buff_size_);
     }
 
     compressed_data_set_ = true;

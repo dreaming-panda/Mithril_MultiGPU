@@ -56,7 +56,7 @@ class DataDecompressor {
     public:
         DataDecompressor(size_t data_size);
         ~DataDecompressor();
-        void receive_compressed_data(std::function<size_t(uint8_t * buff)> recv_data, bool recv_on_cpu); // invoked by ccommunication threads
+        void receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data, bool recv_on_cpu); // invoked by ccommunication threads
         void decompress_data(DataType * data); // invoked by the main thread
 };
 

@@ -46,7 +46,8 @@ int main(int argc, char ** argv) {
         compressor.get_compressed_data(compressed_data, compressed_data_size);
         cudaMemset(data_gpu, 0, sizeof(DataType) * data_size);
         decompressor.receive_compressed_data(
-                [&](uint8_t * buff) {
+                [&](uint8_t * buff, size_t buff_size) {
+                    assert(compressed_data_size <= buff_size);
                     memcpy(buff, compressed_data, compressed_data_size);
                     return compressed_data_size;
                 }, true
@@ -74,7 +75,8 @@ int main(int argc, char ** argv) {
             size_t compressed_data_size;
             compressor.get_compressed_data(compressed_data, compressed_data_size);
             decompressor.receive_compressed_data(
-                    [&](uint8_t * buff) {
+                    [&](uint8_t * buff, size_t buff_size) {
+                        assert(compressed_data_size <= buff_size);
                         cudaMemcpy(buff, compressed_data, compressed_data_size, 
                                 cudaMemcpyDeviceToDevice);
                         return compressed_data_size;

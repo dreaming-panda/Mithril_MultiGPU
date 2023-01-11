@@ -282,7 +282,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
         // FIXME: only works for pipeline parallel
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
-            // TODO
+
             int num_dispatched_chunks = 0;
             while (num_dispatched_chunks < num_local_chunks) {
                 // waiting for communication from remote nodes
@@ -333,8 +333,19 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                             );
                     comm += num_elements_this_chunk * sizeof(DataType);
                 } else {
-                    // TODO
-                    assert(false);
+                    engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
+                            [&](uint8_t * buff, size_t buff_size) {
+                                MPI_Recv(
+                                        buff, buff_size, MPI_CHAR,
+                                        remote_node, ForwardActivationPassing,
+                                        MPI_COMM_WORLD, &status
+                                        );
+                                int count = 0;
+                                MPI_Get_count(&status, MPI_CHAR, &count);
+                                comm += count;
+                                return (size_t) count;
+                            }, true
+                            );
                 }
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteReceiveData);
 
@@ -617,7 +628,8 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                         engine_->pipeline_output_tensor_, task.chunk_id
                         );
 
-                if (! COMPRESS_DATA) {
+                //if (! COMPRESS_DATA) { FIXME
+                if (true) {
                     if (len == 0) {
                         data_buff = new DataType [num_elements_this_chunk];
                         assert(data_buff);
@@ -840,8 +852,18 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                             MPI_COMM_WORLD
                             );
                 } else {
-                    // TODO
-                    assert(false);
+                    DataType * compressed_data = NULL;
+                    size_t compressed_data_size = 0;
+                    engine_->data_compressors_[task.chunk_id]->get_compressed_data(
+                            compressed_data, compressed_data_size
+                            );
+                    assert(compressed_data);
+                    assert(compressed_data_size);
+                    MPI_Send(
+                            compressed_data, compressed_data_size, MPI_CHAR,
+                            remote_node, ForwardActivationPassing,
+                            MPI_COMM_WORLD
+                            );
                 }
             }
         }
@@ -1038,7 +1060,8 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                 assert(grad != NULL);
                 assert(num_elements_this_chunk > 0);
 
-                if (! COMPRESS_DATA) {
+                //if (! COMPRESS_DATA) {  FIXME
+                if (true) {
                     if (len == 0) {
                         grad_buff = new DataType [num_elements_this_chunk];
                         len = num_elements_this_chunk;
@@ -3737,6 +3760,18 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     int op_idx_begin = partitioning_.partition_op_begin[node_id];
     int op_idx_end = partitioning_.partition_op_end[node_id];
 
+    if (pipeline_input_tensor_ != NULL && COMPRESS_DATA) {
+        // decompress the activation if necessary
+        DataType * data = NULL;
+        size_t num_elements_this_chunk = 0;
+        get_vertex_tensor_data_by_chunk(
+                pipeline_input_tensor_, chunk_id, data, num_elements_this_chunk
+                );
+        assert(data);
+        assert(num_elements_this_chunk);
+        data_decompressors_[chunk_id]->decompress_data(data);
+    }
+
     //EdgeId num_edges = 0;
     //for (VertexId v_i = global_vid_begin; v_i < global_vid_end; ++ v_i) {
     //    num_edges += graph_structure_->get_in_degree(v_i);
@@ -3781,6 +3816,19 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 exit(-1);
         }
     }
+
+    if (pipeline_output_tensor_ != NULL && COMPRESS_DATA) {
+        DataType * data = NULL;
+        size_t num_elements_this_chunk = 0;
+        get_vertex_tensor_data_by_chunk(
+                pipeline_output_tensor_, chunk_id, data, num_elements_this_chunk
+                );
+        assert(data);
+        assert(num_elements_this_chunk);
+        // compress the activation
+        data_compressors_[chunk_id]->compress_data(data, true);
+    }
+
     // calculate the loss if applicable 
     if (is_bottommost_node_) {
         //printf("Node %d is going to calculate the loss of local vid [%u, %u)\n",

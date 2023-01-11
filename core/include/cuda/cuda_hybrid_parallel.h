@@ -34,7 +34,7 @@
 
 #define LOW_LEARNING_RATE (0)
 #define NUM_STARTUP_EPOCH (10)
-#define COMPRESS_DATA (false)
+#define COMPRESS_DATA (true)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDADataDependenciesTracker;
