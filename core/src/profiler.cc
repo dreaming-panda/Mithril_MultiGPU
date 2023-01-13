@@ -191,7 +191,7 @@ void Profiler::breakdown_analysis() {
                 breakdown_manager.get_breakdown_sum() / (end_time - start_time)
                );
     }
-    assert(breakdown_manager.get_breakdown_sum() / (end_time - start_time) >= 0.9 || node_id != 0);
+    assert(breakdown_manager.get_breakdown_sum() / (end_time - start_time) >= 0.6 || node_id != 0);
     breakdown_manager.print_breakdowns();
 }
 

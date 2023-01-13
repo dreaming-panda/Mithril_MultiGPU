@@ -3,8 +3,8 @@
 #SBATCH -A cis220117-gpu 
 #SBATCH -t 00:10:00 
 #SBATCH --nodes 1
-#SBATCH --gpus-per-node 4
-#SBATCH --ntasks-per-node 4
+#SBATCH --gpus-per-node 2
+#SBATCH --ntasks-per-node 2
 #SBATCH --cpus-per-task 32
 #SBATCH --output output.txt
 

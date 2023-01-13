@@ -34,7 +34,7 @@
 
 #define LOW_LEARNING_RATE (0)
 #define NUM_STARTUP_EPOCH (10)
-#define COMPRESS_DATA (false)
+#define COMPRESS_DATA (true)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDADataDependenciesTracker;
@@ -1578,6 +1578,12 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int num_startup_epoches_ = 0;
         bool random_dispatch_ = false;
         int user_specified_num_chunks_ = 128;
+
+        double compression_time_;
+        double decompression_time_;
+        size_t compression_size_;
+        size_t decompression_size_;
+        double compute_time_;
 
         // the threads responsible for communication and computation
         pthread_barrier_t barrier_;

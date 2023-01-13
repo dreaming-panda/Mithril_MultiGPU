@@ -10,6 +10,7 @@
 #include "types.h"
 #include "cuda/cuda_data_compressor.h"
 #include "cuda/cuda_executor.h"
+#include "utilities.h"
 
 #define BLOCK_SIZE 1024
 
@@ -26,14 +27,16 @@ DataCompressor::DataCompressor(size_t data_size) {
     gpu_non_zero_elements_ = (DataType*) &gpu_buff_[(data_size / 32 + 1) * sizeof(uint32_t)];
     // allocate the CPU buffer
     cpu_buff_size_ = gpu_buff_size_;
-    cpu_buff_ = new uint8_t [cpu_buff_size_];
+    //cpu_buff_ = new uint8_t [cpu_buff_size_];
+    checkCUDA(cudaMallocHost(&cpu_buff_, cpu_buff_size_)); // pinned memory, much faster
     assert(cpu_buff_);
 }
 
 DataCompressor::~DataCompressor() {
     // deallocate the buffers
     checkCUDA(cudaFree(gpu_buff_));
-    delete [] cpu_buff_;
+    //delete [] cpu_buff_;
+    checkCUDA(cudaFreeHost(cpu_buff_));
 }
 
 struct non_zero_functor {
@@ -65,6 +68,7 @@ __global__ void gen_bitmap_kernel(DataType * data, uint8_t * bitmap, size_t data
 }
 
 void DataCompressor::compress_data(DataType * data, bool send_to_cpu) {
+    double t_c = - get_time();
     assert(! data_compressed_);
 
     size_t data_size = data_size_;
@@ -90,14 +94,21 @@ void DataCompressor::compress_data(DataType * data, bool send_to_cpu) {
     gen_bitmap_kernel<<<num_blocks, block_size>>>(data, bitmap, data_size);
     cudaDeviceSynchronize();
 
+    t_c += get_time();
+
     // calculate the size of the compressed data
     compressed_data_size_ = (data_size / 32 + 1) * sizeof(uint32_t)
         + sizeof(DataType) * num_non_zero_elements;
 
+    double t_t = - get_time();
     if (send_to_cpu) {
         checkCUDA(cudaMemcpy(cpu_buff_, gpu_buff_, compressed_data_size_,
                     cudaMemcpyDeviceToHost));
     }
+    t_t += get_time();
+    
+    //printf("GPU/CPU comm is %.3fx slower than compression, throughput %.3fGBps\n", 
+    //        t_t / t_c, compressed_data_size_ / t_t / 1024. / 1024. / 1024.);
 
     data_compressed_ = true;
     compressed_data_on_cpu_ = send_to_cpu;
@@ -131,14 +142,16 @@ DataDecompressor::DataDecompressor(size_t data_size) {
     checkCUDA(cudaMalloc(&gpu_data_decompression_index_, sizeof(uint32_t) * data_size));
 
     cpu_buff_size_ = gpu_buff_size_;
-    cpu_buff_ = new uint8_t [cpu_buff_size_];
+    //cpu_buff_ = new uint8_t [cpu_buff_size_];
+    checkCUDA(cudaMallocHost(&cpu_buff_, cpu_buff_size_)); // pinned memory
     assert(cpu_buff_);
 }
 
 DataDecompressor::~DataDecompressor() {
     checkCUDA(cudaFree(gpu_buff_));
     checkCUDA(cudaFree(gpu_data_decompression_index_));
-    delete [] cpu_buff_;
+    //delete [] cpu_buff_;
+    checkCUDA(cudaFreeHost(cpu_buff_));
 }
 
 void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data, bool recv_on_cpu) {

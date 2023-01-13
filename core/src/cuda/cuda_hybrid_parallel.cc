@@ -47,6 +47,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
 
     size_t len = 0;
     double comm = 0;
+    double comm_time = 0;
     if (engine_->is_topmost_node()) {
 
         // FIXME: a simple dispatching strategy of the topmost nodes not considering load balancing is used here
@@ -310,6 +311,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                 assert(data);
                 assert(num_elements_this_chunk);
 
+                comm_time -= get_time();
                 if (! COMPRESS_DATA) {
                     if (len == 0) {
                         data_buff = new DataType [num_elements_this_chunk];
@@ -348,6 +350,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                             }, true
                             );
                 }
+                comm_time += get_time();
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteReceiveData);
 
                 // dispatch the received task
@@ -357,6 +360,8 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
         }
     }
     comm_ = comm;
+    printf("Node %d, Layer-level comm throughput (act): %.3f GBps\n",
+            node_id, comm * 1. / comm_time / 1024. / 1024. / 1024.);
     if(len > 0) {
         delete [] data_buff;
         delete [] compressed_data_hdr;
@@ -404,6 +409,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
     CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
     assert(data_dependencies_tracker != NULL);
     double comm = 0;
+    double comm_time = 0;
 
     if (engine_->is_bottommost_node()) {
         // doesn't need to receive gradients from dependent nodes
@@ -629,6 +635,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                         engine_->pipeline_output_tensor_, task.chunk_id
                         );
 
+                comm_time -= get_time();
                 if (! COMPRESS_DATA) { 
                     if (len == 0) {
                         data_buff = new DataType [num_elements_this_chunk];
@@ -667,6 +674,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                             }, true // buff in CPU
                             );
                 }
+                comm_time += get_time();
 
                 Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteReceiveData);
                 task_queue_->push(task);
@@ -680,6 +688,8 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
         //DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
     }
     comm_ = comm;
+    printf("Node %d, Layer-level comm throughput (grad): %.3f GBps\n",
+            node_id, comm * 1. / comm_time / 1024. / 1024. / 1024.);
 }
 
 CUDAPIPForwardTaskCommitter::CUDAPIPForwardTaskCommitter(
@@ -1210,6 +1220,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     //engine_->parameter_server_->print_weights();
     double t = - get_time();
+    engine_->compression_time_ = 0;
+    engine_->decompression_time_ = 0;
+    engine_->compression_size_ = 0;
+    engine_->decompression_size_ = 0;
+    engine_->compute_time_ = 0;
 
     int num_epoch = engine_->get_num_epoch();
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
@@ -1258,9 +1273,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
                             time_elapsed, node_id, task.chunk_id);
 #endif
-                    Profiler::submit_main_thread_event(ForwardTaskStartEvent);
                     engine_->perform_forward_task(task);
-                    Profiler::submit_main_thread_event(ForwardTaskCompleteEvent);
 
                     forward_task_committer_queue_->push(task);
                     if (is_bottommost_node) {
@@ -1290,9 +1303,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
                             time_elapsed, node_id, task.chunk_id);
 #endif
-                    Profiler::submit_main_thread_event(BackwardTaskStartEvent);
                     engine_->perform_backward_task(task); 
-                    Profiler::submit_main_thread_event(BackwardTaskCompleteEvent);
 
                     backward_task_committer_queue_->push(task);
                     engine_->grad_update_sender_->insert_new_task(task); 
@@ -1326,6 +1337,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         //engine_->parameter_server_->print_weights();
     }
     t += get_time();
+    printf("Node %d, compression time: %.3fs, throughput: %.3fGBps\n", 
+            node_id, engine_->compression_time_, engine_->compression_size_ / engine_->compression_time_ / 1024. / 1024. / 1024.);
+    printf("Node %d, decompression time: %.3fs, throughput: %.3fGBps\n", 
+            node_id, engine_->decompression_time_, engine_->decompression_size_ / engine_->decompression_time_ / 1024. / 1024. / 1024.);
+    printf("Node %d, compute time: %.3f s\n", node_id, engine_->compute_time_);
     printf("------------------------node id %d,  total time %fs (per-epoch: %fs)---------------\n", node_id, t, t / num_epoch);
 
     // check the consistency of the distributed weights
@@ -3782,6 +3798,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     int op_idx_end = partitioning_.partition_op_end[node_id];
 
     if (pipeline_input_tensor_ != NULL && COMPRESS_DATA) {
+        decompression_time_ -= get_time();
         // decompress the activation if necessary
         DataType * data = NULL;
         size_t num_elements_this_chunk = 0;
@@ -3791,6 +3808,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
         assert(data);
         assert(num_elements_this_chunk);
         data_decompressors_[chunk_id]->decompress_data(data);
+        decompression_time_ += get_time();
+        decompression_size_ += sizeof(DataType) * num_elements_this_chunk;
     }
 
     //EdgeId num_edges = 0;
@@ -3799,6 +3818,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     //}
     //double chunk_time = - get_time();
 
+    Profiler::submit_main_thread_event(ForwardTaskStartEvent);
+    compute_time_ -= get_time();
     for (int op_idx = op_idx_begin; op_idx < op_idx_end; op_idx ++) {
         Operator * op = op_ten_manager_->get_operator(op_idx);
         assert(op != NULL);
@@ -3837,19 +3858,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 exit(-1);
         }
     }
-
-    if (pipeline_output_tensor_ != NULL && COMPRESS_DATA) {
-        DataType * data = NULL;
-        size_t num_elements_this_chunk = 0;
-        get_vertex_tensor_data_by_chunk(
-                pipeline_output_tensor_, chunk_id, data, num_elements_this_chunk
-                );
-        assert(data);
-        assert(num_elements_this_chunk);
-        // compress the activation
-        data_compressors_[chunk_id]->compress_data(data, true);
-    }
-
     // calculate the loss if applicable 
     if (is_bottommost_node_) {
         //printf("Node %d is going to calculate the loss of local vid [%u, %u)\n",
@@ -3862,6 +3870,25 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 );
         accum_loss_ += loss;
     }
+    compute_time_ += get_time();
+    Profiler::submit_main_thread_event(ForwardTaskCompleteEvent);
+
+    if (pipeline_output_tensor_ != NULL && COMPRESS_DATA) {
+        compression_time_ -= get_time();
+        DataType * data = NULL;
+        size_t num_elements_this_chunk = 0;
+        get_vertex_tensor_data_by_chunk(
+                pipeline_output_tensor_, chunk_id, data, num_elements_this_chunk
+                );
+        assert(data);
+        assert(num_elements_this_chunk);
+        // compress the activation
+        data_compressors_[chunk_id]->compress_data(data, true);
+        compression_time_ += get_time();
+        compression_size_ += sizeof(DataType) * num_elements_this_chunk;
+        //printf("Compression size: %.3f MB\n", sizeof(DataType) * num_elements_this_chunk / 1024. / 1024.);
+    }
+
 
     //chunk_time += get_time();
     //fprintf(stderr, "Vertices: %u, Edges: %lu, ForwardRuntime: %.3f (ms)\n", global_vid_end - global_vid_begin, num_edges, chunk_time * 1000.);
@@ -3917,6 +3944,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     } else {
         // decompress the gradients if necessary
         if (pipeline_output_tensor_ != NULL) {
+            decompression_time_ -= get_time();
             DataType * grad = NULL;
             size_t num_elements_this_chunk = 0;
             get_vertex_tensor_grad_by_chunk(
@@ -3926,6 +3954,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
             assert(grad);
             assert(num_elements_this_chunk);
             grad_decompressors_[chunk_id]->decompress_data(grad);
+            decompression_time_ += get_time();
+            decompression_size_ += sizeof(DataType) * num_elements_this_chunk;
         }
     }
 
@@ -3958,6 +3988,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     }
 
     // backward the gradients
+    compute_time_ -= get_time();
+    Profiler::submit_main_thread_event(BackwardTaskStartEvent);
     for (int op_idx = op_idx_end - 1; op_idx >= op_idx_begin; -- op_idx) {
         if (! backward_operator_mask_[op_idx]) {
             continue;
@@ -3997,6 +4029,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 exit(-1);
         }
     }
+    Profiler::submit_main_thread_event(BackwardTaskCompleteEvent);
+    compute_time_ += get_time();
+
     // apply the gradients by pushing them to the parameter server
     for (WeightOperator * op: local_weight_ops_) { 
         assert(op != NULL);
@@ -4033,6 +4068,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
 
     // compress the gradients if necessary
     if (pipeline_input_tensor_ != NULL && COMPRESS_DATA) {
+        compression_time_ -= get_time();
         DataType * grad = NULL;
         DataType * data = NULL;
         size_t num_elements_this_chunk = 0;
@@ -4051,6 +4087,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         // compress the gradients
         zero_out_unnecessary_grad(grad, data, num_elements_this_chunk);
         grad_compressors_[chunk_id]->compress_data(grad, true);
+        compression_time_ += get_time();
+        compression_size_ += sizeof(DataType) * num_elements_this_chunk;
     }
 }
 
