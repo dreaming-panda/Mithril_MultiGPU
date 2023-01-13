@@ -118,8 +118,14 @@ void DataCompressor::get_compressed_data(DataType * &buff, size_t &buff_size) {
     assert(data_compressed_);
 
     if (compressed_data_on_cpu_) {
+        double t = - get_time();
+        //checkCUDA(cudaMemcpy(cpu_buff_, gpu_buff_, compressed_data_size_,
+        //            cudaMemcpyDeviceToHost));
         buff = (DataType*) cpu_buff_;
         buff_size = compressed_data_size_;
+        t += get_time();
+        //printf("GPU=>CPU comm throughput: %.3f GBps\n",
+        //        compressed_data_size_ / t / 1024. / 1024. / 1024.);
     } else {
         buff = (DataType*) gpu_buff_;
         buff_size = compressed_data_size_;
@@ -159,7 +165,16 @@ void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * bu
     compressed_data_on_cpu_ = recv_on_cpu;
 
     if (recv_on_cpu) {
+        double t_network = - get_time();
         compressed_data_size_ = recv_data(cpu_buff_, cpu_buff_size_);
+        t_network += get_time();
+        //double t_copy = - get_time();
+        //checkCUDA(cudaMemcpy(gpu_buff_, cpu_buff_, compressed_data_size_,
+        //            cudaMemcpyHostToDevice));
+        //t_copy += get_time();
+        //printf("Network => CPU throughput: %.3f GBps, CPU => GPU throughput: %.3f GBps\n",
+        //        compressed_data_size_ / t_network / 1024. / 1024. / 1024.,
+        //        compressed_data_size_ / t_copy / 1024. / 1024. / 1024.);
     } else {
         compressed_data_size_ = recv_data(gpu_buff_, gpu_buff_size_);
     }

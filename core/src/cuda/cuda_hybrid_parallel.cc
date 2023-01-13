@@ -416,6 +416,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
         // however, we should wait for the local forwarding task to finish
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
+            continue; // FIXME
             double start_time = get_time();
 
             int num_dispatched_chunks = 0;
@@ -600,6 +601,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
 
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
+            continue; // TODO
 
             // the shadow gradients will be automatically zero out 
             CUDAShadowGradientsMasterVertices * shadow_gradients = 
@@ -921,6 +923,7 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
     if (engine_->is_topmost_node()) {
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
+            continue; // FIXME
             double start_time = get_time();
             for (int i = 0; i < num_local_chunks; ++ i) {
                 task_queue_->pop_blocking(task);
@@ -1062,6 +1065,7 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
 
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
+            continue; // FIXME
             for (int num_committed_chunks = 0; 
                     num_committed_chunks < num_local_chunks; 
                     ++ num_committed_chunks) {
@@ -1225,6 +1229,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     engine_->compression_size_ = 0;
     engine_->decompression_size_ = 0;
     engine_->compute_time_ = 0;
+    double wait_for_task_time = 0;
+    double wait_for_other_gpus_time = 0;
 
     int num_epoch = engine_->get_num_epoch();
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
@@ -1244,7 +1250,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
 
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
+        wait_for_other_gpus_time -= get_time();
         MPI_Barrier(MPI_COMM_WORLD);
+        wait_for_other_gpus_time += get_time();
         if (node_id == 0) {
             //printf("\n********* Epoch %d: *********\n", epoch_id);
             printf("    Epoch %d:", epoch_id);
@@ -1258,6 +1266,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         int num_scheduled_forward_tasks = 0;
         int num_scheduled_backward_tasks = 0;
         bool success;
+        double slowest_chunk = 0;
+        double fastest_chunk = 1e100;
         while (num_scheduled_forward_tasks < num_local_chunks) {
 #ifdef BOOST_ARCH_X86
             __asm volatile ("pause" ::: "memory");
@@ -1265,8 +1275,13 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
             if (num_scheduled_forward_tasks < num_local_chunks) {
                 CUDAPIPForwardTask task;
-                forward_task_dispatcher_queue_->pop(task, success);
-                if (success) {
+                //forward_task_dispatcher_queue_->pop(task, success);
+                //if (success) {
+                wait_for_task_time -= get_time();
+                forward_task_dispatcher_queue_->pop_blocking(task);
+                wait_for_task_time += get_time();
+                {
+                    double t = - get_time();
                     assert(task.epoch_id == epoch_id);
 #ifdef SHOW_SCHEDULE_DETAILS
                     double time_elapsed = (get_time() - start_time) * 1000;    
@@ -1284,34 +1299,49 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     }
                     engine_->act_update_sender_->insert_new_task(task);
                     ++ num_scheduled_forward_tasks;
+                    t += get_time();
+                    slowest_chunk = std::max(slowest_chunk, t);
+                    fastest_chunk = std::min(fastest_chunk, t);
+                    //if (node_id == 0)
+                    //    printf("Node %d, chunk %d, runtime: %.4f s\n", 
+                    //            node_id, task.chunk_id, t);
                 }
             }
         }
+        printf("Node %d, slowest / fastest chunk time: %.3f\n", node_id, slowest_chunk / fastest_chunk);
 
-        while (num_scheduled_backward_tasks < num_local_chunks) {
-#ifdef BOOST_ARCH_X86
-            __asm volatile ("pause" ::: "memory");
-#endif
-
-            if (num_scheduled_backward_tasks < num_local_chunks) {
-                CUDAPIPBackwardTask task;
-                backward_task_dispatcher_queue_->pop(task, success);
-                if (success) {
-                    assert(task.epoch_id == epoch_id);
-#ifdef SHOW_SCHEDULE_DETAILS
-                    double time_elapsed = (get_time() - start_time) * 1000;    
-                    printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
-                            time_elapsed, node_id, task.chunk_id);
-#endif
-                    engine_->perform_backward_task(task); 
-
-                    backward_task_committer_queue_->push(task);
-                    engine_->grad_update_sender_->insert_new_task(task); 
-                    ++ num_scheduled_backward_tasks;
-                }
-            }
-        }
+//        while (num_scheduled_backward_tasks < num_local_chunks) { FIXME
+//#ifdef BOOST_ARCH_X86
+//            __asm volatile ("pause" ::: "memory");
+//#endif
+//
+//            if (num_scheduled_backward_tasks < num_local_chunks) {
+//                CUDAPIPBackwardTask task;
+//                //backward_task_dispatcher_queue_->pop(task, success);
+//                //if (success) {
+//                wait_for_task_time -= get_time();
+//                backward_task_dispatcher_queue_->pop_blocking(task);
+//                wait_for_task_time += get_time();
+//                {
+//                    assert(task.epoch_id == epoch_id);
+//#ifdef SHOW_SCHEDULE_DETAILS
+//                    double time_elapsed = (get_time() - start_time) * 1000;    
+//                    printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
+//                            time_elapsed, node_id, task.chunk_id);
+//#endif
+//                    engine_->perform_backward_task(task); 
+//
+//                    backward_task_committer_queue_->push(task);
+//                    engine_->grad_update_sender_->insert_new_task(task); 
+//                    ++ num_scheduled_backward_tasks;
+//                }
+//            }
+//        }
         
+        //double end_time = get_time();
+        //printf("It takes node %d %.3f s to finish the computation.\n",
+        //        node_id, end_time - start_time);
+
         Profiler::submit_main_thread_event(GPUSyncStartEvent);
         MPI_Barrier(MPI_COMM_WORLD);
         Profiler::submit_main_thread_event(GPUSynCompleteEvent);
@@ -1337,11 +1367,16 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         //engine_->parameter_server_->print_weights();
     }
     t += get_time();
-    printf("Node %d, compression time: %.3fs, throughput: %.3fGBps\n", 
-            node_id, engine_->compression_time_, engine_->compression_size_ / engine_->compression_time_ / 1024. / 1024. / 1024.);
-    printf("Node %d, decompression time: %.3fs, throughput: %.3fGBps\n", 
-            node_id, engine_->decompression_time_, engine_->decompression_size_ / engine_->decompression_time_ / 1024. / 1024. / 1024.);
-    printf("Node %d, compute time: %.3f s\n", node_id, engine_->compute_time_);
+    printf("Node %d, compression time: %.3fs, compression size: %.3fGB, throughput: %.3fGBps\n", 
+            node_id, engine_->compression_time_, engine_->compression_size_ / 1024. / 1024. / 1024.,
+            engine_->compression_size_ / engine_->compression_time_ / 1024. / 1024. / 1024.);
+    printf("Node %d, decompression time: %.3fs, compression size: %.3fGB, throughput: %.3fGBps\n", 
+            node_id, engine_->decompression_time_, engine_->compression_size_ / 1024. / 1024. / 1024.,
+            engine_->decompression_size_ / engine_->decompression_time_ / 1024. / 1024. / 1024.);
+    printf("Node %d, pure compute time: %.3f s, total compute time: %.3f s\n", 
+            node_id, engine_->compute_time_, engine_->compute_time_ + engine_->compression_time_ + engine_->decompression_time_);
+    printf("Node %d, wait_for_task_time: %.3f s, wait_for_other_gpus_time: %.3f s\n",
+            wait_for_task_time, wait_for_other_gpus_time);
     printf("------------------------node id %d,  total time %fs (per-epoch: %fs)---------------\n", node_id, t, t / num_epoch);
 
     // check the consistency of the distributed weights
@@ -1461,6 +1496,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         printf("Target test_acc: %.4f\n", target_test_acc);
         printf("Epoch to reach the target acc: %d\n", epoch_to_reach_target_acc);
     }
+    fflush(stdout);
 }
 
 bool CUDAOperatorsAndTensorsManager::is_operator_list_ordered() {
@@ -2747,6 +2783,7 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
+        continue; // FIXME
 
         for (int num_sent_chunks = 0; num_sent_chunks < num_local_chunks; ++ num_sent_chunks) {
             task_queue_->pop_blocking(task);
@@ -2889,6 +2926,7 @@ void CUDAPIPGraphDataActivationUpdateReceiver::thread_main() {
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
+        continue; // FIXME
 
         for (int num_received_updates = 0; num_received_updates < num_activation_updates_to_recv; 
                 ++ num_received_updates) {
@@ -2999,6 +3037,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
+        continue; // FIXME
 
         for (int num_sent_chunks = 0; num_sent_chunks < num_local_chunks; ++ num_sent_chunks) {
             task_queue_->pop_blocking(task);
@@ -3151,6 +3190,7 @@ void CUDAPIPGraphDataGradientUpdateReceiver::thread_main() {
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         pthread_barrier_wait(barrier_);
+        continue; // FIXME
 
         for (int num_received_updates = 0; 
                 num_received_updates < num_updates_to_recv; ++ num_received_updates) {
@@ -4508,7 +4548,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-             graph_structure_->get_num_global_vertices() / user_specified_num_chunks_
+             (graph_structure_->get_num_global_vertices() + user_specified_num_chunks_ - 1) / user_specified_num_chunks_ 
             //graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new CUDADataDependenciesTracker(
