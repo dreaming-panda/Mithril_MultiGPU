@@ -3,10 +3,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <mpi.h>
+#include <pthread.h>
 
 #include <thrust/execution_policy.h>
 #include <thrust/scan.h>
 #include <thrust/copy.h>
+
+#include <thread>
 
 #include "types.h"
 #include "cuda/cuda_data_compressor.h"
@@ -153,10 +156,8 @@ void DataCompressor::send_compressed_data_directly_from_gpu(
     assert(data_compressed_);
 
     const size_t batch_size = COMM_BATCH_SIZE;
-    size_t gpu_batch_begin = 0;
-    size_t gpu_batch_end = std::min(compressed_data_size_, batch_size);
-    size_t cpu_batch_begin = 0;
-    size_t cpu_batch_end = 0;
+
+    // TODO: use onesided MPI 
 
     MPI_Send(
             &compressed_data_size_, 1, 
@@ -164,9 +165,53 @@ void DataCompressor::send_compressed_data_directly_from_gpu(
             remote_node, msg_type, MPI_COMM_WORLD
             );
 
+    //pthread_barrier_t barrier;
+    //assert(! pthread_barrier_init(&barrier, NULL, 2));
+
+    //std::thread cuda_memcpy_thread(
+    //        [&]() {
+    //            size_t gpu_batch_begin = 0;
+    //            size_t gpu_batch_end = std::min(compressed_data_size_, batch_size);
+    //            while (gpu_batch_begin < gpu_batch_end) {
+    //                checkCUDA(cudaMemcpy(
+    //                            cpu_buff_ + gpu_batch_begin, gpu_buff_ + gpu_batch_begin,
+    //                            gpu_batch_end - gpu_batch_begin, cudaMemcpyDeviceToHost
+    //                            ));
+    //                double t = - get_time();
+    //                pthread_barrier_wait(&barrier);
+    //                t += get_time();
+    //                printf("cudaMemcpy wait: %.3f ms\n", t * 1000.);
+    //                gpu_batch_begin = gpu_batch_end;
+    //                gpu_batch_end = std::min(gpu_batch_begin + batch_size, compressed_data_size_);
+    //            }
+    //        }
+    //        );
+
+    //size_t cpu_batch_begin = 0;
+    //size_t cpu_batch_end = std::min(compressed_data_size_, batch_size);
+    //while (cpu_batch_begin < cpu_batch_end) {
+    //    double t = - get_time();
+    //    pthread_barrier_wait(&barrier);
+    //    t += get_time();
+    //    printf("MPI_Send wait: %.3f ms\n", t * 1000.);
+    //    MPI_Send(
+    //            cpu_buff_ + cpu_batch_begin, cpu_batch_end - cpu_batch_begin,
+    //            MPI_CHAR, remote_node, msg_type, MPI_COMM_WORLD
+    //            );
+    //    cpu_batch_begin = cpu_batch_end;
+    //    cpu_batch_end = std::min(cpu_batch_begin + batch_size, compressed_data_size_);
+    //}
+
+    //cuda_memcpy_thread.join();
+    //assert(! pthread_barrier_destroy(&barrier));
+    
+
+    size_t gpu_batch_begin = 0;
+    size_t gpu_batch_end = std::min(compressed_data_size_, batch_size);
+    size_t cpu_batch_begin = 0;
+    size_t cpu_batch_end = 0;
     while (gpu_batch_begin < gpu_batch_end ||
             cpu_batch_begin < cpu_batch_end) {
-        /*
         // issue a memcpy from GPU to CPU if applicable
         if (gpu_batch_begin < gpu_batch_end) {
             checkCUDA(cudaMemcpyAsync(
@@ -186,7 +231,7 @@ void DataCompressor::send_compressed_data_directly_from_gpu(
         if (gpu_batch_begin < gpu_batch_end) {
             checkCUDA(cudaStreamSynchronize(cuda_stream_));
         }
-        */
+        /*
         MPI_Request request = MPI_REQUEST_NULL;
         if (cpu_batch_begin < cpu_batch_end) {
             MPI_Isend(
@@ -208,6 +253,7 @@ void DataCompressor::send_compressed_data_directly_from_gpu(
             t += get_time();
             printf("MPI_Wait: %.3f GBps\n", (cpu_batch_end - cpu_batch_begin) / t / 1024. / 1024. / 1024.);
         }
+        */
 
         // update the batch info
         cpu_batch_begin = gpu_batch_begin;
@@ -350,6 +396,40 @@ size_t DataDecompressor::recv_compressed_data_directly_to_gpu(
             );
     const size_t batch_size = COMM_BATCH_SIZE;
 
+    //pthread_barrier_t barrier;
+    //assert(! pthread_barrier_init(&barrier, NULL, 2));
+
+    //std::thread cuda_memcpy_thread(
+    //        [&]() {
+    //            size_t gpu_batch_begin = 0;
+    //            size_t gpu_batch_end = std::min(compressed_data_size_, batch_size);
+    //            while (gpu_batch_begin < gpu_batch_end) {
+    //                pthread_barrier_wait(&barrier);
+    //                checkCUDA(cudaMemcpy(
+    //                            gpu_buff_ + gpu_batch_begin, cpu_buff_ + gpu_batch_begin,
+    //                            gpu_batch_end - gpu_batch_begin, cudaMemcpyHostToDevice
+    //                            ));
+    //                gpu_batch_begin = gpu_batch_end;
+    //                gpu_batch_end = std::min(gpu_batch_begin + batch_size, compressed_data_size_);
+    //            }
+    //        }
+    //        );
+
+    //size_t cpu_batch_begin = 0;
+    //size_t cpu_batch_end = std::min(compressed_data_size_, batch_size);
+    //while (cpu_batch_begin < cpu_batch_end) {
+    //    MPI_Recv(
+    //            cpu_buff_ + cpu_batch_begin, cpu_batch_end - cpu_batch_begin,
+    //            MPI_CHAR, remote_node, msg_type, MPI_COMM_WORLD, &status
+    //            );
+    //    cpu_batch_begin = cpu_batch_end;
+    //    cpu_batch_end = std::min(cpu_batch_begin + batch_size, compressed_data_size_);
+    //    pthread_barrier_wait(&barrier);
+    //}
+
+    //cuda_memcpy_thread.join();
+    //assert(! pthread_barrier_destroy(&barrier));
+
     size_t cpu_batch_begin = 0;
     size_t cpu_batch_end = std::min(batch_size, compressed_data_size_);
     size_t gpu_batch_begin = 0;
@@ -357,7 +437,6 @@ size_t DataDecompressor::recv_compressed_data_directly_to_gpu(
 
     while (cpu_batch_begin < cpu_batch_end ||
             gpu_batch_begin < gpu_batch_end) {
-        /*
         if (gpu_batch_begin < gpu_batch_end) {
             checkCUDA(cudaMemcpyAsync(
                     gpu_buff_ + gpu_batch_begin, cpu_buff_ + gpu_batch_begin,
@@ -374,8 +453,8 @@ size_t DataDecompressor::recv_compressed_data_directly_to_gpu(
         if (gpu_batch_begin < gpu_batch_end) {
             checkCUDA(cudaStreamSynchronize(cuda_stream_));
         }
-        */
 
+        /*
         MPI_Request request = MPI_REQUEST_NULL;
         if (cpu_batch_begin < cpu_batch_end) {
             MPI_Irecv(
@@ -396,6 +475,7 @@ size_t DataDecompressor::recv_compressed_data_directly_to_gpu(
             t += get_time();
             //printf("MPI_Wait: %.3f GBps\n", (cpu_batch_end - cpu_batch_begin) / t / 1024. / 1024. / 1024.);
         }
+        */
 
         gpu_batch_begin = cpu_batch_begin;
         gpu_batch_end = cpu_batch_end;

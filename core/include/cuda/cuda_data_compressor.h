@@ -7,7 +7,7 @@
 
 #include "types.h"
 
-#define COMM_BATCH_SIZE (1 * 1024 * 1024) // 128 KB
+#define COMM_BATCH_SIZE (4 * 1024 * 1024) 
 
 class DataCompressor {
     private:
