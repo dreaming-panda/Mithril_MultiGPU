@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <mpi.h>
 
 #include <thrust/execution_policy.h>
 #include <thrust/scan.h>
@@ -13,6 +14,7 @@
 #include "utilities.h"
 
 #define BLOCK_SIZE 1024
+//#define CUDA_MEMCPY_MAIN_THREAD
 
 DataCompressor::DataCompressor(size_t data_size) {
     data_compressed_ = false;
@@ -30,6 +32,8 @@ DataCompressor::DataCompressor(size_t data_size) {
     //cpu_buff_ = new uint8_t [cpu_buff_size_];
     checkCUDA(cudaMallocHost(&cpu_buff_, cpu_buff_size_)); // pinned memory, much faster
     assert(cpu_buff_);
+    // create the cuda stream used for pipelined data transferring
+    checkCUDA(cudaStreamCreate(&cuda_stream_));
 }
 
 DataCompressor::~DataCompressor() {
@@ -37,6 +41,8 @@ DataCompressor::~DataCompressor() {
     checkCUDA(cudaFree(gpu_buff_));
     //delete [] cpu_buff_;
     checkCUDA(cudaFreeHost(cpu_buff_));
+    // destroy the stream
+    checkCUDA(cudaStreamDestroy(cuda_stream_));
 }
 
 struct non_zero_functor {
@@ -100,18 +106,22 @@ void DataCompressor::compress_data(DataType * data, bool send_to_cpu) {
     compressed_data_size_ = (data_size / 32 + 1) * sizeof(uint32_t)
         + sizeof(DataType) * num_non_zero_elements;
 
+#ifdef CUDA_MEMCPY_MAIN_THREAD
     double t_t = - get_time();
     if (send_to_cpu) {
         checkCUDA(cudaMemcpy(cpu_buff_, gpu_buff_, compressed_data_size_,
                     cudaMemcpyDeviceToHost));
     }
     t_t += get_time();
-    
+#endif
+
     //printf("GPU/CPU comm is %.3fx slower than compression, throughput %.3fGBps\n", 
     //        t_t / t_c, compressed_data_size_ / t_t / 1024. / 1024. / 1024.);
 
     data_compressed_ = true;
     compressed_data_on_cpu_ = send_to_cpu;
+
+    printf("Compressed data size: %.3f MB\n", compressed_data_size_ / 1024. / 1024.);
 }
 
 void DataCompressor::get_compressed_data(DataType * &buff, size_t &buff_size) {
@@ -119,8 +129,10 @@ void DataCompressor::get_compressed_data(DataType * &buff, size_t &buff_size) {
 
     if (compressed_data_on_cpu_) {
         double t = - get_time();
-        //checkCUDA(cudaMemcpy(cpu_buff_, gpu_buff_, compressed_data_size_,
-        //            cudaMemcpyDeviceToHost));
+#ifndef CUDA_MEMCPY_MAIN_THREAD
+        checkCUDA(cudaMemcpy(cpu_buff_, gpu_buff_, compressed_data_size_,
+                    cudaMemcpyDeviceToHost));
+#endif
         buff = (DataType*) cpu_buff_;
         buff_size = compressed_data_size_;
         t += get_time();
@@ -129,6 +141,81 @@ void DataCompressor::get_compressed_data(DataType * &buff, size_t &buff_size) {
     } else {
         buff = (DataType*) gpu_buff_;
         buff_size = compressed_data_size_;
+    }
+
+    data_compressed_ = false;
+    compressed_data_on_cpu_ = false;
+}
+
+void DataCompressor::send_compressed_data_directly_from_gpu(
+        int remote_node, int msg_type
+        ) {
+    assert(data_compressed_);
+
+    const size_t batch_size = COMM_BATCH_SIZE;
+    size_t gpu_batch_begin = 0;
+    size_t gpu_batch_end = std::min(compressed_data_size_, batch_size);
+    size_t cpu_batch_begin = 0;
+    size_t cpu_batch_end = 0;
+
+    MPI_Send(
+            &compressed_data_size_, 1, 
+            DistributedSys::get_mpi_data_type<size_t>(),
+            remote_node, msg_type, MPI_COMM_WORLD
+            );
+
+    while (gpu_batch_begin < gpu_batch_end ||
+            cpu_batch_begin < cpu_batch_end) {
+        /*
+        // issue a memcpy from GPU to CPU if applicable
+        if (gpu_batch_begin < gpu_batch_end) {
+            checkCUDA(cudaMemcpyAsync(
+                        cpu_buff_ + gpu_batch_begin, gpu_buff_ + gpu_batch_begin,
+                        gpu_batch_end - gpu_batch_begin, 
+                        cudaMemcpyDeviceToHost, cuda_stream_
+                        ));
+        }
+        // at the same time, copy the data to the romote node if applicable
+        if (cpu_batch_begin < cpu_batch_end) {
+            MPI_Send(
+                    cpu_buff_ + cpu_batch_begin, cpu_batch_end - cpu_batch_begin,
+                    MPI_CHAR, remote_node, msg_type, MPI_COMM_WORLD
+                    );
+        }
+        // wait until the GPU=>CPU data transferring complete
+        if (gpu_batch_begin < gpu_batch_end) {
+            checkCUDA(cudaStreamSynchronize(cuda_stream_));
+        }
+        */
+        MPI_Request request = MPI_REQUEST_NULL;
+        if (cpu_batch_begin < cpu_batch_end) {
+            MPI_Isend(
+                    cpu_buff_ + cpu_batch_begin, cpu_batch_end - cpu_batch_begin,
+                    MPI_CHAR, remote_node, msg_type, MPI_COMM_WORLD, &request
+                    );
+        }
+        if (gpu_batch_begin < gpu_batch_end) {
+            double t = - get_time()
+            checkCUDA(cudaMemcpy(cpu_buff_ + gpu_batch_begin, gpu_buff_ + gpu_batch_begin,
+                        gpu_batch_end - gpu_batch_begin, cudaMemcpyDeviceToHost));
+            t += get_time();
+            printf("cudaMemcpy: %.3f GBps\n", (gpu_batch_end - gpu_batch_begin) / t / 1024. / 1024. / 1024.);
+        }
+        if (cpu_batch_begin < cpu_batch_end) {
+            double t = - get_time();
+            MPI_Status status;
+            MPI_Wait(&request, &status);
+            t += get_time();
+            printf("MPI_Wait: %.3f GBps\n", (cpu_batch_end - cpu_batch_begin) / t / 1024. / 1024. / 1024.);
+        }
+
+        // update the batch info
+        cpu_batch_begin = gpu_batch_begin;
+        cpu_batch_end = gpu_batch_end;
+        gpu_batch_begin = gpu_batch_end;
+        gpu_batch_end = std::min(
+                gpu_batch_begin + batch_size, compressed_data_size_
+                );
     }
 
     data_compressed_ = false;
@@ -151,6 +238,8 @@ DataDecompressor::DataDecompressor(size_t data_size) {
     //cpu_buff_ = new uint8_t [cpu_buff_size_];
     checkCUDA(cudaMallocHost(&cpu_buff_, cpu_buff_size_)); // pinned memory
     assert(cpu_buff_);
+    // create the cuda stream used for pipelined data transferring
+    checkCUDA(cudaStreamCreate(&cuda_stream_));
 }
 
 DataDecompressor::~DataDecompressor() {
@@ -158,6 +247,8 @@ DataDecompressor::~DataDecompressor() {
     checkCUDA(cudaFree(gpu_data_decompression_index_));
     //delete [] cpu_buff_;
     checkCUDA(cudaFreeHost(cpu_buff_));
+    // destroy the stream
+    checkCUDA(cudaStreamDestroy(cuda_stream_));
 }
 
 void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data, bool recv_on_cpu) {
@@ -168,10 +259,12 @@ void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * bu
         double t_network = - get_time();
         compressed_data_size_ = recv_data(cpu_buff_, cpu_buff_size_);
         t_network += get_time();
-        //double t_copy = - get_time();
-        //checkCUDA(cudaMemcpy(gpu_buff_, cpu_buff_, compressed_data_size_,
-        //            cudaMemcpyHostToDevice));
-        //t_copy += get_time();
+#ifndef CUDA_MEMCPY_MAIN_THREAD
+        double t_copy = - get_time();
+        checkCUDA(cudaMemcpy(gpu_buff_, cpu_buff_, compressed_data_size_,
+                    cudaMemcpyHostToDevice));
+        t_copy += get_time();
+#endif
         //printf("Network => CPU throughput: %.3f GBps, CPU => GPU throughput: %.3f GBps\n",
         //        compressed_data_size_ / t_network / 1024. / 1024. / 1024.,
         //        compressed_data_size_ / t_copy / 1024. / 1024. / 1024.);
@@ -212,10 +305,12 @@ __global__ void decompress_data_kernel(
 void DataDecompressor::decompress_data(DataType * data) {
     assert(compressed_data_set_);
 
+#ifdef CUDA_MEMCPY_MAIN_THREAD
     if (compressed_data_on_cpu_) {
         checkCUDA(cudaMemcpy(gpu_buff_, cpu_buff_, compressed_data_size_,
                     cudaMemcpyHostToDevice));
     }
+#endif
 
     size_t data_size = data_size_;
 
@@ -238,6 +333,82 @@ void DataDecompressor::decompress_data(DataType * data) {
     compressed_data_set_ = false;
     compressed_data_on_cpu_ = false;
 }
+
+size_t DataDecompressor::recv_compressed_data_directly_to_gpu(
+        int remote_node, int msg_type
+        ) {
+#ifdef CUDA_MEMCPY_MAIN_THREAD
+    assert(false);
+#endif
+    assert(! compressed_data_set_);
+
+    MPI_Status status;
+    MPI_Recv(
+            &compressed_data_size_, 1, 
+            DistributedSys::get_mpi_data_type<size_t>(),
+            remote_node, msg_type, MPI_COMM_WORLD, &status
+            );
+    const size_t batch_size = COMM_BATCH_SIZE;
+
+    size_t cpu_batch_begin = 0;
+    size_t cpu_batch_end = std::min(batch_size, compressed_data_size_);
+    size_t gpu_batch_begin = 0;
+    size_t gpu_batch_end = 0;
+
+    while (cpu_batch_begin < cpu_batch_end ||
+            gpu_batch_begin < gpu_batch_end) {
+        /*
+        if (gpu_batch_begin < gpu_batch_end) {
+            checkCUDA(cudaMemcpyAsync(
+                    gpu_buff_ + gpu_batch_begin, cpu_buff_ + gpu_batch_begin,
+                    gpu_batch_end - gpu_batch_begin, 
+                    cudaMemcpyHostToDevice, cuda_stream_ 
+                    ));
+        }
+        if (cpu_batch_begin < cpu_batch_end) {
+            MPI_Recv(
+                    cpu_buff_ + cpu_batch_begin, cpu_batch_end - cpu_batch_begin,
+                    MPI_CHAR, remote_node, msg_type, MPI_COMM_WORLD, &status
+                    );
+        }
+        if (gpu_batch_begin < gpu_batch_end) {
+            checkCUDA(cudaStreamSynchronize(cuda_stream_));
+        }
+        */
+
+        MPI_Request request = MPI_REQUEST_NULL;
+        if (cpu_batch_begin < cpu_batch_end) {
+            MPI_Irecv(
+                    cpu_buff_ + cpu_batch_begin, cpu_batch_end - cpu_batch_begin,
+                    MPI_CHAR, remote_node, msg_type, MPI_COMM_WORLD, &request
+                    );
+        }
+        if (gpu_batch_begin < gpu_batch_end) {
+            checkCUDA(cudaMemcpy(
+                    gpu_buff_ + gpu_batch_begin, cpu_buff_ + gpu_batch_begin,
+                    gpu_batch_end - gpu_batch_begin, cudaMemcpyHostToDevice
+                    ));
+        }
+        if (cpu_batch_begin < cpu_batch_end) {
+            double t = - get_time();
+            MPI_Status status;
+            MPI_Wait(&request, &status);
+            t += get_time();
+            //printf("MPI_Wait: %.3f GBps\n", (cpu_batch_end - cpu_batch_begin) / t / 1024. / 1024. / 1024.);
+        }
+
+        gpu_batch_begin = cpu_batch_begin;
+        gpu_batch_end = cpu_batch_end;
+        cpu_batch_begin = cpu_batch_end;
+        cpu_batch_end = std::min(
+                cpu_batch_begin + batch_size, compressed_data_size_
+                );
+    }
+
+    compressed_data_set_ = true;
+    return compressed_data_size_;
+}
+
 
 
 

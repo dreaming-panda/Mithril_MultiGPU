@@ -7,6 +7,8 @@
 
 #include "types.h"
 
+#define COMM_BATCH_SIZE (1 * 1024 * 1024) // 128 KB
+
 class DataCompressor {
     private:
         size_t data_size_; // in floats
@@ -24,6 +26,8 @@ class DataCompressor {
         size_t cpu_buff_size_; // unit: bytes
         uint8_t * cpu_buff_; 
 
+        cudaStream_t cuda_stream_;
+
     public:
         // the whole data compression process is divided into three stages
         // 1. register the data compression task (given the data size so that
@@ -35,6 +39,7 @@ class DataCompressor {
         ~DataCompressor();
         void compress_data(DataType * data, bool send_to_cpu); // the main thread invoke this function
         void get_compressed_data(DataType * &buff, size_t &buff_size); // the communication thread invoke this function
+        void send_compressed_data_directly_from_gpu(int remote_node, int msg_type);
 };
 
 class DataDecompressor {
@@ -53,11 +58,14 @@ class DataDecompressor {
         size_t cpu_buff_size_; // unit: bytes
         uint8_t * cpu_buff_; 
 
+        cudaStream_t cuda_stream_;
+
     public:
         DataDecompressor(size_t data_size);
         ~DataDecompressor();
         void receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data, bool recv_on_cpu); // invoked by ccommunication threads
         void decompress_data(DataType * data); // invoked by the main thread
+        size_t recv_compressed_data_directly_to_gpu(int remote_node, int msg_type);
 };
 
 #endif

@@ -58,7 +58,7 @@ class GCN: public AbstractApplication {
                 }
                 t = fc(t, output_size); 
                 
-                t = aggregation(t, NORM_SUM);   
+                t = aggregation(t, NORM_SUM);    
 
                 if (i == num_layers_ - 1) { 
                     t = softmax(t); 

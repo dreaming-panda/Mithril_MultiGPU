@@ -21,7 +21,7 @@ find_package(MPI REQUIRED)
 find_package(Nccl REQUIRED)
 find_package(Boost COMPONENTS program_options REQUIRED)
 
-#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --default-stream per-thread")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --default-stream per-thread")
 
 # cxx flags
 set (CMAKE_CXX_STANDARD 17)

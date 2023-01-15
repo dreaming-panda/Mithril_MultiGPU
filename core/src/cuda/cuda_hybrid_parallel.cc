@@ -12,6 +12,8 @@
 #define OPTIMIZE
 #define FIXPART
 
+#define SHOW_SCHEDULE_DETAILS
+
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
         pthread_barrier_t * barrier): 
@@ -335,20 +337,22 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                             );
                     comm += num_elements_this_chunk * sizeof(DataType);
                 } else {
-                    engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
-                            [&](uint8_t * buff, size_t buff_size) {
-                                MPI_Recv(
-                                        buff, buff_size, MPI_CHAR,
-                                        remote_node, ForwardActivationPassing,
-                                        MPI_COMM_WORLD, &status
-                                        );
-                                int count = 0;
-                                MPI_Get_count(&status, MPI_CHAR, &count);
-                                assert(count > 0);
-                                comm += count;
-                                return (size_t) count;
-                            }, true
-                            );
+                    //engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
+                    //        [&](uint8_t * buff, size_t buff_size) {
+                    //            MPI_Recv(
+                    //                    buff, buff_size, MPI_CHAR,
+                    //                    remote_node, ForwardActivationPassing,
+                    //                    MPI_COMM_WORLD, &status
+                    //                    );
+                    //            int count = 0;
+                    //            MPI_Get_count(&status, MPI_CHAR, &count);
+                    //            assert(count > 0);
+                    //            comm += count;
+                    //            return (size_t) count;
+                    //        }, true
+                    //        );
+                    size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu(remote_node, ForwardActivationPassing);
+                    comm += data_size;
                 }
                 comm_time += get_time();
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteReceiveData);
@@ -876,18 +880,19 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                             MPI_COMM_WORLD
                             );
                 } else {
-                    DataType * compressed_data = NULL;
-                    size_t compressed_data_size = 0;
-                    engine_->data_compressors_[task.chunk_id]->get_compressed_data(
-                            compressed_data, compressed_data_size
-                            );
-                    assert(compressed_data);
-                    assert(compressed_data_size);
-                    MPI_Send(
-                            compressed_data, compressed_data_size, MPI_CHAR,
-                            remote_node, ForwardActivationPassing,
-                            MPI_COMM_WORLD
-                            );
+                    //DataType * compressed_data = NULL;
+                    //size_t compressed_data_size = 0;
+                    //engine_->data_compressors_[task.chunk_id]->get_compressed_data(
+                    //        compressed_data, compressed_data_size
+                    //        );
+                    //assert(compressed_data);
+                    //assert(compressed_data_size);
+                    //MPI_Send(
+                    //        compressed_data, compressed_data_size, MPI_CHAR,
+                    //        remote_node, ForwardActivationPassing,
+                    //        MPI_COMM_WORLD
+                    //        );
+                    engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu(remote_node, ForwardActivationPassing);
                 }
             }
         }
@@ -1284,11 +1289,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     double t = - get_time();
                     assert(task.epoch_id == epoch_id);
 #ifdef SHOW_SCHEDULE_DETAILS
-                    double time_elapsed = (get_time() - start_time) * 1000;    
-                    printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
-                            time_elapsed, node_id, task.chunk_id);
+                    if (node_id == 3 || node_id == 2) {
+                        double time_elapsed = (get_time() - start_time) * 1000;    
+                        printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
+                                time_elapsed, node_id, task.chunk_id);
+                    }
 #endif
                     engine_->perform_forward_task(task);
+#ifdef SHOW_SCHEDULE_DETAILS
+                    if (node_id == 3 || node_id == 2) {
+                        double time_elapsed = (get_time() - start_time) * 1000;    
+                        printf("%.3f ms: Node %d, done executing the forwarding task of chunk %d\n",
+                                time_elapsed, node_id, task.chunk_id);
+                    }
+#endif
 
                     forward_task_committer_queue_->push(task);
                     if (is_bottommost_node) {
