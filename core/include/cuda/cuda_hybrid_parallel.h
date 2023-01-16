@@ -21,6 +21,7 @@
 
 #include <assert.h>
 #include <pthread.h>
+#include <mpi.h>
 
 #include <thread>
 
@@ -1612,6 +1613,11 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         // the scheduler
         CUDAAbstractPIPScheduler * scheduler_;
         cudnnHandle_t * cudnn_;
+
+        // used for one-sided MPI communication
+        MPI_Win * act_comm_wins_;
+        MPI_Win * grad_comm_wins_;
+
         inline int get_num_epoch() {
             return num_epoch_;
         }

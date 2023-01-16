@@ -351,7 +351,8 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                     //            return (size_t) count;
                     //        }, true
                     //        );
-                    size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu(remote_node, ForwardActivationPassing);
+                    //size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu(remote_node, ForwardActivationPassing);
+                    size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu_rma(remote_node, ForwardActivationPassing);
                     comm += data_size;
                 }
                 comm_time += get_time();
@@ -892,7 +893,8 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                     //        remote_node, ForwardActivationPassing,
                     //        MPI_COMM_WORLD
                     //        );
-                    engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu(remote_node, ForwardActivationPassing);
+                    //engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu(remote_node, ForwardActivationPassing);
+                    engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu_rma(remote_node, ForwardActivationPassing, engine_->act_comm_wins_[task.chunk_id]);
                 }
             }
         }
@@ -4642,6 +4644,40 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                 assert(grad_decompressors_[chunk_id]);
             }
         }
+        // set up RMA 
+        act_comm_wins_ = new MPI_Win [num_chunks_];
+        grad_comm_wins_ = new MPI_Win [num_chunks_];
+        assert(act_comm_wins_ && grad_comm_wins_);
+        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+            // create the MPI windows for activation passing
+            if (! node_id) {
+                printf("Setting up the MPI window for chunk %d\n", chunk_id);
+            }
+            if (pipeline_input_tensor_) {
+                uint8_t * buff = NULL;
+                size_t buff_size = 0;
+                data_decompressors_[chunk_id]->get_cpu_buff(buff, buff_size);
+                assert(buff != NULL && buff_size > 0);
+                MPI_Win_create(
+                        buff, buff_size, sizeof(uint8_t),
+                        MPI_INFO_NULL, MPI_COMM_WORLD, 
+                        &act_comm_wins_[chunk_id]
+                        );
+            } else {
+                MPI_Win_create(
+                        NULL, 0, sizeof(uint8_t), MPI_INFO_NULL, 
+                        MPI_COMM_WORLD, &act_comm_wins_[chunk_id]
+                        );
+            }
+            // passing sync
+            if (node_id < num_nodes - 1) {
+                MPI_Win_lock(
+                        MPI_LOCK_SHARED, node_id + 1, 0, act_comm_wins_[chunk_id]
+                        );
+            }
+            // create the MPI windows for gradients passing
+            // TODO
+        }
     }
 
     
@@ -4659,7 +4695,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     backward_task_dispatcher_ = new CUDAPIPBackwardTaskDispatcher(total_num_backwarding_tasks, &barrier_);
     backward_task_committer_ = new CUDAPIPBackwardTaskCommitter(total_num_backwarding_tasks, &barrier_);
 
-   
     act_update_sender_ = new CUDAPIPGraphDataActivationUpdateSender(this, total_num_forwarding_tasks, &barrier_);
     act_update_receiver_ = new CUDAPIPGraphDataActivationUpdateReceiver(this, &barrier_);
     grad_update_sender_ = new CUDAPIPGraphDataGradientUpdateSender(this, total_num_backwarding_tasks, &barrier_); 
@@ -4775,6 +4810,17 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     release_resources();
 
     {
+        // release the windows
+        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+            // TODO
+            if (node_id < num_nodes - 1) {
+                MPI_Win_unlock(node_id + 1, act_comm_wins_[chunk_id]);
+            }
+        }
+        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+            // TODO
+            MPI_Win_free(&act_comm_wins_[chunk_id]);
+        }
         for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
             if (pipeline_input_tensor_) {
                 delete data_decompressors_[chunk_id];
