@@ -33,36 +33,36 @@ int main(int argc, char ** argv) {
     cudaMalloc(&data_gpu, sizeof(DataType) * max_data_size);
     gen_data(data_cpu, max_data_size);
 
-    //for (size_t data_size = min_data_size; data_size <= max_data_size;  FIXME
-    //        data_size *= 2) {
-    //    printf("Checking the correctness (data size: %lu floats)...", data_size);
-    //    cudaMemcpy(data_gpu, data_cpu, sizeof(DataType) * data_size, 
-    //            cudaMemcpyHostToDevice);
-    //    DataCompressor compressor(data_size);
-    //    DataDecompressor decompressor(data_size);
-    //    // verify the correctness first
-    //    compressor.compress_data(data_gpu, true);
-    //    DataType * compressed_data;
-    //    size_t compressed_data_size;
-    //    compressor.move_compressed_data_to_cpu();
-    //    compressor.get_compressed_data(compressed_data, compressed_data_size);
-    //    cudaMemset(data_gpu, 0, sizeof(DataType) * data_size);
-    //    decompressor.receive_compressed_data(
-    //            [&](uint8_t * buff, size_t buff_size) {
-    //                assert(compressed_data_size <= buff_size);
-    //                memcpy(buff, compressed_data, compressed_data_size);
-    //                return compressed_data_size;
-    //            }, true
-    //            );
-    //    decompressor.move_compressed_data_to_gpu();
-    //    decompressor.decompress_data(data_gpu);
-    //    cudaMemcpy(decompressed_data_cpu, data_gpu, sizeof(DataType) * data_size,
-    //            cudaMemcpyDeviceToHost);
-    //    for (size_t i = 0; i < data_size; ++ i) {
-    //        assert(decompressed_data_cpu[i] == data_cpu[i]);
-    //    }
-    //    printf("\tPassed\n");
-    //}
+    for (size_t data_size = min_data_size; data_size <= max_data_size;  
+            data_size *= 2) {
+        printf("Checking the correctness (data size: %lu floats)...", data_size);
+        cudaMemcpy(data_gpu, data_cpu, sizeof(DataType) * data_size, 
+                cudaMemcpyHostToDevice);
+        DataCompressor compressor(data_size);
+        DataDecompressor decompressor(data_size);
+        // verify the correctness first
+        compressor.compress_data(data_gpu, true);
+        DataType * compressed_data;
+        size_t compressed_data_size;
+        compressor.move_compressed_data_to_cpu();
+        compressor.get_compressed_data(compressed_data, compressed_data_size);
+        cudaMemset(data_gpu, 0, sizeof(DataType) * data_size);
+        decompressor.receive_compressed_data(
+                [&](uint8_t * buff, size_t buff_size) {
+                    assert(compressed_data_size <= buff_size);
+                    memcpy(buff, compressed_data, compressed_data_size);
+                    return compressed_data_size;
+                }, true
+                );
+        decompressor.move_compressed_data_to_gpu();
+        decompressor.decompress_data(data_gpu);
+        cudaMemcpy(decompressed_data_cpu, data_gpu, sizeof(DataType) * data_size,
+                cudaMemcpyDeviceToHost);
+        for (size_t i = 0; i < data_size; ++ i) {
+            assert(decompressed_data_cpu[i] == data_cpu[i]);
+        }
+        printf("\tPassed\n");
+    }
 
     cudaMemcpy(data_gpu, data_cpu, sizeof(DataType) * max_data_size,
             cudaMemcpyHostToDevice);

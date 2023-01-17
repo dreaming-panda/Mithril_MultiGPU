@@ -1,5 +1,5 @@
-g009.anvil.rcac.purdue.edu
-Tue Jan 17 15:43:06 2023       
+g003.anvil.rcac.purdue.edu
+Tue Jan 17 17:47:17 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
 |-------------------------------+----------------------+----------------------+
@@ -7,8 +7,8 @@ Tue Jan 17 15:43:06 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
-| N/A   27C    P0    48W / 400W |      0MiB / 40536MiB |      0%      Default |
+|   0  NVIDIA A100-SXM...  On   | 00000000:81:00.0 Off |                    0 |
+| N/A   28C    P0    52W / 400W |      0MiB / 40536MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -28,39 +28,71 @@ Currently Loaded Modules:
 
  
 
-[  4%] Built target context
-[ 18%] Built target parallel
-[ 19%] Built target core
+[  5%] Built target context
+[ 13%] Built target core
+[ 19%] Built target parallel
+Scanning dependencies of target cudahelp
+[ 20%] Building CUDA object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_data_compressor.cu.o
+[ 21%] Linking CXX static library libcudahelp.a
 [ 39%] Built target cudahelp
-[ 50%] Built target test_cuda_data_compression
-[ 62%] Built target test_mpi_gpu_pipelined_model_parallel
-[ 62%] Built target test_trivial
-[ 62%] Built target test_nccl_thread
-[ 62%] Built target test_cuda_graph
-[ 62%] Built target test_mpi_gpu_model_parallel
-[ 62%] Built target test_mpi_gpu_hybrid
-[ 81%] Built target test_mpi_structual_graph
-[ 81%] Built target test_cuda_model_parallel
-[ 81%] Built target test_hello_world
-[ 81%] Built target test_mpi_non_structual_graph
-[ 81%] Built target test_mpi_combined
-[ 91%] Built target test_full_structual_graph
-[ 91%] Built target test_mpi_loader
-[ 91%] Built target test_single_node_training
+[ 40%] Linking CXX executable test_full_structual_graph
+[ 42%] Linking CXX executable estimate_comm_volume
+[ 43%] Linking CXX executable test_mpi_combined
+[ 46%] Linking CXX executable test_full_non_structual_graph
+[ 47%] Linking CXX executable test_graph
+[ 47%] Linking CXX executable test_hello_world
+[ 47%] Linking CXX executable test_mpi_loader
+[ 52%] Linking CXX executable test_trivial
+[ 52%] Linking CXX executable test_cuda_data_compression
+[ 52%] Linking CXX executable test_cuda_graph
+[ 52%] Linking CXX executable test_mpi_structual_graph
+[ 55%] Linking CXX executable test_mpi_non_structual_graph
+[ 55%] Linking CXX executable test_cuda
+[ 55%] Linking CXX executable test_nccl_mpi
+[ 55%] Linking CXX executable test_nccl_thread
+[ 63%] Linking CXX executable test_single_node_fullgpu_training
+[ 63%] Linking CXX executable test_mpi_model_parallel
+[ 63%] Linking CXX executable test_single_node_gpu_training
+[ 63%] Linking CXX executable test_mpi_pipelined_model_parallel
+[ 63%] Linking CXX executable test_cuda_pipeline_parallel
+[ 65%] Linking CXX executable test_mpi_gpu_hybrid
+[ 63%] Linking CXX executable test_mpi_gpu_pipelined_model_parallel
+[ 65%] Linking CXX executable test_cuda_model_parallel
+[ 65%] Linking CXX executable test_mpi_gpu_model_parallel
+[ 65%] Linking CXX executable test_single_node_training
+[ 66%] Linking CXX executable test_two_layer_hybrid_parallelism_designer
+[ 69%] Linking CXX executable gcn
+[ 69%] Linking CXX executable gcn_inference
+[ 69%] Linking CXX executable gcn
+[ 70%] Built target test_cuda_graph
+[ 71%] Built target test_mpi_combined
+[ 72%] Built target test_cuda
+[ 75%] Built target test_mpi_structual_graph
+[ 75%] Built target test_hello_world
+[ 76%] Built target test_graph
+[ 83%] Built target estimate_comm_volume
+[ 84%] Built target test_full_non_structual_graph
+[ 83%] Built target test_cuda_data_compression
+[ 84%] Built target test_mpi_non_structual_graph
+[ 84%] Built target test_trivial
+[ 84%] Built target test_mpi_loader
+[ 84%] Built target test_mpi_model_parallel
+[ 85%] Built target test_full_structual_graph
+[ 85%] Built target test_mpi_pipelined_model_parallel
+[ 87%] Built target test_two_layer_hybrid_parallelism_designer
+[ 87%] Built target test_single_node_training
+[ 88%] Built target test_single_node_gpu_training
+[ 89%] Built target test_mpi_gpu_pipelined_model_parallel
+[ 90%] Built target test_mpi_gpu_model_parallel
 [ 91%] Built target test_single_node_fullgpu_training
-[ 91%] Built target estimate_comm_volume
-[ 91%] Built target test_mpi_model_parallel
-[ 91%] Built target test_full_non_structual_graph
-[ 81%] Built target test_cuda
-[ 91%] Built target test_single_node_gpu_training
-[ 91%] Built target test_graph
-[ 91%] Built target test_nccl_mpi
-[ 91%] Built target test_mpi_pipelined_model_parallel
-[ 87%] Built target test_cuda_pipeline_parallel
-[ 97%] Built target OSDI2023_SINGLE_NODE_gcn
-[100%] Built target OSDI2023_MULTI_NODES_gcn
-[100%] Built target OSDI2023_SINGLE_NODE_gcn_inference
-[100%] Built target test_two_layer_hybrid_parallelism_designer
+[ 94%] Built target OSDI2023_SINGLE_NODE_gcn
+[ 94%] Built target test_mpi_gpu_hybrid
+[ 94%] Built target OSDI2023_SINGLE_NODE_gcn_inference
+[ 95%] Built target OSDI2023_MULTI_NODES_gcn
+[ 96%] Built target test_cuda_pipeline_parallel
+[ 97%] Built target test_nccl_mpi
+[ 98%] Built target test_nccl_thread
+[100%] Built target test_cuda_model_parallel
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
 The number of GCN layers: 4
 The number of hidden units: 128
@@ -93,39 +125,39 @@ The number of startup epoches: 0
 Learning rate: 0.001000
 The partition strategy: model
 The dropout rate: 0.500
-Initialized node 3 on machine g012.anvil.rcac.purdue.edu
-Initialized node 2 on machine g011.anvil.rcac.purdue.edu
-Initialized node 0 on machine g009.anvil.rcac.purdue.edu
-Initialized node 1 on machine g010.anvil.rcac.purdue.edu
+Initialized node 2 on machine g009.anvil.rcac.purdue.edu
+Initialized node 1 on machine g004.anvil.rcac.purdue.edu
+Initialized node 3 on machine g010.anvil.rcac.purdue.edu
+Initialized node 0 on machine g003.anvil.rcac.purdue.edu
 Building the CSR structure...
 Building the CSR structure...
 Building the CSR structure...
 Building the CSR structure...
-        It takes 1.929 seconds.
+        It takes 1.882 seconds.
 Building the CSC structure...
-        It takes 1.946 seconds.
+        It takes 1.935 seconds.
 Building the CSC structure...
         It takes 1.948 seconds.
 Building the CSC structure...
-        It takes 1.945 seconds.
+        It takes 1.936 seconds.
 Building the CSC structure...
-        It takes 1.893 seconds.
-        It takes 1.923 seconds.
-        It takes 1.917 seconds.
-        It takes 1.970 seconds.
+        It takes 1.854 seconds.
+        It takes 1.847 seconds.
+        It takes 1.842 seconds.
+        It takes 1.921 seconds.
 Building the Feature Vector...
 Building the Feature Vector...
 Building the Feature Vector...
 Building the Feature Vector...
-        It takes 0.610 seconds.
+        It takes 0.580 seconds.
+Building the Label Vector...
+        It takes 0.596 seconds.
+Building the Label Vector...
+        It takes 0.638 seconds.
 Building the Label Vector...
         It takes 0.593 seconds.
 Building the Label Vector...
-        It takes 0.603 seconds.
-Building the Label Vector...
-        It takes 0.598 seconds.
-Building the Label Vector...
-        It takes 0.326 seconds.
+        It takes 0.310 seconds.
 Number of classes: 47
 Number of feature dimensions: 100
 Number of vertices: 2449029
@@ -133,11 +165,11 @@ Number of vertices: 2449029
 Number of classes: 47
 Number of feature dimensions: 100
 Number of vertices: 2449029
-        It takes 0.321 seconds.
+        It takes 0.387 seconds.
 Number of classes: 47
 Number of feature dimensions: 100
 Number of vertices: 2449029
-        It takes 0.323 seconds.
+        It takes 0.322 seconds.
 Number of classes: 47
 Number of feature dimensions: 100
 Number of vertices: 2449029
@@ -171,6 +203,52 @@ GPU 1, layer [1, 2)
 GPU 2, layer [2, 3)
 GPU 3, layer [3, 4)
 WARNING: the current version only applies to linear GNN models!
+*** Node 2, starting model training...
+Number of operators: 20
+0 2449029 0 6
+0 2449029 6 11
+0 2449029 11 16
+0 2449029 16 20
+Node 2, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 2, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 2 owns the partition [11, 16) x [0, 2449029)
+*** Node 2, constructing the helper classes...
+(Forwarding) Node 2 (fragment 0) depends on nodes: 1 (Tensor: 10)
+(Backwarding) Node 2 (fragment 0) depends on nodes: 3 (Tensor: 15)
+(I-link dependencies): node 2 should send activation to nodes:
+(I-link dependencies): node 2 should receive activation from nodes:
+(I-link dependencies): node 2 should send gradient to nodes:
+(I-link dependencies): node 2 should receive gradient from nodes:
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+GPU 0, layer [0, 1)
+GPU 1, layer [1, 2)
+GPU 2, layer [2, 3)
+GPU 3, layer [3, 4)
+WARNING: the current version only applies to linear GNN models!
+*** Node 3, starting model training...
+Number of operators: 20
+0 2449029 0 6
+0 2449029 6 11
+0 2449029 11 16
+0 2449029 16 20
+Node 3, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 3, Pipeline Output Tensor: NULL
+*** Node 3 owns the partition [16, 20) x [0, 2449029)
+*** Node 3, constructing the helper classes...
+(Forwarding) Node 3 (fragment 0) depends on nodes: 2 (Tensor: 15)
+(Backwarding) Node 3 (fragment 0) depends on nodes:
+(I-link dependencies): node 3 should send activation to nodes:
+(I-link dependencies): node 3 should receive activation from nodes:
+(I-link dependencies): node 3 should send gradient to nodes:
+(I-link dependencies): node 3 should receive gradient from nodes:
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+WARNING: the current version only applies to linear GNN models!
+GPU 0, layer [0, 1)
+GPU 1, layer [1, 2)
+GPU 2, layer [2, 3)
+GPU 3, layer [3, 4)
 *** Node 0, starting model training...
 Number of operators: 20
 0 2449029 0 6
@@ -202,23 +280,6 @@ Operators:
     Op 17: type OPERATOR_MATMUL, output tensors: 17
     Op 18: type OPERATOR_AGGREGATION, output tensors: 18
     Op 19: type OPERATOR_SOFTMAX, output tensors: 19
-train nodes 196615, valid nodes 39323, test nodes 2213091
-Number of GPUs: 4
-GPU 0, layer [0, 1)
-GPU 1, layer [1, 2)
-GPU 2, layer [2, 3)
-GPU 3, layer [3, 4)
-WARNING: the current version only applies to linear GNN models!
-*** Node 3, starting model training...
-Number of operators: 20
-0 2449029 0 6
-0 2449029 6 11
-0 2449029 11 16
-0 2449029 16 20
-Node 3, Pipeline Input Tensor: OPERATOR_DROPOUT
-Node 3, Pipeline Output Tensor: NULL
-*** Node 3 owns the partition [16, 20) x [0, 2449029)
-*** Node 3, constructing the helper classes...
 Boundaries: 0 0 0 0 2449029 2449029 2449029 2449029
 Fragments: [0, 2449029)
 Chunks (number of global chunks: 64): 0-[0, 38267) 1-[38267, 76534) 2-[76534, 114801) 3-[114801, 153068) 4-[153068, 191335) 5-[191335, 229602) 6-[229602, 267869) 7-[267869, 306136) 8-[306136, 344403) ... 63-[2410821, 2449029)
@@ -228,65 +289,36 @@ Chunks (number of global chunks: 64): 0-[0, 38267) 1-[38267, 76534) 2-[76534, 11
 (I-link dependencies): node 0 should receive activation from nodes:
 (I-link dependencies): node 0 should send gradient to nodes:
 (I-link dependencies): node 0 should receive gradient from nodes:
-(Forwarding) Node 3 (fragment 0) depends on nodes: 2 (Tensor: 15)
-(Backwarding) Node 3 (fragment 0) depends on nodes:
-(I-link dependencies): node 3 should send activation to nodes:
-(I-link dependencies): node 3 should receive activation from nodes:
-(I-link dependencies): node 3 should send gradient to nodes:
-(I-link dependencies): node 3 should receive gradient from nodes:
-train nodes 196615, valid nodes 39323, test nodes 2213091
-Number of GPUs: 4
-GPU 0, layer [0, 1)
-GPU 1, layer [1, 2)
-GPU 2, layer [2, 3)
-GPU 3, layer [3, 4)
-WARNING: the current version only applies to linear GNN models!
-*** Node 2, starting model training...
-Number of operators: 20
-0 2449029 0 6
-0 2449029 6 11
-0 2449029 11 16
-0 2449029 16 20
-Node 2, Pipeline Input Tensor: OPERATOR_DROPOUT
-Node 2, Pipeline Output Tensor: OPERATOR_DROPOUT
-*** Node 2 owns the partition [11, 16) x [0, 2449029)
-*** Node 2, constructing the helper classes...
-(Forwarding) Node 2 (fragment 0) depends on nodes: 1 (Tensor: 10)
-(Backwarding) Node 2 (fragment 0) depends on nodes: 3 (Tensor: 15)
-(I-link dependencies): node 2 should send activation to nodes:
-(I-link dependencies): node 2 should receive activation from nodes:
-(I-link dependencies): node 2 should send gradient to nodes:
-(I-link dependencies): node 2 should receive gradient from nodes:
 2449029, 126167053, 126167053
 2449029, 126167053, 126167053
 2449029, 126167053, 126167053
 2449029, 126167053, 126167053
 csr in-out ready !*** Node 0, setting up some other necessary information...
 csr in-out ready !*** Node 1, setting up some other necessary information...
-csr in-out ready !*** Node 2, setting up some other necessary information...
 csr in-out ready !*** Node 3, setting up some other necessary information...
+csr in-out ready !*** Node 2, setting up some other necessary information...
 *** Node 0, starting the helper threads...
 *** Node 1, starting the helper threads...
 *** Node 2, starting the helper threads...
 *** Node 3, starting the helper threads...
++++++++++ Node 2 initializing the weights for op[11, 16)...
++++++++++ Node 2, mapping weight op 11
++++++++++ Node 3 initializing the weights for op[16, 20)...
++++++++++ Node 3, mapping weight op 16
 +++++++++ Node 1 initializing the weights for op[6, 11)...
 +++++++++ Node 1, mapping weight op 6
 +++++++++ Node 0 initializing the weights for op[0, 6)...
 +++++++++ Node 0, mapping weight op 1
-+++++++++ Node 3 initializing the weights for op[16, 20)...
-+++++++++ Node 3, mapping weight op 16
-+++++++++ Node 2 initializing the weights for op[11, 16)...
-+++++++++ Node 2, mapping weight op 11
 RANDOMLY DISPATCH THE CHUNKS...
 *** Node 0, starting task scheduling...
 
 
 
 The learning rate specified by the user: 0.001000000
-*** Node 1, starting task scheduling...
-The learning rate specified by the user: 0.001000000
 *** Node 2, starting task scheduling...
 *** Node 3, starting task scheduling...
+*** Node 1, starting task scheduling...
+The learning rate specified by the user: 0.001000000
 The learning rate specified by the user: 0.001000000
 The learning rate specified by the user: 0.001000000
     Epoch 9:	Loss 38.92037	TrainAcc 0.0061	ValidAcc 0.0065	TestAcc 0.0131
@@ -299,37 +331,37 @@ The learning rate specified by the user: 0.001000000
     Epoch 79:	Loss 38.94170	TrainAcc 0.0052	ValidAcc 0.0060	TestAcc 0.0127
     Epoch 89:	Loss 38.94293	TrainAcc 0.0053	ValidAcc 0.0062	TestAcc 0.0126
 Node 0, Layer-level comm throughput (act): -nan GBps
-Node 1, Layer-level comm throughput (act): 10.876 GBps
-Node 2, Layer-level comm throughput (act): 10.217 GBps
-Node 3, Layer-level comm throughput (act): 11.056 GBps
+Node 1, Layer-level comm throughput (act): 10.923 GBps
+Node 2, Layer-level comm throughput (act): 10.818 GBps
+Node 3, Layer-level comm throughput (act): 11.062 GBps
     Epoch 99:	Loss 38.94215	TrainAcc 0.0053	ValidAcc 0.0063	TestAcc 0.0124
-Node 0, compression time: 0.599s, compression size: 116.779GB, throughput: 195.028GBps
+Node 0, compression time: 0.603s, compression size: 116.779GB, throughput: 193.664GBps
 Node 0, decompression time: 0.000s, compression size: 116.779GB, throughput: -nanGBps
-Node 0, pure compute time: 4.582 s, total compute time: 5.181 s
-Node 0, wait_for_task_time: 0.003 s, wait_for_other_gpus_time: 0.001 s
-------------------------node id 0,  per-epoch time: 0.089823 s---------------
-Node 1, compression time: 0.588s, compression size: 116.779GB, throughput: 198.674GBps
-Node 1, decompression time: 4.535s, compression size: 116.779GB, throughput: 25.753GBps
-Node 1, pure compute time: 3.389 s, total compute time: 8.512 s
-Node 0, wait_for_task_time: 0.174 s, wait_for_other_gpus_time: 0.000 s
-------------------------node id 1,  per-epoch time: 0.089823 s---------------
+Node 0, pure compute time: 4.880 s, total compute time: 5.483 s
+Node 0, wait_for_task_time: 0.002 s, wait_for_other_gpus_time: 0.001 s
+------------------------node id 0,  per-epoch time: 0.073638 s---------------
+Node 1, compression time: 0.601s, compression size: 116.779GB, throughput: 194.431GBps
+Node 1, decompression time: 2.723s, compression size: 116.779GB, throughput: 42.882GBps
+Node 1, pure compute time: 3.388 s, total compute time: 6.712 s
 Node 3, compression time: 0.000s, compression size: 0.000GB, throughput: -nanGBps
-Node 3, decompression time: 0.781s, compression size: 0.000GB, throughput: 149.456GBps
-Node 3, pure compute time: 4.321 s, total compute time: 5.103 s
-Node 0, wait_for_task_time: 3.980 s, wait_for_other_gpus_time: 0.001 s
-------------------------node id 3,  per-epoch time: 0.089823 s---------------
-Node 2, compression time: 0.574s, compression size: 116.779GB, throughput: 203.375GBps
-Node 2, decompression time: 0.763s, compression size: 116.779GB, throughput: 153.005GBps
-Node 2, pure compute time: 3.317 s, total compute time: 4.655 s
-Node 0, wait_for_task_time: 4.250 s, wait_for_other_gpus_time: 0.001 s
-------------------------node id 2,  per-epoch time: 0.089823 s---------------
+Node 3, decompression time: 0.792s, compression size: 0.000GB, throughput: 147.483GBps
+Node 2, compression time: 0.689s, compression size: 116.779GB, throughput: 169.605GBps
+Node 2, decompression time: 2.367s, compression size: 116.779GB, throughput: 49.328GBps
+Node 2, pure compute time: 3.553 s, total compute time: 6.609 s
+Node 0, wait_for_task_time: 0.758 s, wait_for_other_gpus_time: 0.001 s
+------------------------node id 2,  per-epoch time: 0.073638 s---------------
+Node 0, wait_for_task_time: 0.271 s, wait_for_other_gpus_time: 0.001 s
+------------------------node id 1,  per-epoch time: 0.073638 s---------------
+Node 3, pure compute time: 4.768 s, total compute time: 5.559 s
+Node 0, wait_for_task_time: 2.006 s, wait_for_other_gpus_time: 0.001 s
+------------------------node id 3,  per-epoch time: 0.073638 s---------------
 ************ Profiling Results ************
-	Bubble: 1.695256 (s) (19.95 percentage)
-	Compute: 3.917649 (s) (46.10 percentage)
-	GradSync: 0.035246 (s) (0.41 percentage)
-	GraphComm: 0.002206 (s) (0.03 percentage)
-	Imbalance: 1.160949 (s) (13.66 percentage)
-	LayerComm: 1.687391 (s) (19.85 percentage)
+	Bubble: 1.541696 (s) (21.09 percentage)
+	Compute: 4.162383 (s) (56.93 percentage)
+	GradSync: 0.040702 (s) (0.56 percentage)
+	GraphComm: 0.002477 (s) (0.03 percentage)
+	Imbalance: 0.757112 (s) (10.36 percentage)
+	LayerComm: 0.806797 (s) (11.04 percentage)
 	Graph-level communication (cluster-wide, per epoch): 0.000 GB
 	Layer-level communication (cluster-wide, per epoch): 0.990 GB
 	Graph+Layer-level communication (cluster-wide, per epoch): 0.990 GB
@@ -338,11 +370,11 @@ Node 0, wait_for_task_time: 4.250 s, wait_for_other_gpus_time: 0.001 s
 	Graph-level memcpy communication time: 0.000 s, throughput: 0.000000 GBps
 	Graph-level net Activation communication time: 0.000 s, throughput: 0.000000 GBps
 	Graph-level net Gradient communication time: 0.000 s, throughput: 0.000000 GBps
-	Graph-level network batch size: -0.000 Bytes
+	Graph-level network batch size: 0.000 Bytes
 Highest valid_acc: 0.0066
 Target test_acc: 0.0125
 Epoch to reach the target acc: 30
 [MPI Rank 0] Success 
 [MPI Rank 3] Success 
-[MPI Rank 1] Success 
 [MPI Rank 2] Success 
+[MPI Rank 1] Success 

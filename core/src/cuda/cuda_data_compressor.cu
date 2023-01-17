@@ -520,9 +520,8 @@ void DataDecompressor::decompress_data(DataType * data) {
     uint8_t * bitmap = gpu_bitmap_;
     DataType * non_zero_elements = gpu_non_zero_elements_;
     uint32_t * decompression_index = gpu_data_decompression_index_;
-    size_t bitmap_size = data_size / 8 + 1;
 
-    int block_size = BLOCK_SIZE;
+    int block_size = BLOCK_SIZE; 
     int num_blocks = (data_size + block_size - 1) / block_size;
     gen_decompression_index_kernel<<<num_blocks, block_size>>>(bitmap, decompression_index, data_size);
     cudaDeviceSynchronize();
@@ -531,6 +530,7 @@ void DataDecompressor::decompress_data(DataType * data) {
     cudaDeviceSynchronize();
 
     /*
+    size_t bitmap_size = data_size / 8 + 1;
     int block_size = BLOCK_SIZE;
     int num_blocks = (bitmap_size + block_size - 1) / block_size;
     gen_decompression_index_kernel_v2<<<num_blocks, block_size>>>(bitmap, decompression_index, data_size);
