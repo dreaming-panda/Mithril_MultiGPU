@@ -12,7 +12,7 @@
 #define OPTIMIZE
 #define FIXPART
 
-#define SHOW_SCHEDULE_DETAILS
+//#define SHOW_SCHEDULE_DETAILS
 
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
@@ -131,6 +131,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             // synchronization between all threads 
             // the main thread will synchronize with all other nodes
             pthread_barrier_wait(barrier_);
+            pthread_barrier_wait(barrier_);
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
             if (true) { // FIXME
@@ -153,137 +154,9 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             }
         }
     } else {
-//        // should receive activation from dependent nodes first
-//        for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-//            // no cross-epoch parallelism is leverage due to the non-tolerable statistical inefficiency
-//            pthread_barrier_wait(barrier_);
-//            double start_time = get_time();
-//            // recieve dependent tensor data from remote nodes 
-//            // and dispatch tasks accordingly
-//            int num_dispatched_chunks = 0;
-//            for (int chunk_id: local_chunk_ids) {
-//                (*num_ready_remote_nodes_)[chunk_id] = 0;
-//            }
-//            while (num_dispatched_chunks < num_local_chunks) {
-//                // waiting for communication from remote nodes
-//                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartWaitForNewTask);
-//                MPI_Status status;
-//                MPI_Recv(
-//                        &task, sizeof(CUDAPIPForwardTask), MPI_CHAR, 
-//                        MPI_ANY_SOURCE, ForwardActivationPassing,
-//                        MPI_COMM_WORLD, &status
-//                        );
-//                comm += sizeof(CUDAPIPForwardTask);
-//                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteWaitForNewTask);
-//
-//                // receiving the activation data
-//                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartReceiveData);
-//                int remote_node = status.MPI_SOURCE;
-//                const std::set<int> * dependent_remote_nodes = data_dependencies_tracker->get_dependent_remote_nodes_forward(
-//                        task.chunk_id
-//                        );
-//                assert(dependent_remote_nodes != NULL);
-//                // the communication should respect the trakced data dependencies
-//                assert(dependent_remote_nodes->find(remote_node) != dependent_remote_nodes->end());
-//                // receive the remote tensors
-//                const std::vector<Tensor*> * dependent_tensors = 
-//                    data_dependencies_tracker->get_forwarding_dependencies(
-//                            task.chunk_id, remote_node
-//                            );
-//                assert(dependent_tensors != NULL);
-//                assert(dependent_tensors->size() == 1); // FIXME: only applies to pipeline
-//                assert(dependent_tensors->at(0) == engine_->pipeline_input_tensor_);
-//                for (Tensor * tensor: *dependent_tensors) {
-//                    assert(tensor != NULL);
-//                    DataType * data = NULL;
-//                    
-//                    size_t num_elements_this_chunk = 0;
-//                    engine_->get_vertex_tensor_data_by_chunk(
-//                            tensor, task.chunk_id, data, num_elements_this_chunk
-//                            );
-//                    
-//                    assert(data != NULL);
-//                    assert(num_elements_this_chunk > 0);
-//                    if(len == 0){
-//                        data_buff = new DataType[num_elements_this_chunk];
-//                        compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
-//                        compressed_data_payload = new DataType [num_elements_this_chunk];
-//                        len = num_elements_this_chunk;
-//                    } else if(len < num_elements_this_chunk){
-//                        delete [] data_buff;
-//                        delete [] compressed_data_hdr;
-//                        delete [] compressed_data_payload;
-//                        data_buff = new DataType[num_elements_this_chunk];
-//                        compressed_data_hdr = new uint64_t [num_elements_this_chunk / sizeof(uint64_t) + 1];
-//                        compressed_data_payload = new DataType [num_elements_this_chunk];
-//                        len = num_elements_this_chunk;
-//                    }
-//                    assert(data_buff != nullptr);
-//
-//                    if (! COMPRESS_DATA) {
-//                        MPI_Recv(
-//                                data_buff, num_elements_this_chunk, 
-//                                DistributedSys::get_mpi_data_type<DataType>(),
-//                                remote_node, ForwardActivationPassing,
-//                                MPI_COMM_WORLD, &status
-//                                );
-//                        comm += num_elements_this_chunk * sizeof(DataType);
-//                    } else {
-//                        //receive compressed data
-//                        MPI_Recv(
-//                                compressed_data_hdr, num_elements_this_chunk / sizeof(uint64_t) + 1,
-//                                DistributedSys::get_mpi_data_type<uint64_t>(),
-//                                remote_node, ForwardActivationPassing,
-//                                MPI_COMM_WORLD, &status
-//                                );
-//                        comm += (num_elements_this_chunk / sizeof(uint64_t) + 1) * sizeof(uint64_t);
-//                        MPI_Recv(
-//                                compressed_data_payload, num_elements_this_chunk, 
-//                                DistributedSys::get_mpi_data_type<DataType>(),
-//                                remote_node, ForwardActivationPassing,
-//                                MPI_COMM_WORLD, &status
-//                                );
-//                        int num_non_zero_elements;
-//                        MPI_Get_count(
-//                                &status, DistributedSys::get_mpi_data_type<DataType>(), 
-//                                &num_non_zero_elements
-//                                );
-//                        comm += num_non_zero_elements * sizeof(DataType);
-//
-//                        uint64_t * data_hdr_ptx = compressed_data_hdr;
-//                        int idx = 0;
-//                        for (size_t i = 0; i < num_elements_this_chunk; ++ i) {
-//                            size_t offset = i & 63;
-//                            size_t mask = (uint64_t) 1 << offset;
-//                            data_buff[i] = (*data_hdr_ptx & mask) > 0 ? compressed_data_payload[idx]: 0; 
-//                            idx += ((*data_hdr_ptx & mask) > 0);
-//                            data_hdr_ptx += (((i + 1) & 63) == 0 ? 1: 0);
-//                        }
-//                        assert(idx == num_non_zero_elements);
-//                    }
-//
-//                    CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements_this_chunk, __FILE__, __LINE__);
-//                    //delete [] data_buff;
-//                }
-//                Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteReceiveData);
-//
-//                int ready_nodes = (*num_ready_remote_nodes_)[task.chunk_id];
-//                (*num_ready_remote_nodes_)[task.chunk_id] = (++ ready_nodes);
-//                assert(ready_nodes <= dependent_remote_nodes->size());
-//                if (ready_nodes == dependent_remote_nodes->size()) {
-//                    // dispatch the ready task
-//                    double time_elapsed = (get_time() - start_time) * 1000;    
-//#ifdef SHOW_DISPATCH_DETAILS
-//                    printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
-//                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
-//#endif
-//                    task_queue_->push(task);
-//                    ++ num_dispatched_chunks;
-//                }
-//            }
-//        }
         // FIXME: only works for pipeline parallel
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+            pthread_barrier_wait(barrier_);
             pthread_barrier_wait(barrier_);
 
             int num_dispatched_chunks = 0;
@@ -337,23 +210,24 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                             );
                     comm += num_elements_this_chunk * sizeof(DataType);
                 } else {
-                    //engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
-                    //        [&](uint8_t * buff, size_t buff_size) {
-                    //            MPI_Recv(
-                    //                    buff, buff_size, MPI_CHAR,
-                    //                    remote_node, ForwardActivationPassing,
-                    //                    MPI_COMM_WORLD, &status
-                    //                    );
-                    //            int count = 0;
-                    //            MPI_Get_count(&status, MPI_CHAR, &count);
-                    //            assert(count > 0);
-                    //            comm += count;
-                    //            return (size_t) count;
-                    //        }, true
-                    //        );
+                    engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
+                            [&](uint8_t * buff, size_t buff_size) {
+                                MPI_Recv(
+                                        buff, buff_size, MPI_CHAR,
+                                        remote_node, ForwardActivationPassing,
+                                        MPI_COMM_WORLD, &status
+                                        );
+                                int count = 0;
+                                MPI_Get_count(&status, MPI_CHAR, &count);
+                                assert(count > 0);
+                                comm += count;
+                                return (size_t) count;
+                            }, true
+                            );
+                    //engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
                     //size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu(remote_node, ForwardActivationPassing);
-                    size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu_rma(remote_node, ForwardActivationPassing);
-                    comm += data_size;
+                    //size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu_rma(remote_node, ForwardActivationPassing);
+                    //comm += data_size;
                 }
                 comm_time += get_time();
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteReceiveData);
@@ -403,6 +277,8 @@ void CUDAPIPBackwardTaskDispatcher::insert_new_task(CUDAPIPBackwardTask task) { 
 }
 
 void CUDAPIPBackwardTaskDispatcher::thread_main() {
+    return ; // FIXME
+             
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
@@ -420,6 +296,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
         // doesn't need to receive gradients from dependent nodes
         // however, we should wait for the local forwarding task to finish
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+            pthread_barrier_wait(barrier_);
             pthread_barrier_wait(barrier_);
             continue; // FIXME
             double start_time = get_time();
@@ -606,6 +483,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
 
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
+            pthread_barrier_wait(barrier_);
             continue; // TODO
 
             // the shadow gradients will be automatically zero out 
@@ -724,6 +602,7 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
     if (engine_->is_bottommost_node()) {
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
+            pthread_barrier_wait(barrier_);
             double start_time = get_time();
             // do nothing
             for (int i = 0; i < num_local_chunks; ++ i) {
@@ -840,6 +719,9 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
         // FIXME: only works for pipeline parallel
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
+            pthread_barrier_wait(barrier_);
+            double start_time = get_time();
+
             for (int num_sent_chunks = 0; num_sent_chunks < num_local_chunks;
                     ++ num_sent_chunks) {
                 task_queue_->pop_blocking(task);
@@ -852,6 +734,10 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                         remote_node, ForwardActivationPassing,
                         MPI_COMM_WORLD
                         );
+                //double t_0 = get_time();
+                //if (node_id == 0)
+                //    printf("%.3f ms, node %d, starting sending out the data of chunk %d\n", 
+                //            (t_0 - start_time) * 1000., node_id, num_sent_chunks);
 
                 DataType * data = NULL;
                 size_t num_elements_this_chunk = 0;
@@ -881,20 +767,27 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                             MPI_COMM_WORLD
                             );
                 } else {
-                    //DataType * compressed_data = NULL;
-                    //size_t compressed_data_size = 0;
-                    //engine_->data_compressors_[task.chunk_id]->get_compressed_data(
-                    //        compressed_data, compressed_data_size
-                    //        );
-                    //assert(compressed_data);
-                    //assert(compressed_data_size);
-                    //MPI_Send(
-                    //        compressed_data, compressed_data_size, MPI_CHAR,
-                    //        remote_node, ForwardActivationPassing,
-                    //        MPI_COMM_WORLD
-                    //        );
+                    DataType * compressed_data = NULL;
+                    size_t compressed_data_size = 0;
+                    engine_->data_compressors_[task.chunk_id]->get_compressed_data(
+                            compressed_data, compressed_data_size
+                            );
+                    assert(compressed_data);
+                    assert(compressed_data_size);
+                    double t_2 = get_time();
+                    MPI_Send(
+                            compressed_data, compressed_data_size, MPI_CHAR,
+                            remote_node, ForwardActivationPassing,
+                            MPI_COMM_WORLD
+                            );
                     //engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu(remote_node, ForwardActivationPassing);
-                    engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu_rma(remote_node, ForwardActivationPassing, engine_->act_comm_wins_[task.chunk_id]);
+                    //size_t data_size = engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu_rma(remote_node, ForwardActivationPassing, engine_->act_comm_wins_[task.chunk_id]);
+                    double t_1 = get_time();
+                    size_t data_size = compressed_data_size;
+                    //if (node_id == 0)
+                    //    printf("%.3f ms, node %d, done sending out the data of chunk %d (%lu bytes), throughput: %.3f GBps, network throughput: %.3f GBps\n", 
+                    //            (t_1 - start_time) * 1000., node_id, num_sent_chunks, data_size, 1. * data_size / (t_1 - t_0) / 1024. / 1024. / 1024.,
+                    //            data_size / (t_1 - t_2) / 1024. / 1024. / 1024.);
                 }
             }
         }
@@ -916,6 +809,7 @@ CUDAPIPBackwardTaskCommitter::~CUDAPIPBackwardTaskCommitter() {
 }
 
 void CUDAPIPBackwardTaskCommitter::thread_main() {
+    return; // FIXME
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
@@ -929,6 +823,7 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
 
     if (engine_->is_topmost_node()) {
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+            pthread_barrier_wait(barrier_);
             pthread_barrier_wait(barrier_);
             continue; // FIXME
             double start_time = get_time();
@@ -1072,6 +967,7 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
 
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
+            pthread_barrier_wait(barrier_);
             continue; // FIXME
             for (int num_committed_chunks = 0; 
                     num_committed_chunks < num_local_chunks; 
@@ -1207,6 +1103,42 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
     int num_local_chunks = local_chunk_ids.size();
     bool is_bottommost_node = engine_->is_bottommost_node();
+    int num_epoch = engine_->get_num_epoch();
+
+    LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(num_local_chunks * num_epoch);
+    LockFreeQueue<CUDAPIPForwardTask> * act_cpu2gpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(num_local_chunks * num_epoch);
+    engine_->act_gpu2cpu_queue_ = act_gpu2cpu_queue;
+    engine_->act_cpu2gpu_queue_ = act_cpu2gpu_queue;
+
+    std::thread move_act_gpu2cpu_thread(
+            [&]() {
+                CUDAPIPForwardTask task;
+                for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+                    for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
+                        act_gpu2cpu_queue->pop_blocking(task);
+                        if (node_id < num_nodes - 1) {
+                            engine_->data_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
+                        }
+                        forward_task_committer_queue_->push(task);
+                    }
+                }
+            }
+            );
+    std::thread move_act_cpu2gpu_thread(
+            [&]() {
+                CUDAPIPForwardTask task;
+                for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+                    for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
+                        forward_task_dispatcher_queue_->pop_blocking(task);
+                        if (node_id > 0) {
+                            engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
+                        }
+                        //act_cpu2gpu_queue->push(task);
+                        act_cpu2gpu_queue->wait_to_push(task, 1);
+                    }
+                }
+            }
+            );
 
     // task scheduling 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1239,8 +1171,25 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double wait_for_task_time = 0;
     double wait_for_other_gpus_time = 0;
 
-    int num_epoch = engine_->get_num_epoch();
+    const int warmup_epoches = 5;
+    assert(num_epoch > warmup_epoches);
+    double all_epoches_time = 0;
+
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+        if (epoch_id == warmup_epoches) {
+            all_epoches_time = - get_time();
+        }
+        Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
+        wait_for_other_gpus_time -= get_time();
+        MPI_Barrier(MPI_COMM_WORLD);
+        wait_for_other_gpus_time += get_time();
+        pthread_barrier_wait(barrier_);
+        MPI_Barrier(MPI_COMM_WORLD);
+        pthread_barrier_wait(barrier_);
+        double start_time = get_time();
+
+        Profiler::submit_main_thread_event(CrossEpochSyncCompleteEvent);
+
         //engine_->parameter_server_->clear_accum_buffer();
         engine_->weight_aggregator_->clear_gradients();
         // pull the latest weights
@@ -1256,19 +1205,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             engine_->weight_aggregator_->pull_weights(op, data);
         }
 
-        Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
-        wait_for_other_gpus_time -= get_time();
-        MPI_Barrier(MPI_COMM_WORLD);
-        wait_for_other_gpus_time += get_time();
-        if (node_id == 0) {
-            //printf("\n********* Epoch %d: *********\n", epoch_id);
-            printf("    Epoch %d:", epoch_id);
-        }
-        pthread_barrier_wait(barrier_);
-        MPI_Barrier(MPI_COMM_WORLD);
-        Profiler::submit_main_thread_event(CrossEpochSyncCompleteEvent);
-
-        double start_time = get_time();
         // keep poping dispatched tasks
         int num_scheduled_forward_tasks = 0;
         int num_scheduled_backward_tasks = 0;
@@ -1285,28 +1221,30 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 //forward_task_dispatcher_queue_->pop(task, success);
                 //if (success) {
                 wait_for_task_time -= get_time();
-                forward_task_dispatcher_queue_->pop_blocking(task);
+                //forward_task_dispatcher_queue_->pop_blocking(task);
+                act_cpu2gpu_queue->pop_blocking(task);
                 wait_for_task_time += get_time();
                 {
                     double t = - get_time();
                     assert(task.epoch_id == epoch_id);
 #ifdef SHOW_SCHEDULE_DETAILS
-                    if (node_id == 3 || node_id == 2) {
+                    if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
                         double time_elapsed = (get_time() - start_time) * 1000;    
                         printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
-                                time_elapsed, node_id, task.chunk_id);
+                                time_elapsed, node_id, num_scheduled_forward_tasks);
                     }
 #endif
                     engine_->perform_forward_task(task);
 #ifdef SHOW_SCHEDULE_DETAILS
-                    if (node_id == 3 || node_id == 2) {
+                    if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
                         double time_elapsed = (get_time() - start_time) * 1000;    
                         printf("%.3f ms: Node %d, done executing the forwarding task of chunk %d\n",
-                                time_elapsed, node_id, task.chunk_id);
+                                time_elapsed, node_id, num_scheduled_forward_tasks);
                     }
 #endif
 
-                    forward_task_committer_queue_->push(task);
+                    //forward_task_committer_queue_->push(task);
+                    act_gpu2cpu_queue->push(task);
                     if (is_bottommost_node) {
                         CUDAPIPBackwardTask back_task;
                         back_task.epoch_id = task.epoch_id;
@@ -1324,7 +1262,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 }
             }
         }
-        printf("Node %d, slowest / fastest chunk time: %.3f\n", node_id, slowest_chunk / fastest_chunk);
+        //printf("Node %d, slowest / fastest chunk time: %.3f\n", node_id, slowest_chunk / fastest_chunk);
 
 //        while (num_scheduled_backward_tasks < num_local_chunks) { FIXME
 //#ifdef BOOST_ARCH_X86
@@ -1362,6 +1300,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         MPI_Barrier(MPI_COMM_WORLD);
         Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
+
         int num_startup_epoches = engine_->num_startup_epoches_;
         Profiler::submit_main_thread_event(GradSyncStartEvent);
         if (true) {
@@ -1370,19 +1309,32 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
         Profiler::submit_main_thread_event(GradSyncCompleteEvent);
 
+        //double end_time = get_time();
+        //printf("    Normal compute takes %.3f ms", (end_time - start_time) * 1000.);
+
         double train_acc;
         double valid_acc;
         double test_acc;
         double loss;
-        engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
-        if (valid_acc > highest_valid_acc) {
-            highest_valid_acc = valid_acc;
-            target_test_acc = test_acc;
-            epoch_to_reach_target_acc = epoch_id + 1;
+
+        if ((epoch_id + 1) % 10 == 0) {
+            if (node_id == 0) {
+                //printf("\n********* Epoch %d: *********\n", epoch_id);
+                printf("    Epoch %d:", epoch_id);
+            }
+            engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
+            if (valid_acc > highest_valid_acc) {
+                highest_valid_acc = valid_acc;
+                target_test_acc = test_acc;
+                epoch_to_reach_target_acc = epoch_id + 1;
+            }
         }
+        //printf("    Acc calculation takes %.3f ms\n", (get_time() - end_time) * 1000.);
         //engine_->parameter_server_->print_weights();
     }
     t += get_time();
+    all_epoches_time += get_time();
+
     printf("Node %d, compression time: %.3fs, compression size: %.3fGB, throughput: %.3fGBps\n", 
             node_id, engine_->compression_time_, engine_->compression_size_ / 1024. / 1024. / 1024.,
             engine_->compression_size_ / engine_->compression_time_ / 1024. / 1024. / 1024.);
@@ -1393,7 +1345,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             node_id, engine_->compute_time_, engine_->compute_time_ + engine_->compression_time_ + engine_->decompression_time_);
     printf("Node %d, wait_for_task_time: %.3f s, wait_for_other_gpus_time: %.3f s\n",
             wait_for_task_time, wait_for_other_gpus_time);
-    printf("------------------------node id %d,  total time %fs (per-epoch: %fs)---------------\n", node_id, t, t / num_epoch);
+    printf("------------------------node id %d,  per-epoch time: %f s---------------\n", 
+            node_id, all_epoches_time / (num_epoch - warmup_epoches));
 
     // check the consistency of the distributed weights
     engine_->weight_aggregator_->check_weights_consistency();
@@ -1410,6 +1363,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     engine_->act_update_receiver_->wait_for_termination();
     engine_->grad_update_sender_->wait_for_termination(); 
     engine_->grad_update_receiver_->wait_for_termination();
+
+    move_act_gpu2cpu_thread.join();
+    move_act_cpu2gpu_thread.join();
 
     // some communication-related metrics
     double graph_comm_act = engine_->act_update_sender_->get_comm(); 
@@ -2764,6 +2720,7 @@ BPIPLocalGraph::~BPIPLocalGraph(){
 }
 
 void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
+    return; // FIXME
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
@@ -2798,6 +2755,7 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
     // std::vector<int> mirror_vertices_list;
     
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+        pthread_barrier_wait(barrier_);
         pthread_barrier_wait(barrier_);
         continue; // FIXME
 
@@ -2924,6 +2882,7 @@ void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
 }
 
 void CUDAPIPGraphDataActivationUpdateReceiver::thread_main() {
+    return ; // FIXME
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
@@ -2941,6 +2900,7 @@ void CUDAPIPGraphDataActivationUpdateReceiver::thread_main() {
     CUDAPIPForwardTask task;
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+        pthread_barrier_wait(barrier_);
         pthread_barrier_wait(barrier_);
         continue; // FIXME
 
@@ -3018,6 +2978,7 @@ void CUDAPIPGraphDataActivationUpdateReceiver::thread_main() {
 }
 
 void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
+    return ; // FIXME
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
@@ -3052,6 +3013,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
     int num_net_batches = 0;
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+        pthread_barrier_wait(barrier_);
         pthread_barrier_wait(barrier_);
         continue; // FIXME
 
@@ -3188,6 +3150,7 @@ void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
 }
 
 void CUDAPIPGraphDataGradientUpdateReceiver::thread_main() {
+    return ; // FIXME
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
@@ -3205,6 +3168,7 @@ void CUDAPIPGraphDataGradientUpdateReceiver::thread_main() {
     CUDAPIPBackwardTask task;
 
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+        pthread_barrier_wait(barrier_);
         pthread_barrier_wait(barrier_);
         continue; // FIXME
 
@@ -4683,7 +4647,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     
     // create the helper threads 
     printf("*** Node %d, starting the helper threads...\n", node_id);
-    int num_helper_threads_ = 8; 
+    //int num_helper_threads_ = 8;  FIXME
+    int num_helper_threads_ = 2; 
     assert(pthread_barrier_init(&barrier_, NULL, num_helper_threads_ + 1) == 0);
     int num_local_chunks = local_chunk_ids_.size();
     int total_num_forwarding_tasks = num_epoch * num_local_chunks;

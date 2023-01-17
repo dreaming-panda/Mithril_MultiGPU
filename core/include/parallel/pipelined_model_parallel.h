@@ -48,6 +48,20 @@ class LockFreeQueue {
             elements_[queue_tail_] = element;
             ++ queue_tail_;
         }
+        // wait until the queue size is smaller than max_queue_size to push
+        // an element
+        void wait_to_push(T element, size_t max_queue_size) {
+            while (true) {
+#ifdef BOOST_ARCH_X86
+                __asm volatile ("pause" ::: "memory");
+#endif
+                if (queue_tail_ - queue_head_ < max_queue_size) {
+                    break;
+                }
+            }
+            assert(queue_tail_ - queue_head_ < max_queue_size);
+            push(element);
+        }
         // non-blocking
         void pop(T &poped_element, bool &success) {
             if (queue_head_ < queue_tail_) {

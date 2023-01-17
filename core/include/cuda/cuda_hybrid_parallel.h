@@ -1586,6 +1586,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         size_t decompression_size_;
         double compute_time_;
 
+        LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue_;
+        LockFreeQueue<CUDAPIPForwardTask> * act_cpu2gpu_queue_;
+
         // the threads responsible for communication and computation
         pthread_barrier_t barrier_;
         CUDAPIPForwardTaskDispatcher * forward_task_dispatcher_;

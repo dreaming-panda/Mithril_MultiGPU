@@ -41,7 +41,8 @@ class DataCompressor {
         void compress_data(DataType * data, bool send_to_cpu); // the main thread invoke this function
         void get_compressed_data(DataType * &buff, size_t &buff_size); // the communication thread invoke this function
         void send_compressed_data_directly_from_gpu(int remote_node, int msg_type);
-        void send_compressed_data_directly_from_gpu_rma(int remote_node, int msg_type, MPI_Win win);
+        size_t send_compressed_data_directly_from_gpu_rma(int remote_node, int msg_type, MPI_Win win);
+        void move_compressed_data_to_cpu();
 };
 
 class DataDecompressor {
@@ -70,6 +71,7 @@ class DataDecompressor {
         size_t recv_compressed_data_directly_to_gpu(int remote_node, int msg_type);
         size_t recv_compressed_data_directly_to_gpu_rma(int remote_node, int msg_type);
         void get_cpu_buff(uint8_t * &buff, size_t &buff_size);
+        void move_compressed_data_to_gpu();
 };
 
 #endif

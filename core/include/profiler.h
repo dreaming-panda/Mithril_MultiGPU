@@ -65,6 +65,8 @@ class RuntimeBreakdownManager {
     public:
         RuntimeBreakdownManager() {}
         void add_breakdown(std::string name, double t) {
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            //printf("Node %d, reported breakdown %s: %.3f s\n", node_id, name.c_str(), t);
             double avg;
             MPI_Allreduce(
                     &t, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
