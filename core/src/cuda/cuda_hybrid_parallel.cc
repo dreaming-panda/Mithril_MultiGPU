@@ -4614,9 +4614,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         assert(act_comm_wins_ && grad_comm_wins_);
         for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
             // create the MPI windows for activation passing
-            if (! node_id) {
-                printf("Setting up the MPI window for chunk %d\n", chunk_id);
-            }
+            //if (! node_id) {
+            //    printf("Setting up the MPI window for chunk %d\n", chunk_id);
+            //}
             if (pipeline_input_tensor_) {
                 uint8_t * buff = NULL;
                 size_t buff_size = 0;
