@@ -20,7 +20,7 @@ num_layers=4
 hunits=128
 lr=1e-3
 graph=ogbn_products
-epoch=500
+epoch=100
 decay=0
 chunks=64
 
