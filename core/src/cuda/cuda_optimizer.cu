@@ -61,7 +61,7 @@ size_t num_elements
     DataType * v_t = state.v_t_gpu;
     AdamOptimizeWeitghsKernel<<<BlockNumber, ThreadNumber>>>(grad,weight_to_update,m_t,v_t,beta1_,state.exp_beta1,beta2_,state.exp_beta2,
     epsilon_, weight_decay_, learning_rate_,ThreadNumber,BlockNumber,per_thread_elements,num_elements);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 
     //{
     //    DataType datas[num_elements];

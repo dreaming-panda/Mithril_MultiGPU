@@ -450,7 +450,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
 //                            data_descriptor,
 //                            shadow_grad + num_received_elements
 //                        );
-//                        cudaDeviceSynchronize();  
+//                        cudaStreamSynchronize(0);  
 //#endif
 //                        num_received_elements += num_elements_to_receive;
 //                    }
@@ -1328,6 +1328,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 target_test_acc = test_acc;
                 epoch_to_reach_target_acc = epoch_id + 1;
             }
+            fflush(stdout);
         }
         //printf("    Acc calculation takes %.3f ms\n", (get_time() - end_time) * 1000.);
         //engine_->parameter_server_->print_weights();
@@ -1446,24 +1447,24 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     num_net_batches /= num_epoch;
 
     if (! node_id) {
-        printf("\tGraph-level communication (cluster-wide, per epoch): %.3f GB\n",
-                avg_graph_comm / 1024. / 1024. / 1024.);
+        //printf("\tGraph-level communication (cluster-wide, per epoch): %.3f GB\n",
+        //        avg_graph_comm / 1024. / 1024. / 1024.);
         printf("\tLayer-level communication (cluster-wide, per epoch): %.3f GB\n",
                 avg_layer_comm / 1024. / 1024. / 1024.);
-        printf("\tGraph+Layer-level communication (cluster-wide, per epoch): %.3f GB\n",
-                (avg_graph_comm + avg_layer_comm) / 1024. / 1024. / 1024.);
-        printf("\tParameter-server communication (cluster-wide, per epoch): %.3f GB\n",
-                avg_ps_comm / 1024. / 1024. / 1024.);
-        printf("\tGraph-level dev2host communication time: %.3f s, throughput: %.6f GBps\n",
-                graph_dev2host_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_dev2host_time);
-        printf("\tGraph-level memcpy communication time: %.3f s, throughput: %.6f GBps\n",
-                graph_memcpy_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_memcpy_time);
-        printf("\tGraph-level net Activation communication time: %.3f s, throughput: %.6f GBps\n",
-                graph_net_time_act, avg_graph_comm_act / 1024. / 1024. / 1024. / graph_net_time_act);
-        printf("\tGraph-level net Gradient communication time: %.3f s, throughput: %.6f GBps\n",
-                graph_net_time_grad, avg_graph_comm_grad / 1024. / 1024. / 1024. / graph_net_time_grad);
-        printf("\tGraph-level network batch size: %.3f Bytes\n",
-                avg_graph_comm / num_net_batches);
+        //printf("\tGraph+Layer-level communication (cluster-wide, per epoch): %.3f GB\n",
+        //        (avg_graph_comm + avg_layer_comm) / 1024. / 1024. / 1024.);
+        //printf("\tParameter-server communication (cluster-wide, per epoch): %.3f GB\n",
+        //        avg_ps_comm / 1024. / 1024. / 1024.);
+        //printf("\tGraph-level dev2host communication time: %.3f s, throughput: %.6f GBps\n",
+        //        graph_dev2host_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_dev2host_time);
+        //printf("\tGraph-level memcpy communication time: %.3f s, throughput: %.6f GBps\n",
+        //        graph_memcpy_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_memcpy_time);
+        //printf("\tGraph-level net Activation communication time: %.3f s, throughput: %.6f GBps\n",
+        //        graph_net_time_act, avg_graph_comm_act / 1024. / 1024. / 1024. / graph_net_time_act);
+        //printf("\tGraph-level net Gradient communication time: %.3f s, throughput: %.6f GBps\n",
+        //        graph_net_time_grad, avg_graph_comm_grad / 1024. / 1024. / 1024. / graph_net_time_grad);
+        //printf("\tGraph-level network batch size: %.3f Bytes\n",
+        //        avg_graph_comm / num_net_batches);
         printf("Highest valid_acc: %.4f\n", highest_valid_acc);
         printf("Target test_acc: %.4f\n", target_test_acc);
         printf("Epoch to reach the target acc: %d\n", epoch_to_reach_target_acc);
@@ -3402,7 +3403,7 @@ void CUDAPIPWeightAggregator::commit_grad() {
         optimizer_->optimize_weights(
                 op, grad, data, num_elements
                 );
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(0);
     }
 }
 
@@ -3538,7 +3539,7 @@ void CUDAPIPParallelParameterServer::grad_pushing_handling_thread_main() {
         optimizer_->optimize_weights(
                 weight_op, p.second, p.first, num_elements
                 );
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(0);
         locks_[weight_op]->unlock();
     }
      if (len > 0){
@@ -3653,7 +3654,7 @@ void CUDAPIPParallelParameterServer::pull_weight(WeightOperator * weight_op, Dat
         //       );
         CopyFromCUDADeviceToCUDADevice<DataType>(data, weight_data_grad_[weight_op].first, num_elements, __FILE__, __LINE__);
         //SynchronizeCUDADevice(__FILE__, __LINE__);
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(0);
         locks_[weight_op]->unlock();
     } else {
         CUDAPIPPSHeader header;
@@ -3710,7 +3711,7 @@ void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataT
         //        weight_op, grad, weight_data_grad_[weight_op].first,
         //        num_elements
         //        );
-        //cudaDeviceSynchronize();
+        //cudaStreamSynchronize(0);
         //locks_[weight_op]->unlock();
 
         // FIXME
@@ -3792,7 +3793,7 @@ void CUDAPIPParallelParameterServer::commit_grad() {
                 op, acc_buffer, weight_data_grad_[op].first,
                 num_elements
                 );
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(0);
         locks_[op]->unlock();
     }
 }

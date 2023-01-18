@@ -123,7 +123,7 @@ void OperatorExecutorGPU::matmul_forward(MatmulOperator * op)
         d_output_data,
         M
     );
-   // cudaDeviceSynchronize();
+   // cudaStreamSynchronize(0);
     CopyFromCUDADeviceToHost<DataType>(output_data, d_output_data, M * N, __FILE__, __LINE__);
     DeallocateCUDAMemory<DataType>(&d_input_data_0, __FILE__, __LINE__);
     DeallocateCUDAMemory<DataType>(&d_input_data_1, __FILE__, __LINE__);
@@ -789,7 +789,7 @@ void OperatorExecutorGPU::matmul_forward(MatmulOperator * op, VertexId left, Ver
         d_output_data,
         M
     );
-   // cudaDeviceSynchronize();
+   // cudaStreamSynchronize(0);
     CopyFromCUDADeviceToHost<DataType>(output_data + output_start_idx, d_output_data, M * N, __FILE__, __LINE__);
     DeallocateCUDAMemory<DataType>(&d_input_data_0, __FILE__, __LINE__);
     DeallocateCUDAMemory<DataType>(&d_input_data_1, __FILE__, __LINE__);
@@ -1448,7 +1448,7 @@ void OperatorExecutorGPU::aggregation_backward(AggregationOperator * op, VertexI
 void OperatorExecutorGPUV2::relu_forward(ReluOperator * op)
 {   
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op->get_num_input_tensors() == 1);
@@ -1482,7 +1482,7 @@ void OperatorExecutorGPUV2::relu_forward(ReluOperator * op)
     */
     cudnnActivationForward(*cudnn_handle_, relu_descriptor_forward,&alpha, data_descriptor_relu_forward, (const void*)d_input, &beta,data_descriptor_relu_forward,(void*)d_output);
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      reluforward_time += t;
     #endif
@@ -1502,7 +1502,7 @@ void OperatorExecutorGPUV2::relu_forward(ReluOperator * op)
 void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op)
 {   
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op->get_num_input_tensors() == 2);
@@ -1548,7 +1548,7 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op)
         M
     );
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t  += get_time();
      matmulforward_time += t;
     #endif
@@ -1556,7 +1556,7 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op)
 void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op)
 {   
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op->get_num_input_tensors() == 1);
@@ -1600,7 +1600,7 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op)
         (void *)d_output_data
     );
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t  += get_time();
      softmaxforward_time += t;
     #endif
@@ -1669,7 +1669,7 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op)
     has_dbuffer_ = true;
     }
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     cusparseSpMM(
@@ -1682,14 +1682,14 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op)
     cusparseDestroyDnMat(InputData);
     cusparseDestroyDnMat(OutputData);
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t  += get_time();
      aggforward_time += t;
     #endif
 }
 void OperatorExecutorGPUV2::relu_backward(ReluOperator * op) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op->get_num_input_tensors() == 1);
@@ -1754,14 +1754,14 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op) {
     CopyFromHostToCUDADevice<DataType>(d_output_grad, output_grad, num_elements, __FILE__, __LINE__);
     */
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t  += get_time();
      relubackward_time += t;
     #endif
 }
 void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op != NULL);
@@ -1834,7 +1834,7 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op) {
         M
     );
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t  += get_time();
     matmulbackward_time += t;
     #endif
@@ -1872,7 +1872,7 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op) {
 void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
 
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op != NULL);
@@ -1924,7 +1924,7 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
         (void *)d_input_grad
     );
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t  += get_time();
     softmaxbackward_time += t;
     #endif
@@ -1954,7 +1954,7 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
 }
 void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op != NULL);
@@ -2021,7 +2021,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
     cusparseDestroyDnMat(InputGrad);
     cusparseDestroyDnMat(OutputGrad);
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     t  += get_time();
     aggbackward_time += t;
     #endif
@@ -2029,7 +2029,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
 
 void OperatorExecutorGPUV2::relu_forward(ReluOperator * op, VertexId left, VertexId right) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
    assert(op->get_num_input_tensors() == 1);
@@ -2074,7 +2074,7 @@ void OperatorExecutorGPUV2::relu_forward(ReluOperator * op, VertexId left, Verte
     cudnnDestroyActivationDescriptor(relu_descriptor);
     cudnnDestroyTensorDescriptor(data_descriptor);
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      reluforward_time += t;
     #endif
@@ -2124,7 +2124,7 @@ void OperatorExecutorGPUV2::relu_forward(ReluOperator * op, VertexId left, Verte
 
 void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, VertexId right) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op->get_num_input_tensors() == 2);
@@ -2175,7 +2175,7 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, V
         M
     );
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      matmulforward_time += t;
     #endif
@@ -2231,7 +2231,7 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, V
 
 void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op, VertexId left, VertexId right) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op->get_num_input_tensors() == 1);
@@ -2276,7 +2276,7 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op, VertexId left,
     );
     cudnnDestroyTensorDescriptor(data_descriptor);
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      softmaxforward_time += t;
     #endif
@@ -2340,7 +2340,7 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op, VertexId left,
 
 void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, VertexId left, VertexId right) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op->get_num_input_tensors() == 1);
@@ -2425,7 +2425,7 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, Vertex
     //DeallocateCUDAMemory<int>(&lg.cuda_local_rowoffsets, __FILE__, __LINE__);
     }
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      aggforward_time += t;
     #endif
@@ -2497,7 +2497,7 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, Vertex
 
 void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, VertexId right) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op->get_num_input_tensors() == 1);
@@ -2548,7 +2548,7 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, Vert
     cudnnDestroyActivationDescriptor(relu_descriptor);
     cudnnDestroyTensorDescriptor(data_descriptor);
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      relubackward_time += t;
     #endif
@@ -2605,7 +2605,7 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, Vert
 
 void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, VertexId right) {
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
 #endif
     assert(op != NULL);
@@ -2675,7 +2675,7 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, 
         M
     );
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      matmulbackward_time += t;
     #endif
@@ -2790,7 +2790,7 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, 
 
 void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op != NULL);
@@ -2840,7 +2840,7 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left
     );
      cudnnDestroyTensorDescriptor(data_descriptor);
      #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      softmaxbackward_time += t;
     #endif
@@ -2927,7 +2927,7 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left
 
 void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, VertexId left, VertexId right) {
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
     assert(op != NULL);
@@ -2996,7 +2996,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
    // DeallocateCUDAMemory<int>(&lg.cuda_local_rowoffsets,__FILE__,__LINE__);
     }
     #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
      t += get_time();
      aggbackward_time += t;
     #endif
@@ -3571,7 +3571,7 @@ void OperatorExecutorGPUV2::matmuladd_forward(MatmulAddOperator * op)
         d_output_data,
         M
     );
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
 }
 void OperatorExecutorGPUV2::matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right) {
@@ -3651,7 +3651,7 @@ void OperatorExecutorGPUV2::matmuladd_forward(MatmulAddOperator * op, VertexId l
         d_output_data + output_start_idx,
         M
     );
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
 }
 
@@ -3755,7 +3755,7 @@ void OperatorExecutorGPUV2::matmuladd_backward(MatmulAddOperator * op) {
         weight_descriptor,
         d_ingrad1
     );
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     SetCUDAMemory<DataType>(tp_grad, 0, hidden_units * hidden_units, __FILE__, __LINE__);
     SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
 }
@@ -3862,14 +3862,14 @@ void OperatorExecutorGPUV2::matmuladd_backward(MatmulAddOperator * op, VertexId 
         weight_descriptor,
         d_input_grad_1
     );
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     SetCUDAMemory<DataType>(tp_grad, 0, hidden_units * hidden_units, __FILE__, __LINE__);
     SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
 }
 
 void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
     assert(op);
     assert(op->get_num_input_tensors() == 1);
@@ -3945,7 +3945,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
             ));
 
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
 
      //{  
@@ -3963,7 +3963,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
 
 void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op) {
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
 
     assert(op);
@@ -4004,7 +4004,7 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op) {
                 ));
 
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
 }
 
@@ -4015,7 +4015,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
     assert(left < right);
 
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
 
     assert(op);
@@ -4125,7 +4125,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
                 ));
 
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
 }
 
@@ -4136,7 +4136,7 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
     assert(left < right);
 
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
 
     std::map<int, DropoutOpState> * chunk2state = dropout_op_states[op];
@@ -4194,7 +4194,7 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
                 ));
 
 #ifdef TIMETAG
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 #endif
 }
 

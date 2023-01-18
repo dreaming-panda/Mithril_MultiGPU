@@ -37,7 +37,7 @@ void CUDAPIPWeightAggregator::element_wise_add_gpu(
     element_wise_add_kernel<<<num_blocks, block_size>>>(
             src_0, src_1, dst, num_elements
             );
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }
 
 void CUDAPIPParallelParameterServer::element_wise_add_gpu(
@@ -49,14 +49,14 @@ void CUDAPIPParallelParameterServer::element_wise_add_gpu(
     element_wise_add_kernel<<<num_blocks, block_size>>>(
             src_0, src_1, dst, num_elements
             );
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }
 
 void CUDAPIPGraphDataActivationUpdateSender::LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst){
     const int block_size = 1024;
     const int num_blocks = (mirror_vertices_number + block_size - 1) / block_size;
     buffer_mirrors<<<num_blocks, block_size>>>(mirror_vertices_number, mirror_vertices_list, elements_per_vertex, begin, src, dst);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 
 }
 
@@ -64,7 +64,7 @@ void  CUDAPIPGraphDataGradientUpdateSender::LauachBufferMirrors(int mirror_verti
     const int block_size = 1024;
     const int num_blocks = (mirror_vertices_number + block_size - 1) / block_size;
     buffer_mirrors<<<num_blocks, block_size>>>(mirror_vertices_number, mirror_vertices_list, elements_per_vertex, begin, src, dst);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 
 }
 
@@ -86,7 +86,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::zero_out_unnecessary_grad(D
     zero_out_grad_kernel<<<num_blocks, block_size>>>(
             grad, data, num_elements_this_chunk
             );
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }
 
 

@@ -21,5 +21,5 @@ void DistributedModelParallelExecutionEngineGPU::LaunchGPUAdd(DataType * x, Data
     const int BlockNumber = (elements + ThreadNumber - 1)/ThreadNumber;
     int per_thread_elements = elements / (ThreadNumber * BlockNumber) + 1;
     GPUAddKernel<<<BlockNumber, ThreadNumber>>>(x, y, elements, per_thread_elements);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }

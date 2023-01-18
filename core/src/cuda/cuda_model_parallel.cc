@@ -127,7 +127,7 @@ void DistributedModelParallelExecutionEngineGPU::execute_computation_graph_forwa
              //   );
         ncclRecv(data, static_cast<size_t>(num_elements),ncclFloat32, remote_node_id, *nccl_comm_, nccl_stream_);
     }
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     // local activation forwarding
     assert(executor_ != NULL);
     int num_operators = operators.size();
@@ -161,7 +161,7 @@ void DistributedModelParallelExecutionEngineGPU::execute_computation_graph_forwa
                 exit(-1);
         }
     }
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     // send out the dependent local tensors
     for (std::pair<int, Tensor*> suff_tensor_pair: suff_tensors) {
         int remote_node_id = suff_tensor_pair.first;
@@ -183,7 +183,7 @@ void DistributedModelParallelExecutionEngineGPU::execute_computation_graph_forwa
           //      );
         ncclSend(data, static_cast<size_t>(num_elements), ncclFloat32, remote_node_id, *nccl_comm_, nccl_stream_);
     }
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }
 void DistributedModelParallelExecutionEngineGPU::execute_computation_graph_backward(
         const std::vector<Operator*> &operators, 
@@ -259,10 +259,10 @@ void DistributedModelParallelExecutionEngineGPU::execute_computation_graph_backw
                    // MPI_COMM_WORLD, &status
                     //);
             ncclRecv(cuda_buff, num_elements_this_batch, ncclFloat32, remote_node_id, *nccl_comm_, nccl_stream_);
-           // cudaDeviceSynchronize();
+           // cudaStreamSynchronize(0);
             //CopyFromCUDADeviceToHost<DataType>(comm_buff, cuda_buff, num_elements_this_batch, __FILE__, __LINE__);
             LaunchGPUAdd(grad + num_received_elements, cuda_buff, num_elements_this_batch);
-           // cudaDeviceSynchronize();
+           // cudaStreamSynchronize(0);
 /*
 #pragma omp parallel for  
             for (size_t i = 0; i < num_elements_this_batch; ++ i) {
@@ -274,7 +274,7 @@ void DistributedModelParallelExecutionEngineGPU::execute_computation_graph_backw
        // CopyFromHostToCUDADevice<DataType>(grad, cpugrad, num_elements, __FILE__, __LINE__);
         
     }
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     // local gradients backwarding 
     size_t num_operators = operators.size();
     for (size_t i = num_operators; i > 0; -- i) {
@@ -305,7 +305,7 @@ void DistributedModelParallelExecutionEngineGPU::execute_computation_graph_backw
                 exit(-1);
         }
     }
-   cudaDeviceSynchronize();
+   cudaStreamSynchronize(0);
     // send out the gradients of the dependent tensors
     for (std::pair<int, Tensor*> prev_tensor_pair: prev_tensors) {
         int remote_node_id = prev_tensor_pair.first;
@@ -334,11 +334,11 @@ void DistributedModelParallelExecutionEngineGPU::execute_computation_graph_backw
                 //    remote_node_id, GradientPassing, MPI_COMM_WORLD
                   //  );
             ncclSend(grad + num_sent_elements, num_elements_this_batch, ncclFloat32, remote_node_id, *nccl_comm_, nccl_stream_);
-            cudaDeviceSynchronize();
+            cudaStreamSynchronize(0);
             num_sent_elements += num_elements_this_batch;
         }
     }
-   cudaDeviceSynchronize();
+   cudaStreamSynchronize(0);
    // delete [] comm_buff;
   // DeallocateCUDAMemory<DataType>(&cuda_buff, __FILE__, __LINE__);
 }
@@ -606,7 +606,7 @@ double DistributedModelParallelExecutionEngineGPU::execute_application(
             );
 
     // train the model
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     MPI_Barrier(MPI_COMM_WORLD);
 
     double total_runtime = 0.;
@@ -637,12 +637,12 @@ double DistributedModelParallelExecutionEngineGPU::execute_application(
                     application->get_output_tensor(), std_tensor
                     );
         }
-      cudaDeviceSynchronize();
+      cudaStreamSynchronize(0);
         execute_computation_graph_backward(
                 operators, operator_mask, partition_assignments, op_to_idx, prev_tensors, suff_tensors, output_tensor
                 );
         optimize_weights(operators, operator_mask_optimizer);
-      cudaDeviceSynchronize();
+      cudaStreamSynchronize(0);
         MPI_Bcast(
                 &loss, 1, DistributedSys::get_mpi_data_type<double>(),
                 node_with_the_output_tensor, MPI_COMM_WORLD
@@ -664,7 +664,7 @@ double DistributedModelParallelExecutionEngineGPU::execute_application(
         printf("\nAverage per-epoch runtime: %.3f (s)\n\n",
                 total_runtime / double(num_epoch - num_warmups));
     }
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     MPI_Barrier(MPI_COMM_WORLD);
     usleep(300.);
     // release the resource

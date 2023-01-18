@@ -218,14 +218,14 @@ void CrossEntropyLossGPU::LaunchCalculateGradients(DataType * std_data, DataType
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateGradientsKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad, epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }
 double CrossEntropyLossGPU::LaunchGetLoss(DataType * std_data, DataType * output_data, int num_vertices, int outputsize){
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateLossKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, loss_data_,epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 
     const float alpha = 1.0f;
     const float beta = 0.0f; 
@@ -243,7 +243,7 @@ void CrossEntropyLossGPU::LaunchCalculateGradientsMask(DataType * std_data, Data
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, gntrain,outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }
 void CrossEntropyLossGPU::LaunchCalculateGradientsMaskWithStart(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize, int start)
 {
@@ -254,7 +254,7 @@ void CrossEntropyLossGPU::LaunchCalculateGradientsMaskWithStart(DataType * std_d
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad, gpu_training_mask_ + start, epsilon_,num_vertices, gntrain ,outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
     //CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, ntrain, outputsize, ThreadNumber, BlockNumber, per_thread_nodes); FIXME
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }
 double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type){
     const int ThreadNumber = 1024;
@@ -270,7 +270,7 @@ double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * ou
     }else {
         assert(false);
     }
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 
     const float alpha = 1.0f;
     const float beta = 0.0f;
@@ -307,7 +307,7 @@ double CrossEntropyLossGPU::LaunchGetLossMaskWithStart(DataType * std_data, Data
     }else {
         assert(false);
     }
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 
     const float alpha = 1.0f;
     const float beta = 0.0f;
@@ -338,7 +338,7 @@ double CrossEntropyLossGPU::LaunchGetLossWithStart(DataType * std_data, DataType
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateLossKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, loss_data_ + start, epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 
     const float alpha = 1.0f;
     const float beta = 0.0f; 
@@ -359,14 +359,14 @@ void CrossEntropyLossGPUV2::LaunchCalculateGradients(DataType * std_data, DataTy
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateGradientsV2Kernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad, epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 }
 double CrossEntropyLossGPUV2::LaunchGetLoss(DataType * std_data, DataType * output_data, int num_vertices, int outputsize){
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateLossV2Kernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, loss_data_,epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
 
     const float alpha = 1.0f;
     const float beta = 0.0f; 

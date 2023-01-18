@@ -81,7 +81,7 @@ void SynchronizeCUDADevice(const char* file, const int line);
 template <typename T>
 void SetCUDAMemory(T* dst_ptr, int value, size_t size, const char* file, const int line) {
   cudaMemset(reinterpret_cast<void*>(dst_ptr), value, size * sizeof(T));
-  cudaDeviceSynchronize();
+  cudaStreamSynchronize(0);
 }
 
 template <typename T>

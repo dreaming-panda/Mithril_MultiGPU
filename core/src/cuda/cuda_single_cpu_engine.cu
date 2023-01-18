@@ -65,7 +65,7 @@ float SingleNodeExecutionEngineGPU::LaunchCalculate_Accuracy(DataType * cuda_acc
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     Calculate_Accuracy<<<BlockNumber, ThreadNumber>>>(cuda_acc_data,cuda_output_data, cuda_std_data,num_vertices,outputsize, ThreadNumber, BlockNumber,per_thread_nodes);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     //cudnnHandle_t cudnn_;
   //  DataType * d_hit_;
   //  DataType * d_inter_;
@@ -109,7 +109,7 @@ float SingleNodeExecutionEngineGPU::LaunchCalculate_Accuracy_Mask(DataType * cud
     } else if (type == 2){
          Calculate_AccuracyMask<<<BlockNumber, ThreadNumber>>>(cuda_acc_data,cuda_output_data, cuda_std_data,gpu_test_mask_,num_vertices,outputsize, ThreadNumber, BlockNumber,per_thread_nodes);
     }
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(0);
     //cudnnHandle_t cudnn_;
   //  DataType * d_hit_;
   //  DataType * d_inter_;
