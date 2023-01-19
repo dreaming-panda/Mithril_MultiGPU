@@ -144,6 +144,17 @@ void DataCompressor::move_compressed_data_to_cpu() {
     //        compressed_data_size_ / t / 1024. / 1024. / 1024.);
 }
 
+void DataCompressor::move_compressed_data_to_cpu_async() {
+    checkCUDA(cudaMemcpyAsync(
+                cpu_buff_, gpu_buff_, compressed_data_size_, 
+                cudaMemcpyDeviceToHost, 0 
+                ));
+}
+
+void DataCompressor::wait_for_data_movement() {
+    checkCUDA(cudaStreamSynchronize(0));
+}
+
 DataDecompressor::DataDecompressor(size_t data_size) {
     data_size_ = data_size;
     compressed_data_set_ = false;
@@ -206,12 +217,14 @@ __global__ void decompress_data_kernel(
         ) {
     size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < data_size) {
-        size_t bitmap_idx = idx / 8;
-        size_t bitmap_offset = idx % 8;
+        size_t bitmap_idx = idx >> 3;
+        size_t bitmap_offset = idx & 7;
         uint8_t mask = (uint8_t) 1 << bitmap_offset;
         uint8_t is_not_zero = bitmap[bitmap_idx] & mask;
         DataType data = non_zero_elements[decompression_index[idx]];
         decompressed_data[idx] = is_not_zero ? data: 0.;
+
+        //decompressed_data[idx] = non_zero_elements[idx];
     }
 }
 
@@ -262,19 +275,25 @@ __global__ void decompress_data_kernel_v3(
     if (idx < data_size) {
         // load some necessary data
         // 1) the bitmap element
-        size_t bitmap_idx = idx / 8;
+        size_t bitmap_idx = idx >> 3;
         uint8_t bitmap_element = bitmap[bitmap_idx];
         uint32_t prev_non_zeros = decompression_index[bitmap_idx];
-        size_t bitmap_offset = idx % 8;
+        size_t bitmap_offset = idx & 7;
         uint8_t mask = 1;
         for (size_t i = 0; i < bitmap_offset; ++ i, mask <<= 1) {
             prev_non_zeros += ((bitmap_element & mask) != 0);
         }
+
         DataType data = non_zero_elements[prev_non_zeros];
         DataType data_to_write = (bitmap_element & mask) == 0 ? 0 : data;
-        //printf("idx: %lu, data_to_write: %.3f, prev_non_zeros: %u\n\n",
-        //        idx, data_to_write, prev_non_zeros);
+        __syncthreads();
         decompressed_data[idx] = data_to_write;
+
+        //mask = (uint8_t) 1 << bitmap_offset;
+        //if (bitmap_element & mask) {
+        //    DataType data = non_zero_elements[prev_non_zeros];
+        //    decompressed_data[idx] = data;
+        //}
     }
 }
 
@@ -300,30 +319,31 @@ void DataDecompressor::decompress_data(DataType * data) {
     DataType * non_zero_elements = gpu_non_zero_elements_;
     uint32_t * decompression_index = gpu_data_decompression_index_;
 
-    //checkCUDA(cudaMemset(data, 1, sizeof(DataType) * data_size));
-
-    int block_size = BLOCK_SIZE;
-    int num_blocks = (data_size + block_size - 1) / block_size;
-    set_value<<<num_blocks, block_size, 0, cuda_stream_>>>(data, data_size, block_size * num_blocks);
-    cudaStreamSynchronize(cuda_stream_);
+    //checkCUDA(cudaMemcpy(data, non_zero_elements, sizeof(DataType) * data_size,
+    //            cudaMemcpyDeviceToDevice));
 
     //int block_size = BLOCK_SIZE;  
     //int num_blocks = (data_size + block_size - 1) / block_size;
     //gen_decompression_index_kernel<<<num_blocks, block_size>>>(bitmap, decompression_index, data_size);
-    //cudaStreamSynchronize(0);
+    ////cudaStreamSynchronize(0);
     //thrust::exclusive_scan(thrust::cuda::par, decompression_index, decompression_index + data_size, decompression_index);
+
+    ////double t = - get_time();
     //decompress_data_kernel<<<num_blocks, block_size>>>(decompression_index, non_zero_elements, data, bitmap, data_size); 
-    //cudaStreamSynchronize(0);
+    ////cudaStreamSynchronize(0);
+    ////t += get_time();
+    ////printf("Data writing time: %.3f GBps\n", data_size / t / 1024. / 1024. / 1024.);
 
-    //size_t bitmap_size = data_size / 8 + 1;
-    //int block_size = BLOCK_SIZE;
-    //int num_blocks = (bitmap_size + block_size - 1) / block_size;
-    //gen_decompression_index_kernel_v2<<<num_blocks, block_size>>>(bitmap, decompression_index, data_size);
+    //checkCUDA(cudaMemset(data, 0, sizeof(DataType) * data_size));
+    size_t bitmap_size = data_size / 8 + 1;
+    int block_size = BLOCK_SIZE;
+    int num_blocks = (bitmap_size + block_size - 1) / block_size;
+    gen_decompression_index_kernel_v2<<<num_blocks, block_size>>>(bitmap, decompression_index, data_size);
     //checkCUDA(cudaStreamSynchronize(0));
-    //thrust::exclusive_scan(thrust::cuda::par, decompression_index, decompression_index + bitmap_size, decompression_index);
+    thrust::exclusive_scan(thrust::cuda::par, decompression_index, decompression_index + bitmap_size, decompression_index);
 
-    //num_blocks = (data_size + block_size - 1) / block_size;
-    //decompress_data_kernel_v3<<<num_blocks, block_size>>>(decompression_index, non_zero_elements, data, bitmap, data_size, bitmap_size);
+    num_blocks = (data_size + block_size - 1) / block_size;
+    decompress_data_kernel_v3<<<num_blocks, block_size>>>(decompression_index, non_zero_elements, data, bitmap, data_size, bitmap_size);
     //checkCUDA(cudaStreamSynchronize(0));
 
     //decompress_data_kernel_v2<<<num_blocks, block_size>>>(decompression_index, non_zero_elements, data, bitmap, data_size, bitmap_size);
@@ -343,9 +363,22 @@ void DataDecompressor::move_compressed_data_to_gpu() {
     checkCUDA(cudaMemcpy(gpu_buff_, cpu_buff_, compressed_data_size_,
                 cudaMemcpyHostToDevice));
     //t += get_time();
-    //printf("CPU => GPU throughput: %.3f GBps\n", 
+    //printf("CPU => GPU throughput: chunk size: %.3f MB, %.3f GBps\n", 
+    //        compressed_data_size_ / 1024. / 1024.,
     //        compressed_data_size_ / t / 1024. / 1024. / 1024.);
 }
+
+void DataDecompressor::move_compressed_data_to_gpu_async() {
+    //printf("Move the data to GPU\n");
+    checkCUDA(cudaMemcpyAsync(gpu_buff_, cpu_buff_, compressed_data_size_,
+                cudaMemcpyHostToDevice, 0));
+}
+
+void DataDecompressor::wait_for_data_movement() {
+    checkCUDA(cudaStreamSynchronize(0));
+}
+
+
 
 
 

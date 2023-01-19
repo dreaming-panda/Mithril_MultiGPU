@@ -22,7 +22,7 @@ lr=1e-3
 graph=ogbn_products
 epoch=100
 decay=0
-chunks=64
+chunks=32
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks
 

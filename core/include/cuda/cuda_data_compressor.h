@@ -41,10 +41,12 @@ class DataCompressor {
         void compress_data(DataType * data, bool send_to_cpu); // the main thread invoke this function
         void get_compressed_data(DataType * &buff, size_t &buff_size); // the communication thread invoke this function
         void move_compressed_data_to_cpu();
+        void move_compressed_data_to_cpu_async();
+        void wait_for_data_movement();
 };
 
 class DataDecompressor {
-    private:
+    public:
         size_t data_size_; // unit: floats
         size_t compressed_data_size_;
         bool compressed_data_set_;
@@ -61,13 +63,35 @@ class DataDecompressor {
 
         cudaStream_t cuda_stream_;
 
-    public:
         DataDecompressor(size_t data_size);
         ~DataDecompressor();
         void receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data, bool recv_on_cpu); // invoked by ccommunication threads
         void decompress_data(DataType * data); // invoked by the main thread
         void get_cpu_buff(uint8_t * &buff, size_t &buff_size);
         void move_compressed_data_to_gpu();
+        void move_compressed_data_to_gpu_async();
+        void wait_for_data_movement();
+};
+
+class DataCompressorV2 {
+    private:
+        bool data_compressed_;
+
+        size_t data_size_;
+        size_t compressed_data_size_;
+
+        size_t gpu_buff_size_;
+        uint8_t * gpu_buff_;
+        uint8_t * intra_block_pos_;
+        uint32_t * block_starting_pos_;
+        DataType * non_zero_elements_;
+
+        size_t cpu_buff_size_;
+        uint8_t * cpu_buff_;
+
+        // some helper buffers
+        uint64_t * helper_buff;
+
 };
 
 #endif

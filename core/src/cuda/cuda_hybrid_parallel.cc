@@ -212,16 +212,25 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                 } else {
                     engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
                             [&](uint8_t * buff, size_t buff_size) {
+                                //MPI_Recv(
+                                //        buff, buff_size, MPI_CHAR,
+                                //        remote_node, ForwardActivationPassing,
+                                //        MPI_COMM_WORLD, &status
+                                //        );
+                                //int count = 0;
+                                //MPI_Get_count(&status, MPI_CHAR, &count);
+                                //assert(count > 0);
+                                //comm += count;
+                                //return (size_t) count;
+                                size_t compressed_data_size = 0;
                                 MPI_Recv(
-                                        buff, buff_size, MPI_CHAR,
+                                        &compressed_data_size, 1, 
+                                        DistributedSys::get_mpi_data_type<size_t>(),
                                         remote_node, ForwardActivationPassing,
                                         MPI_COMM_WORLD, &status
                                         );
-                                int count = 0;
-                                MPI_Get_count(&status, MPI_CHAR, &count);
-                                assert(count > 0);
-                                comm += count;
-                                return (size_t) count;
+                                comm += compressed_data_size;
+                                return compressed_data_size;
                             }, true
                             );
                     //engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
@@ -775,11 +784,25 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                     assert(compressed_data);
                     assert(compressed_data_size);
                     double t_2 = get_time();
+
+                    MPI_Put(
+                            compressed_data, compressed_data_size, MPI_CHAR, 
+                            remote_node, 0, compressed_data_size, MPI_CHAR,
+                            engine_->act_comm_wins_[task.chunk_id]
+                           );
+                    MPI_Win_flush(remote_node, engine_->act_comm_wins_[task.chunk_id]);
                     MPI_Send(
-                            compressed_data, compressed_data_size, MPI_CHAR,
+                            &compressed_data_size, 1, 
+                            DistributedSys::get_mpi_data_type<size_t>(),
                             remote_node, ForwardActivationPassing,
                             MPI_COMM_WORLD
                             );
+
+                    //MPI_Send(
+                    //        compressed_data, compressed_data_size, MPI_CHAR,
+                    //        remote_node, ForwardActivationPassing,
+                    //        MPI_COMM_WORLD
+                    //        );
                     //engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu(remote_node, ForwardActivationPassing);
                     //size_t data_size = engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu_rma(remote_node, ForwardActivationPassing, engine_->act_comm_wins_[task.chunk_id]);
                     double t_1 = get_time();
@@ -1126,6 +1149,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             );
     std::thread move_act_cpu2gpu_thread(
             [&]() {
+                return ;
                 CUDAPIPForwardTask task;
                 for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
                     for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
@@ -1133,7 +1157,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         if (node_id > 0) {
                             engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
                         }
-                        //act_cpu2gpu_queue->push(task);
                         act_cpu2gpu_queue->wait_to_push(task, 1);
                     }
                 }
@@ -1211,6 +1234,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         bool success;
         double slowest_chunk = 0;
         double fastest_chunk = 1e100;
+        bool has_prev_task = false;
+        CUDAPIPForwardTask prev_task;
+
         while (num_scheduled_forward_tasks < num_local_chunks) {
 #ifdef BOOST_ARCH_X86
             __asm volatile ("pause" ::: "memory");
@@ -1221,9 +1247,25 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 //forward_task_dispatcher_queue_->pop(task, success);
                 //if (success) {
                 wait_for_task_time -= get_time();
-                //forward_task_dispatcher_queue_->pop_blocking(task);
-                act_cpu2gpu_queue->pop_blocking(task);
+                forward_task_dispatcher_queue_->pop_blocking(task);
+                //act_cpu2gpu_queue->pop_blocking(task);
                 wait_for_task_time += get_time();
+
+                if (node_id > 0) {
+                    //double t = - get_time();
+                    engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
+                    //t += get_time();
+                    //if (node_id == 1)
+                    //    printf("Chunk %d, tp: %.3f GBps\n", task.chunk_id, 
+                    //            engine_->data_decompressors_[task.chunk_id]->compressed_data_size_ / t / 1024. / 1024. / 1024.);
+                }
+                //if (node_id > 0) {
+                //    engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
+                //}
+                //if (node_id > 0) {
+                //    engine_->data_decompressors_[task.chunk_id]->wait_for_data_movement();
+                //}
+
                 {
                     double t = - get_time();
                     assert(task.epoch_id == epoch_id);
@@ -1243,6 +1285,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     }
 #endif
 
+                    has_prev_task = true;
+                    prev_task = task;
                     //forward_task_committer_queue_->push(task);
                     act_gpu2cpu_queue->push(task);
                     if (is_bottommost_node) {
@@ -4577,12 +4621,12 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         // initialize the data compressors
         data_compressors_ = new DataCompressor* [num_chunks_];
         data_decompressors_ = new DataDecompressor* [num_chunks_];
-        grad_compressors_ = new DataCompressor* [num_chunks_];
-        grad_decompressors_ = new DataDecompressor* [num_chunks_];
+        //grad_compressors_ = new DataCompressor* [num_chunks_]; FIXME
+        //grad_decompressors_ = new DataDecompressor* [num_chunks_];
         assert(data_compressors_);
         assert(data_decompressors_);
-        assert(grad_compressors_);
-        assert(grad_decompressors_);
+        //assert(grad_compressors_);
+        //assert(grad_decompressors_);
         // the input side
         if (pipeline_input_tensor_ != NULL) {
             size_t num_elements_per_vertex = pipeline_input_tensor_->dims[1];
@@ -4591,9 +4635,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                 VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
                 size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
                 data_decompressors_[chunk_id] = new DataDecompressor(num_elements);
-                grad_compressors_[chunk_id] = new DataCompressor(num_elements);
+                //grad_compressors_[chunk_id] = new DataCompressor(num_elements);
                 assert(data_decompressors_[chunk_id]);
-                assert(grad_compressors_[chunk_id]);
+                //assert(grad_compressors_[chunk_id]);
             }
         }
         // the output side
@@ -4604,9 +4648,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                 VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
                 size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
                 data_compressors_[chunk_id] = new DataCompressor(num_elements);
-                grad_decompressors_[chunk_id] = new DataDecompressor(num_elements);
+                //grad_decompressors_[chunk_id] = new DataDecompressor(num_elements);
                 assert(data_compressors_[chunk_id]);
-                assert(grad_decompressors_[chunk_id]);
+                //assert(grad_decompressors_[chunk_id]);
             }
         }
         // set up RMA 
@@ -4790,17 +4834,17 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
             if (pipeline_input_tensor_) {
                 delete data_decompressors_[chunk_id];
-                delete grad_compressors_[chunk_id];
+                //delete grad_compressors_[chunk_id];
             }
             if (pipeline_output_tensor_) {
                 delete data_compressors_[chunk_id];
-                delete grad_decompressors_[chunk_id];
+                //delete grad_decompressors_[chunk_id];
             }
         }
         delete [] data_compressors_;
         delete [] data_decompressors_;
-        delete [] grad_compressors_;
-        delete [] grad_decompressors_;
+        //delete [] grad_compressors_;
+        //delete [] grad_decompressors_;
     }
 
     // destroy the threads
