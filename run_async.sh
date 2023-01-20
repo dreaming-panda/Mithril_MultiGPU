@@ -19,8 +19,8 @@ make -j
 num_layers=4
 hunits=128
 lr=1e-3
-graph=ogbn_products
-epoch=100
+graph=reddit
+epoch=1000
 decay=0
 chunks=32
 
