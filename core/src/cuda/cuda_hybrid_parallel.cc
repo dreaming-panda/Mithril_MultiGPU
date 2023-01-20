@@ -749,9 +749,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     int num_epoch = engine_->get_num_epoch();
 
     LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(num_local_chunks * num_epoch);
-    LockFreeQueue<CUDAPIPForwardTask> * act_cpu2gpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(num_local_chunks * num_epoch);
+    LockFreeQueue<CUDAPIPBackwardTask> * grad_gpu2cpu_queue = new LockFreeQueue<CUDAPIPBackwardTask>(num_local_chunks * num_epoch);
+    //LockFreeQueue<CUDAPIPForwardTask> * act_cpu2gpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(num_local_chunks * num_epoch);
     engine_->act_gpu2cpu_queue_ = act_gpu2cpu_queue;
-    engine_->act_cpu2gpu_queue_ = act_cpu2gpu_queue;
+    //engine_->act_cpu2gpu_queue_ = act_cpu2gpu_queue;
 
     std::thread move_act_gpu2cpu_thread(
             [&]() {
@@ -766,6 +767,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     }
                 }
             }
+            );
+    std::thread move_grad_gpu2cpu_thread(
+            [&]() {
+                    CUDAPIPBackwardTask task;
+                    for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+                        for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
+                            grad_gpu2cpu_queue->pop_blocking(task);
+                            if (node_id > 0) {
+                                engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
+                            }
+                            backward_task_committer_queue_->push(task);
+                        }
+                    }
+                }
             );
     //std::thread move_act_cpu2gpu_thread(
     //        [&]() {
@@ -873,7 +888,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
                 if (node_id > 0) {
                     //double t = - get_time();
-                    engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
+                    engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
                     //t += get_time();
                     //if (node_id == 1)
                     //    printf("Chunk %d, tp: %.3f GBps\n", task.chunk_id, 
@@ -939,6 +954,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 backward_task_dispatcher_queue_->pop_blocking(task);
                 wait_for_task_time += get_time();
                 {
+                    if (node_id < num_nodes - 1) {
+                        engine_->grad_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
+                    }
                     assert(task.epoch_id == epoch_id);
 #ifdef SHOW_SCHEDULE_DETAILS
                     double time_elapsed = (get_time() - start_time) * 1000;    
@@ -947,7 +965,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 #endif
                     engine_->perform_backward_task(task); 
 
-                    backward_task_committer_queue_->push(task);
+                    //backward_task_committer_queue_->push(task);
+                    grad_gpu2cpu_queue->push(task);
                     engine_->grad_update_sender_->insert_new_task(task); 
                     ++ num_scheduled_backward_tasks;
                 }
@@ -1007,7 +1026,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     printf("Node %d, pure compute time: %.3f s, total compute time: %.3f s\n", 
             node_id, engine_->compute_time_, engine_->compute_time_ + engine_->compression_time_ + engine_->decompression_time_);
     printf("Node %d, wait_for_task_time: %.3f s, wait_for_other_gpus_time: %.3f s\n",
-            wait_for_task_time, wait_for_other_gpus_time);
+            node_id, wait_for_task_time, wait_for_other_gpus_time);
     printf("------------------------node id %d,  per-epoch time: %f s---------------\n", 
             node_id, all_epoches_time / (num_epoch - warmup_epoches));
 
@@ -1028,6 +1047,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     engine_->grad_update_receiver_->wait_for_termination();
 
     move_act_gpu2cpu_thread.join();
+    move_grad_gpu2cpu_thread.join();
     //move_act_cpu2gpu_thread.join();
 
     // some communication-related metrics

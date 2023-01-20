@@ -1587,7 +1587,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         double compute_time_;
 
         LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue_;
-        LockFreeQueue<CUDAPIPForwardTask> * act_cpu2gpu_queue_;
+        //LockFreeQueue<CUDAPIPForwardTask> * act_cpu2gpu_queue_;
+        //LockFreeQueue<>
 
         // the threads responsible for communication and computation
         pthread_barrier_t barrier_;
