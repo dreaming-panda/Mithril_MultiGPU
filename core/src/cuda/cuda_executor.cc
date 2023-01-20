@@ -3852,3 +3852,197 @@ void OperatorExecutorGPUV2::matmuladd_backward(MatmulAddOperator * op, VertexId 
     SetCUDAMemory<DataType>(tp_grad, 0, hidden_units * hidden_units, __FILE__, __LINE__);
     SetCUDAMemory<DataType>(tp_weight, 0, hidden_units * hidden_units, __FILE__, __LINE__);
 }
+
+void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {
+    if (left == right) {
+        return ;
+    }
+    assert(left < right);
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+
+    assert(op);
+    assert(op->get_num_input_tensors() == 1);
+    assert(op->get_num_output_tensors() == 1);
+
+    Tensor * input_tensor = op->get_input_tensor(0);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor);
+    assert(output_tensor);
+    assert(input_tensor->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+
+    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource);
+    assert(output_tensor_resource);
+
+    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+    //printf("NumVertices: %u\n", num_vertices);
+    size_t num_elements = input_tensor_resource->get_num_elements();
+    assert(num_elements == output_tensor_resource->get_num_elements());
+    assert(num_elements % num_vertices == 0);
+    size_t num_elements_per_vertex = num_elements / num_vertices;
+
+    size_t start_idx = num_elements_per_vertex * left;
+    size_t end_idx = num_elements_per_vertex * right;
+    //printf("Start_idx: %lu, End_idx: %lu\n", start_idx, end_idx);
+
+    DataType * d_input_data = input_tensor_resource->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    assert(d_input_data);
+    assert(d_output_data);
+    d_input_data += start_idx;
+    d_output_data += start_idx;
+
+    if (dropout_op_states.find(op) == dropout_op_states.end()) {
+        std::map<int, DropoutOpState> * mapping = new std::map<int, DropoutOpState>();
+        assert(mapping);
+        dropout_op_states[op] = mapping;
+    }
+    std::map<int, DropoutOpState> * chunk2state = dropout_op_states[op];
+    assert(chunk2state);
+    if (chunk2state->find(chunk_id) == chunk2state->end()) {
+        // allocate a new dropout state
+        size_t states_size = 0;
+        checkCUDNN(cudnnDropoutGetStatesSize(*cudnn_handle_, &states_size));
+        void * states = NULL;
+        checkCUDA(cudaMalloc(&states, states_size));
+        assert(states);
+        // set up the op descriptor
+        cudnnDropoutDescriptor_t dropout_descriptor;
+        checkCUDNN(cudnnCreateDropoutDescriptor(&dropout_descriptor));
+        checkCUDNN(cudnnSetDropoutDescriptor(
+                    dropout_descriptor, *cudnn_handle_,
+                    op->dropout_rate_,
+                    states, states_size,
+                    1234
+                    ));
+        // set up the tensor descriptor
+        cudnnTensorDescriptor_t tensor_descriptor;
+        checkCUDNN(cudnnCreateTensorDescriptor(&tensor_descriptor));
+        assert(end_idx > start_idx);
+        checkCUDNN(cudnnSetTensor4dDescriptor(
+                    tensor_descriptor, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT,
+                    1, 1, 1, 
+                    end_idx - start_idx
+                    ));
+        // allocate reserve space
+        size_t reserve_space_size = 0;
+        checkCUDNN(cudnnDropoutGetReserveSpaceSize(tensor_descriptor, &reserve_space_size));
+        void * reserve_space = NULL;
+        checkCUDA(cudaMalloc(&reserve_space, reserve_space_size));
+        assert(reserve_space);
+        // cache the result
+        DropoutOpState dropout_op_state;
+        dropout_op_state.dropout_descriptor = dropout_descriptor;
+        dropout_op_state.tensor_descriptor = tensor_descriptor;
+        dropout_op_state.reserved_space = reserve_space;
+        dropout_op_state.reserved_space_size = reserve_space_size;
+        dropout_op_state.random_state = states;
+        dropout_op_state.random_state_size = states_size;
+        dropout_op_state.left = left;
+        dropout_op_state.right = right;
+        (*chunk2state)[chunk_id] = dropout_op_state;
+    }
+    DropoutOpState dropout_op_state = (*chunk2state)[chunk_id];
+
+    cudnnDropoutDescriptor_t dropout_descriptor = dropout_op_state.dropout_descriptor;
+    cudnnTensorDescriptor_t tensor_descriptor = dropout_op_state.tensor_descriptor;
+    void * reserved_space = dropout_op_state.reserved_space;
+    size_t reserved_space_size = dropout_op_state.reserved_space_size;
+    assert(reserved_space);
+    assert(dropout_op_state.left == left);
+    assert(dropout_op_state.right == right);
+
+    // use the state to perform forwarding
+    checkCUDNN(cudnnDropoutForward(
+                *cudnn_handle_,
+                dropout_descriptor,
+                tensor_descriptor,
+                (const void*) d_input_data,
+                tensor_descriptor,
+                (void*) d_output_data,
+                (void*) reserved_space,
+                reserved_space_size
+                ));
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+}
+
+void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {
+    if (left == right) {
+        return ;
+    }
+    assert(left < right);
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+
+    std::map<int, DropoutOpState> * chunk2state = dropout_op_states[op];
+    assert(chunk2state);
+    DropoutOpState dropout_op_state = (*chunk2state)[chunk_id];
+
+    cudnnDropoutDescriptor_t dropout_descriptor = dropout_op_state.dropout_descriptor;
+    cudnnTensorDescriptor_t tensor_descriptor = dropout_op_state.tensor_descriptor;
+    void * reserved_space = dropout_op_state.reserved_space;
+    size_t reserved_space_size = dropout_op_state.reserved_space_size;
+    assert(reserved_space);
+
+    assert(op);
+    assert(op->get_num_input_tensors() == 1);
+    assert(op->get_num_output_tensors() == 1);
+
+    Tensor * input_tensor = op->get_input_tensor(0);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor);
+    assert(output_tensor);
+    assert(input_tensor->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+
+    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+    assert(input_tensor_resource);
+    assert(output_tensor_resource);
+
+    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+    size_t num_elements = input_tensor_resource->get_num_elements();
+    assert(num_elements == output_tensor_resource->get_num_elements());
+    assert(num_elements % num_vertices == 0);
+    size_t num_elements_per_vertex = num_elements / num_vertices;
+
+    size_t start_idx = num_elements_per_vertex * left;
+    size_t end_idx = num_elements_per_vertex * right;
+    assert(start_idx < end_idx);
+
+    DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    assert(d_input_grad);
+    assert(d_output_grad);
+    d_input_grad += start_idx;
+    d_output_grad += start_idx;
+
+    checkCUDNN(cudnnDropoutBackward(
+                *cudnn_handle_,
+                dropout_descriptor,
+                tensor_descriptor,
+                (const void*) d_output_grad,
+                tensor_descriptor,
+                (void*) d_input_grad,
+                (void*) reserved_space,
+                reserved_space_size
+                ));
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+}
+
+
+
+

@@ -12,9 +12,35 @@
 #include"cusparse_v2.h"
 #include"graph.h"
 #include <iostream>
+#include <sstream>
 #include "utilities.h"
 #include "distributed_sys.h"
 #include <assert.h>
+
+#define FatalError(s) do {                                             \
+    std::stringstream _where, _message;                                \
+    _where << __FILE__ << ':' << __LINE__;                             \
+    _message << std::string(s) + "\n" << __FILE__ << ':' << __LINE__;  \
+    std::cerr << _message.str() << "\nAborting...\n";                  \
+    exit(1);                                                           \
+} while(0)
+
+#define checkCUDNN(status) do {                                        \
+    std::stringstream _error;                                          \
+    if (status != CUDNN_STATUS_SUCCESS) {                              \
+      _error << "CUDNN failure: " << cudnnGetErrorString(status);      \
+      FatalError(_error.str());                                        \
+    }                                                                  \
+} while(0)
+
+#define checkCUDA(status) do {                                         \
+    std::stringstream _error;                                          \
+    if (status != 0) {                                                 \
+      _error << "Cuda failure: " << status;                            \
+      FatalError(_error.str());                                        \
+    }                                                                  \
+} while(0)
+
 class OperatorExecutorGPU:public AbstractOperatorExecutor
 {
     private: 
@@ -186,6 +212,19 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         DataType * tp_grad;
         bool id_init;
         int hidden_units;
+
+        // used for chunk-based GPU training
+        struct DropoutOpState {
+            cudnnDropoutDescriptor_t dropout_descriptor;
+            cudnnTensorDescriptor_t tensor_descriptor;
+            void * reserved_space;
+            size_t reserved_space_size;
+            void * random_state;
+            size_t random_state_size;
+            VertexId left;
+            VertexId right;
+        };
+        std::map<DropoutOperator*, std::map<int, DropoutOpState>*> dropout_op_states; // mapping from (op, chunk_id) to the state
     public:
         OperatorExecutorGPUV2(){
             graph_ = nullptr;
@@ -395,6 +434,12 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         void matmuladd_backward(MatmulAddOperator * op);
         void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right);
         void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right);
+
+        //void dropout_forward(DropoutOperator * op);
+        //void dropout_backward(DropoutOperator * op);
+        void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
+        void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
+
         void Print(){
             std::cout << "relu forward :"<<reluforward_time<<std::endl;
             std::cout << "relu backward :"<<relubackward_time<<std::endl;

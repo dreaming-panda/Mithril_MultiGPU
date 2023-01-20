@@ -73,6 +73,7 @@ class AbstractApplication {
         Tensor * aggregation(Tensor * t, AggregationType type);
         Tensor * identity(int height, int width);
         Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta);
+        Tensor * dropout(Tensor * a, double dropout_rate);
     public:
         const std::vector<Operator*>& get_operators();
         AbstractApplication(int num_features);

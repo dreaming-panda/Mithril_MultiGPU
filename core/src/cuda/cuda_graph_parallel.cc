@@ -505,6 +505,9 @@ void CUDAGraphParallelEngine::execute_computation_graph_forward(const std::vecto
             case OPERATOR_MATMULADD:
                 executor_->matmuladd_forward((MatmulAddOperator*) op, start_vertex_, end_vertex_);
                 break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_forward((DropoutOperator*) op, start_vertex_, end_vertex_, 0);
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -571,6 +574,9 @@ void CUDAGraphParallelEngine::execute_computation_graph_backward(
                 break;
             case OPERATOR_MATMULADD:
                 executor_->matmuladd_backward((MatmulAddOperator*) op, start_vertex_, end_vertex_);
+                break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_backward((DropoutOperator*) op, start_vertex_, end_vertex_, 0);
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
