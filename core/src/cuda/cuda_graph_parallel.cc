@@ -710,9 +710,9 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
    
     int epoch;
     for (epoch = 0; epoch < num_epoch || num_epoch == -1; ++ epoch) {
-        if(node_id == 0){
-        printf("    Epoch %d:", epoch);
-         }
+        if(node_id == 0 && (epoch + 1) % 10 == 0){
+            printf("    Epoch %d:", epoch);
+        }
         double epoch_time = - get_time();
 
         double cf = -get_time();
@@ -731,13 +731,15 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
         loss_time += lt;
         
         double ca = -get_time();
-        train_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,0);
-        valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
-        test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
-        
-        MPI_Allreduce(&train_accuracy, &train_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&valid_accuracy, &valid_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&test_accuracy, &test_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        if ((epoch + 1) % 10 == 0) {
+            train_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,0);
+            valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
+            test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
+            
+            MPI_Allreduce(&train_accuracy, &train_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&valid_accuracy, &valid_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&test_accuracy, &test_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
         
         ca += get_time();
         calacc_time += ca;
@@ -759,8 +761,8 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
         if (epoch >= num_warmups) {
             total_runtime += epoch_time;
         }
-        if(node_id == 0){
-        printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+        if(node_id == 0 && (epoch + 1) % 10 == 0){
+            printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
         }
        
 
