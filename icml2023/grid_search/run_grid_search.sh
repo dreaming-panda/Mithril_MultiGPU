@@ -6,7 +6,6 @@
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
-#SBATCH --output ./icml2023/grid_search/output_products_2.txt
 
 hostname
 nvidia-smi

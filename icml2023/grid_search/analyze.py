@@ -4,18 +4,18 @@ import time
 import json
 
 # number of combinations:
-# 4 x 3 x 4 x 3 = 144
+# 4 x 2 s 4 x 3 = 96
 learning_rates = [
         3e-4, 1e-3, 3e-3, 1e-2
         ]
 decays = [
-        1e-5, 1e-4, 1e-3
+        0, 1e-5
         ]
 hunits = [
         64, 128, 256, 512
         ]
 dropouts = [
-        0.25, 0.50, 0.75
+        0.3, 0.5, 0.7
         ]
 
 def get_valid_acc(graph, lr, decay, hunit, dropout):
