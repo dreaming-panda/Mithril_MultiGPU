@@ -16,12 +16,12 @@ cd build
 make -j
 
 # setting up the hyper-parameters
-num_layers=4
+num_layers=3
 hunits=128
-lr=1e-3
+lr=3e-3
 graph=ogbn_products
-epoch=100
+epoch=-1
 decay=0
-chunks=32
+dropout=0.3
 
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --dropout 0.5
+mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --dropout $dropout
