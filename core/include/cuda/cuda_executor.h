@@ -213,6 +213,12 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         bool id_init;
         int hidden_units;
 
+        // used for single-node GPU training
+        std::map<DropoutOperator*, cudnnDropoutDescriptor_t> dropout_op_descriptor;
+        std::map<DropoutOperator*, cudnnTensorDescriptor_t> dropout_op_tensor_descriptor;
+        std::map<DropoutOperator*, void*> dropout_op_reserve_space; 
+        std::map<DropoutOperator*, size_t> dropout_op_reserve_space_size;
+
         // used for chunk-based GPU training
         struct DropoutOpState {
             cudnnDropoutDescriptor_t dropout_descriptor;
@@ -435,8 +441,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right);
         void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right);
 
-        //void dropout_forward(DropoutOperator * op);
-        //void dropout_backward(DropoutOperator * op);
+        void dropout_forward(DropoutOperator * op);
+        void dropout_backward(DropoutOperator * op);
         void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
         void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
 

@@ -1,0 +1,52 @@
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
+The number of hidden units: 256
+The number of training epoches: -1
+Learning rate: 0.003000
+Initialized node g000.anvil.rcac.purdue.edu
+Building the CSR structure...
+        It takes 1.992 seconds.
+Building the CSC structure...
+        It takes 1.877 seconds.
+Building the Feature Vector...
+        It takes 0.674 seconds.
+Building the Label Vector...
+        It takes 0.309 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Dropout: 0.500 
+train nodes 196615, valid nodes 39323, test nodes 2213091
+*** Allocating resources for all tensors...
+    OP_TYPE: OPERATOR_INPUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
+gcn: /home/x-jchen5/baseline/Mithril_MultiGPU/core/src/cuda/cuda_resource.cc:25: virtual void TensorResourceGPU::map(): Assertion `gpu_data_ != nullptr' failed.
+[g000:3037930] *** Process received signal ***
+[g000:3037930] Signal: Aborted (6)
+[g000:3037930] Signal code:  (-6)
+[g000:3037930] [ 0] /lib64/libc.so.6(+0x37410)[0x1529d3ad6410]
+[g000:3037930] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x1529d3ad638f]
+[g000:3037930] [ 2] /lib64/libc.so.6(abort+0x127)[0x1529d3ac0dc5]
+[g000:3037930] [ 3] /lib64/libc.so.6(+0x21c99)[0x1529d3ac0c99]
+[g000:3037930] [ 4] /lib64/libc.so.6(+0x2fa86)[0x1529d3acea86]
+[g000:3037930] [ 5] ./build/applications/single_gpu/gcn(_ZN17TensorResourceGPU3mapEv+0x42a)[0x45551a]
+[g000:3037930] [ 6] ./build/applications/single_gpu/gcn(_ZN28SingleNodeExecutionEngineGPU19execute_applicationEP19AbstractApplicationi+0x14b)[0x452e2b]
+[g000:3037930] [ 7] ./build/applications/single_gpu/gcn(main+0x1381)[0x4231e1]
+[g000:3037930] [ 8] /lib64/libc.so.6(__libc_start_main+0xf3)[0x1529d3ac24a3]
+[g000:3037930] [ 9] ./build/applications/single_gpu/gcn(_start+0x2e)[0x42371e]
+[g000:3037930] *** End of error message ***
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun noticed that process rank 0 with PID 3037930 on node g000 exited on signal 6 (Aborted).
+--------------------------------------------------------------------------

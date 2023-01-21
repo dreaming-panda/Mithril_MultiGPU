@@ -789,9 +789,9 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
     // printf("calgra Time: %.3f(s)\n",calgra_time);
     // printf("cf Time: %.3f(s)\n",cf_time);
     // printf("cb Time: %.3f(s)\n",cb_time);
-    // printf("Highest validation acc: %.4f\n", highest_valid_acc);
-    // printf("Target test acc: %.4f\n", target_test_acc);
-    // printf("Epochs to reach the target acc: %d\n", epoch_to_reach_the_target_acc);
+    printf("Highest validation acc: %.4f\n", highest_valid_acc);
+    printf("Target test acc: %.4f\n", target_test_acc);
+    printf("Epochs to reach the target acc: %d\n", epoch_to_reach_the_target_acc);
     // releasing the resource of all tensors
     for (Operator * op: operators) {
         assert(op != NULL);
