@@ -1,4 +1,5 @@
 #include<cuda/cuda_single_cpu_engine.h>
+#include<cuda/cuda_weight_manager.h>
 #include "application.h"
 #include "engine.h"
 #include "utilities.h"
@@ -418,16 +419,23 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     }
 
     // initialize the weight tensors
+    std::vector<WeightOperator*> weight_ops;
     for (Operator * op: operators) {
         if (op->get_type() == OPERATOR_WEIGHT) {
             assert(op->get_num_output_tensors() == 1);
             init_weight_tensor(op->get_output_tensor(0));
+            weight_ops.push_back((WeightOperator*) op);
         }
         if (op->get_type() == OPERATOR_IDEN) {
             assert(op->get_num_output_tensors() == 1);
             init_identity_tensor(op->get_output_tensor(0));
         }
     }
+    // ininialize the weight check pointing 
+    assert(num_epoch != -1);
+    WeightDumper * weight_dumper = new WeightDumper(
+            num_epoch / 10 + 2, "checkpointed_weights", weight_ops
+            );
     printf("*** Done preparing the weight tensor.\n");
 
     FILE * weight_fout = NULL;
@@ -457,7 +465,6 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     //printf("num_epoch: %d\n", num_epoch);
     int epoch;
     for (epoch = 0; epoch < num_epoch || num_epoch == -1; ++ epoch) {
-        printf("    Epoch %d:", epoch);
         double epoch_time = - get_time();
 
         double cf = -get_time();
@@ -494,7 +501,18 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         if (epoch >= num_warmups) {
             total_runtime += epoch_time;
         }
-        printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+        if ((epoch + 1) % 10 == 0) {
+            printf("    Epoch %d:", epoch);
+            printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+            // dump the weights
+            weight_dumper.next_version();
+            for (WeightOperator * op: weight_ops) {
+                Tensor * tensor = op->get_output_tensor(0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                DataType * cuda_data = resource->get_gpu_data();
+                weight_dumper.save_weight(op, cuda_data);
+            }
+        }
 
         if (DUMP_WEGIHTS) {
             fprintf(weight_fout, "Epoch: %d\n", epoch);
@@ -577,6 +595,9 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                 per_op_runtime_[i]
                 );
     }
+
+    weight_dumper.commit_to_file();
+    delete weight_dumper;
 
     return train_accuracy;
 }
