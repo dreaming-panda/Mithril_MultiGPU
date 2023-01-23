@@ -1,5 +1,5 @@
-g003.anvil.rcac.purdue.edu
-Sun Jan 22 20:53:01 2023       
+g000.anvil.rcac.purdue.edu
+Mon Jan 23 14:05:53 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
 |-------------------------------+----------------------+----------------------+
@@ -7,8 +7,8 @@ Sun Jan 22 20:53:01 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA A100-SXM...  On   | 00000000:C1:00.0 Off |                    0 |
-| N/A   36C    P0    53W / 400W |      0MiB / 40536MiB |      0%      Default |
+|   0  NVIDIA A100-SXM...  On   | 00000000:01:00.0 Off |                    0 |
+| N/A   28C    P0    51W / 400W |      0MiB / 40536MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -29,56 +29,56 @@ Currently Loaded Modules:
  
 
 [  4%] Built target context
-[ 17%] Built target parallel
+[ 11%] Built target parallel
 [ 19%] Built target core
 [ 40%] Built target cudahelp
-[ 57%] Built target test_mpi_gpu_model_parallel
-[ 57%] Built target test_cuda_model_parallel
-[ 57%] Built target test_mpi_gpu_hybrid
-[ 73%] Built target test_mpi_model_parallel
-[ 57%] Built target test_mpi_gpu_pipelined_model_parallel
-[ 73%] Built target test_cuda
-[ 73%] Built target test_cuda_pipeline_parallel
-[ 73%] Built target test_cuda_graph
-[ 73%] Built target test_full_structual_graph
-[ 73%] Built target test_mpi_pipelined_model_parallel
-[ 73%] Built target test_nccl_thread
-[ 73%] Built target test_single_node_training
-[ 73%] Built target test_full_non_structual_graph
-[ 78%] Built target test_mpi_structual_graph
-[ 78%] Built target test_graph
-[ 78%] Built target test_mpi_loader
-[ 78%] Built target test_hello_world
-[ 83%] Built target test_single_node_gpu_training
-[ 87%] Built target test_mpi_non_structual_graph
-[ 89%] Built target test_mpi_combined
-[ 89%] Built target test_single_node_fullgpu_training
-[ 87%] Built target estimate_comm_volume
+[ 42%] Built target test_cuda_graph
+[ 50%] Built target test_cuda_model_parallel
+[ 50%] Built target test_mpi_combined
+[ 54%] Built target test_graph
+[ 54%] Built target test_trivial
+[ 65%] Built target test_mpi_gpu_hybrid
+[ 65%] Built target test_mpi_structual_graph
+[ 65%] Built target test_hello_world
+[ 81%] Built target test_cuda
+[ 81%] Built target test_single_node_fullgpu_training
+[ 81%] Built target test_mpi_loader
+[ 81%] Built target test_mpi_gpu_pipelined_model_parallel
+[ 81%] Built target test_full_non_structual_graph
+[ 81%] Built target test_nccl_thread
+[ 81%] Built target test_cuda_pipeline_parallel
+[ 89%] Built target test_mpi_non_structual_graph
+[ 89%] Built target test_mpi_gpu_model_parallel
+[ 89%] Built target estimate_comm_volume
+[ 89%] Built target test_single_node_training
+[ 89%] Built target test_full_structual_graph
+[ 89%] Built target test_single_node_gpu_training
 [ 89%] Built target test_nccl_mpi
-[ 89%] Built target test_trivial
-[ 93%] Built target OSDI2023_SINGLE_NODE_gcn_inference
-[ 95%] Built target test_two_layer_hybrid_parallelism_designer
-[ 98%] Built target OSDI2023_MULTI_NODES_gcn
-[100%] Built target OSDI2023_SINGLE_NODE_gcn
-[100%] Built target OSDI2023_MULTI_NODES_gcn_graph_parallel
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+[ 89%] Built target test_mpi_model_parallel
+[ 89%] Built target test_mpi_pipelined_model_parallel
+[ 95%] Built target OSDI2023_MULTI_NODES_gcn_graph_parallel
+[ 95%] Built target OSDI2023_SINGLE_NODE_gcn_inference
+[ 95%] Built target OSDI2023_SINGLE_NODE_gcn
+[100%] Built target test_two_layer_hybrid_parallelism_designer
+[100%] Built target OSDI2023_MULTI_NODES_gcn
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_mag
 The number of GCN layers: 4
 The number of hidden units: 128
-The number of training epoches: 100
-Learning rate: 0.003000
-Initialized node g003.anvil.rcac.purdue.edu
+The number of training epoches: 1000
+Learning rate: 0.001000
+Initialized node g000.anvil.rcac.purdue.edu
 Building the CSR structure...
-        It takes 1.965 seconds.
+        It takes 0.179 seconds.
 Building the CSC structure...
-        It takes 1.933 seconds.
+        It takes 0.170 seconds.
 Building the Feature Vector...
-        It takes 0.566 seconds.
+        It takes 0.221 seconds.
 Building the Label Vector...
-        It takes 0.309 seconds.
-Number of classes: 47
-Number of feature dimensions: 100
+        It takes 0.535 seconds.
+Number of classes: 349
+Number of feature dimensions: 128
 Dropout: 0.300 
-train nodes 196615, valid nodes 39323, test nodes 2213091
+train nodes 629571, valid nodes 64879, test nodes 41939
 *** Allocating resources for all tensors...
     OP_TYPE: OPERATOR_INPUT
     OP_TYPE: OPERATOR_WEIGHT
@@ -104,72 +104,162 @@ train nodes 196615, valid nodes 39323, test nodes 2213091
 *** Preparing the input tensor...
 *** Done preparing the input tensor.
 *** Preparing the STD tensor...
-    Number of labels: 47
-    Number of vertices: 2449029
+    Number of labels: 349
+    Number of vertices: 736389
 *** Done preparing the STD tensor.
 *** Done preparing the weight tensor.
 
 ****** Start model training... ******
-    Epoch 9:	Loss 1.52178	TrainAcc 0.6187	ValidAcc 0.6136	TestAcc 0.4886
-    Epoch 19:	Loss 0.81432	TrainAcc 0.8296	ValidAcc 0.8240	TestAcc 0.6555
-    Epoch 29:	Loss 0.62348	TrainAcc 0.8607	ValidAcc 0.8557	TestAcc 0.6886
-    Epoch 39:	Loss 0.53741	TrainAcc 0.8753	ValidAcc 0.8700	TestAcc 0.7035
-    Epoch 49:	Loss 0.48703	TrainAcc 0.8843	ValidAcc 0.8780	TestAcc 0.7150
-    Epoch 59:	Loss 0.45632	TrainAcc 0.8894	ValidAcc 0.8824	TestAcc 0.7218
-    Epoch 69:	Loss 0.43397	TrainAcc 0.8932	ValidAcc 0.8863	TestAcc 0.7282
-    Epoch 79:	Loss 0.41762	TrainAcc 0.8958	ValidAcc 0.8891	TestAcc 0.7345
-    Epoch 89:	Loss 0.40571	TrainAcc 0.8988	ValidAcc 0.8914	TestAcc 0.7389
-    Epoch 99:	Loss 0.39548	TrainAcc 0.9005	ValidAcc 0.8939	TestAcc 0.7426
+    Epoch 9:	Loss 5.40085	TrainAcc 0.0344	ValidAcc 0.0262	TestAcc 0.0052
+    Epoch 19:	Loss 5.03815	TrainAcc 0.0692	ValidAcc 0.0765	TestAcc 0.0779
+    Epoch 29:	Loss 4.82172	TrainAcc 0.0944	ValidAcc 0.0949	TestAcc 0.0814
+    Epoch 39:	Loss 4.49254	TrainAcc 0.1317	ValidAcc 0.1111	TestAcc 0.1876
+    Epoch 49:	Loss 4.16579	TrainAcc 0.1527	ValidAcc 0.1392	TestAcc 0.2191
+    Epoch 59:	Loss 3.87606	TrainAcc 0.1705	ValidAcc 0.1899	TestAcc 0.2158
+    Epoch 69:	Loss 3.68126	TrainAcc 0.1884	ValidAcc 0.1971	TestAcc 0.2138
+    Epoch 79:	Loss 3.54260	TrainAcc 0.2022	ValidAcc 0.2021	TestAcc 0.2339
+    Epoch 89:	Loss 3.42946	TrainAcc 0.2151	ValidAcc 0.2100	TestAcc 0.2434
+    Epoch 99:	Loss 3.34145	TrainAcc 0.2254	ValidAcc 0.2140	TestAcc 0.2576
+    Epoch 109:	Loss 3.27112	TrainAcc 0.2331	ValidAcc 0.2193	TestAcc 0.2574
+    Epoch 119:	Loss 3.21326	TrainAcc 0.2407	ValidAcc 0.2252	TestAcc 0.2618
+    Epoch 129:	Loss 3.16806	TrainAcc 0.2459	ValidAcc 0.2256	TestAcc 0.2669
+    Epoch 139:	Loss 3.13131	TrainAcc 0.2512	ValidAcc 0.2321	TestAcc 0.2822
+    Epoch 149:	Loss 3.10198	TrainAcc 0.2539	ValidAcc 0.2294	TestAcc 0.2789
+    Epoch 159:	Loss 3.07791	TrainAcc 0.2570	ValidAcc 0.2321	TestAcc 0.2865
+    Epoch 169:	Loss 3.05578	TrainAcc 0.2596	ValidAcc 0.2322	TestAcc 0.2872
+    Epoch 179:	Loss 3.03800	TrainAcc 0.2629	ValidAcc 0.2319	TestAcc 0.2869
+    Epoch 189:	Loss 3.01867	TrainAcc 0.2643	ValidAcc 0.2361	TestAcc 0.2971
+    Epoch 199:	Loss 3.00290	TrainAcc 0.2666	ValidAcc 0.2363	TestAcc 0.2914
+    Epoch 209:	Loss 2.98709	TrainAcc 0.2692	ValidAcc 0.2350	TestAcc 0.2918
+    Epoch 219:	Loss 2.97140	TrainAcc 0.2719	ValidAcc 0.2357	TestAcc 0.2980
+    Epoch 229:	Loss 2.95850	TrainAcc 0.2733	ValidAcc 0.2393	TestAcc 0.2992
+    Epoch 239:	Loss 2.94606	TrainAcc 0.2739	ValidAcc 0.2402	TestAcc 0.3012
+    Epoch 249:	Loss 2.93267	TrainAcc 0.2761	ValidAcc 0.2404	TestAcc 0.3009
+    Epoch 259:	Loss 2.91980	TrainAcc 0.2777	ValidAcc 0.2423	TestAcc 0.3053
+    Epoch 269:	Loss 2.90800	TrainAcc 0.2789	ValidAcc 0.2444	TestAcc 0.3082
+    Epoch 279:	Loss 2.89682	TrainAcc 0.2807	ValidAcc 0.2453	TestAcc 0.3045
+    Epoch 289:	Loss 2.88541	TrainAcc 0.2823	ValidAcc 0.2467	TestAcc 0.3076
+    Epoch 299:	Loss 2.87634	TrainAcc 0.2826	ValidAcc 0.2460	TestAcc 0.3080
+    Epoch 309:	Loss 2.86530	TrainAcc 0.2842	ValidAcc 0.2472	TestAcc 0.3067
+    Epoch 319:	Loss 2.85644	TrainAcc 0.2862	ValidAcc 0.2487	TestAcc 0.3130
+    Epoch 329:	Loss 2.84805	TrainAcc 0.2881	ValidAcc 0.2505	TestAcc 0.3122
+    Epoch 339:	Loss 2.83942	TrainAcc 0.2892	ValidAcc 0.2509	TestAcc 0.3182
+    Epoch 349:	Loss 2.83131	TrainAcc 0.2900	ValidAcc 0.2502	TestAcc 0.3137
+    Epoch 359:	Loss 2.82391	TrainAcc 0.2915	ValidAcc 0.2533	TestAcc 0.3176
+    Epoch 369:	Loss 2.81810	TrainAcc 0.2919	ValidAcc 0.2556	TestAcc 0.3220
+    Epoch 379:	Loss 2.81101	TrainAcc 0.2927	ValidAcc 0.2527	TestAcc 0.3168
+    Epoch 389:	Loss 2.80371	TrainAcc 0.2950	ValidAcc 0.2552	TestAcc 0.3193
+    Epoch 399:	Loss 2.79769	TrainAcc 0.2958	ValidAcc 0.2559	TestAcc 0.3236
+    Epoch 409:	Loss 2.79396	TrainAcc 0.2963	ValidAcc 0.2563	TestAcc 0.3202
+    Epoch 419:	Loss 2.78729	TrainAcc 0.2968	ValidAcc 0.2542	TestAcc 0.3214
+    Epoch 429:	Loss 2.78224	TrainAcc 0.2983	ValidAcc 0.2560	TestAcc 0.3254
+    Epoch 439:	Loss 2.77703	TrainAcc 0.2990	ValidAcc 0.2585	TestAcc 0.3241
+    Epoch 449:	Loss 2.77307	TrainAcc 0.2993	ValidAcc 0.2578	TestAcc 0.3214
+    Epoch 459:	Loss 2.76848	TrainAcc 0.3002	ValidAcc 0.2601	TestAcc 0.3284
+    Epoch 469:	Loss 2.76475	TrainAcc 0.3005	ValidAcc 0.2611	TestAcc 0.3295
+    Epoch 479:	Loss 2.76137	TrainAcc 0.3013	ValidAcc 0.2594	TestAcc 0.3256
+    Epoch 489:	Loss 2.75511	TrainAcc 0.3024	ValidAcc 0.2595	TestAcc 0.3258
+    Epoch 499:	Loss 2.75324	TrainAcc 0.3034	ValidAcc 0.2610	TestAcc 0.3287
+    Epoch 509:	Loss 2.74912	TrainAcc 0.3033	ValidAcc 0.2612	TestAcc 0.3306
+    Epoch 519:	Loss 2.74459	TrainAcc 0.3043	ValidAcc 0.2623	TestAcc 0.3275
+    Epoch 529:	Loss 2.74154	TrainAcc 0.3051	ValidAcc 0.2623	TestAcc 0.3320
+    Epoch 539:	Loss 2.73830	TrainAcc 0.3060	ValidAcc 0.2632	TestAcc 0.3316
+    Epoch 549:	Loss 2.73459	TrainAcc 0.3058	ValidAcc 0.2640	TestAcc 0.3339
+    Epoch 559:	Loss 2.73175	TrainAcc 0.3067	ValidAcc 0.2650	TestAcc 0.3342
+    Epoch 569:	Loss 2.72978	TrainAcc 0.3064	ValidAcc 0.2663	TestAcc 0.3369
+    Epoch 579:	Loss 2.72490	TrainAcc 0.3072	ValidAcc 0.2656	TestAcc 0.3369
+    Epoch 589:	Loss 2.72148	TrainAcc 0.3077	ValidAcc 0.2652	TestAcc 0.3369
+    Epoch 599:	Loss 2.71871	TrainAcc 0.3085	ValidAcc 0.2653	TestAcc 0.3348
+    Epoch 609:	Loss 2.71683	TrainAcc 0.3084	ValidAcc 0.2671	TestAcc 0.3382
+    Epoch 619:	Loss 2.71488	TrainAcc 0.3092	ValidAcc 0.2678	TestAcc 0.3402
+    Epoch 629:	Loss 2.71146	TrainAcc 0.3096	ValidAcc 0.2670	TestAcc 0.3414
+    Epoch 639:	Loss 2.70782	TrainAcc 0.3110	ValidAcc 0.2697	TestAcc 0.3421
+    Epoch 649:	Loss 2.70537	TrainAcc 0.3109	ValidAcc 0.2687	TestAcc 0.3437
+    Epoch 659:	Loss 2.70273	TrainAcc 0.3112	ValidAcc 0.2676	TestAcc 0.3400
+    Epoch 669:	Loss 2.70065	TrainAcc 0.3115	ValidAcc 0.2682	TestAcc 0.3402
+    Epoch 679:	Loss 2.69984	TrainAcc 0.3116	ValidAcc 0.2693	TestAcc 0.3419
+    Epoch 689:	Loss 2.69511	TrainAcc 0.3125	ValidAcc 0.2697	TestAcc 0.3406
+    Epoch 699:	Loss 2.69341	TrainAcc 0.3133	ValidAcc 0.2712	TestAcc 0.3432
+    Epoch 709:	Loss 2.69126	TrainAcc 0.3135	ValidAcc 0.2712	TestAcc 0.3426
+    Epoch 719:	Loss 2.68908	TrainAcc 0.3139	ValidAcc 0.2715	TestAcc 0.3434
+    Epoch 729:	Loss 2.68800	TrainAcc 0.3137	ValidAcc 0.2726	TestAcc 0.3438
+    Epoch 739:	Loss 2.68421	TrainAcc 0.3135	ValidAcc 0.2724	TestAcc 0.3431
+    Epoch 749:	Loss 2.68215	TrainAcc 0.3141	ValidAcc 0.2710	TestAcc 0.3468
+    Epoch 759:	Loss 2.68069	TrainAcc 0.3143	ValidAcc 0.2715	TestAcc 0.3471
+    Epoch 769:	Loss 2.67837	TrainAcc 0.3158	ValidAcc 0.2723	TestAcc 0.3456
+    Epoch 779:	Loss 2.67747	TrainAcc 0.3160	ValidAcc 0.2739	TestAcc 0.3457
+    Epoch 789:	Loss 2.67461	TrainAcc 0.3153	ValidAcc 0.2731	TestAcc 0.3452
+    Epoch 799:	Loss 2.67260	TrainAcc 0.3168	ValidAcc 0.2713	TestAcc 0.3441
+    Epoch 809:	Loss 2.67060	TrainAcc 0.3162	ValidAcc 0.2729	TestAcc 0.3482
+    Epoch 819:	Loss 2.66871	TrainAcc 0.3163	ValidAcc 0.2718	TestAcc 0.3455
+    Epoch 829:	Loss 2.66764	TrainAcc 0.3174	ValidAcc 0.2741	TestAcc 0.3461
+    Epoch 839:	Loss 2.66524	TrainAcc 0.3179	ValidAcc 0.2748	TestAcc 0.3468
+    Epoch 849:	Loss 2.66316	TrainAcc 0.3175	ValidAcc 0.2750	TestAcc 0.3487
+    Epoch 859:	Loss 2.65983	TrainAcc 0.3185	ValidAcc 0.2740	TestAcc 0.3492
+    Epoch 869:	Loss 2.65955	TrainAcc 0.3177	ValidAcc 0.2746	TestAcc 0.3477
+    Epoch 879:	Loss 2.65812	TrainAcc 0.3182	ValidAcc 0.2743	TestAcc 0.3430
+    Epoch 889:	Loss 2.65648	TrainAcc 0.3192	ValidAcc 0.2748	TestAcc 0.3486
+    Epoch 899:	Loss 2.65413	TrainAcc 0.3191	ValidAcc 0.2748	TestAcc 0.3490
+    Epoch 909:	Loss 2.65284	TrainAcc 0.3192	ValidAcc 0.2759	TestAcc 0.3466
+    Epoch 919:	Loss 2.65034	TrainAcc 0.3196	ValidAcc 0.2754	TestAcc 0.3483
+    Epoch 929:	Loss 2.64919	TrainAcc 0.3197	ValidAcc 0.2763	TestAcc 0.3484
+    Epoch 939:	Loss 2.64756	TrainAcc 0.3200	ValidAcc 0.2771	TestAcc 0.3483
+    Epoch 949:	Loss 2.64613	TrainAcc 0.3206	ValidAcc 0.2761	TestAcc 0.3510
+    Epoch 959:	Loss 2.64467	TrainAcc 0.3202	ValidAcc 0.2767	TestAcc 0.3495
+    Epoch 969:	Loss 2.64190	TrainAcc 0.3211	ValidAcc 0.2791	TestAcc 0.3501
+    Epoch 979:	Loss 2.64150	TrainAcc 0.3208	ValidAcc 0.2772	TestAcc 0.3497
+    Epoch 989:	Loss 2.63953	TrainAcc 0.3218	ValidAcc 0.2781	TestAcc 0.3491
+    Epoch 999:	Loss 2.63830	TrainAcc 0.3216	ValidAcc 0.2794	TestAcc 0.3506
 
-Average per-epoch runtime: 0.236 (s)
-Total Time: 22.622(s)
-loss Time: 0.065(s)
-calacc Time: 0.586(s)
-calgra Time: 0.471(s)
-cf Time: 10.013(s)
-cb Time: 12.750(s)
-Highest validation acc: 0.8939
-Target test acc: 0.7426
-Epochs to reach the target acc: 100
+Average per-epoch runtime: 0.190 (s)
+Total Time: 189.303(s)
+loss Time: 10.924(s)
+calacc Time: 63.847(s)
+calgra Time: 46.857(s)
+cf Time: 27.133(s)
+cb Time: 41.536(s)
+Highest validation acc: 0.2796
+Target test acc: 0.3509
+Epochs to reach the target acc: 978
 The runtime of each operator:
 	Op 0 (OPERATOR_INPUT),	Rumtime: 0.000000 s
 	Op 1 (OPERATOR_WEIGHT),	Rumtime: 0.000000 s
-	Op 2 (OPERATOR_MATMUL),	Rumtime: 1.224066 s
-	Op 3 (OPERATOR_AGGREGATION),	Rumtime: 3.360200 s
-	Op 4 (OPERATOR_RELU),	Rumtime: 0.553570 s
-	Op 5 (OPERATOR_DROPOUT),	Rumtime: 0.410386 s
-	Op 6 (OPERATOR_WEIGHT),	Rumtime: 0.000014 s
-	Op 7 (OPERATOR_MATMUL),	Rumtime: 1.301857 s
-	Op 8 (OPERATOR_AGGREGATION),	Rumtime: 3.356832 s
-	Op 9 (OPERATOR_RELU),	Rumtime: 0.552903 s
-	Op 10 (OPERATOR_DROPOUT),	Rumtime: 0.409500 s
-	Op 11 (OPERATOR_WEIGHT),	Rumtime: 0.000008 s
-	Op 12 (OPERATOR_MATMUL),	Rumtime: 1.300647 s
-	Op 13 (OPERATOR_AGGREGATION),	Rumtime: 3.355983 s
-	Op 14 (OPERATOR_RELU),	Rumtime: 0.552572 s
-	Op 15 (OPERATOR_DROPOUT),	Rumtime: 0.409281 s
-	Op 16 (OPERATOR_WEIGHT),	Rumtime: 0.000006 s
-	Op 17 (OPERATOR_MATMUL),	Rumtime: 0.634820 s
-	Op 18 (OPERATOR_AGGREGATION),	Rumtime: 2.751108 s
-	Op 19 (OPERATOR_SOFTMAX),	Rumtime: 1.478213 s
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+	Op 2 (OPERATOR_MATMUL),	Rumtime: 4.066553 s
+	Op 3 (OPERATOR_AGGREGATION),	Rumtime: 3.798852 s
+	Op 4 (OPERATOR_RELU),	Rumtime: 1.669472 s
+	Op 5 (OPERATOR_DROPOUT),	Rumtime: 1.222840 s
+	Op 6 (OPERATOR_WEIGHT),	Rumtime: 0.000076 s
+	Op 7 (OPERATOR_MATMUL),	Rumtime: 4.067757 s
+	Op 8 (OPERATOR_AGGREGATION),	Rumtime: 3.798523 s
+	Op 9 (OPERATOR_RELU),	Rumtime: 1.668352 s
+	Op 10 (OPERATOR_DROPOUT),	Rumtime: 1.222016 s
+	Op 11 (OPERATOR_WEIGHT),	Rumtime: 0.000076 s
+	Op 12 (OPERATOR_MATMUL),	Rumtime: 4.064056 s
+	Op 13 (OPERATOR_AGGREGATION),	Rumtime: 3.798182 s
+	Op 14 (OPERATOR_RELU),	Rumtime: 1.672025 s
+	Op 15 (OPERATOR_DROPOUT),	Rumtime: 1.224880 s
+	Op 16 (OPERATOR_WEIGHT),	Rumtime: 0.000088 s
+	Op 17 (OPERATOR_MATMUL),	Rumtime: 11.275893 s
+	Op 18 (OPERATOR_AGGREGATION),	Rumtime: 12.567221 s
+	Op 19 (OPERATOR_SOFTMAX),	Rumtime: 7.888270 s
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_mag
 The number of GCN layers: 4
 The number of hidden units: 128
 The number of training epoches: 0
 Learning rate: 0.000000
-Initialized node g003.anvil.rcac.purdue.edu
+Initialized node g000.anvil.rcac.purdue.edu
 Building the CSR structure...
-        It takes 1.951 seconds.
+        It takes 0.183 seconds.
 Building the CSC structure...
-        It takes 1.901 seconds.
+        It takes 0.173 seconds.
 Building the Feature Vector...
-        It takes 0.574 seconds.
+        It takes 0.220 seconds.
 Building the Label Vector...
-        It takes 0.315 seconds.
-Number of classes: 47
-Number of feature dimensions: 100
+        It takes 0.533 seconds.
+Number of classes: 349
+Number of feature dimensions: 128
 Dropout: 0.000 
-train nodes 196615, valid nodes 39323, test nodes 2213091
+train nodes 629571, valid nodes 64879, test nodes 41939
 *** Allocating resources for all tensors...
     OP_TYPE: OPERATOR_INPUT
     OP_TYPE: OPERATOR_WEIGHT
@@ -195,17 +285,107 @@ train nodes 196615, valid nodes 39323, test nodes 2213091
 *** Preparing the input tensor...
 *** Done preparing the input tensor.
 *** Preparing the STD tensor...
-    Number of labels: 47
-    Number of vertices: 2449029
+    Number of labels: 349
+    Number of vertices: 736389
 *** Done preparing the STD tensor.
-Version 0	TrainAcc 0.6604	ValidAcc 0.6548	TestAcc 0.5260
-Version 1	TrainAcc 0.8312	ValidAcc 0.8288	TestAcc 0.6686
-Version 2	TrainAcc 0.8625	ValidAcc 0.8571	TestAcc 0.6977
-Version 3	TrainAcc 0.8780	ValidAcc 0.8723	TestAcc 0.7110
-Version 4	TrainAcc 0.8856	ValidAcc 0.8795	TestAcc 0.7218
-Version 5	TrainAcc 0.8903	ValidAcc 0.8839	TestAcc 0.7301
-Version 6	TrainAcc 0.8937	ValidAcc 0.8877	TestAcc 0.7369
-Version 7	TrainAcc 0.8970	ValidAcc 0.8912	TestAcc 0.7440
-Version 8	TrainAcc 0.8992	ValidAcc 0.8935	TestAcc 0.7484
-Version 9	TrainAcc 0.9015	ValidAcc 0.8951	TestAcc 0.7532
-Version 9 achieved the highest validation accuracy 0.8951 (test accuracy: 0.7532)
+Version 0	TrainAcc 0.0356	ValidAcc 0.0275	TestAcc 0.0057
+Version 1	TrainAcc 0.0822	ValidAcc 0.0899	TestAcc 0.0796
+Version 2	TrainAcc 0.1005	ValidAcc 0.0984	TestAcc 0.0820
+Version 3	TrainAcc 0.1381	ValidAcc 0.1135	TestAcc 0.1888
+Version 4	TrainAcc 0.1594	ValidAcc 0.1500	TestAcc 0.2200
+Version 5	TrainAcc 0.1799	ValidAcc 0.1976	TestAcc 0.2021
+Version 6	TrainAcc 0.2005	ValidAcc 0.2035	TestAcc 0.2078
+Version 7	TrainAcc 0.2182	ValidAcc 0.2125	TestAcc 0.2392
+Version 8	TrainAcc 0.2314	ValidAcc 0.2212	TestAcc 0.2575
+Version 9	TrainAcc 0.2404	ValidAcc 0.2260	TestAcc 0.2652
+Version 10	TrainAcc 0.2465	ValidAcc 0.2286	TestAcc 0.2701
+Version 11	TrainAcc 0.2536	ValidAcc 0.2336	TestAcc 0.2782
+Version 12	TrainAcc 0.2593	ValidAcc 0.2370	TestAcc 0.2921
+Version 13	TrainAcc 0.2635	ValidAcc 0.2390	TestAcc 0.2992
+Version 14	TrainAcc 0.2666	ValidAcc 0.2404	TestAcc 0.3020
+Version 15	TrainAcc 0.2692	ValidAcc 0.2417	TestAcc 0.3057
+Version 16	TrainAcc 0.2720	ValidAcc 0.2423	TestAcc 0.3055
+Version 17	TrainAcc 0.2742	ValidAcc 0.2433	TestAcc 0.3073
+Version 18	TrainAcc 0.2764	ValidAcc 0.2437	TestAcc 0.3098
+Version 19	TrainAcc 0.2783	ValidAcc 0.2449	TestAcc 0.3109
+Version 20	TrainAcc 0.2800	ValidAcc 0.2466	TestAcc 0.3114
+Version 21	TrainAcc 0.2818	ValidAcc 0.2484	TestAcc 0.3136
+Version 22	TrainAcc 0.2833	ValidAcc 0.2489	TestAcc 0.3129
+Version 23	TrainAcc 0.2850	ValidAcc 0.2500	TestAcc 0.3139
+Version 24	TrainAcc 0.2868	ValidAcc 0.2504	TestAcc 0.3151
+Version 25	TrainAcc 0.2880	ValidAcc 0.2511	TestAcc 0.3176
+Version 26	TrainAcc 0.2896	ValidAcc 0.2525	TestAcc 0.3176
+Version 27	TrainAcc 0.2915	ValidAcc 0.2541	TestAcc 0.3192
+Version 28	TrainAcc 0.2931	ValidAcc 0.2546	TestAcc 0.3203
+Version 29	TrainAcc 0.2947	ValidAcc 0.2558	TestAcc 0.3202
+Version 30	TrainAcc 0.2964	ValidAcc 0.2574	TestAcc 0.3226
+Version 31	TrainAcc 0.2976	ValidAcc 0.2584	TestAcc 0.3245
+Version 32	TrainAcc 0.2991	ValidAcc 0.2586	TestAcc 0.3254
+Version 33	TrainAcc 0.3000	ValidAcc 0.2580	TestAcc 0.3256
+Version 34	TrainAcc 0.3013	ValidAcc 0.2603	TestAcc 0.3284
+Version 35	TrainAcc 0.3026	ValidAcc 0.2618	TestAcc 0.3296
+Version 36	TrainAcc 0.3036	ValidAcc 0.2620	TestAcc 0.3298
+Version 37	TrainAcc 0.3045	ValidAcc 0.2620	TestAcc 0.3319
+Version 38	TrainAcc 0.3055	ValidAcc 0.2635	TestAcc 0.3329
+Version 39	TrainAcc 0.3065	ValidAcc 0.2650	TestAcc 0.3343
+Version 40	TrainAcc 0.3073	ValidAcc 0.2645	TestAcc 0.3341
+Version 41	TrainAcc 0.3082	ValidAcc 0.2651	TestAcc 0.3362
+Version 42	TrainAcc 0.3089	ValidAcc 0.2661	TestAcc 0.3375
+Version 43	TrainAcc 0.3097	ValidAcc 0.2667	TestAcc 0.3376
+Version 44	TrainAcc 0.3107	ValidAcc 0.2677	TestAcc 0.3371
+Version 45	TrainAcc 0.3112	ValidAcc 0.2677	TestAcc 0.3399
+Version 46	TrainAcc 0.3118	ValidAcc 0.2682	TestAcc 0.3402
+Version 47	TrainAcc 0.3123	ValidAcc 0.2687	TestAcc 0.3404
+Version 48	TrainAcc 0.3130	ValidAcc 0.2691	TestAcc 0.3410
+Version 49	TrainAcc 0.3135	ValidAcc 0.2696	TestAcc 0.3426
+Version 50	TrainAcc 0.3141	ValidAcc 0.2700	TestAcc 0.3428
+Version 51	TrainAcc 0.3149	ValidAcc 0.2706	TestAcc 0.3422
+Version 52	TrainAcc 0.3152	ValidAcc 0.2710	TestAcc 0.3440
+Version 53	TrainAcc 0.3157	ValidAcc 0.2715	TestAcc 0.3449
+Version 54	TrainAcc 0.3161	ValidAcc 0.2723	TestAcc 0.3454
+Version 55	TrainAcc 0.3167	ValidAcc 0.2728	TestAcc 0.3457
+Version 56	TrainAcc 0.3172	ValidAcc 0.2729	TestAcc 0.3467
+Version 57	TrainAcc 0.3178	ValidAcc 0.2737	TestAcc 0.3473
+Version 58	TrainAcc 0.3185	ValidAcc 0.2745	TestAcc 0.3476
+Version 59	TrainAcc 0.3185	ValidAcc 0.2743	TestAcc 0.3483
+Version 60	TrainAcc 0.3191	ValidAcc 0.2748	TestAcc 0.3481
+Version 61	TrainAcc 0.3196	ValidAcc 0.2752	TestAcc 0.3499
+Version 62	TrainAcc 0.3200	ValidAcc 0.2756	TestAcc 0.3502
+Version 63	TrainAcc 0.3204	ValidAcc 0.2760	TestAcc 0.3511
+Version 64	TrainAcc 0.3207	ValidAcc 0.2766	TestAcc 0.3513
+Version 65	TrainAcc 0.3213	ValidAcc 0.2769	TestAcc 0.3522
+Version 66	TrainAcc 0.3217	ValidAcc 0.2773	TestAcc 0.3525
+Version 67	TrainAcc 0.3220	ValidAcc 0.2775	TestAcc 0.3526
+Version 68	TrainAcc 0.3224	ValidAcc 0.2776	TestAcc 0.3534
+Version 69	TrainAcc 0.3229	ValidAcc 0.2780	TestAcc 0.3528
+Version 70	TrainAcc 0.3231	ValidAcc 0.2782	TestAcc 0.3539
+Version 71	TrainAcc 0.3234	ValidAcc 0.2787	TestAcc 0.3540
+Version 72	TrainAcc 0.3237	ValidAcc 0.2786	TestAcc 0.3546
+Version 73	TrainAcc 0.3243	ValidAcc 0.2794	TestAcc 0.3545
+Version 74	TrainAcc 0.3246	ValidAcc 0.2793	TestAcc 0.3550
+Version 75	TrainAcc 0.3249	ValidAcc 0.2791	TestAcc 0.3555
+Version 76	TrainAcc 0.3249	ValidAcc 0.2794	TestAcc 0.3558
+Version 77	TrainAcc 0.3255	ValidAcc 0.2797	TestAcc 0.3559
+Version 78	TrainAcc 0.3259	ValidAcc 0.2804	TestAcc 0.3556
+Version 79	TrainAcc 0.3261	ValidAcc 0.2809	TestAcc 0.3565
+Version 80	TrainAcc 0.3262	ValidAcc 0.2803	TestAcc 0.3571
+Version 81	TrainAcc 0.3266	ValidAcc 0.2810	TestAcc 0.3566
+Version 82	TrainAcc 0.3272	ValidAcc 0.2815	TestAcc 0.3572
+Version 83	TrainAcc 0.3273	ValidAcc 0.2810	TestAcc 0.3574
+Version 84	TrainAcc 0.3274	ValidAcc 0.2811	TestAcc 0.3574
+Version 85	TrainAcc 0.3280	ValidAcc 0.2825	TestAcc 0.3576
+Version 86	TrainAcc 0.3282	ValidAcc 0.2824	TestAcc 0.3579
+Version 87	TrainAcc 0.3283	ValidAcc 0.2821	TestAcc 0.3582
+Version 88	TrainAcc 0.3284	ValidAcc 0.2820	TestAcc 0.3582
+Version 89	TrainAcc 0.3290	ValidAcc 0.2824	TestAcc 0.3584
+Version 90	TrainAcc 0.3292	ValidAcc 0.2828	TestAcc 0.3586
+Version 91	TrainAcc 0.3293	ValidAcc 0.2829	TestAcc 0.3584
+Version 92	TrainAcc 0.3296	ValidAcc 0.2834	TestAcc 0.3584
+Version 93	TrainAcc 0.3300	ValidAcc 0.2838	TestAcc 0.3591
+Version 94	TrainAcc 0.3303	ValidAcc 0.2839	TestAcc 0.3592
+Version 95	TrainAcc 0.3305	ValidAcc 0.2838	TestAcc 0.3587
+Version 96	TrainAcc 0.3307	ValidAcc 0.2839	TestAcc 0.3589
+Version 97	TrainAcc 0.3310	ValidAcc 0.2843	TestAcc 0.3589
+Version 98	TrainAcc 0.3312	ValidAcc 0.2843	TestAcc 0.3600
+Version 99	TrainAcc 0.3313	ValidAcc 0.2842	TestAcc 0.3593
+Version 98 achieved the highest validation accuracy 0.2843 (test accuracy: 0.3600)

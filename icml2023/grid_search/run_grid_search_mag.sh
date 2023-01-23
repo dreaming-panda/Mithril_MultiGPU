@@ -16,7 +16,7 @@ make -j
 cd ..
 
 date
-echo "Running grid search on Reddit"
-python ./icml2023/grid_search/run.py reddit checkpointed_weights_reddit
+echo "Running grid search on ogbn-mag"
+python ./icml2023/grid_search/run.py ogbn_mag checkpointed_weights_ogbn_mag
 date
 
