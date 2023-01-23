@@ -1,5 +1,5 @@
-g002.anvil.rcac.purdue.edu
-Sun Jan 22 19:42:09 2023       
+g003.anvil.rcac.purdue.edu
+Sun Jan 22 20:53:01 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
 |-------------------------------+----------------------+----------------------+
@@ -8,7 +8,7 @@ Sun Jan 22 19:42:09 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA A100-SXM...  On   | 00000000:C1:00.0 Off |                    0 |
-| N/A   27C    P0    51W / 400W |      0MiB / 40536MiB |      0%      Default |
+| N/A   36C    P0    53W / 400W |      0MiB / 40536MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -29,58 +29,63 @@ Currently Loaded Modules:
  
 
 [  4%] Built target context
-[ 18%] Built target parallel
+[ 17%] Built target parallel
 [ 19%] Built target core
 [ 40%] Built target cudahelp
-[ 42%] Built target test_cuda
-[ 45%] Built target test_mpi_gpu_hybrid
-[ 53%] Built target test_mpi_combined
-[ 55%] Built target test_mpi_structual_graph
-[ 57%] Built target test_cuda_graph
-[ 62%] Built target test_mpi_gpu_pipelined_model_parallel
-[ 64%] Built target test_cuda_model_parallel
-[ 64%] Built target test_trivial
-[ 64%] Built target test_full_structual_graph
-[ 72%] Built target test_mpi_loader
-[ 72%] Built target test_hello_world
-[ 72%] Built target test_mpi_non_structual_graph
-[ 72%] Built target estimate_comm_volume
+[ 57%] Built target test_mpi_gpu_model_parallel
+[ 57%] Built target test_cuda_model_parallel
+[ 57%] Built target test_mpi_gpu_hybrid
+[ 73%] Built target test_mpi_model_parallel
+[ 57%] Built target test_mpi_gpu_pipelined_model_parallel
+[ 73%] Built target test_cuda
 [ 73%] Built target test_cuda_pipeline_parallel
-[ 74%] Built target test_mpi_gpu_model_parallel
-[ 72%] Built target test_nccl_mpi
-[ 75%] Built target test_full_non_structual_graph
-[ 79%] Built target test_graph
-[ 80%] Built target test_single_node_gpu_training
-[ 83%] Built target test_mpi_pipelined_model_parallel
-[ 83%] Built target test_nccl_thread
-[ 85%] Built target test_single_node_training
+[ 73%] Built target test_cuda_graph
+[ 73%] Built target test_full_structual_graph
+[ 73%] Built target test_mpi_pipelined_model_parallel
+[ 73%] Built target test_nccl_thread
+[ 73%] Built target test_single_node_training
+[ 73%] Built target test_full_non_structual_graph
+[ 78%] Built target test_mpi_structual_graph
+[ 78%] Built target test_graph
+[ 78%] Built target test_mpi_loader
+[ 78%] Built target test_hello_world
+[ 83%] Built target test_single_node_gpu_training
+[ 87%] Built target test_mpi_non_structual_graph
+[ 89%] Built target test_mpi_combined
 [ 89%] Built target test_single_node_fullgpu_training
-[ 89%] Built target test_mpi_model_parallel
-[ 92%] Built target OSDI2023_MULTI_NODES_gcn_graph_parallel
-[ 94%] Built target OSDI2023_SINGLE_NODE_gcn_inference
-[ 95%] Built target OSDI2023_MULTI_NODES_gcn
-[ 97%] Built target OSDI2023_SINGLE_NODE_gcn
-[100%] Built target test_two_layer_hybrid_parallelism_designer
+[ 87%] Built target estimate_comm_volume
+[ 89%] Built target test_nccl_mpi
+[ 89%] Built target test_trivial
+[ 93%] Built target OSDI2023_SINGLE_NODE_gcn_inference
+[ 95%] Built target test_two_layer_hybrid_parallelism_designer
+[ 98%] Built target OSDI2023_MULTI_NODES_gcn
+[100%] Built target OSDI2023_SINGLE_NODE_gcn
+[100%] Built target OSDI2023_MULTI_NODES_gcn_graph_parallel
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
-The number of GCN layers: 3
+The number of GCN layers: 4
 The number of hidden units: 128
 The number of training epoches: 100
 Learning rate: 0.003000
-Initialized node g002.anvil.rcac.purdue.edu
+Initialized node g003.anvil.rcac.purdue.edu
 Building the CSR structure...
-        It takes 1.922 seconds.
+        It takes 1.965 seconds.
 Building the CSC structure...
-        It takes 1.889 seconds.
+        It takes 1.933 seconds.
 Building the Feature Vector...
-        It takes 0.572 seconds.
+        It takes 0.566 seconds.
 Building the Label Vector...
-        It takes 0.310 seconds.
+        It takes 0.309 seconds.
 Number of classes: 47
 Number of feature dimensions: 100
 Dropout: 0.300 
 train nodes 196615, valid nodes 39323, test nodes 2213091
 *** Allocating resources for all tensors...
     OP_TYPE: OPERATOR_INPUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
     OP_TYPE: OPERATOR_WEIGHT
     OP_TYPE: OPERATOR_MATMUL
     OP_TYPE: OPERATOR_AGGREGATION
@@ -105,63 +110,73 @@ train nodes 196615, valid nodes 39323, test nodes 2213091
 *** Done preparing the weight tensor.
 
 ****** Start model training... ******
-    Epoch 9:	Loss 1.55486	TrainAcc 0.7042	ValidAcc 0.6980	TestAcc 0.5285
-    Epoch 19:	Loss 0.87481	TrainAcc 0.8226	ValidAcc 0.8173	TestAcc 0.6496
-    Epoch 29:	Loss 0.66867	TrainAcc 0.8591	ValidAcc 0.8528	TestAcc 0.6865
-    Epoch 39:	Loss 0.58305	TrainAcc 0.8735	ValidAcc 0.8677	TestAcc 0.6955
-    Epoch 49:	Loss 0.52748	TrainAcc 0.8817	ValidAcc 0.8752	TestAcc 0.7045
-    Epoch 59:	Loss 0.49329	TrainAcc 0.8852	ValidAcc 0.8797	TestAcc 0.7142
-    Epoch 69:	Loss 0.47016	TrainAcc 0.8886	ValidAcc 0.8822	TestAcc 0.7158
-    Epoch 79:	Loss 0.45287	TrainAcc 0.8920	ValidAcc 0.8846	TestAcc 0.7204
-    Epoch 89:	Loss 0.43978	TrainAcc 0.8937	ValidAcc 0.8874	TestAcc 0.7234
-    Epoch 99:	Loss 0.42880	TrainAcc 0.8959	ValidAcc 0.8889	TestAcc 0.7270
+    Epoch 9:	Loss 1.52178	TrainAcc 0.6187	ValidAcc 0.6136	TestAcc 0.4886
+    Epoch 19:	Loss 0.81432	TrainAcc 0.8296	ValidAcc 0.8240	TestAcc 0.6555
+    Epoch 29:	Loss 0.62348	TrainAcc 0.8607	ValidAcc 0.8557	TestAcc 0.6886
+    Epoch 39:	Loss 0.53741	TrainAcc 0.8753	ValidAcc 0.8700	TestAcc 0.7035
+    Epoch 49:	Loss 0.48703	TrainAcc 0.8843	ValidAcc 0.8780	TestAcc 0.7150
+    Epoch 59:	Loss 0.45632	TrainAcc 0.8894	ValidAcc 0.8824	TestAcc 0.7218
+    Epoch 69:	Loss 0.43397	TrainAcc 0.8932	ValidAcc 0.8863	TestAcc 0.7282
+    Epoch 79:	Loss 0.41762	TrainAcc 0.8958	ValidAcc 0.8891	TestAcc 0.7345
+    Epoch 89:	Loss 0.40571	TrainAcc 0.8988	ValidAcc 0.8914	TestAcc 0.7389
+    Epoch 99:	Loss 0.39548	TrainAcc 0.9005	ValidAcc 0.8939	TestAcc 0.7426
 
-Average per-epoch runtime: 0.176 (s)
-Total Time: 16.941(s)
-loss Time: 0.066(s)
-calacc Time: 0.582(s)
-calgra Time: 0.470(s)
-cf Time: 7.459(s)
-cb Time: 9.340(s)
-Highest validation acc: 0.8894
-Target test acc: 0.7256
-Epochs to reach the target acc: 95
+Average per-epoch runtime: 0.236 (s)
+Total Time: 22.622(s)
+loss Time: 0.065(s)
+calacc Time: 0.586(s)
+calgra Time: 0.471(s)
+cf Time: 10.013(s)
+cb Time: 12.750(s)
+Highest validation acc: 0.8939
+Target test acc: 0.7426
+Epochs to reach the target acc: 100
 The runtime of each operator:
 	Op 0 (OPERATOR_INPUT),	Rumtime: 0.000000 s
 	Op 1 (OPERATOR_WEIGHT),	Rumtime: 0.000000 s
-	Op 2 (OPERATOR_MATMUL),	Rumtime: 1.223439 s
-	Op 3 (OPERATOR_AGGREGATION),	Rumtime: 3.352128 s
-	Op 4 (OPERATOR_RELU),	Rumtime: 0.553442 s
-	Op 5 (OPERATOR_DROPOUT),	Rumtime: 0.411375 s
-	Op 6 (OPERATOR_WEIGHT),	Rumtime: 0.000005 s
-	Op 7 (OPERATOR_MATMUL),	Rumtime: 1.301634 s
-	Op 8 (OPERATOR_AGGREGATION),	Rumtime: 3.351838 s
-	Op 9 (OPERATOR_RELU),	Rumtime: 0.552973 s
-	Op 10 (OPERATOR_DROPOUT),	Rumtime: 0.412036 s
-	Op 11 (OPERATOR_WEIGHT),	Rumtime: 0.000007 s
-	Op 12 (OPERATOR_MATMUL),	Rumtime: 0.636287 s
-	Op 13 (OPERATOR_AGGREGATION),	Rumtime: 2.745340 s
-	Op 14 (OPERATOR_SOFTMAX),	Rumtime: 1.475599 s
+	Op 2 (OPERATOR_MATMUL),	Rumtime: 1.224066 s
+	Op 3 (OPERATOR_AGGREGATION),	Rumtime: 3.360200 s
+	Op 4 (OPERATOR_RELU),	Rumtime: 0.553570 s
+	Op 5 (OPERATOR_DROPOUT),	Rumtime: 0.410386 s
+	Op 6 (OPERATOR_WEIGHT),	Rumtime: 0.000014 s
+	Op 7 (OPERATOR_MATMUL),	Rumtime: 1.301857 s
+	Op 8 (OPERATOR_AGGREGATION),	Rumtime: 3.356832 s
+	Op 9 (OPERATOR_RELU),	Rumtime: 0.552903 s
+	Op 10 (OPERATOR_DROPOUT),	Rumtime: 0.409500 s
+	Op 11 (OPERATOR_WEIGHT),	Rumtime: 0.000008 s
+	Op 12 (OPERATOR_MATMUL),	Rumtime: 1.300647 s
+	Op 13 (OPERATOR_AGGREGATION),	Rumtime: 3.355983 s
+	Op 14 (OPERATOR_RELU),	Rumtime: 0.552572 s
+	Op 15 (OPERATOR_DROPOUT),	Rumtime: 0.409281 s
+	Op 16 (OPERATOR_WEIGHT),	Rumtime: 0.000006 s
+	Op 17 (OPERATOR_MATMUL),	Rumtime: 0.634820 s
+	Op 18 (OPERATOR_AGGREGATION),	Rumtime: 2.751108 s
+	Op 19 (OPERATOR_SOFTMAX),	Rumtime: 1.478213 s
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
-The number of GCN layers: 3
+The number of GCN layers: 4
 The number of hidden units: 128
 The number of training epoches: 0
 Learning rate: 0.000000
-Initialized node g002.anvil.rcac.purdue.edu
+Initialized node g003.anvil.rcac.purdue.edu
 Building the CSR structure...
-        It takes 1.891 seconds.
+        It takes 1.951 seconds.
 Building the CSC structure...
-        It takes 1.857 seconds.
+        It takes 1.901 seconds.
 Building the Feature Vector...
-        It takes 0.569 seconds.
+        It takes 0.574 seconds.
 Building the Label Vector...
-        It takes 0.311 seconds.
+        It takes 0.315 seconds.
 Number of classes: 47
 Number of feature dimensions: 100
 Dropout: 0.000 
 train nodes 196615, valid nodes 39323, test nodes 2213091
 *** Allocating resources for all tensors...
     OP_TYPE: OPERATOR_INPUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
     OP_TYPE: OPERATOR_WEIGHT
     OP_TYPE: OPERATOR_MATMUL
     OP_TYPE: OPERATOR_AGGREGATION
@@ -183,13 +198,14 @@ train nodes 196615, valid nodes 39323, test nodes 2213091
     Number of labels: 47
     Number of vertices: 2449029
 *** Done preparing the STD tensor.
-Version 0	TrainAcc 0.7123	ValidAcc 0.7049	TestAcc 0.5463
-Version 1	TrainAcc 0.8271	ValidAcc 0.8228	TestAcc 0.6580
-Version 2	TrainAcc 0.8605	ValidAcc 0.8559	TestAcc 0.6953
-Version 3	TrainAcc 0.8749	ValidAcc 0.8696	TestAcc 0.7032
-Version 4	TrainAcc 0.8826	ValidAcc 0.8766	TestAcc 0.7102
-Version 5	TrainAcc 0.8868	ValidAcc 0.8814	TestAcc 0.7210
-Version 6	TrainAcc 0.8900	ValidAcc 0.8835	TestAcc 0.7235
-Version 7	TrainAcc 0.8928	ValidAcc 0.8860	TestAcc 0.7271
-Version 8	TrainAcc 0.8949	ValidAcc 0.8882	TestAcc 0.7312
-Version 9	TrainAcc 0.8972	ValidAcc 0.8903	TestAcc 0.7347
+Version 0	TrainAcc 0.6604	ValidAcc 0.6548	TestAcc 0.5260
+Version 1	TrainAcc 0.8312	ValidAcc 0.8288	TestAcc 0.6686
+Version 2	TrainAcc 0.8625	ValidAcc 0.8571	TestAcc 0.6977
+Version 3	TrainAcc 0.8780	ValidAcc 0.8723	TestAcc 0.7110
+Version 4	TrainAcc 0.8856	ValidAcc 0.8795	TestAcc 0.7218
+Version 5	TrainAcc 0.8903	ValidAcc 0.8839	TestAcc 0.7301
+Version 6	TrainAcc 0.8937	ValidAcc 0.8877	TestAcc 0.7369
+Version 7	TrainAcc 0.8970	ValidAcc 0.8912	TestAcc 0.7440
+Version 8	TrainAcc 0.8992	ValidAcc 0.8935	TestAcc 0.7484
+Version 9	TrainAcc 0.9015	ValidAcc 0.8951	TestAcc 0.7532
+Version 9 achieved the highest validation accuracy 0.8951 (test accuracy: 0.7532)

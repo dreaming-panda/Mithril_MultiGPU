@@ -78,7 +78,8 @@ int main(int argc, char ** argv) {
     desc.add_options()
         ("graph", po::value<std::string>()->required(), "The directory of the graph dataset.")
         ("layers", po::value<int>()->required(), "The number of GCN layers.")
-        ("hunits", po::value<int>()->required(), "The number of hidden units.");
+        ("hunits", po::value<int>()->required(), "The number of hidden units.")
+        ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The weights checkpoint file.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -101,6 +102,7 @@ int main(int argc, char ** argv) {
     double learning_rate = 0;
     double weight_decay = 0;
     double dropout_rate = 0;
+    std::string weight_file = vm["weight_file"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -195,7 +197,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_lr_scheduler(lr_scheduler);
 
     // train the model
-    execution_engine->model_inference(gcn, "checkpointed_weights");
+    execution_engine->model_inference(gcn, weight_file);
 
     // destroy the model
     delete gcn;

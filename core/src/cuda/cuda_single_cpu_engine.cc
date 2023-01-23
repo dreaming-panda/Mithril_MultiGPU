@@ -435,7 +435,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     // ininialize the weight check pointing 
     assert(num_epoch != -1);
     WeightDumper * weight_dumper = new WeightDumper(
-            num_epoch / 10 + 2, "checkpointed_weights", weight_ops
+            num_epoch / 10 + 2, weight_file_, weight_ops
             );
     printf("*** Done preparing the weight tensor.\n");
 
@@ -672,6 +672,9 @@ void SingleNodeExecutionEngineGPU::model_inference(AbstractApplication * applica
     }
 
     int num_versions = WeightLoader::get_num_versions(weight_file);
+    double highest_valid_acc = 0;
+    double target_test_acc = 0;
+    int version_highest_valid_acc = 0;
     for (int version = 0; version < num_versions; ++ version) {
         WeightLoader::load_weight_ops(weight_file, weights_data, version);
         int idx = 0;
@@ -689,7 +692,14 @@ void SingleNodeExecutionEngineGPU::model_inference(AbstractApplication * applica
         double valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
         double test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
         printf("Version %d\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", version, train_accuracy, valid_accuracy, test_accuracy);
+        if (valid_accuracy > highest_valid_acc) {
+            highest_valid_acc = valid_accuracy;
+            target_test_acc = test_accuracy;
+            version_highest_valid_acc = version;
+        }
     }
+    printf("Version %d achieved the highest validation accuracy %.4f (test accuracy: %.4f)\n",
+            version_highest_valid_acc, highest_valid_acc, target_test_acc);
 
     // releasing the resource of all tensors
     for (Operator * op: operators) {

@@ -82,7 +82,8 @@ int main(int argc, char ** argv) {
         ("epoch", po::value<int>()->required(), "The number of epoches (-1: train until converge).")
         ("lr", po::value<double>()->required(), "The learning rate.")
         ("decay", po::value<double>()->required(), "Weight decay.")
-        ("dropout", po::value<double>()->required(), "Dropout rate.");
+        ("dropout", po::value<double>()->required(), "Dropout rate.")
+        ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The weights checkpoint file.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -105,6 +106,7 @@ int main(int argc, char ** argv) {
     double learning_rate = vm["lr"].as<double>();
     double weight_decay = vm["decay"].as<double>();
     double dropout_rate = vm["dropout"].as<double>();
+    std::string weight_file = vm["weight_file"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -197,6 +199,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
     execution_engine->set_lr_scheduler(lr_scheduler);
+    execution_engine->set_weight_file(weight_file);
 
     // train the model
     execution_engine->execute_application(gcn, num_epoch);
