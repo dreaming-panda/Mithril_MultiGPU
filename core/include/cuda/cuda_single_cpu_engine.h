@@ -1,6 +1,9 @@
 #ifndef CUDA_ENGINE_H
 #define CUDA_ENGINE_H
 
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "application.h"
 #include "engine.h"
 #include "graph.h"
@@ -12,6 +15,8 @@
 #include "cuda/cuda_graph_loader.h"
 #include "cuda/cuda_loss.h"
 #include "cudnn.h"
+#include <string>
+#include <map>
 
 class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
     private:

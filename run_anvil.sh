@@ -20,7 +20,7 @@ num_layers=3
 hunits=128
 lr=3e-3
 graph=ogbn_products
-epoch=-1
+epoch=100
 decay=0
 dropout=0.3
 

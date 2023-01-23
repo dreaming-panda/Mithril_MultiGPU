@@ -505,12 +505,12 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             printf("    Epoch %d:", epoch);
             printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
             // dump the weights
-            weight_dumper.next_version();
+            weight_dumper->next_version();
             for (WeightOperator * op: weight_ops) {
                 Tensor * tensor = op->get_output_tensor(0);
                 TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
                 DataType * cuda_data = resource->get_gpu_data();
-                weight_dumper.save_weight(op, cuda_data);
+                weight_dumper->save_weight(op, cuda_data);
             }
         }
 
@@ -596,7 +596,7 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                 );
     }
 
-    weight_dumper.commit_to_file();
+    weight_dumper->commit_to_file();
     delete weight_dumper;
 
     return train_accuracy;
