@@ -74,6 +74,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
             inference_mode_ = true;
         }
         double execute_application(AbstractApplication * application, int num_epoch);
+        void model_inference(AbstractApplication * application, std::string weight_file);
         void set_lr_scheduler(LearningRateScheduler * lr_scheduler){
             this->lr_scheduler_ = lr_scheduler;
         };

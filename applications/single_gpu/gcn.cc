@@ -31,43 +31,6 @@
 
 using namespace std;
 
-//class GCN: public AbstractApplication {
-//    private:
-//        int num_layers_;
-//        int num_hidden_units_;
-//        int num_classes_;
-//
-//    public:
-//        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features): 
-//            AbstractApplication(num_features),
-//            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes) {
-//            assert(num_layers >= 1);
-//            assert(num_hidden_units >= 1);
-//            assert(num_classes >= 1);
-//        }
-//        ~GCN() {}
-//
-//        Tensor * forward(Tensor * input) {
-//            Tensor * t = input;
-//            for (int i = 0; i < num_layers_; ++ i) {
-//                int output_size = num_hidden_units_;
-//                if (i == num_layers_ - 1) {
-//                    output_size = num_classes_;
-//                }
-//                t = fc(t, output_size);
-//
-//                t = aggregation(t, NORM_SUM);  
-//
-//                if (i == num_layers_ - 1) { 
-//                    t = softmax(t);
-//                } else {
-//                    t = relu(t);
-//                }
-//            }
-//            return t;
-//        }
-//};
-
 class GCN: public AbstractApplication {
     private:
         int num_layers_;

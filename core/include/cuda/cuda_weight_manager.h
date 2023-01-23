@@ -106,6 +106,14 @@ class WeightLoader {
         }
 
     public:
+        static int get_num_versions(std::string weight_file) {
+            int f = open(weight_file.c_str(), O_RDONLY);
+            assert(f != -1);
+            int num_versions;
+            read_file(f, (uint8_t*) &num_versions, sizeof(int));
+            assert(close(f) == 0);
+            return num_versions;
+        }
         static void load_weight_ops(
                 std::string weight_file,
                 const std::vector<DataType*> weights_data,
