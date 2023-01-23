@@ -29,9 +29,9 @@ def get_valid_acc(graph, lr, decay, hunit, dropout):
             line = f.readline()
             if line == None or len(line) == 0:
                 break
-            if "Highest validation acc:" in line:
+            if "achieved the highest validation accuracy" in line:
                 line = line.strip().split(" ")
-                return float(line[-1])
+                return float(line[-4])
     return None
 
 def get_test_acc(graph, lr, decay, hunit, dropout):
@@ -45,9 +45,9 @@ def get_test_acc(graph, lr, decay, hunit, dropout):
             line = f.readline()
             if line == None or len(line) == 0:
                 break
-            if "Target test acc:" in line:
+            if "achieved the highest validation accuracy" in line:
                 line = line.strip().split(" ")
-                return float(line[-1])
+                return float(line[-1][:-1])
     return None
 
 if __name__ == "__main__":

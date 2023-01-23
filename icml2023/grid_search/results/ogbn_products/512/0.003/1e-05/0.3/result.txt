@@ -1,17 +1,17 @@
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
 The number of GCN layers: 4
 The number of hidden units: 512
-The number of training epoches: -1
+The number of training epoches: 3000
 Learning rate: 0.003000
 Initialized node g002.anvil.rcac.purdue.edu
 Building the CSR structure...
-        It takes 1.954 seconds.
+        It takes 1.958 seconds.
 Building the CSC structure...
-        It takes 1.923 seconds.
+        It takes 1.917 seconds.
 Building the Feature Vector...
-        It takes 0.607 seconds.
+        It takes 0.583 seconds.
 Building the Label Vector...
-        It takes 0.329 seconds.
+        It takes 0.316 seconds.
 Number of classes: 47
 Number of feature dimensions: 100
 Dropout: 0.300 
@@ -24,24 +24,71 @@ train nodes 196615, valid nodes 39323, test nodes 2213091
     OP_TYPE: OPERATOR_RELU
     OP_TYPE: OPERATOR_DROPOUT
 gcn: /home/x-jchen5/baseline/Mithril_MultiGPU/core/src/cuda/cuda_resource.cc:26: virtual void TensorResourceGPU::map(): Assertion `gpu_grad_ != nullptr' failed.
-[g002:2687003] *** Process received signal ***
-[g002:2687003] Signal: Aborted (6)
-[g002:2687003] Signal code:  (-6)
-[g002:2687003] [ 0] /lib64/libc.so.6(+0x37410)[0x14d9ac3b2410]
-[g002:2687003] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x14d9ac3b238f]
-[g002:2687003] [ 2] /lib64/libc.so.6(abort+0x127)[0x14d9ac39cdc5]
-[g002:2687003] [ 3] /lib64/libc.so.6(+0x21c99)[0x14d9ac39cc99]
-[g002:2687003] [ 4] /lib64/libc.so.6(+0x2fa86)[0x14d9ac3aaa86]
-[g002:2687003] [ 5] ./build/applications/single_gpu/gcn(_ZN17TensorResourceGPU3mapEv+0x443)[0x455533]
-[g002:2687003] [ 6] ./build/applications/single_gpu/gcn(_ZN28SingleNodeExecutionEngineGPU19execute_applicationEP19AbstractApplicationi+0x14b)[0x452e2b]
-[g002:2687003] [ 7] ./build/applications/single_gpu/gcn(main+0x1381)[0x4231e1]
-[g002:2687003] [ 8] /lib64/libc.so.6(__libc_start_main+0xf3)[0x14d9ac39e4a3]
-[g002:2687003] [ 9] ./build/applications/single_gpu/gcn(_start+0x2e)[0x42371e]
-[g002:2687003] *** End of error message ***
+[g002:3470594] *** Process received signal ***
+[g002:3470594] Signal: Aborted (6)
+[g002:3470594] Signal code:  (-6)
+[g002:3470594] [ 0] /lib64/libc.so.6(+0x37410)[0x14c818742410]
+[g002:3470594] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x14c81874238f]
+[g002:3470594] [ 2] /lib64/libc.so.6(abort+0x127)[0x14c81872cdc5]
+[g002:3470594] [ 3] /lib64/libc.so.6(+0x21c99)[0x14c81872cc99]
+[g002:3470594] [ 4] /lib64/libc.so.6(+0x2fa86)[0x14c81873aa86]
+[g002:3470594] [ 5] ./build/applications/single_gpu/gcn(_ZN17TensorResourceGPU3mapEv+0x443)[0x459ec3]
+[g002:3470594] [ 6] ./build/applications/single_gpu/gcn(_ZN28SingleNodeExecutionEngineGPU19execute_applicationEP19AbstractApplicationi+0x14b)[0x4547fb]
+[g002:3470594] [ 7] ./build/applications/single_gpu/gcn(main+0x13d6)[0x424216]
+[g002:3470594] [ 8] /lib64/libc.so.6(__libc_start_main+0xf3)[0x14c81872e4a3]
+[g002:3470594] [ 9] ./build/applications/single_gpu/gcn(_start+0x2e)[0x42478e]
+[g002:3470594] *** End of error message ***
 --------------------------------------------------------------------------
 Primary job  terminated normally, but 1 process returned
 a non-zero exit code. Per user-direction, the job has been aborted.
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
-mpirun noticed that process rank 0 with PID 2687003 on node g002 exited on signal 6 (Aborted).
+mpirun noticed that process rank 0 with PID 3470594 on node g002 exited on signal 6 (Aborted).
+--------------------------------------------------------------------------
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
+The number of hidden units: 512
+The number of training epoches: 0
+Learning rate: 0.000000
+Initialized node g002.anvil.rcac.purdue.edu
+Building the CSR structure...
+        It takes 1.886 seconds.
+Building the CSC structure...
+        It takes 1.837 seconds.
+Building the Feature Vector...
+        It takes 0.564 seconds.
+Building the Label Vector...
+        It takes 0.308 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Dropout: 0.000 
+train nodes 196615, valid nodes 39323, test nodes 2213091
+*** Allocating resources for all tensors...
+    OP_TYPE: OPERATOR_INPUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
+gcn_inference: /home/x-jchen5/baseline/Mithril_MultiGPU/core/src/cuda/cuda_resource.cc:26: virtual void TensorResourceGPU::map(): Assertion `gpu_grad_ != nullptr' failed.
+[g002:3470659] *** Process received signal ***
+[g002:3470659] Signal: Aborted (6)
+[g002:3470659] Signal code:  (-6)
+[g002:3470659] [ 0] /lib64/libc.so.6(+0x37410)[0x149eeca61410]
+[g002:3470659] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x149eeca6138f]
+[g002:3470659] [ 2] /lib64/libc.so.6(abort+0x127)[0x149eeca4bdc5]
+[g002:3470659] [ 3] /lib64/libc.so.6(+0x21c99)[0x149eeca4bc99]
+[g002:3470659] [ 4] /lib64/libc.so.6(+0x2fa86)[0x149eeca59a86]
+[g002:3470659] [ 5] ./build/applications/single_gpu/gcn_inference(_ZN17TensorResourceGPU3mapEv+0x443)[0x4588b3]
+[g002:3470659] [ 6] ./build/applications/single_gpu/gcn_inference(_ZN28SingleNodeExecutionEngineGPU15model_inferenceEP19AbstractApplicationNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE+0x16b)[0x45510b]
+[g002:3470659] [ 7] ./build/applications/single_gpu/gcn_inference(main+0x117e)[0x4226fe]
+[g002:3470659] [ 8] /lib64/libc.so.6(__libc_start_main+0xf3)[0x149eeca4d4a3]
+[g002:3470659] [ 9] ./build/applications/single_gpu/gcn_inference(_start+0x2e)[0x422c7e]
+[g002:3470659] *** End of error message ***
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun noticed that process rank 0 with PID 3470659 on node g002 exited on signal 6 (Aborted).
 --------------------------------------------------------------------------
