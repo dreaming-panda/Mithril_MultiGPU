@@ -219,6 +219,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         std::map<DropoutOperator*, void*> dropout_op_reserve_space; 
         std::map<DropoutOperator*, size_t> dropout_op_reserve_space_size;
 
+        int random_seed_ = 1234;
+
         // used for chunk-based GPU training
         struct DropoutOpState {
             cudnnDropoutDescriptor_t dropout_descriptor;
@@ -445,6 +447,10 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         void dropout_backward(DropoutOperator * op);
         void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
         void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
+
+        void set_random_seed(int random_seed) {
+            random_seed_ = random_seed;
+        }
 
         void Print(){
             std::cout << "relu forward :"<<reluforward_time<<std::endl;

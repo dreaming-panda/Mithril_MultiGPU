@@ -75,6 +75,7 @@ private:
       int ntest;
       VertexId vertices_;
       bool usingsplit;
+      int random_seed_ = 23;
 
       cudnnHandle_t cudnn_;
       cudnnReduceTensorDescriptor_t MeanDesc;
@@ -111,6 +112,9 @@ public:
             }
             cudaStreamDestroy(nccl_stream_);
             cusparseDestroy(cusparse_h);
+      }
+      void setRandomSeed(int random_seed) {
+          random_seed_ = random_seed;
       }
       void setCuda(cudnnHandle_t cudnn, VertexId num_vertices, ncclComm_t *comm)
       {

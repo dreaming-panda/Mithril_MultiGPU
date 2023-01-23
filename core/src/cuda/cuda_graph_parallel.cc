@@ -241,7 +241,7 @@ void CUDAGraphParallelEngine::init_weight_tensor_data(
     int M  = num_elements / N;
     assert(M > 0);
     double range = sqrt(6./(N + M));
-    srand(23);
+    srand(random_seed_);
     for (size_t i = 0; i < num_elements; ++ i) {
         double r = double(rand()) / double(RAND_MAX);
         assert(r >= 0. && r <= 1.);

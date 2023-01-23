@@ -20,7 +20,7 @@ num_layers=4
 hunits=128
 lr=1e-3
 graph=ogbn_mag
-epoch=1000
+epoch=2000
 decay=0
 dropout=0.3
 

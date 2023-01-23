@@ -3891,7 +3891,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
                     dropout_descriptor, *cudnn_handle_,
                     op->dropout_rate_,
                     states, states_size,
-                    1234
+                    random_seed_
                     ));
         // set up the tensor descriptor
         cudnnTensorDescriptor_t tensor_descriptor;
@@ -4061,7 +4061,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
                     dropout_descriptor, *cudnn_handle_,
                     op->dropout_rate_,
                     states, states_size,
-                    1234
+                    random_seed_
                     ));
         // set up the tensor descriptor
         cudnnTensorDescriptor_t tensor_descriptor;

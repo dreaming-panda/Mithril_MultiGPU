@@ -143,7 +143,8 @@ int main(int argc, char ** argv) {
         ("startup", po::value<int>()->default_value(0), "The number of startup epoches (i.e., epoches without any asynchrony).")
         ("random", po::value<int>()->default_value(0), "Randomly dispatch the execution of the chunk? 1: Yes, 0: No.")
         ("chunks", po::value<int>()->default_value(128), "The number of chunks.")
-        ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.");
+        ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.")
+        ("seed", po::value<int>()->default_value(1234), "The random seed.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -170,6 +171,7 @@ int main(int argc, char ** argv) {
     bool random_dispatch = vm["random"].as<int>() == 1;
     int num_chunks = vm["chunks"].as<int>();
     double dropout_rate = vm["dropout"].as<double>();
+    int random_seed = vm["seed"].as<int>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -243,6 +245,9 @@ int main(int argc, char ** argv) {
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
     executor->graph_parallel_set_csr();
 
+    // set random seed
+    execution_engine->setRandomSeed(random_seed);
+    executor->set_random_seed(random_seed);
     
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
