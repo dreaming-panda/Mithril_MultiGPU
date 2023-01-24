@@ -1,5 +1,5 @@
 g005.anvil.rcac.purdue.edu
-Fri Jan 20 20:03:43 2023       
+Mon Jan 23 22:42:55 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
 |-------------------------------+----------------------+----------------------+
@@ -7,8 +7,20 @@ Fri Jan 20 20:03:43 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
+|   0  NVIDIA A100-SXM...  On   | 00000000:01:00.0 Off |                    0 |
+| N/A   29C    P0    52W / 400W |      0MiB / 40536MiB |      0%      Default |
+|                               |                      |             Disabled |
++-------------------------------+----------------------+----------------------+
+|   1  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
 | N/A   27C    P0    50W / 400W |      0MiB / 40536MiB |      0%      Default |
+|                               |                      |             Disabled |
++-------------------------------+----------------------+----------------------+
+|   2  NVIDIA A100-SXM...  On   | 00000000:81:00.0 Off |                    0 |
+| N/A   29C    P0    50W / 400W |      0MiB / 40536MiB |      0%      Default |
+|                               |                      |             Disabled |
++-------------------------------+----------------------+----------------------+
+|   3  NVIDIA A100-SXM...  On   | 00000000:C1:00.0 Off |                    0 |
+| N/A   28C    P0    51W / 400W |      0MiB / 40536MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -29,58 +41,842 @@ Currently Loaded Modules:
  
 
 [  4%] Built target context
-[ 18%] Built target core
-[ 19%] Built target parallel
+[ 18%] Built target parallel
+[ 19%] Built target core
 [ 39%] Built target cudahelp
-[ 57%] Built target test_cuda_pipeline_parallel
-[ 76%] Built target test_mpi_structual_graph
-[ 73%] Built target test_cuda_data_compression
-[ 79%] Built target test_trivial
-[ 58%] Built target test_cuda_model_parallel
-[ 58%] Built target test_mpi_gpu_pipelined_model_parallel
-[ 79%] Built target test_single_node_fullgpu_training
-[ 91%] Built target estimate_comm_volume
+[ 43%] Built target test_mpi_gpu_hybrid
+[ 43%] Built target test_cuda_data_compression
+[ 46%] Built target test_mpi_combined
+[ 83%] Built target test_mpi_pipelined_model_parallel
+[ 83%] Built target estimate_comm_volume
+[ 83%] Built target test_cuda_graph
+[ 83%] Built target test_mpi_gpu_pipelined_model_parallel
+[ 83%] Built target test_single_node_training
+[ 83%] Built target test_cuda_model_parallel
+[ 83%] Built target test_mpi_structual_graph
+[ 91%] Built target test_hello_world
+[ 83%] Built target test_cuda
+[ 83%] Built target test_cuda_pipeline_parallel
+[ 91%] Built target test_graph
 [ 91%] Built target test_mpi_model_parallel
-[ 91%] Built target test_single_node_gpu_training
-[ 88%] Built target test_hello_world
-[ 91%] Built target test_single_node_training
-[ 91%] Built target test_mpi_pipelined_model_parallel
-[ 91%] Built target test_mpi_gpu_hybrid
-[ 91%] Built target test_nccl_thread
-[ 91%] Built target test_nccl_mpi
-[ 91%] Built target test_full_structual_graph
-[ 58%] Built target test_mpi_gpu_model_parallel
-[ 68%] Built target test_graph
-[ 79%] Built target test_mpi_loader
 [ 91%] Built target test_full_non_structual_graph
-[ 79%] Built target test_cuda_graph
-[ 91%] Built target test_mpi_non_structual_graph
-[ 91%] Built target test_mpi_combined
-[ 84%] Built target test_cuda
-[ 97%] Built target OSDI2023_SINGLE_NODE_gcn_inference
+[ 91%] Built target test_full_structual_graph
+[ 91%] Built target test_single_node_gpu_training
+[ 91%] Built target test_nccl_mpi
+[ 83%] Built target test_nccl_thread
+[ 91%] Built target test_mpi_gpu_model_parallel
+[ 91%] Built target test_trivial
+[ 91%] Built target test_single_node_fullgpu_training
+[ 83%] Built target test_mpi_non_structual_graph
+[ 83%] Built target test_mpi_loader
+[ 97%] Built target OSDI2023_SINGLE_NODE_gcn
 [100%] Built target OSDI2023_MULTI_NODES_gcn
-[100%] Built target OSDI2023_SINGLE_NODE_gcn
+[100%] Built target OSDI2023_SINGLE_NODE_gcn_inference
 [100%] Built target test_two_layer_hybrid_parallelism_designer
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/reddit
-The number of GCN layers: 3
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
 The number of hidden units: 128
 The number of training epoches: 5000
-Learning rate: 0.001000
-Dropout rate: 0.500000
+The number of startup epoches: 0
+Learning rate: 0.010000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: saved_weights
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
+The number of hidden units: 128
+The number of training epoches: 5000
+The number of startup epoches: 0
+Learning rate: 0.010000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: saved_weights
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
+The number of hidden units: 128
+The number of training epoches: 5000
+The number of startup epoches: 0
+Learning rate: 0.010000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: saved_weights
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
+The number of hidden units: 128
+The number of training epoches: 5000
+The number of startup epoches: 0
+Learning rate: 0.010000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: saved_weights
+Initialized node 1 on machine g005.anvil.rcac.purdue.edu
 Initialized node 0 on machine g005.anvil.rcac.purdue.edu
+Initialized node 3 on machine g005.anvil.rcac.purdue.edu
+Initialized node 2 on machine g005.anvil.rcac.purdue.edu
 Building the CSR structure...
-        It takes 1.729 seconds.
+Building the CSR structure...
+Building the CSR structure...
+Building the CSR structure...
+        It takes 2.061 seconds.
 Building the CSC structure...
-        It takes 1.694 seconds.
+        It takes 2.112 seconds.
+Building the CSC structure...
+        It takes 2.148 seconds.
+Building the CSC structure...
+        It takes 2.172 seconds.
+Building the CSC structure...
+        It takes 1.997 seconds.
+        It takes 1.979 seconds.
+        It takes 2.023 seconds.
+        It takes 2.045 seconds.
 Building the Feature Vector...
-        It takes 0.287 seconds.
+Building the Feature Vector...
+Building the Feature Vector...
+Building the Feature Vector...
+        It takes 0.775 seconds.
 Building the Label Vector...
-        It takes 0.026 seconds.
-Number of classes: 41
-Number of feature dimensions: 602
-train nodes 153431, valid nodes 23831, test nodes 55703
+        It takes 0.765 seconds.
+Building the Label Vector...
+        It takes 0.765 seconds.
+Building the Label Vector...
+        It takes 0.797 seconds.
+Building the Label Vector...
+        It takes 0.406 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Number of vertices: 2449029
+        It takes 0.396 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Number of vertices: 2449029
+        It takes 0.388 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Number of vertices: 2449029
+        It takes 0.386 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Number of vertices: 2449029
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+GPU 0, layer [0, 1)
+GPU 1, layer [1, 2)
+GPU 2, layer [2, 3)
+GPU 3, layer [3, 4)
+*** Node 1, starting model training...
+Number of operators: 20
+0 2449029 0 6
+0 2449029 6 11
+0 2449029 11 16
+0 2449029 16 20
+Node 1, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 1, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 1 owns the partition [6, 11) x [0, 2449029)
+*** Node 1, constructing the helper classes...
+WARNING: the current version only applies to linear GNN models!
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+GPU 0, layer [0, 1)
+GPU 1, layer [1, 2)
+GPU 2, layer [2, 3)
+GPU 3, layer [3, 4)
+*** Node 3, starting model training...
+Number of operators: 20
+0 2449029 0 6
+0 2449029 6 11
+0 2449029 11 16
+0 2449029 16 20
+WARNING: the current version only applies to linear GNN models!
+Node 3, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 3, Pipeline Output Tensor: NULL
+*** Node 3 owns the partition [16, 20) x [0, 2449029)
+*** Node 3, constructing the helper classes...
+train nodes 196615, valid nodes 39323, test nodes 2213091
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+WARNING: the current version only applies to linear GNN models!
+GPU 0, layer [0, 1)
+GPU 1, layer [1, 2)
+GPU 2, layer [2, 3)
+GPU 3, layer [3, 4)
+*** Node 2, starting model training...
+Number of operators: 20
+0 2449029 0 6
+0 2449029 6 11
+0 2449029 11 16
+0 2449029 16 20
+Node 2, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 2, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 2 owns the partition [11, 16) x [0, 2449029)
+*** Node 2, constructing the helper classes...
+Number of GPUs: 4
+GPU 0, layer [0, 1)
+GPU 1, layer [1, 2)
+GPU 2, layer [2, 3)
+GPU 3, layer [3, 4)
+WARNING: the current version only applies to linear GNN models!
+*** Node 0, starting model training...
+Number of operators: 20
+0 2449029 0 6
+0 2449029 6 11
+0 2449029 11 16
+0 2449029 16 20
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 0 owns the partition [0, 6) x [0, 2449029)
+*** Node 0, constructing the helper classes...
+Operators:
+    Op 0: type OPERATOR_INPUT, output tensors: 0
+    Op 1: type OPERATOR_WEIGHT, output tensors: 1
+    Op 2: type OPERATOR_MATMUL, output tensors: 2
+    Op 3: type OPERATOR_AGGREGATION, output tensors: 3
+    Op 4: type OPERATOR_RELU, output tensors: 4
+    Op 5: type OPERATOR_DROPOUT, output tensors: 5
+    Op 6: type OPERATOR_WEIGHT, output tensors: 6
+    Op 7: type OPERATOR_MATMUL, output tensors: 7
+    Op 8: type OPERATOR_AGGREGATION, output tensors: 8
+    Op 9: type OPERATOR_RELU, output tensors: 9
+    Op 10: type OPERATOR_DROPOUT, output tensors: 10
+    Op 11: type OPERATOR_WEIGHT, output tensors: 11
+    Op 12: type OPERATOR_MATMUL, output tensors: 12
+    Op 13: type OPERATOR_AGGREGATION, output tensors: 13
+    Op 14: type OPERATOR_RELU, output tensors: 14
+    Op 15: type OPERATOR_DROPOUT, output tensors: 15
+    Op 16: type OPERATOR_WEIGHT, output tensors: 16
+    Op 17: type OPERATOR_MATMUL, output tensors: 17
+    Op 18: type OPERATOR_AGGREGATION, output tensors: 18
+    Op 19: type OPERATOR_SOFTMAX, output tensors: 19
+(Forwarding) Node 3 (fragment 0) depends on nodes: 2 (Tensor: 15)
+(Backwarding) Node 3 (fragment 0) depends on nodes:
+(I-link dependencies): node 3 should send activation to nodes:
+(I-link dependencies): node 3 should receive activation from nodes:
+(I-link dependencies): node 3 should send gradient to nodes:
+(I-link dependencies): node 3 should receive gradient from nodes:
+(Forwarding) Node 1 (fragment 0) depends on nodes: 0 (Tensor: 5)
+(Backwarding) Node 1 (fragment 0) depends on nodes: 2 (Tensor: 10)
+(I-link dependencies): node 1 should send activation to nodes:
+(I-link dependencies): node 1 should receive activation from nodes:
+(I-link dependencies): node 1 should send gradient to nodes:
+(I-link dependencies): node 1 should receive gradient from nodes:
+Boundaries: 0 0 0 0 2449029 2449029 2449029 2449029
+Fragments: [0, 2449029)
+Chunks (number of global chunks: 32): 0-[0, 76533) 1-[76533, 153066) 2-[153066, 229599) 3-[229599, 306132) 4-[306132, 382665) 5-[382665, 459198) 6-[459198, 535731) 7-[535731, 612264) 8-[612264, 688797) ... 31-[2372523, 2449029)
+(Forwarding) Node 0 (fragment 0) depends on nodes:
+(Backwarding) Node 0 (fragment 0) depends on nodes: 1 (Tensor: 5)
+(I-link dependencies): node 0 should send activation to nodes:
+(I-link dependencies): node 0 should receive activation from nodes:
+(Forwarding) Node 2 (fragment 0) depends on nodes: 1 (Tensor: 10)
+(Backwarding) Node 2 (fragment 0) depends on nodes: 3 (Tensor: 15)
+(I-link dependencies): node 0 should send gradient to nodes:
+(I-link dependencies): node 0 should receive gradient from nodes:
+(I-link dependencies): node 2 should send activation to nodes:
+(I-link dependencies): node 2 should receive activation from nodes:
+(I-link dependencies): node 2 should send gradient to nodes:
+(I-link dependencies): node 2 should receive gradient from nodes:
+2449029, 126167053, 126167053
+2449029, 126167053, 126167053
+2449029, 126167053, 126167053
+2449029, 126167053, 126167053
+csr in-out ready !*** Node 3, setting up some other necessary information...
+csr in-out ready !*** Node 0, setting up some other necessary information...
+csr in-out ready !*** Node 2, setting up some other necessary information...
+csr in-out ready !*** Node 1, setting up some other necessary information...
+*** Node 2, starting the helper threads...
+*** Node 0, starting the helper threads...
+*** Node 3, starting the helper threads...
+*** Node 1, starting the helper threads...
++++++++++ Node 0 initializing the weights for op[0, 6)...
++++++++++ Node 0, mapping weight op 1
++++++++++ Node 1 initializing the weights for op[6, 11)...
++++++++++ Node 1, mapping weight op 6
++++++++++ Node 3 initializing the weights for op[16, 20)...
++++++++++ Node 3, mapping weight op 16
++++++++++ Node 2 initializing the weights for op[11, 16)...
++++++++++ Node 2, mapping weight op 11
+RANDOMLY DISPATCH THE CHUNKS...
+*** Node 1, starting task scheduling...
+*** Node 3, starting task scheduling...
+The learning rate specified by the user: 0.010000000
+*** Node 2, starting task scheduling...
+The learning rate specified by the user: 0.010000000
+*** Node 0, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.010000000
+The learning rate specified by the user: 0.010000000
+    Epoch 9:	Loss 3.12374	TrainAcc 0.5885	ValidAcc 0.5854	TestAcc 0.4695
+    Epoch 19:	Loss 1.71559	TrainAcc 0.6569	ValidAcc 0.6483	TestAcc 0.4973
+    Epoch 29:	Loss 1.11549	TrainAcc 0.7844	ValidAcc 0.7785	TestAcc 0.6041
+    Epoch 39:	Loss 0.80442	TrainAcc 0.8225	ValidAcc 0.8175	TestAcc 0.6333
+    Epoch 49:	Loss 0.67807	TrainAcc 0.8528	ValidAcc 0.8475	TestAcc 0.6677
+    Epoch 59:	Loss 0.59696	TrainAcc 0.8605	ValidAcc 0.8555	TestAcc 0.6866
+    Epoch 69:	Loss 0.55422	TrainAcc 0.8702	ValidAcc 0.8637	TestAcc 0.6907
+    Epoch 79:	Loss 0.52101	TrainAcc 0.8743	ValidAcc 0.8688	TestAcc 0.6999
+    Epoch 89:	Loss 0.50548	TrainAcc 0.8797	ValidAcc 0.8732	TestAcc 0.7066
+    Epoch 99:	Loss 0.48792	TrainAcc 0.8816	ValidAcc 0.8734	TestAcc 0.7067
+    Epoch 109:	Loss 0.47498	TrainAcc 0.8863	ValidAcc 0.8788	TestAcc 0.7031
+    Epoch 119:	Loss 0.45867	TrainAcc 0.8852	ValidAcc 0.8794	TestAcc 0.7170
+    Epoch 129:	Loss 0.44841	TrainAcc 0.8906	ValidAcc 0.8822	TestAcc 0.7140
+    Epoch 139:	Loss 0.43695	TrainAcc 0.8924	ValidAcc 0.8859	TestAcc 0.7194
+    Epoch 149:	Loss 0.43028	TrainAcc 0.8941	ValidAcc 0.8864	TestAcc 0.7167
+    Epoch 159:	Loss 0.42494	TrainAcc 0.8933	ValidAcc 0.8859	TestAcc 0.7203
+    Epoch 169:	Loss 0.41948	TrainAcc 0.8921	ValidAcc 0.8873	TestAcc 0.7148
+    Epoch 179:	Loss 0.41529	TrainAcc 0.8976	ValidAcc 0.8896	TestAcc 0.7206
+    Epoch 189:	Loss 0.41284	TrainAcc 0.8978	ValidAcc 0.8889	TestAcc 0.7275
+    Epoch 199:	Loss 0.40951	TrainAcc 0.8992	ValidAcc 0.8913	TestAcc 0.7274
+    Epoch 209:	Loss 0.40965	TrainAcc 0.8981	ValidAcc 0.8916	TestAcc 0.7194
+    Epoch 219:	Loss 0.40356	TrainAcc 0.8972	ValidAcc 0.8925	TestAcc 0.7225
+    Epoch 229:	Loss 0.40252	TrainAcc 0.8978	ValidAcc 0.8890	TestAcc 0.7275
+    Epoch 239:	Loss 0.39613	TrainAcc 0.9009	ValidAcc 0.8948	TestAcc 0.7271
+    Epoch 249:	Loss 0.39197	TrainAcc 0.9007	ValidAcc 0.8938	TestAcc 0.7374
+    Epoch 259:	Loss 0.38969	TrainAcc 0.9017	ValidAcc 0.8936	TestAcc 0.7199
+    Epoch 269:	Loss 0.38696	TrainAcc 0.9047	ValidAcc 0.8968	TestAcc 0.7375
+    Epoch 279:	Loss 0.38488	TrainAcc 0.9005	ValidAcc 0.8937	TestAcc 0.7312
+    Epoch 289:	Loss 0.38406	TrainAcc 0.9032	ValidAcc 0.8956	TestAcc 0.7314
+    Epoch 299:	Loss 0.37909	TrainAcc 0.9054	ValidAcc 0.8968	TestAcc 0.7302
+    Epoch 309:	Loss 0.37678	TrainAcc 0.9031	ValidAcc 0.8978	TestAcc 0.7398
+    Epoch 319:	Loss 0.37667	TrainAcc 0.9038	ValidAcc 0.8926	TestAcc 0.7313
+    Epoch 329:	Loss 0.37346	TrainAcc 0.9048	ValidAcc 0.8978	TestAcc 0.7378
+    Epoch 339:	Loss 0.36945	TrainAcc 0.9071	ValidAcc 0.8994	TestAcc 0.7338
+    Epoch 349:	Loss 0.36901	TrainAcc 0.9069	ValidAcc 0.8983	TestAcc 0.7382
+    Epoch 359:	Loss 0.36787	TrainAcc 0.9052	ValidAcc 0.8977	TestAcc 0.7437
+    Epoch 369:	Loss 0.36689	TrainAcc 0.9079	ValidAcc 0.8991	TestAcc 0.7364
+    Epoch 379:	Loss 0.36636	TrainAcc 0.9064	ValidAcc 0.8998	TestAcc 0.7340
+    Epoch 389:	Loss 0.36707	TrainAcc 0.9048	ValidAcc 0.8968	TestAcc 0.7423
+    Epoch 399:	Loss 0.36541	TrainAcc 0.9068	ValidAcc 0.8980	TestAcc 0.7383
+    Epoch 409:	Loss 0.36774	TrainAcc 0.9052	ValidAcc 0.8946	TestAcc 0.7273
+    Epoch 419:	Loss 0.36522	TrainAcc 0.9085	ValidAcc 0.9019	TestAcc 0.7435
+    Epoch 429:	Loss 0.36119	TrainAcc 0.9099	ValidAcc 0.9023	TestAcc 0.7428
+    Epoch 439:	Loss 0.35515	TrainAcc 0.9090	ValidAcc 0.9001	TestAcc 0.7454
+    Epoch 449:	Loss 0.35131	TrainAcc 0.9105	ValidAcc 0.9026	TestAcc 0.7408
+    Epoch 459:	Loss 0.34830	TrainAcc 0.9110	ValidAcc 0.9036	TestAcc 0.7437
+    Epoch 469:	Loss 0.34693	TrainAcc 0.9117	ValidAcc 0.9027	TestAcc 0.7432
+    Epoch 479:	Loss 0.34688	TrainAcc 0.9099	ValidAcc 0.9005	TestAcc 0.7428
+    Epoch 489:	Loss 0.34508	TrainAcc 0.9116	ValidAcc 0.9043	TestAcc 0.7435
+    Epoch 499:	Loss 0.34487	TrainAcc 0.9104	ValidAcc 0.9021	TestAcc 0.7366
+    Epoch 509:	Loss 0.34474	TrainAcc 0.9107	ValidAcc 0.9029	TestAcc 0.7443
+    Epoch 519:	Loss 0.34371	TrainAcc 0.9120	ValidAcc 0.9017	TestAcc 0.7472
+    Epoch 529:	Loss 0.34427	TrainAcc 0.9128	ValidAcc 0.9034	TestAcc 0.7405
+    Epoch 539:	Loss 0.34414	TrainAcc 0.9088	ValidAcc 0.9016	TestAcc 0.7386
+    Epoch 549:	Loss 0.34666	TrainAcc 0.9089	ValidAcc 0.8987	TestAcc 0.7437
+    Epoch 559:	Loss 0.34466	TrainAcc 0.9132	ValidAcc 0.9056	TestAcc 0.7464
+    Epoch 569:	Loss 0.34558	TrainAcc 0.9119	ValidAcc 0.9036	TestAcc 0.7332
+    Epoch 579:	Loss 0.34800	TrainAcc 0.9111	ValidAcc 0.9005	TestAcc 0.7438
+    Epoch 589:	Loss 0.34601	TrainAcc 0.9089	ValidAcc 0.9012	TestAcc 0.7409
+    Epoch 599:	Loss 0.34368	TrainAcc 0.9104	ValidAcc 0.9012	TestAcc 0.7396
+    Epoch 609:	Loss 0.34202	TrainAcc 0.9093	ValidAcc 0.9004	TestAcc 0.7350
+    Epoch 619:	Loss 0.33907	TrainAcc 0.9119	ValidAcc 0.9022	TestAcc 0.7458
+    Epoch 629:	Loss 0.33608	TrainAcc 0.9121	ValidAcc 0.9033	TestAcc 0.7416
+    Epoch 639:	Loss 0.33329	TrainAcc 0.9142	ValidAcc 0.9046	TestAcc 0.7422
+    Epoch 649:	Loss 0.33181	TrainAcc 0.9134	ValidAcc 0.9029	TestAcc 0.7437
+    Epoch 659:	Loss 0.33113	TrainAcc 0.9146	ValidAcc 0.9040	TestAcc 0.7449
+    Epoch 669:	Loss 0.33070	TrainAcc 0.9144	ValidAcc 0.9040	TestAcc 0.7364
+    Epoch 679:	Loss 0.33244	TrainAcc 0.9123	ValidAcc 0.9033	TestAcc 0.7415
+    Epoch 689:	Loss 0.33073	TrainAcc 0.9162	ValidAcc 0.9070	TestAcc 0.7497
+    Epoch 699:	Loss 0.33027	TrainAcc 0.9149	ValidAcc 0.9038	TestAcc 0.7398
+    Epoch 709:	Loss 0.33254	TrainAcc 0.9125	ValidAcc 0.9023	TestAcc 0.7430
+    Epoch 719:	Loss 0.33252	TrainAcc 0.9125	ValidAcc 0.9000	TestAcc 0.7392
+    Epoch 729:	Loss 0.33271	TrainAcc 0.9141	ValidAcc 0.9049	TestAcc 0.7410
+    Epoch 739:	Loss 0.32961	TrainAcc 0.9156	ValidAcc 0.9069	TestAcc 0.7479
+    Epoch 749:	Loss 0.33017	TrainAcc 0.9140	ValidAcc 0.9026	TestAcc 0.7464
+    Epoch 759:	Loss 0.32963	TrainAcc 0.9144	ValidAcc 0.9055	TestAcc 0.7308
+    Epoch 769:	Loss 0.32782	TrainAcc 0.9154	ValidAcc 0.9041	TestAcc 0.7484
+    Epoch 779:	Loss 0.33061	TrainAcc 0.9102	ValidAcc 0.9000	TestAcc 0.7381
+    Epoch 789:	Loss 0.33096	TrainAcc 0.9130	ValidAcc 0.9019	TestAcc 0.7377
+    Epoch 799:	Loss 0.32889	TrainAcc 0.9125	ValidAcc 0.9040	TestAcc 0.7344
+    Epoch 809:	Loss 0.33175	TrainAcc 0.9100	ValidAcc 0.8989	TestAcc 0.7440
+    Epoch 819:	Loss 0.32642	TrainAcc 0.9141	ValidAcc 0.9047	TestAcc 0.7414
+    Epoch 829:	Loss 0.32151	TrainAcc 0.9171	ValidAcc 0.9049	TestAcc 0.7431
+    Epoch 839:	Loss 0.31616	TrainAcc 0.9179	ValidAcc 0.9068	TestAcc 0.7370
+    Epoch 849:	Loss 0.31511	TrainAcc 0.9182	ValidAcc 0.9069	TestAcc 0.7501
+    Epoch 859:	Loss 0.31542	TrainAcc 0.9172	ValidAcc 0.9061	TestAcc 0.7485
+    Epoch 869:	Loss 0.31704	TrainAcc 0.9172	ValidAcc 0.9047	TestAcc 0.7410
+    Epoch 879:	Loss 0.31769	TrainAcc 0.9165	ValidAcc 0.9056	TestAcc 0.7349
+    Epoch 889:	Loss 0.32136	TrainAcc 0.9144	ValidAcc 0.9030	TestAcc 0.7482
+    Epoch 899:	Loss 0.32202	TrainAcc 0.9166	ValidAcc 0.9056	TestAcc 0.7444
+    Epoch 909:	Loss 0.32329	TrainAcc 0.9173	ValidAcc 0.9056	TestAcc 0.7390
+    Epoch 919:	Loss 0.31728	TrainAcc 0.9182	ValidAcc 0.9071	TestAcc 0.7483
+    Epoch 929:	Loss 0.31648	TrainAcc 0.9163	ValidAcc 0.9050	TestAcc 0.7453
+    Epoch 939:	Loss 0.31583	TrainAcc 0.9173	ValidAcc 0.9078	TestAcc 0.7422
+    Epoch 949:	Loss 0.31447	TrainAcc 0.9165	ValidAcc 0.9046	TestAcc 0.7417
+    Epoch 959:	Loss 0.31303	TrainAcc 0.9177	ValidAcc 0.9065	TestAcc 0.7431
+    Epoch 969:	Loss 0.31123	TrainAcc 0.9190	ValidAcc 0.9063	TestAcc 0.7459
+    Epoch 979:	Loss 0.30927	TrainAcc 0.9198	ValidAcc 0.9088	TestAcc 0.7447
+    Epoch 989:	Loss 0.30791	TrainAcc 0.9193	ValidAcc 0.9085	TestAcc 0.7450
+    Epoch 999:	Loss 0.30701	TrainAcc 0.9185	ValidAcc 0.9067	TestAcc 0.7433
+    Epoch 1009:	Loss 0.30591	TrainAcc 0.9190	ValidAcc 0.9078	TestAcc 0.7437
+    Epoch 1019:	Loss 0.30526	TrainAcc 0.9193	ValidAcc 0.9073	TestAcc 0.7393
+    Epoch 1029:	Loss 0.30643	TrainAcc 0.9177	ValidAcc 0.9071	TestAcc 0.7481
+    Epoch 1039:	Loss 0.30822	TrainAcc 0.9183	ValidAcc 0.9062	TestAcc 0.7447
+    Epoch 1049:	Loss 0.30833	TrainAcc 0.9192	ValidAcc 0.9070	TestAcc 0.7375
+    Epoch 1059:	Loss 0.30906	TrainAcc 0.9206	ValidAcc 0.9091	TestAcc 0.7466
+    Epoch 1069:	Loss 0.31090	TrainAcc 0.9166	ValidAcc 0.9064	TestAcc 0.7416
+    Epoch 1079:	Loss 0.31084	TrainAcc 0.9191	ValidAcc 0.9060	TestAcc 0.7447
+    Epoch 1089:	Loss 0.30915	TrainAcc 0.9198	ValidAcc 0.9064	TestAcc 0.7313
+    Epoch 1099:	Loss 0.30989	TrainAcc 0.9172	ValidAcc 0.9064	TestAcc 0.7512
+    Epoch 1109:	Loss 0.30790	TrainAcc 0.9199	ValidAcc 0.9068	TestAcc 0.7424
+    Epoch 1119:	Loss 0.30788	TrainAcc 0.9188	ValidAcc 0.9058	TestAcc 0.7436
+    Epoch 1129:	Loss 0.30763	TrainAcc 0.9188	ValidAcc 0.9052	TestAcc 0.7446
+    Epoch 1139:	Loss 0.30672	TrainAcc 0.9215	ValidAcc 0.9089	TestAcc 0.7482
+    Epoch 1149:	Loss 0.30568	TrainAcc 0.9211	ValidAcc 0.9087	TestAcc 0.7419
+    Epoch 1159:	Loss 0.30962	TrainAcc 0.9169	ValidAcc 0.9046	TestAcc 0.7437
+    Epoch 1169:	Loss 0.30977	TrainAcc 0.9194	ValidAcc 0.9074	TestAcc 0.7452
+    Epoch 1179:	Loss 0.31022	TrainAcc 0.9188	ValidAcc 0.9062	TestAcc 0.7413
+    Epoch 1189:	Loss 0.31327	TrainAcc 0.9187	ValidAcc 0.9058	TestAcc 0.7422
+    Epoch 1199:	Loss 0.31255	TrainAcc 0.9179	ValidAcc 0.9060	TestAcc 0.7424
+    Epoch 1209:	Loss 0.31018	TrainAcc 0.9179	ValidAcc 0.9062	TestAcc 0.7499
+    Epoch 1219:	Loss 0.30726	TrainAcc 0.9201	ValidAcc 0.9085	TestAcc 0.7412
+    Epoch 1229:	Loss 0.30496	TrainAcc 0.9193	ValidAcc 0.9077	TestAcc 0.7488
+    Epoch 1239:	Loss 0.30184	TrainAcc 0.9223	ValidAcc 0.9112	TestAcc 0.7450
+    Epoch 1249:	Loss 0.29887	TrainAcc 0.9210	ValidAcc 0.9106	TestAcc 0.7456
+    Epoch 1259:	Loss 0.29685	TrainAcc 0.9219	ValidAcc 0.9087	TestAcc 0.7445
+    Epoch 1269:	Loss 0.29412	TrainAcc 0.9222	ValidAcc 0.9098	TestAcc 0.7430
+    Epoch 1279:	Loss 0.29395	TrainAcc 0.9217	ValidAcc 0.9098	TestAcc 0.7475
+    Epoch 1289:	Loss 0.29260	TrainAcc 0.9240	ValidAcc 0.9123	TestAcc 0.7465
+    Epoch 1299:	Loss 0.29078	TrainAcc 0.9232	ValidAcc 0.9095	TestAcc 0.7433
+    Epoch 1309:	Loss 0.29140	TrainAcc 0.9231	ValidAcc 0.9100	TestAcc 0.7457
+    Epoch 1319:	Loss 0.29145	TrainAcc 0.9222	ValidAcc 0.9108	TestAcc 0.7408
+    Epoch 1329:	Loss 0.29465	TrainAcc 0.9206	ValidAcc 0.9087	TestAcc 0.7449
+    Epoch 1339:	Loss 0.29469	TrainAcc 0.9230	ValidAcc 0.9090	TestAcc 0.7435
+    Epoch 1349:	Loss 0.29628	TrainAcc 0.9215	ValidAcc 0.9101	TestAcc 0.7417
+    Epoch 1359:	Loss 0.30040	TrainAcc 0.9183	ValidAcc 0.9046	TestAcc 0.7399
+    Epoch 1369:	Loss 0.30060	TrainAcc 0.9195	ValidAcc 0.9083	TestAcc 0.7401
+    Epoch 1379:	Loss 0.29899	TrainAcc 0.9211	ValidAcc 0.9097	TestAcc 0.7456
+    Epoch 1389:	Loss 0.29993	TrainAcc 0.9210	ValidAcc 0.9070	TestAcc 0.7362
+    Epoch 1399:	Loss 0.29806	TrainAcc 0.9198	ValidAcc 0.9081	TestAcc 0.7483
+    Epoch 1409:	Loss 0.29620	TrainAcc 0.9220	ValidAcc 0.9068	TestAcc 0.7366
+    Epoch 1419:	Loss 0.29307	TrainAcc 0.9232	ValidAcc 0.9105	TestAcc 0.7462
+    Epoch 1429:	Loss 0.29173	TrainAcc 0.9235	ValidAcc 0.9085	TestAcc 0.7424
+    Epoch 1439:	Loss 0.29093	TrainAcc 0.9240	ValidAcc 0.9106	TestAcc 0.7440
+    Epoch 1449:	Loss 0.29003	TrainAcc 0.9240	ValidAcc 0.9101	TestAcc 0.7491
+    Epoch 1459:	Loss 0.29010	TrainAcc 0.9228	ValidAcc 0.9073	TestAcc 0.7397
+    Epoch 1469:	Loss 0.28913	TrainAcc 0.9241	ValidAcc 0.9111	TestAcc 0.7426
+    Epoch 1479:	Loss 0.28835	TrainAcc 0.9236	ValidAcc 0.9104	TestAcc 0.7409
+    Epoch 1489:	Loss 0.28898	TrainAcc 0.9216	ValidAcc 0.9087	TestAcc 0.7485
+    Epoch 1499:	Loss 0.28920	TrainAcc 0.9226	ValidAcc 0.9100	TestAcc 0.7376
+    Epoch 1509:	Loss 0.29020	TrainAcc 0.9221	ValidAcc 0.9078	TestAcc 0.7422
+    Epoch 1519:	Loss 0.29036	TrainAcc 0.9240	ValidAcc 0.9108	TestAcc 0.7427
+    Epoch 1529:	Loss 0.29244	TrainAcc 0.9208	ValidAcc 0.9075	TestAcc 0.7447
+    Epoch 1539:	Loss 0.29503	TrainAcc 0.9215	ValidAcc 0.9061	TestAcc 0.7357
+    Epoch 1549:	Loss 0.29331	TrainAcc 0.9222	ValidAcc 0.9107	TestAcc 0.7438
+    Epoch 1559:	Loss 0.29327	TrainAcc 0.9226	ValidAcc 0.9079	TestAcc 0.7413
+    Epoch 1569:	Loss 0.29240	TrainAcc 0.9226	ValidAcc 0.9087	TestAcc 0.7439
+    Epoch 1579:	Loss 0.29007	TrainAcc 0.9232	ValidAcc 0.9099	TestAcc 0.7410
+    Epoch 1589:	Loss 0.29173	TrainAcc 0.9206	ValidAcc 0.9068	TestAcc 0.7428
+    Epoch 1599:	Loss 0.28408	TrainAcc 0.9244	ValidAcc 0.9101	TestAcc 0.7488
+    Epoch 1609:	Loss 0.28273	TrainAcc 0.9248	ValidAcc 0.9111	TestAcc 0.7409
+    Epoch 1619:	Loss 0.28427	TrainAcc 0.9245	ValidAcc 0.9096	TestAcc 0.7371
+    Epoch 1629:	Loss 0.28448	TrainAcc 0.9252	ValidAcc 0.9112	TestAcc 0.7414
+    Epoch 1639:	Loss 0.28738	TrainAcc 0.9224	ValidAcc 0.9078	TestAcc 0.7428
+    Epoch 1649:	Loss 0.28861	TrainAcc 0.9218	ValidAcc 0.9088	TestAcc 0.7407
+    Epoch 1659:	Loss 0.29035	TrainAcc 0.9246	ValidAcc 0.9096	TestAcc 0.7391
+    Epoch 1669:	Loss 0.29095	TrainAcc 0.9251	ValidAcc 0.9115	TestAcc 0.7389
+    Epoch 1679:	Loss 0.29525	TrainAcc 0.9188	ValidAcc 0.9071	TestAcc 0.7419
+    Epoch 1689:	Loss 0.29595	TrainAcc 0.9200	ValidAcc 0.9042	TestAcc 0.7426
+    Epoch 1699:	Loss 0.29472	TrainAcc 0.9203	ValidAcc 0.9077	TestAcc 0.7334
+    Epoch 1709:	Loss 0.29285	TrainAcc 0.9205	ValidAcc 0.9063	TestAcc 0.7410
+    Epoch 1719:	Loss 0.29244	TrainAcc 0.9212	ValidAcc 0.9088	TestAcc 0.7437
+    Epoch 1729:	Loss 0.29045	TrainAcc 0.9232	ValidAcc 0.9080	TestAcc 0.7483
+    Epoch 1739:	Loss 0.29081	TrainAcc 0.9231	ValidAcc 0.9093	TestAcc 0.7309
+    Epoch 1749:	Loss 0.28962	TrainAcc 0.9246	ValidAcc 0.9111	TestAcc 0.7440
+    Epoch 1759:	Loss 0.29032	TrainAcc 0.9223	ValidAcc 0.9095	TestAcc 0.7496
+    Epoch 1769:	Loss 0.28718	TrainAcc 0.9247	ValidAcc 0.9110	TestAcc 0.7391
+    Epoch 1779:	Loss 0.28756	TrainAcc 0.9223	ValidAcc 0.9067	TestAcc 0.7386
+    Epoch 1789:	Loss 0.28682	TrainAcc 0.9230	ValidAcc 0.9095	TestAcc 0.7434
+    Epoch 1799:	Loss 0.28636	TrainAcc 0.9232	ValidAcc 0.9097	TestAcc 0.7417
+    Epoch 1809:	Loss 0.28889	TrainAcc 0.9232	ValidAcc 0.9076	TestAcc 0.7411
+    Epoch 1819:	Loss 0.28986	TrainAcc 0.9230	ValidAcc 0.9100	TestAcc 0.7365
+    Epoch 1829:	Loss 0.29311	TrainAcc 0.9213	ValidAcc 0.9081	TestAcc 0.7373
+    Epoch 1839:	Loss 0.29438	TrainAcc 0.9218	ValidAcc 0.9057	TestAcc 0.7424
+    Epoch 1849:	Loss 0.29278	TrainAcc 0.9231	ValidAcc 0.9102	TestAcc 0.7387
+    Epoch 1859:	Loss 0.29018	TrainAcc 0.9229	ValidAcc 0.9083	TestAcc 0.7456
+    Epoch 1869:	Loss 0.28754	TrainAcc 0.9243	ValidAcc 0.9087	TestAcc 0.7406
+    Epoch 1879:	Loss 0.28435	TrainAcc 0.9246	ValidAcc 0.9094	TestAcc 0.7417
+    Epoch 1889:	Loss 0.28197	TrainAcc 0.9248	ValidAcc 0.9102	TestAcc 0.7481
+    Epoch 1899:	Loss 0.27932	TrainAcc 0.9272	ValidAcc 0.9125	TestAcc 0.7393
+    Epoch 1909:	Loss 0.27812	TrainAcc 0.9257	ValidAcc 0.9090	TestAcc 0.7457
+    Epoch 1919:	Loss 0.27746	TrainAcc 0.9249	ValidAcc 0.9105	TestAcc 0.7413
+    Epoch 1929:	Loss 0.27657	TrainAcc 0.9262	ValidAcc 0.9097	TestAcc 0.7461
+    Epoch 1939:	Loss 0.27539	TrainAcc 0.9254	ValidAcc 0.9109	TestAcc 0.7341
+    Epoch 1949:	Loss 0.27505	TrainAcc 0.9261	ValidAcc 0.9123	TestAcc 0.7462
+    Epoch 1959:	Loss 0.27503	TrainAcc 0.9257	ValidAcc 0.9108	TestAcc 0.7420
+    Epoch 1969:	Loss 0.27710	TrainAcc 0.9254	ValidAcc 0.9099	TestAcc 0.7338
+    Epoch 1979:	Loss 0.27673	TrainAcc 0.9283	ValidAcc 0.9122	TestAcc 0.7437
+    Epoch 1989:	Loss 0.28153	TrainAcc 0.9226	ValidAcc 0.9085	TestAcc 0.7447
+    Epoch 1999:	Loss 0.28541	TrainAcc 0.9236	ValidAcc 0.9091	TestAcc 0.7329
+    Epoch 2009:	Loss 0.28747	TrainAcc 0.9241	ValidAcc 0.9074	TestAcc 0.7388
+    Epoch 2019:	Loss 0.28889	TrainAcc 0.9219	ValidAcc 0.9084	TestAcc 0.7419
+    Epoch 2029:	Loss 0.28710	TrainAcc 0.9232	ValidAcc 0.9078	TestAcc 0.7394
+    Epoch 2039:	Loss 0.28545	TrainAcc 0.9255	ValidAcc 0.9098	TestAcc 0.7364
+    Epoch 2049:	Loss 0.28317	TrainAcc 0.9236	ValidAcc 0.9089	TestAcc 0.7460
+    Epoch 2059:	Loss 0.28083	TrainAcc 0.9257	ValidAcc 0.9104	TestAcc 0.7385
+    Epoch 2069:	Loss 0.27811	TrainAcc 0.9255	ValidAcc 0.9112	TestAcc 0.7436
+    Epoch 2079:	Loss 0.27626	TrainAcc 0.9250	ValidAcc 0.9099	TestAcc 0.7409
+    Epoch 2089:	Loss 0.27495	TrainAcc 0.9260	ValidAcc 0.9112	TestAcc 0.7389
+    Epoch 2099:	Loss 0.27273	TrainAcc 0.9261	ValidAcc 0.9109	TestAcc 0.7424
+    Epoch 2109:	Loss 0.27181	TrainAcc 0.9270	ValidAcc 0.9112	TestAcc 0.7403
+    Epoch 2119:	Loss 0.27170	TrainAcc 0.9275	ValidAcc 0.9111	TestAcc 0.7416
+    Epoch 2129:	Loss 0.27114	TrainAcc 0.9274	ValidAcc 0.9122	TestAcc 0.7381
+    Epoch 2139:	Loss 0.27301	TrainAcc 0.9254	ValidAcc 0.9088	TestAcc 0.7453
+    Epoch 2149:	Loss 0.27594	TrainAcc 0.9269	ValidAcc 0.9092	TestAcc 0.7383
+    Epoch 2159:	Loss 0.27554	TrainAcc 0.9280	ValidAcc 0.9126	TestAcc 0.7375
+    Epoch 2169:	Loss 0.27882	TrainAcc 0.9220	ValidAcc 0.9082	TestAcc 0.7468
+    Epoch 2179:	Loss 0.27995	TrainAcc 0.9266	ValidAcc 0.9105	TestAcc 0.7377
+    Epoch 2189:	Loss 0.27995	TrainAcc 0.9264	ValidAcc 0.9094	TestAcc 0.7328
+    Epoch 2199:	Loss 0.27594	TrainAcc 0.9257	ValidAcc 0.9117	TestAcc 0.7440
+    Epoch 2209:	Loss 0.27175	TrainAcc 0.9266	ValidAcc 0.9117	TestAcc 0.7391
+    Epoch 2219:	Loss 0.27214	TrainAcc 0.9258	ValidAcc 0.9085	TestAcc 0.7367
+    Epoch 2229:	Loss 0.27162	TrainAcc 0.9268	ValidAcc 0.9121	TestAcc 0.7446
+    Epoch 2239:	Loss 0.27163	TrainAcc 0.9266	ValidAcc 0.9102	TestAcc 0.7357
+    Epoch 2249:	Loss 0.27434	TrainAcc 0.9255	ValidAcc 0.9081	TestAcc 0.7394
+    Epoch 2259:	Loss 0.27356	TrainAcc 0.9272	ValidAcc 0.9108	TestAcc 0.7403
+    Epoch 2269:	Loss 0.27408	TrainAcc 0.9265	ValidAcc 0.9102	TestAcc 0.7384
+    Epoch 2279:	Loss 0.27428	TrainAcc 0.9264	ValidAcc 0.9105	TestAcc 0.7444
+    Epoch 2289:	Loss 0.27419	TrainAcc 0.9268	ValidAcc 0.9110	TestAcc 0.7378
+    Epoch 2299:	Loss 0.27599	TrainAcc 0.9248	ValidAcc 0.9100	TestAcc 0.7360
+    Epoch 2309:	Loss 0.27462	TrainAcc 0.9277	ValidAcc 0.9107	TestAcc 0.7449
+    Epoch 2319:	Loss 0.27458	TrainAcc 0.9277	ValidAcc 0.9096	TestAcc 0.7348
+    Epoch 2329:	Loss 0.27521	TrainAcc 0.9258	ValidAcc 0.9106	TestAcc 0.7355
+    Epoch 2339:	Loss 0.27427	TrainAcc 0.9248	ValidAcc 0.9092	TestAcc 0.7444
+    Epoch 2349:	Loss 0.27435	TrainAcc 0.9249	ValidAcc 0.9083	TestAcc 0.7291
+    Epoch 2359:	Loss 0.27408	TrainAcc 0.9262	ValidAcc 0.9109	TestAcc 0.7433
+    Epoch 2369:	Loss 0.27333	TrainAcc 0.9250	ValidAcc 0.9096	TestAcc 0.7348
+    Epoch 2379:	Loss 0.27398	TrainAcc 0.9266	ValidAcc 0.9102	TestAcc 0.7397
+    Epoch 2389:	Loss 0.27293	TrainAcc 0.9259	ValidAcc 0.9115	TestAcc 0.7388
+    Epoch 2399:	Loss 0.27432	TrainAcc 0.9243	ValidAcc 0.9078	TestAcc 0.7358
+    Epoch 2409:	Loss 0.27640	TrainAcc 0.9240	ValidAcc 0.9078	TestAcc 0.7351
+    Epoch 2419:	Loss 0.27525	TrainAcc 0.9265	ValidAcc 0.9101	TestAcc 0.7415
+    Epoch 2429:	Loss 0.27339	TrainAcc 0.9268	ValidAcc 0.9118	TestAcc 0.7425
+    Epoch 2439:	Loss 0.27447	TrainAcc 0.9272	ValidAcc 0.9104	TestAcc 0.7404
+    Epoch 2449:	Loss 0.27421	TrainAcc 0.9260	ValidAcc 0.9110	TestAcc 0.7330
+    Epoch 2459:	Loss 0.27412	TrainAcc 0.9265	ValidAcc 0.9112	TestAcc 0.7439
+    Epoch 2469:	Loss 0.27471	TrainAcc 0.9271	ValidAcc 0.9086	TestAcc 0.7378
+    Epoch 2479:	Loss 0.27456	TrainAcc 0.9259	ValidAcc 0.9121	TestAcc 0.7349
+    Epoch 2489:	Loss 0.27294	TrainAcc 0.9261	ValidAcc 0.9089	TestAcc 0.7461
+    Epoch 2499:	Loss 0.27264	TrainAcc 0.9272	ValidAcc 0.9103	TestAcc 0.7357
+    Epoch 2509:	Loss 0.27074	TrainAcc 0.9284	ValidAcc 0.9119	TestAcc 0.7376
+    Epoch 2519:	Loss 0.26963	TrainAcc 0.9282	ValidAcc 0.9117	TestAcc 0.7436
+    Epoch 2529:	Loss 0.26938	TrainAcc 0.9254	ValidAcc 0.9110	TestAcc 0.7318
+    Epoch 2539:	Loss 0.26772	TrainAcc 0.9283	ValidAcc 0.9121	TestAcc 0.7448
+    Epoch 2549:	Loss 0.26693	TrainAcc 0.9292	ValidAcc 0.9111	TestAcc 0.7394
+    Epoch 2559:	Loss 0.26607	TrainAcc 0.9294	ValidAcc 0.9133	TestAcc 0.7400
+    Epoch 2569:	Loss 0.26662	TrainAcc 0.9282	ValidAcc 0.9124	TestAcc 0.7404
+    Epoch 2579:	Loss 0.26743	TrainAcc 0.9261	ValidAcc 0.9103	TestAcc 0.7364
+    Epoch 2589:	Loss 0.26857	TrainAcc 0.9265	ValidAcc 0.9099	TestAcc 0.7392
+    Epoch 2599:	Loss 0.26933	TrainAcc 0.9277	ValidAcc 0.9108	TestAcc 0.7388
+    Epoch 2609:	Loss 0.26870	TrainAcc 0.9276	ValidAcc 0.9116	TestAcc 0.7386
+    Epoch 2619:	Loss 0.27214	TrainAcc 0.9267	ValidAcc 0.9111	TestAcc 0.7389
+    Epoch 2629:	Loss 0.27263	TrainAcc 0.9264	ValidAcc 0.9110	TestAcc 0.7333
+    Epoch 2639:	Loss 0.27347	TrainAcc 0.9253	ValidAcc 0.9102	TestAcc 0.7407
+    Epoch 2649:	Loss 0.27350	TrainAcc 0.9242	ValidAcc 0.9079	TestAcc 0.7390
+    Epoch 2659:	Loss 0.27323	TrainAcc 0.9252	ValidAcc 0.9085	TestAcc 0.7347
+    Epoch 2669:	Loss 0.27161	TrainAcc 0.9267	ValidAcc 0.9108	TestAcc 0.7427
+    Epoch 2679:	Loss 0.26986	TrainAcc 0.9292	ValidAcc 0.9109	TestAcc 0.7415
+    Epoch 2689:	Loss 0.26902	TrainAcc 0.9285	ValidAcc 0.9127	TestAcc 0.7376
+    Epoch 2699:	Loss 0.26602	TrainAcc 0.9288	ValidAcc 0.9113	TestAcc 0.7431
+    Epoch 2709:	Loss 0.26485	TrainAcc 0.9290	ValidAcc 0.9106	TestAcc 0.7374
+    Epoch 2719:	Loss 0.26398	TrainAcc 0.9287	ValidAcc 0.9131	TestAcc 0.7387
+    Epoch 2729:	Loss 0.26269	TrainAcc 0.9285	ValidAcc 0.9106	TestAcc 0.7410
+    Epoch 2739:	Loss 0.26189	TrainAcc 0.9293	ValidAcc 0.9124	TestAcc 0.7377
+    Epoch 2749:	Loss 0.26184	TrainAcc 0.9290	ValidAcc 0.9104	TestAcc 0.7352
+    Epoch 2759:	Loss 0.26081	TrainAcc 0.9281	ValidAcc 0.9115	TestAcc 0.7412
+    Epoch 2769:	Loss 0.25975	TrainAcc 0.9299	ValidAcc 0.9114	TestAcc 0.7375
+    Epoch 2779:	Loss 0.25978	TrainAcc 0.9287	ValidAcc 0.9122	TestAcc 0.7376
+    Epoch 2789:	Loss 0.26023	TrainAcc 0.9294	ValidAcc 0.9131	TestAcc 0.7388
+    Epoch 2799:	Loss 0.26090	TrainAcc 0.9286	ValidAcc 0.9129	TestAcc 0.7413
+    Epoch 2809:	Loss 0.26303	TrainAcc 0.9285	ValidAcc 0.9103	TestAcc 0.7335
+    Epoch 2819:	Loss 0.26357	TrainAcc 0.9299	ValidAcc 0.9123	TestAcc 0.7373
+    Epoch 2829:	Loss 0.26335	TrainAcc 0.9274	ValidAcc 0.9110	TestAcc 0.7432
+    Epoch 2839:	Loss 0.26737	TrainAcc 0.9267	ValidAcc 0.9071	TestAcc 0.7302
+    Epoch 2849:	Loss 0.26716	TrainAcc 0.9286	ValidAcc 0.9117	TestAcc 0.7344
+    Epoch 2859:	Loss 0.26844	TrainAcc 0.9275	ValidAcc 0.9097	TestAcc 0.7429
+    Epoch 2869:	Loss 0.27036	TrainAcc 0.9280	ValidAcc 0.9113	TestAcc 0.7322
+    Epoch 2879:	Loss 0.27005	TrainAcc 0.9254	ValidAcc 0.9089	TestAcc 0.7380
+    Epoch 2889:	Loss 0.27038	TrainAcc 0.9257	ValidAcc 0.9113	TestAcc 0.7338
+    Epoch 2899:	Loss 0.26858	TrainAcc 0.9277	ValidAcc 0.9116	TestAcc 0.7392
+    Epoch 2909:	Loss 0.26578	TrainAcc 0.9293	ValidAcc 0.9130	TestAcc 0.7383
+    Epoch 2919:	Loss 0.26351	TrainAcc 0.9296	ValidAcc 0.9125	TestAcc 0.7402
+    Epoch 2929:	Loss 0.26331	TrainAcc 0.9287	ValidAcc 0.9108	TestAcc 0.7370
+    Epoch 2939:	Loss 0.26161	TrainAcc 0.9295	ValidAcc 0.9112	TestAcc 0.7432
+    Epoch 2949:	Loss 0.26007	TrainAcc 0.9282	ValidAcc 0.9116	TestAcc 0.7325
+    Epoch 2959:	Loss 0.25914	TrainAcc 0.9298	ValidAcc 0.9128	TestAcc 0.7401
+    Epoch 2969:	Loss 0.25762	TrainAcc 0.9296	ValidAcc 0.9101	TestAcc 0.7328
+    Epoch 2979:	Loss 0.25991	TrainAcc 0.9270	ValidAcc 0.9126	TestAcc 0.7380
+    Epoch 2989:	Loss 0.25866	TrainAcc 0.9302	ValidAcc 0.9127	TestAcc 0.7355
+    Epoch 2999:	Loss 0.26046	TrainAcc 0.9287	ValidAcc 0.9122	TestAcc 0.7373
+    Epoch 3009:	Loss 0.26293	TrainAcc 0.9269	ValidAcc 0.9123	TestAcc 0.7356
+    Epoch 3019:	Loss 0.26363	TrainAcc 0.9298	ValidAcc 0.9109	TestAcc 0.7382
+    Epoch 3029:	Loss 0.26555	TrainAcc 0.9289	ValidAcc 0.9128	TestAcc 0.7329
+    Epoch 3039:	Loss 0.26878	TrainAcc 0.9246	ValidAcc 0.9091	TestAcc 0.7349
+    Epoch 3049:	Loss 0.26814	TrainAcc 0.9284	ValidAcc 0.9107	TestAcc 0.7333
+    Epoch 3059:	Loss 0.26669	TrainAcc 0.9289	ValidAcc 0.9124	TestAcc 0.7383
+    Epoch 3069:	Loss 0.26566	TrainAcc 0.9277	ValidAcc 0.9121	TestAcc 0.7374
+    Epoch 3079:	Loss 0.26603	TrainAcc 0.9280	ValidAcc 0.9100	TestAcc 0.7326
+    Epoch 3089:	Loss 0.26376	TrainAcc 0.9261	ValidAcc 0.9108	TestAcc 0.7365
+    Epoch 3099:	Loss 0.26216	TrainAcc 0.9281	ValidAcc 0.9105	TestAcc 0.7348
+    Epoch 3109:	Loss 0.26067	TrainAcc 0.9281	ValidAcc 0.9109	TestAcc 0.7392
+    Epoch 3119:	Loss 0.25919	TrainAcc 0.9291	ValidAcc 0.9122	TestAcc 0.7312
+    Epoch 3129:	Loss 0.25838	TrainAcc 0.9292	ValidAcc 0.9128	TestAcc 0.7380
+    Epoch 3139:	Loss 0.25733	TrainAcc 0.9304	ValidAcc 0.9123	TestAcc 0.7384
+    Epoch 3149:	Loss 0.25579	TrainAcc 0.9319	ValidAcc 0.9128	TestAcc 0.7369
+    Epoch 3159:	Loss 0.25643	TrainAcc 0.9300	ValidAcc 0.9125	TestAcc 0.7365
+    Epoch 3169:	Loss 0.25695	TrainAcc 0.9293	ValidAcc 0.9123	TestAcc 0.7381
+    Epoch 3179:	Loss 0.25632	TrainAcc 0.9306	ValidAcc 0.9117	TestAcc 0.7389
+    Epoch 3189:	Loss 0.25777	TrainAcc 0.9299	ValidAcc 0.9118	TestAcc 0.7304
+    Epoch 3199:	Loss 0.25756	TrainAcc 0.9284	ValidAcc 0.9117	TestAcc 0.7404
+    Epoch 3209:	Loss 0.25842	TrainAcc 0.9293	ValidAcc 0.9107	TestAcc 0.7365
+    Epoch 3219:	Loss 0.25685	TrainAcc 0.9299	ValidAcc 0.9129	TestAcc 0.7354
+    Epoch 3229:	Loss 0.25456	TrainAcc 0.9304	ValidAcc 0.9128	TestAcc 0.7411
+    Epoch 3239:	Loss 0.25519	TrainAcc 0.9302	ValidAcc 0.9109	TestAcc 0.7382
+    Epoch 3249:	Loss 0.25608	TrainAcc 0.9310	ValidAcc 0.9132	TestAcc 0.7380
+    Epoch 3259:	Loss 0.25829	TrainAcc 0.9292	ValidAcc 0.9086	TestAcc 0.7308
+    Epoch 3269:	Loss 0.26018	TrainAcc 0.9308	ValidAcc 0.9131	TestAcc 0.7347
+    Epoch 3279:	Loss 0.26326	TrainAcc 0.9258	ValidAcc 0.9094	TestAcc 0.7402
+    Epoch 3289:	Loss 0.26960	TrainAcc 0.9244	ValidAcc 0.9067	TestAcc 0.7255
+    Epoch 3299:	Loss 0.26957	TrainAcc 0.9271	ValidAcc 0.9101	TestAcc 0.7380
+    Epoch 3309:	Loss 0.26967	TrainAcc 0.9271	ValidAcc 0.9119	TestAcc 0.7384
+    Epoch 3319:	Loss 0.26881	TrainAcc 0.9273	ValidAcc 0.9107	TestAcc 0.7388
+    Epoch 3329:	Loss 0.25809	TrainAcc 0.9303	ValidAcc 0.9117	TestAcc 0.7374
+    Epoch 3339:	Loss 0.25393	TrainAcc 0.9304	ValidAcc 0.9133	TestAcc 0.7384
+    Epoch 3349:	Loss 0.25257	TrainAcc 0.9316	ValidAcc 0.9121	TestAcc 0.7411
+    Epoch 3359:	Loss 0.25188	TrainAcc 0.9316	ValidAcc 0.9122	TestAcc 0.7352
+    Epoch 3369:	Loss 0.25207	TrainAcc 0.9299	ValidAcc 0.9131	TestAcc 0.7374
+    Epoch 3379:	Loss 0.25139	TrainAcc 0.9314	ValidAcc 0.9108	TestAcc 0.7369
+    Epoch 3389:	Loss 0.25175	TrainAcc 0.9300	ValidAcc 0.9127	TestAcc 0.7335
+    Epoch 3399:	Loss 0.25182	TrainAcc 0.9311	ValidAcc 0.9131	TestAcc 0.7390
+    Epoch 3409:	Loss 0.25120	TrainAcc 0.9307	ValidAcc 0.9108	TestAcc 0.7322
+    Epoch 3419:	Loss 0.25207	TrainAcc 0.9310	ValidAcc 0.9117	TestAcc 0.7371
+    Epoch 3429:	Loss 0.25212	TrainAcc 0.9315	ValidAcc 0.9125	TestAcc 0.7357
+    Epoch 3439:	Loss 0.25246	TrainAcc 0.9309	ValidAcc 0.9122	TestAcc 0.7315
+    Epoch 3449:	Loss 0.25443	TrainAcc 0.9287	ValidAcc 0.9115	TestAcc 0.7397
+    Epoch 3459:	Loss 0.25460	TrainAcc 0.9310	ValidAcc 0.9119	TestAcc 0.7329
+    Epoch 3469:	Loss 0.25758	TrainAcc 0.9295	ValidAcc 0.9115	TestAcc 0.7330
+    Epoch 3479:	Loss 0.25987	TrainAcc 0.9291	ValidAcc 0.9105	TestAcc 0.7342
+    Epoch 3489:	Loss 0.26218	TrainAcc 0.9279	ValidAcc 0.9112	TestAcc 0.7354
+    Epoch 3499:	Loss 0.26142	TrainAcc 0.9295	ValidAcc 0.9135	TestAcc 0.7406
+    Epoch 3509:	Loss 0.25142	TrainAcc 0.9318	ValidAcc 0.9121	TestAcc 0.7337
+    Epoch 3519:	Loss 0.25026	TrainAcc 0.9326	ValidAcc 0.9155	TestAcc 0.7403
+    Epoch 3529:	Loss 0.24852	TrainAcc 0.9320	ValidAcc 0.9139	TestAcc 0.7368
+    Epoch 3539:	Loss 0.25116	TrainAcc 0.9304	ValidAcc 0.9101	TestAcc 0.7325
+    Epoch 3549:	Loss 0.25070	TrainAcc 0.9317	ValidAcc 0.9131	TestAcc 0.7344
+    Epoch 3559:	Loss 0.25089	TrainAcc 0.9296	ValidAcc 0.9130	TestAcc 0.7371
+    Epoch 3569:	Loss 0.25406	TrainAcc 0.9293	ValidAcc 0.9107	TestAcc 0.7347
+    Epoch 3579:	Loss 0.25666	TrainAcc 0.9287	ValidAcc 0.9112	TestAcc 0.7351
+    Epoch 3589:	Loss 0.25939	TrainAcc 0.9296	ValidAcc 0.9115	TestAcc 0.7302
+    Epoch 3599:	Loss 0.26171	TrainAcc 0.9301	ValidAcc 0.9103	TestAcc 0.7418
+    Epoch 3609:	Loss 0.26136	TrainAcc 0.9292	ValidAcc 0.9122	TestAcc 0.7400
+    Epoch 3619:	Loss 0.26322	TrainAcc 0.9289	ValidAcc 0.9109	TestAcc 0.7288
+    Epoch 3629:	Loss 0.26125	TrainAcc 0.9280	ValidAcc 0.9109	TestAcc 0.7398
+    Epoch 3639:	Loss 0.26036	TrainAcc 0.9286	ValidAcc 0.9107	TestAcc 0.7378
+    Epoch 3649:	Loss 0.25834	TrainAcc 0.9293	ValidAcc 0.9110	TestAcc 0.7304
+    Epoch 3659:	Loss 0.25613	TrainAcc 0.9292	ValidAcc 0.9117	TestAcc 0.7377
+    Epoch 3669:	Loss 0.25488	TrainAcc 0.9285	ValidAcc 0.9101	TestAcc 0.7333
+    Epoch 3679:	Loss 0.25210	TrainAcc 0.9308	ValidAcc 0.9128	TestAcc 0.7368
+    Epoch 3689:	Loss 0.25162	TrainAcc 0.9312	ValidAcc 0.9124	TestAcc 0.7344
+    Epoch 3699:	Loss 0.25062	TrainAcc 0.9306	ValidAcc 0.9121	TestAcc 0.7359
+    Epoch 3709:	Loss 0.24958	TrainAcc 0.9313	ValidAcc 0.9146	TestAcc 0.7419
+    Epoch 3719:	Loss 0.25200	TrainAcc 0.9308	ValidAcc 0.9128	TestAcc 0.7300
+    Epoch 3729:	Loss 0.25039	TrainAcc 0.9320	ValidAcc 0.9138	TestAcc 0.7364
+    Epoch 3739:	Loss 0.24969	TrainAcc 0.9313	ValidAcc 0.9144	TestAcc 0.7352
+    Epoch 3749:	Loss 0.25348	TrainAcc 0.9286	ValidAcc 0.9096	TestAcc 0.7360
+    Epoch 3759:	Loss 0.25377	TrainAcc 0.9298	ValidAcc 0.9141	TestAcc 0.7247
+    Epoch 3769:	Loss 0.25268	TrainAcc 0.9323	ValidAcc 0.9142	TestAcc 0.7394
+    Epoch 3779:	Loss 0.25463	TrainAcc 0.9305	ValidAcc 0.9125	TestAcc 0.7350
+    Epoch 3789:	Loss 0.25525	TrainAcc 0.9289	ValidAcc 0.9117	TestAcc 0.7320
+    Epoch 3799:	Loss 0.25571	TrainAcc 0.9283	ValidAcc 0.9102	TestAcc 0.7301
+    Epoch 3809:	Loss 0.25576	TrainAcc 0.9289	ValidAcc 0.9130	TestAcc 0.7342
+    Epoch 3819:	Loss 0.25467	TrainAcc 0.9281	ValidAcc 0.9111	TestAcc 0.7411
+    Epoch 3829:	Loss 0.25477	TrainAcc 0.9316	ValidAcc 0.9127	TestAcc 0.7293
+    Epoch 3839:	Loss 0.25392	TrainAcc 0.9320	ValidAcc 0.9132	TestAcc 0.7402
+    Epoch 3849:	Loss 0.25423	TrainAcc 0.9311	ValidAcc 0.9112	TestAcc 0.7332
+    Epoch 3859:	Loss 0.25342	TrainAcc 0.9314	ValidAcc 0.9149	TestAcc 0.7401
+    Epoch 3869:	Loss 0.25416	TrainAcc 0.9305	ValidAcc 0.9113	TestAcc 0.7361
+    Epoch 3879:	Loss 0.25383	TrainAcc 0.9325	ValidAcc 0.9134	TestAcc 0.7299
+    Epoch 3889:	Loss 0.25230	TrainAcc 0.9298	ValidAcc 0.9139	TestAcc 0.7421
+    Epoch 3899:	Loss 0.25381	TrainAcc 0.9298	ValidAcc 0.9098	TestAcc 0.7327
+    Epoch 3909:	Loss 0.25476	TrainAcc 0.9282	ValidAcc 0.9090	TestAcc 0.7345
+    Epoch 3919:	Loss 0.25530	TrainAcc 0.9294	ValidAcc 0.9117	TestAcc 0.7281
+    Epoch 3929:	Loss 0.25801	TrainAcc 0.9267	ValidAcc 0.9100	TestAcc 0.7423
+    Epoch 3939:	Loss 0.25947	TrainAcc 0.9277	ValidAcc 0.9110	TestAcc 0.7196
+    Epoch 3949:	Loss 0.25759	TrainAcc 0.9295	ValidAcc 0.9119	TestAcc 0.7367
+    Epoch 3959:	Loss 0.25778	TrainAcc 0.9284	ValidAcc 0.9095	TestAcc 0.7317
+    Epoch 3969:	Loss 0.25600	TrainAcc 0.9286	ValidAcc 0.9107	TestAcc 0.7305
+    Epoch 3979:	Loss 0.25329	TrainAcc 0.9306	ValidAcc 0.9130	TestAcc 0.7315
+    Epoch 3989:	Loss 0.25137	TrainAcc 0.9293	ValidAcc 0.9117	TestAcc 0.7397
+    Epoch 3999:	Loss 0.25006	TrainAcc 0.9314	ValidAcc 0.9131	TestAcc 0.7326
+    Epoch 4009:	Loss 0.24983	TrainAcc 0.9303	ValidAcc 0.9117	TestAcc 0.7370
+    Epoch 4019:	Loss 0.24948	TrainAcc 0.9317	ValidAcc 0.9135	TestAcc 0.7330
+    Epoch 4029:	Loss 0.24753	TrainAcc 0.9316	ValidAcc 0.9121	TestAcc 0.7390
+    Epoch 4039:	Loss 0.24802	TrainAcc 0.9322	ValidAcc 0.9112	TestAcc 0.7361
+    Epoch 4049:	Loss 0.24528	TrainAcc 0.9326	ValidAcc 0.9137	TestAcc 0.7322
+    Epoch 4059:	Loss 0.24132	TrainAcc 0.9337	ValidAcc 0.9155	TestAcc 0.7416
+    Epoch 4069:	Loss 0.24109	TrainAcc 0.9336	ValidAcc 0.9130	TestAcc 0.7337
+    Epoch 4079:	Loss 0.24209	TrainAcc 0.9332	ValidAcc 0.9130	TestAcc 0.7339
+    Epoch 4089:	Loss 0.24245	TrainAcc 0.9330	ValidAcc 0.9137	TestAcc 0.7289
+    Epoch 4099:	Loss 0.24564	TrainAcc 0.9304	ValidAcc 0.9114	TestAcc 0.7414
+    Epoch 4109:	Loss 0.24728	TrainAcc 0.9329	ValidAcc 0.9139	TestAcc 0.7291
+    Epoch 4119:	Loss 0.25180	TrainAcc 0.9292	ValidAcc 0.9093	TestAcc 0.7279
+    Epoch 4129:	Loss 0.25485	TrainAcc 0.9313	ValidAcc 0.9135	TestAcc 0.7354
+    Epoch 4139:	Loss 0.25729	TrainAcc 0.9285	ValidAcc 0.9119	TestAcc 0.7359
+    Epoch 4149:	Loss 0.26310	TrainAcc 0.9263	ValidAcc 0.9058	TestAcc 0.7244
+    Epoch 4159:	Loss 0.26299	TrainAcc 0.9274	ValidAcc 0.9111	TestAcc 0.7366
+    Epoch 4169:	Loss 0.26311	TrainAcc 0.9293	ValidAcc 0.9098	TestAcc 0.7344
+    Epoch 4179:	Loss 0.26329	TrainAcc 0.9287	ValidAcc 0.9108	TestAcc 0.7338
+    Epoch 4189:	Loss 0.26079	TrainAcc 0.9301	ValidAcc 0.9113	TestAcc 0.7331
+    Epoch 4199:	Loss 0.25797	TrainAcc 0.9314	ValidAcc 0.9126	TestAcc 0.7388
+    Epoch 4209:	Loss 0.25344	TrainAcc 0.9318	ValidAcc 0.9124	TestAcc 0.7365
+    Epoch 4219:	Loss 0.25098	TrainAcc 0.9315	ValidAcc 0.9116	TestAcc 0.7338
+    Epoch 4229:	Loss 0.24835	TrainAcc 0.9316	ValidAcc 0.9135	TestAcc 0.7372
+    Epoch 4239:	Loss 0.24627	TrainAcc 0.9323	ValidAcc 0.9124	TestAcc 0.7330
+    Epoch 4249:	Loss 0.24369	TrainAcc 0.9322	ValidAcc 0.9142	TestAcc 0.7352
+    Epoch 4259:	Loss 0.24344	TrainAcc 0.9319	ValidAcc 0.9132	TestAcc 0.7322
+    Epoch 4269:	Loss 0.24182	TrainAcc 0.9329	ValidAcc 0.9144	TestAcc 0.7400
+    Epoch 4279:	Loss 0.24181	TrainAcc 0.9337	ValidAcc 0.9135	TestAcc 0.7298
+    Epoch 4289:	Loss 0.24236	TrainAcc 0.9328	ValidAcc 0.9123	TestAcc 0.7364
+    Epoch 4299:	Loss 0.24312	TrainAcc 0.9315	ValidAcc 0.9151	TestAcc 0.7304
+    Epoch 4309:	Loss 0.24366	TrainAcc 0.9324	ValidAcc 0.9126	TestAcc 0.7377
+    Epoch 4319:	Loss 0.24475	TrainAcc 0.9314	ValidAcc 0.9113	TestAcc 0.7279
+    Epoch 4329:	Loss 0.24733	TrainAcc 0.9284	ValidAcc 0.9105	TestAcc 0.7319
+    Epoch 4339:	Loss 0.24732	TrainAcc 0.9310	ValidAcc 0.9125	TestAcc 0.7295
+    Epoch 4349:	Loss 0.24519	TrainAcc 0.9332	ValidAcc 0.9148	TestAcc 0.7363
+    Epoch 4359:	Loss 0.24576	TrainAcc 0.9324	ValidAcc 0.9125	TestAcc 0.7335
+    Epoch 4369:	Loss 0.24663	TrainAcc 0.9307	ValidAcc 0.9109	TestAcc 0.7293
+    Epoch 4379:	Loss 0.24783	TrainAcc 0.9295	ValidAcc 0.9095	TestAcc 0.7348
+    Epoch 4389:	Loss 0.24715	TrainAcc 0.9320	ValidAcc 0.9129	TestAcc 0.7316
+    Epoch 4399:	Loss 0.24727	TrainAcc 0.9323	ValidAcc 0.9125	TestAcc 0.7368
+    Epoch 4409:	Loss 0.24940	TrainAcc 0.9296	ValidAcc 0.9124	TestAcc 0.7272
+    Epoch 4419:	Loss 0.24896	TrainAcc 0.9308	ValidAcc 0.9127	TestAcc 0.7344
+    Epoch 4429:	Loss 0.24705	TrainAcc 0.9318	ValidAcc 0.9127	TestAcc 0.7328
+    Epoch 4439:	Loss 0.24551	TrainAcc 0.9330	ValidAcc 0.9140	TestAcc 0.7357
+    Epoch 4449:	Loss 0.24416	TrainAcc 0.9348	ValidAcc 0.9145	TestAcc 0.7326
+    Epoch 4459:	Loss 0.24365	TrainAcc 0.9324	ValidAcc 0.9131	TestAcc 0.7348
+    Epoch 4469:	Loss 0.24466	TrainAcc 0.9321	ValidAcc 0.9129	TestAcc 0.7359
+    Epoch 4479:	Loss 0.24289	TrainAcc 0.9318	ValidAcc 0.9118	TestAcc 0.7293
+    Epoch 4489:	Loss 0.24280	TrainAcc 0.9321	ValidAcc 0.9122	TestAcc 0.7314
+    Epoch 4499:	Loss 0.24174	TrainAcc 0.9318	ValidAcc 0.9129	TestAcc 0.7332
+    Epoch 4509:	Loss 0.24098	TrainAcc 0.9340	ValidAcc 0.9162	TestAcc 0.7388
+    Epoch 4519:	Loss 0.24163	TrainAcc 0.9328	ValidAcc 0.9117	TestAcc 0.7240
+    Epoch 4529:	Loss 0.24291	TrainAcc 0.9320	ValidAcc 0.9126	TestAcc 0.7376
+    Epoch 4539:	Loss 0.24350	TrainAcc 0.9335	ValidAcc 0.9133	TestAcc 0.7302
+    Epoch 4549:	Loss 0.24534	TrainAcc 0.9311	ValidAcc 0.9121	TestAcc 0.7347
+    Epoch 4559:	Loss 0.24706	TrainAcc 0.9317	ValidAcc 0.9126	TestAcc 0.7350
+    Epoch 4569:	Loss 0.24626	TrainAcc 0.9318	ValidAcc 0.9134	TestAcc 0.7260
+    Epoch 4579:	Loss 0.24698	TrainAcc 0.9318	ValidAcc 0.9120	TestAcc 0.7338
+    Epoch 4589:	Loss 0.24795	TrainAcc 0.9282	ValidAcc 0.9113	TestAcc 0.7335
+    Epoch 4599:	Loss 0.24868	TrainAcc 0.9309	ValidAcc 0.9115	TestAcc 0.7333
+    Epoch 4609:	Loss 0.24832	TrainAcc 0.9313	ValidAcc 0.9117	TestAcc 0.7244
+    Epoch 4619:	Loss 0.24848	TrainAcc 0.9311	ValidAcc 0.9140	TestAcc 0.7392
+    Epoch 4629:	Loss 0.24538	TrainAcc 0.9328	ValidAcc 0.9119	TestAcc 0.7350
+    Epoch 4639:	Loss 0.24621	TrainAcc 0.9328	ValidAcc 0.9139	TestAcc 0.7326
+    Epoch 4649:	Loss 0.24503	TrainAcc 0.9326	ValidAcc 0.9127	TestAcc 0.7294
+    Epoch 4659:	Loss 0.24727	TrainAcc 0.9301	ValidAcc 0.9115	TestAcc 0.7378
+    Epoch 4669:	Loss 0.24584	TrainAcc 0.9327	ValidAcc 0.9135	TestAcc 0.7357
+    Epoch 4679:	Loss 0.24524	TrainAcc 0.9343	ValidAcc 0.9134	TestAcc 0.7342
+    Epoch 4689:	Loss 0.24141	TrainAcc 0.9318	ValidAcc 0.9122	TestAcc 0.7361
+    Epoch 4699:	Loss 0.24159	TrainAcc 0.9324	ValidAcc 0.9146	TestAcc 0.7352
+    Epoch 4709:	Loss 0.24159	TrainAcc 0.9332	ValidAcc 0.9137	TestAcc 0.7298
+    Epoch 4719:	Loss 0.24101	TrainAcc 0.9328	ValidAcc 0.9129	TestAcc 0.7302
+    Epoch 4729:	Loss 0.24234	TrainAcc 0.9315	ValidAcc 0.9124	TestAcc 0.7399
+    Epoch 4739:	Loss 0.24238	TrainAcc 0.9335	ValidAcc 0.9118	TestAcc 0.7289
+    Epoch 4749:	Loss 0.24360	TrainAcc 0.9317	ValidAcc 0.9117	TestAcc 0.7284
+    Epoch 4759:	Loss 0.24614	TrainAcc 0.9300	ValidAcc 0.9096	TestAcc 0.7328
+    Epoch 4769:	Loss 0.24680	TrainAcc 0.9310	ValidAcc 0.9136	TestAcc 0.7360
+    Epoch 4779:	Loss 0.24664	TrainAcc 0.9332	ValidAcc 0.9128	TestAcc 0.7318
+    Epoch 4789:	Loss 0.24533	TrainAcc 0.9330	ValidAcc 0.9146	TestAcc 0.7330
+    Epoch 4799:	Loss 0.24754	TrainAcc 0.9307	ValidAcc 0.9125	TestAcc 0.7333
+    Epoch 4809:	Loss 0.24680	TrainAcc 0.9328	ValidAcc 0.9132	TestAcc 0.7381
+    Epoch 4819:	Loss 0.24776	TrainAcc 0.9307	ValidAcc 0.9088	TestAcc 0.7251
+    Epoch 4829:	Loss 0.25046	TrainAcc 0.9293	ValidAcc 0.9107	TestAcc 0.7357
+    Epoch 4839:	Loss 0.24904	TrainAcc 0.9296	ValidAcc 0.9119	TestAcc 0.7352
+    Epoch 4849:	Loss 0.24960	TrainAcc 0.9320	ValidAcc 0.9109	TestAcc 0.7253
+    Epoch 4859:	Loss 0.24827	TrainAcc 0.9313	ValidAcc 0.9138	TestAcc 0.7328
+    Epoch 4869:	Loss 0.24688	TrainAcc 0.9306	ValidAcc 0.9128	TestAcc 0.7337
+    Epoch 4879:	Loss 0.24667	TrainAcc 0.9313	ValidAcc 0.9114	TestAcc 0.7306
+    Epoch 4889:	Loss 0.24603	TrainAcc 0.9308	ValidAcc 0.9114	TestAcc 0.7310
+    Epoch 4899:	Loss 0.24416	TrainAcc 0.9318	ValidAcc 0.9109	TestAcc 0.7344
+    Epoch 4909:	Loss 0.24210	TrainAcc 0.9342	ValidAcc 0.9137	TestAcc 0.7293
+    Epoch 4919:	Loss 0.24115	TrainAcc 0.9328	ValidAcc 0.9139	TestAcc 0.7350
+    Epoch 4929:	Loss 0.24094	TrainAcc 0.9318	ValidAcc 0.9119	TestAcc 0.7272
+    Epoch 4939:	Loss 0.23966	TrainAcc 0.9324	ValidAcc 0.9132	TestAcc 0.7375
+    Epoch 4949:	Loss 0.23870	TrainAcc 0.9334	ValidAcc 0.9127	TestAcc 0.7276
+    Epoch 4959:	Loss 0.23929	TrainAcc 0.9324	ValidAcc 0.9147	TestAcc 0.7349
+    Epoch 4969:	Loss 0.23948	TrainAcc 0.9324	ValidAcc 0.9145	TestAcc 0.7323
+    Epoch 4979:	Loss 0.23953	TrainAcc 0.9333	ValidAcc 0.9133	TestAcc 0.7273
+    Epoch 4989:	Loss 0.23833	TrainAcc 0.9342	ValidAcc 0.9154	TestAcc 0.7372
+Node 0, Layer-level comm throughput (act): -nan GBps
+Node 1, Layer-level comm throughput (act): 10.787 GBps
+Node 2, Layer-level comm throughput (act): 9.950 GBps
+Node 3, Layer-level comm throughput (act): 12.729 GBps
+Node 3, Layer-level comm throughput (grad): -nan GBps
+Node 2, Layer-level comm throughput (grad): 13.624 GBps
+Node 1, Layer-level comm throughput (grad): 10.476 GBps
+Node 0, Layer-level comm throughput (grad): 11.470 GBps
+Node 3, compression time: 36.697s, compression size: 5838.940GB, throughput: 159.111GBps
+Node 3, decompression time: 52.593s, compression size: 5838.940GB, throughput: 111.021GBps
+Node 3, pure compute time: 338.502 s, total compute time: 427.793 s
+Node 3, wait_for_task_time: 35.463 s, wait_for_other_gpus_time: 0.022 s
+------------------------node id 3,  per-epoch time: 0.129267 s---------------
+    Epoch 4999:	Loss 0.23863	TrainAcc 0.9332	ValidAcc 0.9147	TestAcc 0.7323
+Node 0, compression time: 24.251s, compression size: 5838.940GB, throughput: 240.774GBps
+Node 0, decompression time: 59.929s, compression size: 5838.940GB, throughput: 97.431GBps
+Node 0, pure compute time: 364.479 s, total compute time: 448.659 s
+Node 0, wait_for_task_time: 152.930 s, wait_for_other_gpus_time: 0.018 s
+------------------------node id 0,  per-epoch time: 0.129267 s---------------
+Node 2, compression time: 60.234s, compression size: 11677.880GB, throughput: 193.875GBps
+Node 2, decompression time: 85.966s, compression size: 11677.880GB, throughput: 135.843GBps
+Node 2, pure compute time: 329.241 s, total compute time: 475.441 s
+Node 2, wait_for_task_time: 82.529 s, wait_for_other_gpus_time: 0.023 s
+------------------------node id 2,  per-epoch time: 0.129267 s---------------
+Node 1, compression time: 60.310s, compression size: 11677.880GB, throughput: 193.632GBps
+Node 1, decompression time: 137.944s, compression size: 11677.880GB, throughput: 84.656GBps
+Node 1, pure compute time: 331.031 s, total compute time: 529.285 s
+Node 1, wait_for_task_time: 57.227 s, wait_for_other_gpus_time: 0.023 s
+------------------------node id 1,  per-epoch time: 0.129267 s---------------
+************ Profiling Results ************
+	Bubble: 50.003300 (s) (10.72 percentage)
+	Compute: 341.532304 (s) (73.25 percentage)
+	GradSync: 1.754991 (s) (0.38 percentage)
+	GraphComm: 0.137380 (s) (0.03 percentage)
+	Imbalance: 48.994513 (s) (10.51 percentage)
+	LayerComm: 23.816711 (s) (5.11 percentage)
+	Layer-level communication (cluster-wide, per epoch): 1.161 GB
+Highest valid_acc: 0.9162
+Target test_acc: 0.7388
+Epoch to reach the target acc: 4510
+ERROR: undercount the overhead: breakdown sum / all time: 0.720
+ERROR: undercount the overhead: breakdown sum / all time: 0.720
+ERROR: undercount the overhead: breakdown sum / all time: 0.720
+ERROR: undercount the overhead: breakdown sum / all time: 0.720
+[MPI Rank 3] Success 
+[MPI Rank 0] Success 
+[MPI Rank 2] Success 
+[MPI Rank 1] Success 
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
+The number of hidden units: 128
+The number of training epoches: 0
+Learning rate: 0.000000
+Initialized node g005.anvil.rcac.purdue.edu
+Building the CSR structure...
+        It takes 1.940 seconds.
+Building the CSC structure...
+        It takes 1.906 seconds.
+Building the Feature Vector...
+        It takes 0.583 seconds.
+Building the Label Vector...
+        It takes 0.315 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Dropout: 0.000 
+train nodes 196615, valid nodes 39323, test nodes 2213091
 *** Allocating resources for all tensors...
     OP_TYPE: OPERATOR_INPUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
     OP_TYPE: OPERATOR_WEIGHT
     OP_TYPE: OPERATOR_MATMUL
     OP_TYPE: OPERATOR_AGGREGATION
@@ -99,29 +895,507 @@ train nodes 153431, valid nodes 23831, test nodes 55703
 *** Preparing the input tensor...
 *** Done preparing the input tensor.
 *** Preparing the STD tensor...
-    Number of labels: 41
-    Number of vertices: 232965
+    Number of labels: 47
+    Number of vertices: 2449029
 *** Done preparing the STD tensor.
-*** Done preparing the weight tensor.
-There are 3 weight operators.
-gcn: /home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_single_cpu_engine.cc:451: virtual double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication*, int): Assertion `num_weight_ops >= num_stages' failed.
-[g005:3963601] *** Process received signal ***
-[g005:3963601] Signal: Aborted (6)
-[g005:3963601] Signal code:  (-6)
-[g005:3963601] [ 0] /lib64/libc.so.6(+0x37410)[0x15247488d410]
-[g005:3963601] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x15247488d38f]
-[g005:3963601] [ 2] /lib64/libc.so.6(abort+0x127)[0x152474877dc5]
-[g005:3963601] [ 3] /lib64/libc.so.6(+0x21c99)[0x152474877c99]
-[g005:3963601] [ 4] /lib64/libc.so.6(+0x2fa86)[0x152474885a86]
-[g005:3963601] [ 5] ./applications/single_gpu/gcn(_ZN28SingleNodeExecutionEngineGPU19execute_applicationEP19AbstractApplicationi+0x163b)[0x45589b]
-[g005:3963601] [ 6] ./applications/single_gpu/gcn(main+0x1391)[0x424421]
-[g005:3963601] [ 7] /lib64/libc.so.6(__libc_start_main+0xf3)[0x1524748794a3]
-[g005:3963601] [ 8] ./applications/single_gpu/gcn(_start+0x2e)[0x42495e]
-[g005:3963601] *** End of error message ***
---------------------------------------------------------------------------
-Primary job  terminated normally, but 1 process returned
-a non-zero exit code. Per user-direction, the job has been aborted.
---------------------------------------------------------------------------
---------------------------------------------------------------------------
-mpirun noticed that process rank 0 with PID 3963601 on node g005 exited on signal 6 (Aborted).
---------------------------------------------------------------------------
+Version 0	TrainAcc 0.5148	ValidAcc 0.5092	TestAcc 0.3990
+Version 1	TrainAcc 0.6851	ValidAcc 0.6789	TestAcc 0.5275
+Version 2	TrainAcc 0.7896	ValidAcc 0.7835	TestAcc 0.6249
+Version 3	TrainAcc 0.8317	ValidAcc 0.8269	TestAcc 0.6607
+Version 4	TrainAcc 0.8577	ValidAcc 0.8528	TestAcc 0.6838
+Version 5	TrainAcc 0.8683	ValidAcc 0.8626	TestAcc 0.7050
+Version 6	TrainAcc 0.8744	ValidAcc 0.8689	TestAcc 0.7063
+Version 7	TrainAcc 0.8736	ValidAcc 0.8686	TestAcc 0.7096
+Version 8	TrainAcc 0.8833	ValidAcc 0.8768	TestAcc 0.7214
+Version 9	TrainAcc 0.8821	ValidAcc 0.8746	TestAcc 0.7201
+Version 10	TrainAcc 0.8864	ValidAcc 0.8790	TestAcc 0.7120
+Version 11	TrainAcc 0.8872	ValidAcc 0.8829	TestAcc 0.7312
+Version 12	TrainAcc 0.8936	ValidAcc 0.8870	TestAcc 0.7341
+Version 13	TrainAcc 0.8946	ValidAcc 0.8878	TestAcc 0.7367
+Version 14	TrainAcc 0.8915	ValidAcc 0.8867	TestAcc 0.7340
+Version 15	TrainAcc 0.8947	ValidAcc 0.8878	TestAcc 0.7380
+Version 16	TrainAcc 0.8964	ValidAcc 0.8912	TestAcc 0.7366
+Version 17	TrainAcc 0.8999	ValidAcc 0.8932	TestAcc 0.7354
+Version 18	TrainAcc 0.9002	ValidAcc 0.8924	TestAcc 0.7446
+Version 19	TrainAcc 0.8969	ValidAcc 0.8895	TestAcc 0.7423
+Version 20	TrainAcc 0.9005	ValidAcc 0.8936	TestAcc 0.7442
+Version 21	TrainAcc 0.8976	ValidAcc 0.8940	TestAcc 0.7371
+Version 22	TrainAcc 0.9011	ValidAcc 0.8935	TestAcc 0.7523
+Version 23	TrainAcc 0.9035	ValidAcc 0.8980	TestAcc 0.7471
+Version 24	TrainAcc 0.9021	ValidAcc 0.8971	TestAcc 0.7576
+Version 25	TrainAcc 0.9047	ValidAcc 0.8980	TestAcc 0.7440
+Version 26	TrainAcc 0.9054	ValidAcc 0.8983	TestAcc 0.7527
+Version 27	TrainAcc 0.9007	ValidAcc 0.8953	TestAcc 0.7512
+Version 28	TrainAcc 0.9051	ValidAcc 0.9006	TestAcc 0.7553
+Version 29	TrainAcc 0.9070	ValidAcc 0.8985	TestAcc 0.7480
+Version 30	TrainAcc 0.9038	ValidAcc 0.8997	TestAcc 0.7604
+Version 31	TrainAcc 0.9072	ValidAcc 0.8989	TestAcc 0.7576
+Version 32	TrainAcc 0.9091	ValidAcc 0.9036	TestAcc 0.7628
+Version 33	TrainAcc 0.9081	ValidAcc 0.9011	TestAcc 0.7562
+Version 34	TrainAcc 0.9092	ValidAcc 0.9027	TestAcc 0.7557
+Version 35	TrainAcc 0.9082	ValidAcc 0.9019	TestAcc 0.7667
+Version 36	TrainAcc 0.9096	ValidAcc 0.9018	TestAcc 0.7627
+Version 37	TrainAcc 0.9070	ValidAcc 0.9021	TestAcc 0.7526
+Version 38	TrainAcc 0.9072	ValidAcc 0.9015	TestAcc 0.7606
+Version 39	TrainAcc 0.9071	ValidAcc 0.9011	TestAcc 0.7610
+Version 40	TrainAcc 0.9095	ValidAcc 0.9005	TestAcc 0.7554
+Version 41	TrainAcc 0.9106	ValidAcc 0.9055	TestAcc 0.7623
+Version 42	TrainAcc 0.9104	ValidAcc 0.9038	TestAcc 0.7617
+Version 43	TrainAcc 0.9110	ValidAcc 0.9032	TestAcc 0.7675
+Version 44	TrainAcc 0.9135	ValidAcc 0.9064	TestAcc 0.7662
+Version 45	TrainAcc 0.9122	ValidAcc 0.9062	TestAcc 0.7663
+Version 46	TrainAcc 0.9130	ValidAcc 0.9053	TestAcc 0.7644
+Version 47	TrainAcc 0.9126	ValidAcc 0.9033	TestAcc 0.7662
+Version 48	TrainAcc 0.9131	ValidAcc 0.9063	TestAcc 0.7671
+Version 49	TrainAcc 0.9126	ValidAcc 0.9050	TestAcc 0.7605
+Version 50	TrainAcc 0.9149	ValidAcc 0.9079	TestAcc 0.7679
+Version 51	TrainAcc 0.9123	ValidAcc 0.9054	TestAcc 0.7706
+Version 52	TrainAcc 0.9136	ValidAcc 0.9059	TestAcc 0.7646
+Version 53	TrainAcc 0.9102	ValidAcc 0.9040	TestAcc 0.7585
+Version 54	TrainAcc 0.9146	ValidAcc 0.9056	TestAcc 0.7697
+Version 55	TrainAcc 0.9153	ValidAcc 0.9072	TestAcc 0.7708
+Version 56	TrainAcc 0.9107	ValidAcc 0.9036	TestAcc 0.7528
+Version 57	TrainAcc 0.9125	ValidAcc 0.9039	TestAcc 0.7644
+Version 58	TrainAcc 0.9098	ValidAcc 0.9028	TestAcc 0.7668
+Version 59	TrainAcc 0.9114	ValidAcc 0.9058	TestAcc 0.7630
+Version 60	TrainAcc 0.9125	ValidAcc 0.9034	TestAcc 0.7567
+Version 61	TrainAcc 0.9144	ValidAcc 0.9071	TestAcc 0.7690
+Version 62	TrainAcc 0.9154	ValidAcc 0.9072	TestAcc 0.7706
+Version 63	TrainAcc 0.9163	ValidAcc 0.9078	TestAcc 0.7652
+Version 64	TrainAcc 0.9159	ValidAcc 0.9076	TestAcc 0.7657
+Version 65	TrainAcc 0.9164	ValidAcc 0.9086	TestAcc 0.7689
+Version 66	TrainAcc 0.9156	ValidAcc 0.9064	TestAcc 0.7610
+Version 67	TrainAcc 0.9170	ValidAcc 0.9085	TestAcc 0.7678
+Version 68	TrainAcc 0.9175	ValidAcc 0.9087	TestAcc 0.7737
+Version 69	TrainAcc 0.9152	ValidAcc 0.9074	TestAcc 0.7631
+Version 70	TrainAcc 0.9136	ValidAcc 0.9068	TestAcc 0.7676
+Version 71	TrainAcc 0.9152	ValidAcc 0.9048	TestAcc 0.7648
+Version 72	TrainAcc 0.9183	ValidAcc 0.9098	TestAcc 0.7669
+Version 73	TrainAcc 0.9167	ValidAcc 0.9093	TestAcc 0.7678
+Version 74	TrainAcc 0.9145	ValidAcc 0.9045	TestAcc 0.7722
+Version 75	TrainAcc 0.9160	ValidAcc 0.9086	TestAcc 0.7532
+Version 76	TrainAcc 0.9148	ValidAcc 0.9060	TestAcc 0.7653
+Version 77	TrainAcc 0.9128	ValidAcc 0.9044	TestAcc 0.7638
+Version 78	TrainAcc 0.9167	ValidAcc 0.9075	TestAcc 0.7678
+Version 79	TrainAcc 0.9129	ValidAcc 0.9065	TestAcc 0.7527
+Version 80	TrainAcc 0.9147	ValidAcc 0.9053	TestAcc 0.7684
+Version 81	TrainAcc 0.9178	ValidAcc 0.9110	TestAcc 0.7688
+Version 82	TrainAcc 0.9192	ValidAcc 0.9104	TestAcc 0.7726
+Version 83	TrainAcc 0.9199	ValidAcc 0.9113	TestAcc 0.7607
+Version 84	TrainAcc 0.9202	ValidAcc 0.9103	TestAcc 0.7715
+Version 85	TrainAcc 0.9191	ValidAcc 0.9099	TestAcc 0.7738
+Version 86	TrainAcc 0.9206	ValidAcc 0.9098	TestAcc 0.7697
+Version 87	TrainAcc 0.9169	ValidAcc 0.9061	TestAcc 0.7544
+Version 88	TrainAcc 0.9189	ValidAcc 0.9101	TestAcc 0.7737
+Version 89	TrainAcc 0.9186	ValidAcc 0.9091	TestAcc 0.7715
+Version 90	TrainAcc 0.9199	ValidAcc 0.9089	TestAcc 0.7645
+Version 91	TrainAcc 0.9192	ValidAcc 0.9091	TestAcc 0.7700
+Version 92	TrainAcc 0.9175	ValidAcc 0.9080	TestAcc 0.7703
+Version 93	TrainAcc 0.9195	ValidAcc 0.9098	TestAcc 0.7661
+Version 94	TrainAcc 0.9189	ValidAcc 0.9081	TestAcc 0.7677
+Version 95	TrainAcc 0.9209	ValidAcc 0.9110	TestAcc 0.7680
+Version 96	TrainAcc 0.9223	ValidAcc 0.9115	TestAcc 0.7740
+Version 97	TrainAcc 0.9214	ValidAcc 0.9107	TestAcc 0.7689
+Version 98	TrainAcc 0.9211	ValidAcc 0.9116	TestAcc 0.7680
+Version 99	TrainAcc 0.9215	ValidAcc 0.9104	TestAcc 0.7703
+Version 100	TrainAcc 0.9220	ValidAcc 0.9125	TestAcc 0.7708
+Version 101	TrainAcc 0.9221	ValidAcc 0.9115	TestAcc 0.7638
+Version 102	TrainAcc 0.9203	ValidAcc 0.9105	TestAcc 0.7716
+Version 103	TrainAcc 0.9214	ValidAcc 0.9113	TestAcc 0.7733
+Version 104	TrainAcc 0.9210	ValidAcc 0.9099	TestAcc 0.7617
+Version 105	TrainAcc 0.9221	ValidAcc 0.9104	TestAcc 0.7701
+Version 106	TrainAcc 0.9196	ValidAcc 0.9100	TestAcc 0.7662
+Version 107	TrainAcc 0.9213	ValidAcc 0.9110	TestAcc 0.7761
+Version 108	TrainAcc 0.9216	ValidAcc 0.9086	TestAcc 0.7537
+Version 109	TrainAcc 0.9214	ValidAcc 0.9115	TestAcc 0.7779
+Version 110	TrainAcc 0.9218	ValidAcc 0.9105	TestAcc 0.7733
+Version 111	TrainAcc 0.9217	ValidAcc 0.9092	TestAcc 0.7652
+Version 112	TrainAcc 0.9223	ValidAcc 0.9106	TestAcc 0.7734
+Version 113	TrainAcc 0.9234	ValidAcc 0.9126	TestAcc 0.7752
+Version 114	TrainAcc 0.9206	ValidAcc 0.9097	TestAcc 0.7618
+Version 115	TrainAcc 0.9198	ValidAcc 0.9099	TestAcc 0.7684
+Version 116	TrainAcc 0.9233	ValidAcc 0.9122	TestAcc 0.7746
+Version 117	TrainAcc 0.9184	ValidAcc 0.9082	TestAcc 0.7640
+Version 118	TrainAcc 0.9195	ValidAcc 0.9092	TestAcc 0.7688
+Version 119	TrainAcc 0.9196	ValidAcc 0.9092	TestAcc 0.7643
+Version 120	TrainAcc 0.9194	ValidAcc 0.9100	TestAcc 0.7777
+Version 121	TrainAcc 0.9232	ValidAcc 0.9126	TestAcc 0.7654
+Version 122	TrainAcc 0.9217	ValidAcc 0.9116	TestAcc 0.7745
+Version 123	TrainAcc 0.9242	ValidAcc 0.9132	TestAcc 0.7685
+Version 124	TrainAcc 0.9216	ValidAcc 0.9129	TestAcc 0.7709
+Version 125	TrainAcc 0.9239	ValidAcc 0.9132	TestAcc 0.7706
+Version 126	TrainAcc 0.9249	ValidAcc 0.9137	TestAcc 0.7690
+Version 127	TrainAcc 0.9249	ValidAcc 0.9134	TestAcc 0.7722
+Version 128	TrainAcc 0.9262	ValidAcc 0.9136	TestAcc 0.7733
+Version 129	TrainAcc 0.9243	ValidAcc 0.9127	TestAcc 0.7686
+Version 130	TrainAcc 0.9256	ValidAcc 0.9128	TestAcc 0.7734
+Version 131	TrainAcc 0.9239	ValidAcc 0.9138	TestAcc 0.7662
+Version 132	TrainAcc 0.9248	ValidAcc 0.9139	TestAcc 0.7724
+Version 133	TrainAcc 0.9256	ValidAcc 0.9128	TestAcc 0.7716
+Version 134	TrainAcc 0.9218	ValidAcc 0.9130	TestAcc 0.7635
+Version 135	TrainAcc 0.9208	ValidAcc 0.9087	TestAcc 0.7677
+Version 136	TrainAcc 0.9232	ValidAcc 0.9119	TestAcc 0.7671
+Version 137	TrainAcc 0.9228	ValidAcc 0.9115	TestAcc 0.7733
+Version 138	TrainAcc 0.9242	ValidAcc 0.9113	TestAcc 0.7623
+Version 139	TrainAcc 0.9234	ValidAcc 0.9125	TestAcc 0.7753
+Version 140	TrainAcc 0.9261	ValidAcc 0.9136	TestAcc 0.7682
+Version 141	TrainAcc 0.9266	ValidAcc 0.9145	TestAcc 0.7719
+Version 142	TrainAcc 0.9259	ValidAcc 0.9128	TestAcc 0.7715
+Version 143	TrainAcc 0.9268	ValidAcc 0.9138	TestAcc 0.7657
+Version 144	TrainAcc 0.9255	ValidAcc 0.9134	TestAcc 0.7752
+Version 145	TrainAcc 0.9247	ValidAcc 0.9114	TestAcc 0.7676
+Version 146	TrainAcc 0.9263	ValidAcc 0.9144	TestAcc 0.7684
+Version 147	TrainAcc 0.9264	ValidAcc 0.9144	TestAcc 0.7647
+Version 148	TrainAcc 0.9241	ValidAcc 0.9113	TestAcc 0.7754
+Version 149	TrainAcc 0.9251	ValidAcc 0.9138	TestAcc 0.7663
+Version 150	TrainAcc 0.9261	ValidAcc 0.9130	TestAcc 0.7684
+Version 151	TrainAcc 0.9263	ValidAcc 0.9131	TestAcc 0.7659
+Version 152	TrainAcc 0.9222	ValidAcc 0.9107	TestAcc 0.7712
+Version 153	TrainAcc 0.9251	ValidAcc 0.9122	TestAcc 0.7673
+Version 154	TrainAcc 0.9249	ValidAcc 0.9145	TestAcc 0.7644
+Version 155	TrainAcc 0.9248	ValidAcc 0.9124	TestAcc 0.7696
+Version 156	TrainAcc 0.9251	ValidAcc 0.9124	TestAcc 0.7700
+Version 157	TrainAcc 0.9246	ValidAcc 0.9140	TestAcc 0.7648
+Version 158	TrainAcc 0.9252	ValidAcc 0.9122	TestAcc 0.7700
+Version 159	TrainAcc 0.9274	ValidAcc 0.9144	TestAcc 0.7754
+Version 160	TrainAcc 0.9269	ValidAcc 0.9141	TestAcc 0.7694
+Version 161	TrainAcc 0.9271	ValidAcc 0.9131	TestAcc 0.7652
+Version 162	TrainAcc 0.9263	ValidAcc 0.9145	TestAcc 0.7623
+Version 163	TrainAcc 0.9257	ValidAcc 0.9119	TestAcc 0.7717
+Version 164	TrainAcc 0.9253	ValidAcc 0.9141	TestAcc 0.7715
+Version 165	TrainAcc 0.9268	ValidAcc 0.9148	TestAcc 0.7666
+Version 166	TrainAcc 0.9238	ValidAcc 0.9112	TestAcc 0.7599
+Version 167	TrainAcc 0.9196	ValidAcc 0.9100	TestAcc 0.7639
+Version 168	TrainAcc 0.9222	ValidAcc 0.9092	TestAcc 0.7724
+Version 169	TrainAcc 0.9244	ValidAcc 0.9125	TestAcc 0.7611
+Version 170	TrainAcc 0.9252	ValidAcc 0.9113	TestAcc 0.7657
+Version 171	TrainAcc 0.9270	ValidAcc 0.9140	TestAcc 0.7707
+Version 172	TrainAcc 0.9259	ValidAcc 0.9133	TestAcc 0.7767
+Version 173	TrainAcc 0.9260	ValidAcc 0.9127	TestAcc 0.7601
+Version 174	TrainAcc 0.9265	ValidAcc 0.9151	TestAcc 0.7627
+Version 175	TrainAcc 0.9249	ValidAcc 0.9126	TestAcc 0.7750
+Version 176	TrainAcc 0.9262	ValidAcc 0.9144	TestAcc 0.7641
+Version 177	TrainAcc 0.9265	ValidAcc 0.9116	TestAcc 0.7651
+Version 178	TrainAcc 0.9268	ValidAcc 0.9142	TestAcc 0.7690
+Version 179	TrainAcc 0.9259	ValidAcc 0.9128	TestAcc 0.7683
+Version 180	TrainAcc 0.9268	ValidAcc 0.9139	TestAcc 0.7685
+Version 181	TrainAcc 0.9248	ValidAcc 0.9121	TestAcc 0.7628
+Version 182	TrainAcc 0.9242	ValidAcc 0.9119	TestAcc 0.7638
+Version 183	TrainAcc 0.9242	ValidAcc 0.9101	TestAcc 0.7725
+Version 184	TrainAcc 0.9254	ValidAcc 0.9120	TestAcc 0.7607
+Version 185	TrainAcc 0.9252	ValidAcc 0.9134	TestAcc 0.7724
+Version 186	TrainAcc 0.9265	ValidAcc 0.9129	TestAcc 0.7692
+Version 187	TrainAcc 0.9279	ValidAcc 0.9156	TestAcc 0.7644
+Version 188	TrainAcc 0.9274	ValidAcc 0.9145	TestAcc 0.7763
+Version 189	TrainAcc 0.9289	ValidAcc 0.9156	TestAcc 0.7627
+Version 190	TrainAcc 0.9283	ValidAcc 0.9131	TestAcc 0.7712
+Version 191	TrainAcc 0.9279	ValidAcc 0.9153	TestAcc 0.7671
+Version 192	TrainAcc 0.9281	ValidAcc 0.9146	TestAcc 0.7741
+Version 193	TrainAcc 0.9290	ValidAcc 0.9138	TestAcc 0.7599
+Version 194	TrainAcc 0.9287	ValidAcc 0.9156	TestAcc 0.7699
+Version 195	TrainAcc 0.9278	ValidAcc 0.9130	TestAcc 0.7715
+Version 196	TrainAcc 0.9306	ValidAcc 0.9155	TestAcc 0.7651
+Version 197	TrainAcc 0.9294	ValidAcc 0.9137	TestAcc 0.7621
+Version 198	TrainAcc 0.9236	ValidAcc 0.9109	TestAcc 0.7703
+Version 199	TrainAcc 0.9263	ValidAcc 0.9135	TestAcc 0.7639
+Version 200	TrainAcc 0.9267	ValidAcc 0.9120	TestAcc 0.7610
+Version 201	TrainAcc 0.9255	ValidAcc 0.9130	TestAcc 0.7722
+Version 202	TrainAcc 0.9252	ValidAcc 0.9140	TestAcc 0.7673
+Version 203	TrainAcc 0.9275	ValidAcc 0.9146	TestAcc 0.7626
+Version 204	TrainAcc 0.9259	ValidAcc 0.9125	TestAcc 0.7714
+Version 205	TrainAcc 0.9279	ValidAcc 0.9132	TestAcc 0.7660
+Version 206	TrainAcc 0.9271	ValidAcc 0.9149	TestAcc 0.7669
+Version 207	TrainAcc 0.9272	ValidAcc 0.9133	TestAcc 0.7681
+Version 208	TrainAcc 0.9288	ValidAcc 0.9161	TestAcc 0.7662
+Version 209	TrainAcc 0.9291	ValidAcc 0.9145	TestAcc 0.7692
+Version 210	TrainAcc 0.9290	ValidAcc 0.9154	TestAcc 0.7686
+Version 211	TrainAcc 0.9312	ValidAcc 0.9149	TestAcc 0.7686
+Version 212	TrainAcc 0.9301	ValidAcc 0.9154	TestAcc 0.7626
+Version 213	TrainAcc 0.9283	ValidAcc 0.9141	TestAcc 0.7729
+Version 214	TrainAcc 0.9295	ValidAcc 0.9148	TestAcc 0.7729
+Version 215	TrainAcc 0.9290	ValidAcc 0.9146	TestAcc 0.7570
+Version 216	TrainAcc 0.9259	ValidAcc 0.9130	TestAcc 0.7747
+Version 217	TrainAcc 0.9296	ValidAcc 0.9161	TestAcc 0.7698
+Version 218	TrainAcc 0.9273	ValidAcc 0.9120	TestAcc 0.7522
+Version 219	TrainAcc 0.9284	ValidAcc 0.9154	TestAcc 0.7718
+Version 220	TrainAcc 0.9286	ValidAcc 0.9153	TestAcc 0.7655
+Version 221	TrainAcc 0.9290	ValidAcc 0.9143	TestAcc 0.7642
+Version 222	TrainAcc 0.9295	ValidAcc 0.9148	TestAcc 0.7723
+Version 223	TrainAcc 0.9290	ValidAcc 0.9154	TestAcc 0.7638
+Version 224	TrainAcc 0.9301	ValidAcc 0.9141	TestAcc 0.7676
+Version 225	TrainAcc 0.9299	ValidAcc 0.9137	TestAcc 0.7681
+Version 226	TrainAcc 0.9300	ValidAcc 0.9162	TestAcc 0.7652
+Version 227	TrainAcc 0.9288	ValidAcc 0.9141	TestAcc 0.7723
+Version 228	TrainAcc 0.9283	ValidAcc 0.9127	TestAcc 0.7640
+Version 229	TrainAcc 0.9297	ValidAcc 0.9136	TestAcc 0.7643
+Version 230	TrainAcc 0.9290	ValidAcc 0.9156	TestAcc 0.7713
+Version 231	TrainAcc 0.9275	ValidAcc 0.9117	TestAcc 0.7630
+Version 232	TrainAcc 0.9272	ValidAcc 0.9140	TestAcc 0.7582
+Version 233	TrainAcc 0.9263	ValidAcc 0.9106	TestAcc 0.7712
+Version 234	TrainAcc 0.9279	ValidAcc 0.9115	TestAcc 0.7554
+Version 235	TrainAcc 0.9299	ValidAcc 0.9149	TestAcc 0.7694
+Version 236	TrainAcc 0.9279	ValidAcc 0.9131	TestAcc 0.7642
+Version 237	TrainAcc 0.9311	ValidAcc 0.9153	TestAcc 0.7680
+Version 238	TrainAcc 0.9288	ValidAcc 0.9142	TestAcc 0.7650
+Version 239	TrainAcc 0.9267	ValidAcc 0.9125	TestAcc 0.7663
+Version 240	TrainAcc 0.9285	ValidAcc 0.9146	TestAcc 0.7654
+Version 241	TrainAcc 0.9315	ValidAcc 0.9154	TestAcc 0.7691
+Version 242	TrainAcc 0.9281	ValidAcc 0.9154	TestAcc 0.7703
+Version 243	TrainAcc 0.9294	ValidAcc 0.9148	TestAcc 0.7706
+Version 244	TrainAcc 0.9293	ValidAcc 0.9131	TestAcc 0.7589
+Version 245	TrainAcc 0.9292	ValidAcc 0.9164	TestAcc 0.7693
+Version 246	TrainAcc 0.9291	ValidAcc 0.9131	TestAcc 0.7719
+Version 247	TrainAcc 0.9287	ValidAcc 0.9141	TestAcc 0.7590
+Version 248	TrainAcc 0.9295	ValidAcc 0.9141	TestAcc 0.7733
+Version 249	TrainAcc 0.9312	ValidAcc 0.9147	TestAcc 0.7657
+Version 250	TrainAcc 0.9312	ValidAcc 0.9152	TestAcc 0.7613
+Version 251	TrainAcc 0.9288	ValidAcc 0.9143	TestAcc 0.7720
+Version 252	TrainAcc 0.9296	ValidAcc 0.9143	TestAcc 0.7604
+Version 253	TrainAcc 0.9320	ValidAcc 0.9155	TestAcc 0.7711
+Version 254	TrainAcc 0.9314	ValidAcc 0.9155	TestAcc 0.7706
+Version 255	TrainAcc 0.9315	ValidAcc 0.9154	TestAcc 0.7637
+Version 256	TrainAcc 0.9301	ValidAcc 0.9149	TestAcc 0.7685
+Version 257	TrainAcc 0.9289	ValidAcc 0.9141	TestAcc 0.7646
+Version 258	TrainAcc 0.9297	ValidAcc 0.9148	TestAcc 0.7669
+Version 259	TrainAcc 0.9323	ValidAcc 0.9158	TestAcc 0.7660
+Version 260	TrainAcc 0.9290	ValidAcc 0.9147	TestAcc 0.7647
+Version 261	TrainAcc 0.9287	ValidAcc 0.9136	TestAcc 0.7676
+Version 262	TrainAcc 0.9287	ValidAcc 0.9123	TestAcc 0.7587
+Version 263	TrainAcc 0.9273	ValidAcc 0.9140	TestAcc 0.7658
+Version 264	TrainAcc 0.9275	ValidAcc 0.9140	TestAcc 0.7707
+Version 265	TrainAcc 0.9305	ValidAcc 0.9152	TestAcc 0.7617
+Version 266	TrainAcc 0.9311	ValidAcc 0.9166	TestAcc 0.7708
+Version 267	TrainAcc 0.9312	ValidAcc 0.9159	TestAcc 0.7690
+Version 268	TrainAcc 0.9315	ValidAcc 0.9150	TestAcc 0.7616
+Version 269	TrainAcc 0.9310	ValidAcc 0.9166	TestAcc 0.7698
+Version 270	TrainAcc 0.9313	ValidAcc 0.9134	TestAcc 0.7660
+Version 271	TrainAcc 0.9316	ValidAcc 0.9162	TestAcc 0.7638
+Version 272	TrainAcc 0.9320	ValidAcc 0.9152	TestAcc 0.7681
+Version 273	TrainAcc 0.9306	ValidAcc 0.9145	TestAcc 0.7662
+Version 274	TrainAcc 0.9317	ValidAcc 0.9153	TestAcc 0.7611
+Version 275	TrainAcc 0.9314	ValidAcc 0.9157	TestAcc 0.7701
+Version 276	TrainAcc 0.9330	ValidAcc 0.9161	TestAcc 0.7671
+Version 277	TrainAcc 0.9330	ValidAcc 0.9157	TestAcc 0.7628
+Version 278	TrainAcc 0.9330	ValidAcc 0.9166	TestAcc 0.7653
+Version 279	TrainAcc 0.9303	ValidAcc 0.9153	TestAcc 0.7695
+Version 280	TrainAcc 0.9328	ValidAcc 0.9145	TestAcc 0.7637
+Version 281	TrainAcc 0.9329	ValidAcc 0.9160	TestAcc 0.7620
+Version 282	TrainAcc 0.9285	ValidAcc 0.9137	TestAcc 0.7694
+Version 283	TrainAcc 0.9310	ValidAcc 0.9140	TestAcc 0.7642
+Version 284	TrainAcc 0.9317	ValidAcc 0.9153	TestAcc 0.7577
+Version 285	TrainAcc 0.9289	ValidAcc 0.9139	TestAcc 0.7700
+Version 286	TrainAcc 0.9305	ValidAcc 0.9146	TestAcc 0.7598
+Version 287	TrainAcc 0.9274	ValidAcc 0.9124	TestAcc 0.7637
+Version 288	TrainAcc 0.9297	ValidAcc 0.9140	TestAcc 0.7630
+Version 289	TrainAcc 0.9319	ValidAcc 0.9154	TestAcc 0.7683
+Version 290	TrainAcc 0.9332	ValidAcc 0.9156	TestAcc 0.7666
+Version 291	TrainAcc 0.9313	ValidAcc 0.9158	TestAcc 0.7686
+Version 292	TrainAcc 0.9316	ValidAcc 0.9156	TestAcc 0.7630
+Version 293	TrainAcc 0.9314	ValidAcc 0.9154	TestAcc 0.7703
+Version 294	TrainAcc 0.9303	ValidAcc 0.9156	TestAcc 0.7609
+Version 295	TrainAcc 0.9327	ValidAcc 0.9166	TestAcc 0.7680
+Version 296	TrainAcc 0.9320	ValidAcc 0.9147	TestAcc 0.7609
+Version 297	TrainAcc 0.9322	ValidAcc 0.9171	TestAcc 0.7674
+Version 298	TrainAcc 0.9328	ValidAcc 0.9168	TestAcc 0.7651
+Version 299	TrainAcc 0.9312	ValidAcc 0.9145	TestAcc 0.7648
+Version 300	TrainAcc 0.9315	ValidAcc 0.9170	TestAcc 0.7637
+Version 301	TrainAcc 0.9307	ValidAcc 0.9132	TestAcc 0.7649
+Version 302	TrainAcc 0.9295	ValidAcc 0.9128	TestAcc 0.7588
+Version 303	TrainAcc 0.9279	ValidAcc 0.9134	TestAcc 0.7625
+Version 304	TrainAcc 0.9324	ValidAcc 0.9160	TestAcc 0.7646
+Version 305	TrainAcc 0.9314	ValidAcc 0.9145	TestAcc 0.7632
+Version 306	TrainAcc 0.9274	ValidAcc 0.9138	TestAcc 0.7658
+Version 307	TrainAcc 0.9300	ValidAcc 0.9129	TestAcc 0.7593
+Version 308	TrainAcc 0.9300	ValidAcc 0.9150	TestAcc 0.7639
+Version 309	TrainAcc 0.9317	ValidAcc 0.9151	TestAcc 0.7632
+Version 310	TrainAcc 0.9315	ValidAcc 0.9152	TestAcc 0.7688
+Version 311	TrainAcc 0.9322	ValidAcc 0.9161	TestAcc 0.7597
+Version 312	TrainAcc 0.9333	ValidAcc 0.9164	TestAcc 0.7657
+Version 313	TrainAcc 0.9339	ValidAcc 0.9166	TestAcc 0.7684
+Version 314	TrainAcc 0.9337	ValidAcc 0.9162	TestAcc 0.7638
+Version 315	TrainAcc 0.9322	ValidAcc 0.9147	TestAcc 0.7634
+Version 316	TrainAcc 0.9331	ValidAcc 0.9171	TestAcc 0.7652
+Version 317	TrainAcc 0.9315	ValidAcc 0.9145	TestAcc 0.7684
+Version 318	TrainAcc 0.9329	ValidAcc 0.9152	TestAcc 0.7580
+Version 319	TrainAcc 0.9320	ValidAcc 0.9173	TestAcc 0.7672
+Version 320	TrainAcc 0.9300	ValidAcc 0.9137	TestAcc 0.7629
+Version 321	TrainAcc 0.9340	ValidAcc 0.9163	TestAcc 0.7622
+Version 322	TrainAcc 0.9338	ValidAcc 0.9166	TestAcc 0.7672
+Version 323	TrainAcc 0.9325	ValidAcc 0.9153	TestAcc 0.7678
+Version 324	TrainAcc 0.9335	ValidAcc 0.9163	TestAcc 0.7653
+Version 325	TrainAcc 0.9317	ValidAcc 0.9138	TestAcc 0.7621
+Version 326	TrainAcc 0.9327	ValidAcc 0.9150	TestAcc 0.7583
+Version 327	TrainAcc 0.9263	ValidAcc 0.9110	TestAcc 0.7670
+Version 328	TrainAcc 0.9296	ValidAcc 0.9135	TestAcc 0.7584
+Version 329	TrainAcc 0.9315	ValidAcc 0.9148	TestAcc 0.7636
+Version 330	TrainAcc 0.9307	ValidAcc 0.9164	TestAcc 0.7683
+Version 331	TrainAcc 0.9306	ValidAcc 0.9147	TestAcc 0.7672
+Version 332	TrainAcc 0.9333	ValidAcc 0.9165	TestAcc 0.7661
+Version 333	TrainAcc 0.9339	ValidAcc 0.9168	TestAcc 0.7642
+Version 334	TrainAcc 0.9338	ValidAcc 0.9163	TestAcc 0.7699
+Version 335	TrainAcc 0.9334	ValidAcc 0.9158	TestAcc 0.7637
+Version 336	TrainAcc 0.9336	ValidAcc 0.9162	TestAcc 0.7642
+Version 337	TrainAcc 0.9336	ValidAcc 0.9153	TestAcc 0.7658
+Version 338	TrainAcc 0.9341	ValidAcc 0.9162	TestAcc 0.7634
+Version 339	TrainAcc 0.9338	ValidAcc 0.9165	TestAcc 0.7663
+Version 340	TrainAcc 0.9339	ValidAcc 0.9153	TestAcc 0.7626
+Version 341	TrainAcc 0.9341	ValidAcc 0.9171	TestAcc 0.7639
+Version 342	TrainAcc 0.9338	ValidAcc 0.9159	TestAcc 0.7677
+Version 343	TrainAcc 0.9328	ValidAcc 0.9151	TestAcc 0.7574
+Version 344	TrainAcc 0.9342	ValidAcc 0.9165	TestAcc 0.7683
+Version 345	TrainAcc 0.9341	ValidAcc 0.9163	TestAcc 0.7630
+Version 346	TrainAcc 0.9318	ValidAcc 0.9155	TestAcc 0.7605
+Version 347	TrainAcc 0.9309	ValidAcc 0.9147	TestAcc 0.7616
+Version 348	TrainAcc 0.9300	ValidAcc 0.9140	TestAcc 0.7639
+Version 349	TrainAcc 0.9335	ValidAcc 0.9176	TestAcc 0.7711
+Version 350	TrainAcc 0.9345	ValidAcc 0.9168	TestAcc 0.7616
+Version 351	TrainAcc 0.9354	ValidAcc 0.9179	TestAcc 0.7689
+Version 352	TrainAcc 0.9328	ValidAcc 0.9165	TestAcc 0.7644
+Version 353	TrainAcc 0.9337	ValidAcc 0.9153	TestAcc 0.7641
+Version 354	TrainAcc 0.9352	ValidAcc 0.9172	TestAcc 0.7601
+Version 355	TrainAcc 0.9317	ValidAcc 0.9163	TestAcc 0.7641
+Version 356	TrainAcc 0.9325	ValidAcc 0.9156	TestAcc 0.7634
+Version 357	TrainAcc 0.9327	ValidAcc 0.9143	TestAcc 0.7674
+Version 358	TrainAcc 0.9331	ValidAcc 0.9169	TestAcc 0.7576
+Version 359	TrainAcc 0.9318	ValidAcc 0.9153	TestAcc 0.7650
+Version 360	TrainAcc 0.9298	ValidAcc 0.9147	TestAcc 0.7690
+Version 361	TrainAcc 0.9318	ValidAcc 0.9131	TestAcc 0.7532
+Version 362	TrainAcc 0.9311	ValidAcc 0.9141	TestAcc 0.7632
+Version 363	TrainAcc 0.9301	ValidAcc 0.9130	TestAcc 0.7688
+Version 364	TrainAcc 0.9329	ValidAcc 0.9140	TestAcc 0.7566
+Version 365	TrainAcc 0.9321	ValidAcc 0.9147	TestAcc 0.7636
+Version 366	TrainAcc 0.9330	ValidAcc 0.9161	TestAcc 0.7637
+Version 367	TrainAcc 0.9337	ValidAcc 0.9170	TestAcc 0.7654
+Version 368	TrainAcc 0.9338	ValidAcc 0.9157	TestAcc 0.7636
+Version 369	TrainAcc 0.9356	ValidAcc 0.9171	TestAcc 0.7630
+Version 370	TrainAcc 0.9328	ValidAcc 0.9164	TestAcc 0.7705
+Version 371	TrainAcc 0.9349	ValidAcc 0.9168	TestAcc 0.7606
+Version 372	TrainAcc 0.9358	ValidAcc 0.9170	TestAcc 0.7624
+Version 373	TrainAcc 0.9320	ValidAcc 0.9172	TestAcc 0.7624
+Version 374	TrainAcc 0.9311	ValidAcc 0.9144	TestAcc 0.7666
+Version 375	TrainAcc 0.9353	ValidAcc 0.9178	TestAcc 0.7569
+Version 376	TrainAcc 0.9335	ValidAcc 0.9159	TestAcc 0.7635
+Version 377	TrainAcc 0.9318	ValidAcc 0.9157	TestAcc 0.7657
+Version 378	TrainAcc 0.9314	ValidAcc 0.9147	TestAcc 0.7589
+Version 379	TrainAcc 0.9315	ValidAcc 0.9133	TestAcc 0.7595
+Version 380	TrainAcc 0.9333	ValidAcc 0.9163	TestAcc 0.7619
+Version 381	TrainAcc 0.9334	ValidAcc 0.9171	TestAcc 0.7728
+Version 382	TrainAcc 0.9351	ValidAcc 0.9166	TestAcc 0.7583
+Version 383	TrainAcc 0.9341	ValidAcc 0.9165	TestAcc 0.7647
+Version 384	TrainAcc 0.9347	ValidAcc 0.9165	TestAcc 0.7653
+Version 385	TrainAcc 0.9332	ValidAcc 0.9165	TestAcc 0.7672
+Version 386	TrainAcc 0.9326	ValidAcc 0.9145	TestAcc 0.7675
+Version 387	TrainAcc 0.9351	ValidAcc 0.9165	TestAcc 0.7552
+Version 388	TrainAcc 0.9311	ValidAcc 0.9163	TestAcc 0.7681
+Version 389	TrainAcc 0.9319	ValidAcc 0.9140	TestAcc 0.7634
+Version 390	TrainAcc 0.9327	ValidAcc 0.9149	TestAcc 0.7632
+Version 391	TrainAcc 0.9316	ValidAcc 0.9150	TestAcc 0.7514
+Version 392	TrainAcc 0.9291	ValidAcc 0.9125	TestAcc 0.7718
+Version 393	TrainAcc 0.9336	ValidAcc 0.9163	TestAcc 0.7564
+Version 394	TrainAcc 0.9325	ValidAcc 0.9152	TestAcc 0.7605
+Version 395	TrainAcc 0.9318	ValidAcc 0.9140	TestAcc 0.7630
+Version 396	TrainAcc 0.9324	ValidAcc 0.9149	TestAcc 0.7613
+Version 397	TrainAcc 0.9342	ValidAcc 0.9159	TestAcc 0.7592
+Version 398	TrainAcc 0.9331	ValidAcc 0.9155	TestAcc 0.7710
+Version 399	TrainAcc 0.9332	ValidAcc 0.9160	TestAcc 0.7620
+Version 400	TrainAcc 0.9345	ValidAcc 0.9163	TestAcc 0.7658
+Version 401	TrainAcc 0.9363	ValidAcc 0.9173	TestAcc 0.7627
+Version 402	TrainAcc 0.9340	ValidAcc 0.9167	TestAcc 0.7663
+Version 403	TrainAcc 0.9340	ValidAcc 0.9147	TestAcc 0.7686
+Version 404	TrainAcc 0.9363	ValidAcc 0.9171	TestAcc 0.7601
+Version 405	TrainAcc 0.9361	ValidAcc 0.9180	TestAcc 0.7696
+Version 406	TrainAcc 0.9362	ValidAcc 0.9175	TestAcc 0.7655
+Version 407	TrainAcc 0.9357	ValidAcc 0.9173	TestAcc 0.7646
+Version 408	TrainAcc 0.9350	ValidAcc 0.9171	TestAcc 0.7525
+Version 409	TrainAcc 0.9345	ValidAcc 0.9166	TestAcc 0.7708
+Version 410	TrainAcc 0.9337	ValidAcc 0.9168	TestAcc 0.7598
+Version 411	TrainAcc 0.9340	ValidAcc 0.9157	TestAcc 0.7550
+Version 412	TrainAcc 0.9345	ValidAcc 0.9159	TestAcc 0.7637
+Version 413	TrainAcc 0.9285	ValidAcc 0.9142	TestAcc 0.7631
+Version 414	TrainAcc 0.9309	ValidAcc 0.9120	TestAcc 0.7588
+Version 415	TrainAcc 0.9327	ValidAcc 0.9158	TestAcc 0.7622
+Version 416	TrainAcc 0.9316	ValidAcc 0.9150	TestAcc 0.7643
+Version 417	TrainAcc 0.9315	ValidAcc 0.9149	TestAcc 0.7631
+Version 418	TrainAcc 0.9326	ValidAcc 0.9165	TestAcc 0.7619
+Version 419	TrainAcc 0.9335	ValidAcc 0.9156	TestAcc 0.7651
+Version 420	TrainAcc 0.9338	ValidAcc 0.9169	TestAcc 0.7645
+Version 421	TrainAcc 0.9334	ValidAcc 0.9144	TestAcc 0.7609
+Version 422	TrainAcc 0.9348	ValidAcc 0.9176	TestAcc 0.7668
+Version 423	TrainAcc 0.9359	ValidAcc 0.9168	TestAcc 0.7624
+Version 424	TrainAcc 0.9351	ValidAcc 0.9168	TestAcc 0.7644
+Version 425	TrainAcc 0.9360	ValidAcc 0.9184	TestAcc 0.7608
+Version 426	TrainAcc 0.9360	ValidAcc 0.9176	TestAcc 0.7702
+Version 427	TrainAcc 0.9365	ValidAcc 0.9177	TestAcc 0.7603
+Version 428	TrainAcc 0.9355	ValidAcc 0.9168	TestAcc 0.7641
+Version 429	TrainAcc 0.9357	ValidAcc 0.9175	TestAcc 0.7602
+Version 430	TrainAcc 0.9348	ValidAcc 0.9159	TestAcc 0.7666
+Version 431	TrainAcc 0.9333	ValidAcc 0.9154	TestAcc 0.7572
+Version 432	TrainAcc 0.9326	ValidAcc 0.9154	TestAcc 0.7599
+Version 433	TrainAcc 0.9368	ValidAcc 0.9184	TestAcc 0.7621
+Version 434	TrainAcc 0.9362	ValidAcc 0.9182	TestAcc 0.7642
+Version 435	TrainAcc 0.9328	ValidAcc 0.9150	TestAcc 0.7631
+Version 436	TrainAcc 0.9341	ValidAcc 0.9164	TestAcc 0.7552
+Version 437	TrainAcc 0.9336	ValidAcc 0.9157	TestAcc 0.7657
+Version 438	TrainAcc 0.9358	ValidAcc 0.9173	TestAcc 0.7590
+Version 439	TrainAcc 0.9336	ValidAcc 0.9154	TestAcc 0.7644
+Version 440	TrainAcc 0.9334	ValidAcc 0.9163	TestAcc 0.7590
+Version 441	TrainAcc 0.9353	ValidAcc 0.9183	TestAcc 0.7618
+Version 442	TrainAcc 0.9356	ValidAcc 0.9169	TestAcc 0.7653
+Version 443	TrainAcc 0.9367	ValidAcc 0.9185	TestAcc 0.7642
+Version 444	TrainAcc 0.9371	ValidAcc 0.9176	TestAcc 0.7628
+Version 445	TrainAcc 0.9341	ValidAcc 0.9168	TestAcc 0.7595
+Version 446	TrainAcc 0.9351	ValidAcc 0.9162	TestAcc 0.7673
+Version 447	TrainAcc 0.9346	ValidAcc 0.9157	TestAcc 0.7579
+Version 448	TrainAcc 0.9357	ValidAcc 0.9178	TestAcc 0.7611
+Version 449	TrainAcc 0.9369	ValidAcc 0.9176	TestAcc 0.7614
+Version 450	TrainAcc 0.9374	ValidAcc 0.9188	TestAcc 0.7706
+Version 451	TrainAcc 0.9362	ValidAcc 0.9166	TestAcc 0.7526
+Version 452	TrainAcc 0.9352	ValidAcc 0.9164	TestAcc 0.7656
+Version 453	TrainAcc 0.9364	ValidAcc 0.9169	TestAcc 0.7595
+Version 454	TrainAcc 0.9335	ValidAcc 0.9153	TestAcc 0.7634
+Version 455	TrainAcc 0.9347	ValidAcc 0.9163	TestAcc 0.7646
+Version 456	TrainAcc 0.9357	ValidAcc 0.9168	TestAcc 0.7548
+Version 457	TrainAcc 0.9336	ValidAcc 0.9159	TestAcc 0.7607
+Version 458	TrainAcc 0.9317	ValidAcc 0.9163	TestAcc 0.7628
+Version 459	TrainAcc 0.9351	ValidAcc 0.9162	TestAcc 0.7677
+Version 460	TrainAcc 0.9346	ValidAcc 0.9159	TestAcc 0.7512
+Version 461	TrainAcc 0.9354	ValidAcc 0.9176	TestAcc 0.7682
+Version 462	TrainAcc 0.9341	ValidAcc 0.9165	TestAcc 0.7660
+Version 463	TrainAcc 0.9362	ValidAcc 0.9172	TestAcc 0.7618
+Version 464	TrainAcc 0.9350	ValidAcc 0.9163	TestAcc 0.7560
+Version 465	TrainAcc 0.9344	ValidAcc 0.9169	TestAcc 0.7651
+Version 466	TrainAcc 0.9352	ValidAcc 0.9174	TestAcc 0.7673
+Version 467	TrainAcc 0.9364	ValidAcc 0.9171	TestAcc 0.7595
+Version 468	TrainAcc 0.9345	ValidAcc 0.9160	TestAcc 0.7638
+Version 469	TrainAcc 0.9354	ValidAcc 0.9177	TestAcc 0.7647
+Version 470	TrainAcc 0.9364	ValidAcc 0.9171	TestAcc 0.7632
+Version 471	TrainAcc 0.9362	ValidAcc 0.9165	TestAcc 0.7537
+Version 472	TrainAcc 0.9351	ValidAcc 0.9170	TestAcc 0.7701
+Version 473	TrainAcc 0.9355	ValidAcc 0.9155	TestAcc 0.7593
+Version 474	TrainAcc 0.9343	ValidAcc 0.9156	TestAcc 0.7554
+Version 475	TrainAcc 0.9344	ValidAcc 0.9161	TestAcc 0.7618
+Version 476	TrainAcc 0.9356	ValidAcc 0.9182	TestAcc 0.7668
+Version 477	TrainAcc 0.9374	ValidAcc 0.9181	TestAcc 0.7621
+Version 478	TrainAcc 0.9340	ValidAcc 0.9162	TestAcc 0.7594
+Version 479	TrainAcc 0.9340	ValidAcc 0.9189	TestAcc 0.7622
+Version 480	TrainAcc 0.9339	ValidAcc 0.9159	TestAcc 0.7685
+Version 481	TrainAcc 0.9320	ValidAcc 0.9125	TestAcc 0.7504
+Version 482	TrainAcc 0.9326	ValidAcc 0.9145	TestAcc 0.7639
+Version 483	TrainAcc 0.9320	ValidAcc 0.9171	TestAcc 0.7642
+Version 484	TrainAcc 0.9345	ValidAcc 0.9148	TestAcc 0.7543
+Version 485	TrainAcc 0.9349	ValidAcc 0.9177	TestAcc 0.7616
+Version 486	TrainAcc 0.9330	ValidAcc 0.9161	TestAcc 0.7627
+Version 487	TrainAcc 0.9340	ValidAcc 0.9144	TestAcc 0.7590
+Version 488	TrainAcc 0.9351	ValidAcc 0.9169	TestAcc 0.7596
+Version 489	TrainAcc 0.9348	ValidAcc 0.9164	TestAcc 0.7668
+Version 490	TrainAcc 0.9371	ValidAcc 0.9180	TestAcc 0.7589
+Version 491	TrainAcc 0.9348	ValidAcc 0.9166	TestAcc 0.7622
+Version 492	TrainAcc 0.9349	ValidAcc 0.9162	TestAcc 0.7567
+Version 493	TrainAcc 0.9365	ValidAcc 0.9182	TestAcc 0.7667
+Version 494	TrainAcc 0.9366	ValidAcc 0.9177	TestAcc 0.7595
+Version 495	TrainAcc 0.9354	ValidAcc 0.9174	TestAcc 0.7604
+Version 496	TrainAcc 0.9361	ValidAcc 0.9174	TestAcc 0.7657
+Version 497	TrainAcc 0.9377	ValidAcc 0.9186	TestAcc 0.7558
+Version 498	TrainAcc 0.9366	ValidAcc 0.9170	TestAcc 0.7647
+Version 499	TrainAcc 0.9365	ValidAcc 0.9178	TestAcc 0.7612
+Version 479 achieved the highest validation accuracy 0.9189 (test accuracy: 0.7622)

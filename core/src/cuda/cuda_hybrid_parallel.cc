@@ -2954,8 +2954,9 @@ static void check_consistency_gpu_array(T * value, size_t num_elements) {
 CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
                 CUDAOperatorsAndTensorsManager * op_ten_manager,
                 AbstractLowerLevelOptimizer * optimizer,
-                DistributedPIPHybridParallelExecutionEngineGPU * engine
-                ): op_ten_manager_(op_ten_manager), optimizer_(optimizer) {
+                DistributedPIPHybridParallelExecutionEngineGPU * engine,
+                WeightDumper * weight_dumper
+                ): op_ten_manager_(op_ten_manager), optimizer_(optimizer), weight_dumper_(weight_dumper) {
     int num_operators = op_ten_manager->get_num_operators();
     int num_weight_operators = 0;
     // init op2idx_ && weight_ops_
@@ -3003,6 +3004,8 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
     // allocate the reduce buffer
     aggr_buffer_ = new DataType[max_num_elements];
     assert(aggr_buffer_ != NULL);
+    // init the epoch id 
+    epoch_id_ = 0;
 }
 
 CUDAPIPWeightAggregator::~CUDAPIPWeightAggregator() {
@@ -3088,6 +3091,16 @@ void CUDAPIPWeightAggregator::commit_grad() {
                 );
         cudaStreamSynchronize(0);
     }
+    if ((epoch_id_ + 1) % 10 == 0) {
+        // check point the weights
+        weight_dumper_->next_version();
+        for (int i = 0; i < num_weight_operators; ++ i) {
+            WeightOperator * op = weight_ops_[i];
+            DataType * data = weight_ops_data_[i];
+            weight_dumper_->save_weight(op, data);
+        }
+    }
+    ++ epoch_id_;
 }
 
 void CUDAPIPWeightAggregator::check_weights_consistency() {
@@ -4227,11 +4240,19 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     lgraph->InitMemory();
     lgraph->InitCsr();
     
-    
+    std::vector<WeightOperator*> weight_ops;
+    for (Operator * op: operators) {
+        if (op->get_type() == OPERATOR_WEIGHT) {
+            weight_ops.push_back((WeightOperator*) op);
+        }
+    }
+    WeightDumper * weight_dumper = new WeightDumper(
+            num_epoch / 10 + 1, weight_file_, weight_ops
+            );
     
     local_graph_ = lgraph;
     //parameter_server_ = new CUDAPIPParallelParameterServer(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this);
-    weight_aggregator_ = new CUDAPIPWeightAggregator(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this);
+    weight_aggregator_ = new CUDAPIPWeightAggregator(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this, weight_dumper);
     
     assert(op_ten_manager_ != NULL);
     assert(vid_translation_ != NULL);
@@ -4529,6 +4550,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     delete local_graph_;
     //delete parameter_server_;
     delete weight_aggregator_;
+
+    weight_dumper->commit_to_file();
+    delete weight_dumper;
 
     // destroy the partitioning
     delete [] partitioning.partition_vid_begin;

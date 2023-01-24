@@ -149,7 +149,8 @@ int main(int argc, char ** argv) {
         ("startup", po::value<int>()->default_value(0), "The number of startup epoches (i.e., epoches without any asynchrony).")
         ("random", po::value<int>()->default_value(0), "Randomly dispatch the execution of the chunk? 1: Yes, 0: No.")
         ("chunks", po::value<int>()->default_value(32), "The number of chunks.")
-        ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.");
+        ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.")
+        ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The file storing the checkpointed weights.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -176,6 +177,7 @@ int main(int argc, char ** argv) {
     bool random_dispatch = vm["random"].as<int>() == 1;
     int num_chunks = vm["chunks"].as<int>();
     double dropout = vm["dropout"].as<double>();
+    std::string weight_file = vm["weight_file"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -185,6 +187,7 @@ int main(int argc, char ** argv) {
     printf("Learning rate: %.6f\n", learning_rate);
     printf("The partition strategy: %s\n", partition_strategy.c_str());
     printf("The dropout rate: %.3f\n", dropout);
+    printf("The checkpointed weight file: %s\n", weight_file.c_str());
 
     volatile bool terminated = false;
     Context::init_context();
@@ -271,6 +274,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_optimizer(optimizer);
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
+    execution_engine->set_weight_file(weight_file);
 
     // determine the partitioning 
     int num_gpus = DistributedSys::get_instance()->get_num_nodes();

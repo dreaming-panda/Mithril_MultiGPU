@@ -18,6 +18,7 @@
 #include "context.h"
 #include "parallel/pipelined_model_parallel.h"
 #include "cuda/cuda_data_compressor.h"
+#include "cuda/cuda_weight_manager.h"
 
 #include <assert.h>
 #include <pthread.h>
@@ -1442,6 +1443,10 @@ class CUDAPIPWeightAggregator {
         // the communication volume
         double comm_; 
 
+        // the weight file
+        WeightDumper * weight_dumper_;
+        int epoch_id_;
+
         // a helper function
         void element_wise_add_gpu(DataType * src_0, DataType * src_1, DataType * dst, size_t num_elements);
 
@@ -1449,7 +1454,8 @@ class CUDAPIPWeightAggregator {
         CUDAPIPWeightAggregator(
                 CUDAOperatorsAndTensorsManager * op_ten_manager,
                 AbstractLowerLevelOptimizer * optimizer,
-                DistributedPIPHybridParallelExecutionEngineGPU * engine
+                DistributedPIPHybridParallelExecutionEngineGPU * engine,
+                WeightDumper * weight_dumper
                 );
         ~CUDAPIPWeightAggregator();
 
@@ -1621,6 +1627,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         // used for one-sided MPI communication
         MPI_Win * act_comm_wins_;
         MPI_Win * grad_comm_wins_;
+
+        std::string weight_file_;
 
         inline int get_num_epoch() {
             return num_epoch_;
@@ -1831,6 +1839,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         void set_num_chunks(int num_chunks) {
             user_specified_num_chunks_ = num_chunks;
+        }
+        void set_weight_file(std::string weight_file) {
+            weight_file_ = weight_file;
         }
 };
 
