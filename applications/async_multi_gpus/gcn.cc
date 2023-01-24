@@ -150,7 +150,8 @@ int main(int argc, char ** argv) {
         ("random", po::value<int>()->default_value(0), "Randomly dispatch the execution of the chunk? 1: Yes, 0: No.")
         ("chunks", po::value<int>()->default_value(32), "The number of chunks.")
         ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.")
-        ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The file storing the checkpointed weights.");
+        ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The file storing the checkpointed weights.")
+        ("seed", po::value<int>()->default_value(1234), "The random seed.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -178,6 +179,7 @@ int main(int argc, char ** argv) {
     int num_chunks = vm["chunks"].as<int>();
     double dropout = vm["dropout"].as<double>();
     std::string weight_file = vm["weight_file"].as<std::string>();
+    int random_seed = vm["seed"].as<int>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -265,6 +267,9 @@ int main(int argc, char ** argv) {
     // CopyFromHostToCUDADevice<int>(gpu_test_mask_, test, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
     printf("train nodes %d, valid nodes %d, test nodes %d\n", ntrain, nvalid, ntest);
 
+    // set the random seed
+    execution_engine->set_random_seed(random_seed);
+    executor->set_random_seed(random_seed);
     
     //loss->set_mask(training, valid, test, gpu_training_mask_, gpu_valid_mask_, gpu_test_mask_, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
     execution_engine->set_mask(training, valid, test, nullptr, nullptr, nullptr, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);

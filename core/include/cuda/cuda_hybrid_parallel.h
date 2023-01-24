@@ -1630,6 +1630,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         std::string weight_file_;
 
+        // random seed
+        int random_seed_ = 23;
+
         inline int get_num_epoch() {
             return num_epoch_;
         }
@@ -1797,7 +1800,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int M  = num_elements / N;
             assert(M > 0);
             double range = sqrt(6./(N + M));
-            srand(23);
+            srand(random_seed_);
             for (size_t i = 0; i < num_elements; ++ i) {
             double r = double(rand()) / double(RAND_MAX);
             assert(r >= 0. && r <= 1.);
@@ -1842,6 +1845,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         void set_weight_file(std::string weight_file) {
             weight_file_ = weight_file;
+        }
+        void set_random_seed(int random_seed) {
+            random_seed_ = random_seed;
         }
 };
 

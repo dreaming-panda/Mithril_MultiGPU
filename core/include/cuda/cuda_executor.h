@@ -231,6 +231,9 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         DataType * tp_grad;
         bool id_init;
         int hidden_units;
+
+        // random seed
+        int random_seed_ = 1234;
     public:
         OperatorExecutorGPUV2(){
             graph_ = nullptr;
@@ -425,6 +428,10 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         void dropout_backward(DropoutOperator * op);
         void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
         void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
+
+        void set_random_seed(int random_seed) {
+            random_seed_ = random_seed;
+        }
 
         void Print(){
             std::cout << "relu forward :"<<reluforward_time<<std::endl;
