@@ -11,6 +11,7 @@ settings = {
         "ogbn_products": {"hunit": 128, "lr": 0.01, "decay": 1e-05, "dropout": 0.5, "epoch": 5000}
         }
 num_runs = 3
+scale = 1.5
 
 if __name__ == "__main__":
 
@@ -26,7 +27,7 @@ if __name__ == "__main__":
             setting = settings[dataset]
             weight_file = "checkpointed_weights_%s" % (dataset)
             command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/%s --layers 4 --hunits %s --epoch %s --lr %s --decay %s --dropout %s --weight_file %s --seed %s --part model --chunks 32 > %s 2>&1" % (
-                    dataset, setting["hunit"], setting["epoch"] * 2, setting["lr"], # double the number of epoch as it converges slower
+                    dataset, setting["hunit"], int(setting["epoch"] * scale), setting["lr"] / scale, # double the number of epoch as it converges slower
                     setting["decay"], setting["dropout"], weight_file, seed,
                     result_dir + "/" + result_file
                     )
