@@ -51,43 +51,6 @@ static void getHostName(char* hostname, int maxlen) {
   }
 }
 
-//class GCN: public AbstractApplication {
-//    private:
-//        int num_layers_;
-//        int num_hidden_units_;
-//        int num_classes_;
-//
-//    public:
-//        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features): 
-//            AbstractApplication(num_features),
-//            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes) {
-//            assert(num_layers >= 1);
-//            assert(num_hidden_units >= 1);
-//            assert(num_classes >= 1);
-//        }
-//        ~GCN() {}
-//
-//        Tensor * forward(Tensor * input) {
-//            Tensor * t = input;
-//            for (int i = 0; i < num_layers_; ++ i) {
-//                int output_size = num_hidden_units_;
-//                if (i == num_layers_ - 1) {
-//                    output_size = num_classes_;
-//                }
-//                t = fc(t, output_size);
-//                
-//                t = aggregation(t, NORM_SUM);  
-//
-//                if (i == num_layers_ - 1) { 
-//                    t = softmax(t);
-//                } else {
-//                    t = relu(t); 
-//                }
-//            }
-//            return t;
-//        }
-//};
-
 class GCN: public AbstractApplication {
     private:
         int num_layers_;
@@ -144,7 +107,8 @@ int main(int argc, char ** argv) {
         ("random", po::value<int>()->default_value(0), "Randomly dispatch the execution of the chunk? 1: Yes, 0: No.")
         ("chunks", po::value<int>()->default_value(128), "The number of chunks.")
         ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.")
-        ("seed", po::value<int>()->default_value(1234), "The random seed.");
+        ("seed", po::value<int>()->default_value(1234), "The random seed.")
+        ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The checkpointed weight file.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -172,6 +136,7 @@ int main(int argc, char ** argv) {
     int num_chunks = vm["chunks"].as<int>();
     double dropout_rate = vm["dropout"].as<double>();
     int random_seed = vm["seed"].as<int>();
+    std::string weight_file = vm["weight_file"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -248,6 +213,8 @@ int main(int argc, char ** argv) {
     // set random seed
     execution_engine->setRandomSeed(random_seed);
     executor->set_random_seed(random_seed);
+
+    execution_engine->set_weight_file(weight_file);
     
     CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);

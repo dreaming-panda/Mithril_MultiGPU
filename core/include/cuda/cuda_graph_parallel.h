@@ -85,6 +85,8 @@ private:
       DataType *cuda_acc;
       cudnnTensorDescriptor_t data_descriptor;
 
+      std::string weight_file_ = "checkpointed_weights";
+
 public:
       CUDAGraphParallelEngine()
       {
@@ -149,7 +151,13 @@ public:
       void set_max_dim(int max_dim){
             this->max_dim = max_dim;
       }
+      void set_weight_file(std::string weight_file) {
+          weight_file_ = weight_file;
+      }
       double execute_application(AbstractApplication * application, int num_epoch);
 };
 
 #endif
+
+
+

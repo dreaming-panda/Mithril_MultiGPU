@@ -3,7 +3,7 @@ import sys
 import random
 
 datasets = [
-        "reddit",
+        #"reddit",
         "ogbn_products"
         ]
 settings = {
@@ -31,9 +31,10 @@ if __name__ == "__main__":
                     result_dir + "/" + result_file
                     )
             print("Dataset %s, the %s-th run" % (dataset, run))
+            sys.stdout.flush()
             #print(command)
             os.system(command)
-            # TODO: running the inference
+            # running the inference
             command = "./build/applications/single_gpu/gcn_inference --graph $PROJECT/gnn_datasets/reordered/%s --layers 4 --hunits %s --weight_file %s >> %s 2>&1" % (
                     dataset, setting["hunit"], weight_file, result_dir + "/" + result_file
                     )
