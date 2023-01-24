@@ -2,9 +2,9 @@
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
 #SBATCH -t 00:10:00 
-#SBATCH --nodes 4
-#SBATCH --gpus-per-node 1
-#SBATCH --ntasks-per-node 1
+#SBATCH --nodes 1
+#SBATCH --gpus-per-node 4
+#SBATCH --ntasks-per-node 4
 #SBATCH --cpus-per-task 32
 #SBATCH --output output.txt
 
@@ -19,7 +19,7 @@ make -j
 num_layers=4
 hunits=128
 lr=1e-3
-graph=ogbn_arxiv
+graph=ogbn_products
 epoch=1000
 decay=0
 chunks=32

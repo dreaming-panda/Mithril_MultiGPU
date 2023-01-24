@@ -1003,6 +1003,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 //printf("\n********* Epoch %d: *********\n", epoch_id);
                 printf("    Epoch %d:", epoch_id);
             }
+            engine_->accum_loss_ /= 10;
             engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
             if (valid_acc > highest_valid_acc) {
                 highest_valid_acc = valid_acc;
