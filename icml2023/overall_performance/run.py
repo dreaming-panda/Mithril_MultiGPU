@@ -3,14 +3,14 @@ import sys
 import random
 
 datasets = [
-        #"reddit",
+        "reddit",
         "ogbn_products"
         ]
 settings = {
         "reddit": {"hunit": 512, "lr": 0.01, "decay": 0, "dropout": 0.5, "epoch": 5000},
         "ogbn_products": {"hunit": 128, "lr": 0.01, "decay": 1e-05, "dropout": 0.5, "epoch": 5000}
         }
-num_runs = 10
+num_runs = 3
 
 if __name__ == "__main__":
 
