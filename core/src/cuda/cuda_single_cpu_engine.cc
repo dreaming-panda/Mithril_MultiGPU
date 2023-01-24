@@ -697,6 +697,7 @@ void SingleNodeExecutionEngineGPU::model_inference(AbstractApplication * applica
             target_test_acc = test_accuracy;
             version_highest_valid_acc = version;
         }
+        fflush(stdout);
     }
     printf("Version %d achieved the highest validation accuracy %.4f (test accuracy: %.4f)\n",
             version_highest_valid_acc, highest_valid_acc, target_test_acc);
