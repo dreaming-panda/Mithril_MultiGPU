@@ -56,7 +56,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
         dispatch_algorithm_ = RandomDispatch;
         if (dispatch_algorithm_ == RandomDispatch) {
             printf("RANDOMLY DISPATCH THE CHUNKS...\n");
-            auto rand_gen = std::default_random_engine{};
+            auto rand_gen = std::default_random_engine(rand());
             std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
         } else if (dispatch_algorithm_ == HighDegreeFirstDispatch) {
             printf("DISPATCH THE HIGH-DEGREE CHUNKS FIRST...\n");

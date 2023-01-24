@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 00:15:00 
+#SBATCH -t 00:45:00 
 #SBATCH --nodes 1
 #SBATCH --gpus-per-node 4
 #SBATCH --ntasks-per-node 4
@@ -17,15 +17,16 @@ make -j
 
 # setting up the hyper-parameters
 num_layers=4
-hunits=128
-lr=1e-2
-graph=ogbn_products
-epoch=1000
-decay=1e-5
+hunits=512
+lr=5e-3
+graph=reddit
+epoch=8000
+decay=0
 chunks=32
 dropout=0.5
+seed=532
 
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file saved_weights --dropout $dropout --seed 8888
+mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file saved_weights --dropout $dropout --seed $seed
 
 $HOME/baseline/Mithril_MultiGPU/build/applications/single_gpu/gcn_inference --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --weight_file saved_weights
 

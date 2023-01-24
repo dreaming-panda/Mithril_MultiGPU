@@ -15,7 +15,7 @@ num_runs = 3
 if __name__ == "__main__":
 
     for dataset in datasets:
-        random.seed(1234)
+        random.seed(2333)
         for run in range(num_runs):
             result_dir = "./icml2023/overall_performance/results/%s" % (
                     dataset
@@ -25,8 +25,8 @@ if __name__ == "__main__":
             seed = random.randint(1, 10000)
             setting = settings[dataset]
             weight_file = "checkpointed_weights_%s" % (dataset)
-            command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/%s --layers 4 --hunits %s --epoch %s --lr %s --decay %s --dropout %s --weight_file %s --seed %s > %s 2>&1" % (
-                    dataset, setting["hunit"], setting["epoch"], setting["lr"],
+            command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/%s --layers 4 --hunits %s --epoch %s --lr %s --decay %s --dropout %s --weight_file %s --seed %s --part model --chunks 32 > %s 2>&1" % (
+                    dataset, setting["hunit"], setting["epoch"] * 2, setting["lr"], # double the number of epoch as it converges slower
                     setting["decay"], setting["dropout"], weight_file, seed,
                     result_dir + "/" + result_file
                     )
