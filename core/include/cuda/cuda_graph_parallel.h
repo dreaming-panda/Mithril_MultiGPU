@@ -75,6 +75,7 @@ private:
       int ntest;
       VertexId vertices_;
       bool usingsplit;
+      int random_seed_ = 23;
 
       cudnnHandle_t cudnn_;
       cudnnReduceTensorDescriptor_t MeanDesc;
@@ -84,6 +85,8 @@ private:
       DataType *cuda_acc;
       cudnnTensorDescriptor_t data_descriptor;
       std::string graph_path;
+
+      std::string weight_file_ = "checkpointed_weights";
 
 public:
       CUDAGraphParallelEngine()
@@ -112,6 +115,9 @@ public:
             }
             cudaStreamDestroy(nccl_stream_);
             cusparseDestroy(cusparse_h);
+      }
+      void setRandomSeed(int random_seed) {
+          random_seed_ = random_seed;
       }
       void setCuda(cudnnHandle_t cudnn, VertexId num_vertices, ncclComm_t *comm)
       {
@@ -146,6 +152,9 @@ public:
       void set_max_dim(int max_dim){
             this->max_dim = max_dim;
       }
+      void set_weight_file(std::string weight_file) {
+          weight_file_ = weight_file;
+      }
       double execute_application(AbstractApplication * application, int num_epoch);
       void set_graph_path(std::string graph_path){
             this->graph_path = graph_path;
@@ -153,3 +162,6 @@ public:
 };
 
 #endif
+
+
+

@@ -134,6 +134,11 @@ Tensor * AbstractApplication::add(Tensor * a, Tensor * b, DataType alpha, DataTy
     operators_.push_back(add);
     return add->get_output_tensor(0);
 }
+Tensor * AbstractApplication::dropout(Tensor * a, double dropout_rate) {
+    Operator * dropout = new DropoutOperator(a, dropout_rate);
+    operators_.push_back(dropout);
+    return dropout->get_output_tensor(0);
+}
 AbstractApplication::AbstractApplication(int num_features): num_features_(num_features) {
     operators_.clear();
     input_tensor_ = NULL;

@@ -36,11 +36,12 @@ class GCN: public AbstractApplication {
         int num_layers_;
         int num_hidden_units_;
         int num_classes_;
+        double dropout_rate_;
 
     public:
-        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features): 
+        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate): 
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes) {
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate) {
             assert(num_layers >= 1);
             assert(num_hidden_units >= 1);
             assert(num_classes >= 1);
@@ -54,14 +55,15 @@ class GCN: public AbstractApplication {
                 if (i == num_layers_ - 1) {
                     output_size = num_classes_;
                 }
-                t = fc(t, output_size);
-
-                t = aggregation(t, NORM_SUM);  
+                t = fc(t, output_size); 
+                
+                t = aggregation(t, NORM_SUM);    
 
                 if (i == num_layers_ - 1) { 
-                    t = softmax(t);
+                    t = softmax(t); 
                 } else {
-                    t = relu(t);
+                    t = relu(t);  
+                    t = dropout(t, dropout_rate_);
                 }
             }
             return t;
@@ -79,7 +81,9 @@ int main(int argc, char ** argv) {
         ("hunits", po::value<int>()->required(), "The number of hidden units.")
         ("epoch", po::value<int>()->required(), "The number of epoches (-1: train until converge).")
         ("lr", po::value<double>()->required(), "The learning rate.")
-        ("decay", po::value<double>()->required(), "Weight decay.");
+        ("decay", po::value<double>()->required(), "Weight decay.")
+        ("dropout", po::value<double>()->required(), "Dropout rate.")
+        ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The weights checkpoint file.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -101,6 +105,8 @@ int main(int argc, char ** argv) {
     int num_epoch = vm["epoch"].as<int>();
     double learning_rate = vm["lr"].as<double>();
     double weight_decay = vm["decay"].as<double>();
+    double dropout_rate = vm["dropout"].as<double>();
+    std::string weight_file = vm["weight_file"].as<std::string>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -135,9 +141,10 @@ int main(int argc, char ** argv) {
     int num_features = graph_non_structural_data->get_num_feature_dimensions();
     printf("Number of classes: %d\n", num_classes);
     printf("Number of feature dimensions: %d\n", num_features);
+    printf("Dropout: %.3f \n", dropout_rate);
 
     // setup the execution engine
-    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features);
+    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features, dropout_rate);
     SingleNodeExecutionEngineGPU * execution_engine = new SingleNodeExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay);
     LearningRateScheduler * lr_scheduler = new LearningRateScheduler(0.005e-3, learning_rate, 0.8, 1e-8, 20000, 0);
@@ -192,6 +199,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
     execution_engine->set_lr_scheduler(lr_scheduler);
+    execution_engine->set_weight_file(weight_file);
 
     // train the model
     execution_engine->execute_application(gcn, num_epoch);

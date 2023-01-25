@@ -29,7 +29,7 @@ limitations under the License.
 #include "executor.h"
 #include "cuda/cuda_executor.h"
 
-#define NUM_CONVERGE_EPOCH (100)
+#define NUM_CONVERGE_EPOCH (200)
 
 class AbstractExecutionEngine {
     protected:

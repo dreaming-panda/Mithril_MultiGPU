@@ -1,6 +1,7 @@
 #include "cuda/cuda_graph_parallel.h"
 #include "distributed_sys.h"
 #include "assert.h"
+#include "cuda/cuda_weight_manager.h"
 #include <set>
 #include <algorithm>
 #include <fstream>
@@ -269,7 +270,7 @@ void CUDAGraphParallelEngine::init_weight_tensor_data(
     int M  = num_elements / N;
     assert(M > 0);
     double range = sqrt(6./(N + M));
-    srand(23);
+    srand(random_seed_);
     for (size_t i = 0; i < num_elements; ++ i) {
         double r = double(rand()) / double(RAND_MAX);
         assert(r >= 0. && r <= 1.);
@@ -533,6 +534,9 @@ void CUDAGraphParallelEngine::execute_computation_graph_forward(const std::vecto
             case OPERATOR_MATMULADD:
                 executor_->matmuladd_forward((MatmulAddOperator*) op, start_vertex_, end_vertex_);
                 break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_forward((DropoutOperator*) op, start_vertex_, end_vertex_, 0);
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -599,6 +603,9 @@ void CUDAGraphParallelEngine::execute_computation_graph_backward(
                 break;
             case OPERATOR_MATMULADD:
                 executor_->matmuladd_backward((MatmulAddOperator*) op, start_vertex_, end_vertex_);
+                break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_backward((DropoutOperator*) op, start_vertex_, end_vertex_, 0);
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
@@ -700,18 +707,25 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
     }
     
     // initialize the weight tensors
+    std::vector<WeightOperator*> weight_ops;
     for (Operator * op: operators) {
         if (op->get_type() == OPERATOR_WEIGHT) {
             assert(op->get_num_output_tensors() == 1);
             init_weight_tensor(op->get_output_tensor(0));
+            weight_ops.push_back((WeightOperator*) op);
         }
-    
+    }
+    // ininialize the weight check pointing 
+    assert(num_epoch != -1);
+    WeightDumper * weight_dumper = NULL;
+    if (node_id == 0) {
+        weight_dumper = new WeightDumper(
+                num_epoch / 10 + 2, weight_file_, weight_ops
+            );
     }
     printf("*** Done preparing the weight tensor.\n");
     
     FILE * weight_fout = NULL;
-   
-
     
     // start training
     
@@ -732,9 +746,9 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
    
     int epoch;
     for (epoch = 0; epoch < num_epoch || num_epoch == -1; ++ epoch) {
-        if(node_id == 0){
-        printf("    Epoch %d:", epoch);
-         }
+        if(node_id == 0 && (epoch + 1) % 10 == 0){
+            printf("    Epoch %d:", epoch);
+        }
         double epoch_time = - get_time();
 
         double cf = -get_time();
@@ -753,13 +767,15 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
         loss_time += lt;
         
         double ca = -get_time();
-        train_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,0);
-        valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
-        test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
-        
-        MPI_Allreduce(&train_accuracy, &train_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&valid_accuracy, &valid_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&test_accuracy, &test_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        if ((epoch + 1) % 10 == 0) {
+            train_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,0);
+            valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
+            test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
+            
+            MPI_Allreduce(&train_accuracy, &train_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&valid_accuracy, &valid_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&test_accuracy, &test_accuracy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        }
         
         ca += get_time();
         calacc_time += ca;
@@ -781,8 +797,16 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
         if (epoch >= num_warmups) {
             total_runtime += epoch_time;
         }
-        if(node_id == 0){
-        printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+        if(node_id == 0 && (epoch + 1) % 10 == 0){
+            printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+            // dump the weights
+            weight_dumper->next_version();
+            for (WeightOperator * op: weight_ops) {
+                Tensor * tensor = op->get_output_tensor(0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                DataType * cuda_data = resource->get_gpu_data();
+                weight_dumper->save_weight(op, cuda_data);
+            }
         }
        
 
@@ -809,9 +833,9 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
     // printf("calgra Time: %.3f(s)\n",calgra_time);
     // printf("cf Time: %.3f(s)\n",cf_time);
     // printf("cb Time: %.3f(s)\n",cb_time);
-    // printf("Highest validation acc: %.4f\n", highest_valid_acc);
-    // printf("Target test acc: %.4f\n", target_test_acc);
-    // printf("Epochs to reach the target acc: %d\n", epoch_to_reach_the_target_acc);
+    printf("Highest validation acc: %.4f\n", highest_valid_acc);
+    printf("Target test acc: %.4f\n", target_test_acc);
+    printf("Epochs to reach the target acc: %d\n", epoch_to_reach_the_target_acc);
     // releasing the resource of all tensors
     for (Operator * op: operators) {
         assert(op != NULL);
@@ -829,7 +853,10 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
     delete std_tensor->resource;
     delete std_tensor;
     
-
+    if (node_id == 0) {
+        weight_dumper->commit_to_file();
+        delete weight_dumper;
+    }
     
     return train_accuracy;
     

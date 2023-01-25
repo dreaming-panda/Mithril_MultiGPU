@@ -47,7 +47,8 @@ enum OperatorType {
     OPERATOR_AGGREGATION,
     OPERATOR_ADD,
     OPERATOR_IDEN,
-    OPERATOR_MATMULADD
+    OPERATOR_MATMULADD,
+    OPERATOR_DROPOUT
 };
 
 std::string get_op_type_str(OperatorType type);
@@ -138,6 +139,12 @@ class IDentityOperator: public Operator {
         
         IDentityOperator(int dim_0, int dim_1);
         ~IDentityOperator() {}
+};
+class DropoutOperator: public Operator {
+    public:
+        DropoutOperator(Tensor * a, double dropout_rate);
+        ~DropoutOperator() {}
+        double dropout_rate_;
 };
 // graph operators
 

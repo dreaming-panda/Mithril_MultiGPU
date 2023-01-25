@@ -1,4 +1,5 @@
 #include<cuda/cuda_single_cpu_engine.h>
+#include<cuda/cuda_weight_manager.h>
 #include "application.h"
 #include "engine.h"
 #include "utilities.h"
@@ -41,6 +42,9 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::
                 break;
             case OPERATOR_MATMULADD:
                 executor_->matmuladd_forward((MatmulAddOperator*) op, 0, graph_structure_->get_num_global_vertices());
+                break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_forward((DropoutOperator*) op);
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
@@ -108,6 +112,9 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
                 break;
             case OPERATOR_MATMULADD:
                 executor_->matmuladd_backward((MatmulAddOperator*) op, 0, graph_structure_->get_num_global_vertices());
+                break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_backward((DropoutOperator*) op);
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
@@ -329,6 +336,7 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy_mask(Tensor * output_ten
    // DeallocateCUDAMemory<DataType>(&cuda_acc_, __FILE__, __LINE__);
     return acc;
 }
+
 double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
     assert(application != NULL);
     const std::vector<Operator*>& operators = application->get_operators();
@@ -412,16 +420,23 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     }
 
     // initialize the weight tensors
+    std::vector<WeightOperator*> weight_ops;
     for (Operator * op: operators) {
         if (op->get_type() == OPERATOR_WEIGHT) {
             assert(op->get_num_output_tensors() == 1);
             init_weight_tensor(op->get_output_tensor(0));
+            weight_ops.push_back((WeightOperator*) op);
         }
         if (op->get_type() == OPERATOR_IDEN) {
             assert(op->get_num_output_tensors() == 1);
             init_identity_tensor(op->get_output_tensor(0));
         }
     }
+    // ininialize the weight check pointing 
+    assert(num_epoch != -1);
+    WeightDumper * weight_dumper = new WeightDumper(
+            num_epoch / 10 + 2, weight_file_, weight_ops
+            );
     printf("*** Done preparing the weight tensor.\n");
 
     FILE * weight_fout = NULL;
@@ -451,7 +466,6 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
     //printf("num_epoch: %d\n", num_epoch);
     int epoch;
     for (epoch = 0; epoch < num_epoch || num_epoch == -1; ++ epoch) {
-        printf("    Epoch %d:", epoch);
         double epoch_time = - get_time();
 
         double cf = -get_time();
@@ -488,7 +502,18 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
         if (epoch >= num_warmups) {
             total_runtime += epoch_time;
         }
-        printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+        if ((epoch + 1) % 10 == 0) {
+            printf("    Epoch %d:", epoch);
+            printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+            // dump the weights
+            weight_dumper->next_version();
+            for (WeightOperator * op: weight_ops) {
+                Tensor * tensor = op->get_output_tensor(0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                DataType * cuda_data = resource->get_gpu_data();
+                weight_dumper->save_weight(op, cuda_data);
+            }
+        }
 
         if (DUMP_WEGIHTS) {
             fprintf(weight_fout, "Epoch: %d\n", epoch);
@@ -572,8 +597,128 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
                 );
     }
 
+    weight_dumper->commit_to_file();
+    delete weight_dumper;
+
     return train_accuracy;
 }
 
+void SingleNodeExecutionEngineGPU::model_inference(AbstractApplication * application, std::string weight_file) {
+    assert(application != NULL);
+    const std::vector<Operator*>& operators = application->get_operators();
+    per_op_runtime_ = new double[operators.size()];
+    memset(per_op_runtime_, 0, sizeof(double) * operators.size());
 
+    // allocating resource for all tensors
+    printf("*** Allocating resources for all tensors...\n");
+    for (Operator * op: operators) {
+        assert(op != NULL);
+        std::string op_str = get_op_type_str(op->get_type());
+        printf("    OP_TYPE: %s\n", op_str.c_str());
+        int num_output_tensors = op->get_num_output_tensors();
+        for (int i = 0; i < num_output_tensors; ++ i) {
+            Tensor * tensor = op->get_output_tensor(i);
+            assert(tensor->resource == NULL);
+            tensor->resource = new TensorResourceGPU(tensor, graph_structure_->get_num_global_vertices());
+            tensor->resource->map();
+        }
+    }
+    printf("*** Done allocating resource.\n");
+    // preparing the input tensor
+    printf("*** Preparing the input tensor...\n");
+    prepare_input_tensor(application->get_input_tensor());
+    printf("*** Done preparing the input tensor.\n");
+    // preparing the std tensor
+    printf("*** Preparing the STD tensor...\n");
+    Tensor * output_tensor = application->get_output_tensor();
+    assert(output_tensor->type == VERTEX_TENSOR);
+    Tensor * std_tensor = new Tensor;
+    std_tensor->type = VERTEX_TENSOR;
+    std_tensor->num_dims = 2;
+    std_tensor->dims[0] = -1;
+    std_tensor->dims[1] = output_tensor->dims[1];
+    std_tensor->op = NULL;
+    std_tensor->idx = -1;
+    std_tensor->resource = new TensorResourceGPU(std_tensor, graph_structure_->get_num_global_vertices());
+    std_tensor->resource->map();
+    prepare_std_tensor(std_tensor);
+    printf("*** Done preparing the STD tensor.\n");
+
+    // initialize the weight tensors
+    std::vector<WeightOperator*> weight_ops;
+    for (Operator * op: operators) {
+        if (op->get_type() == OPERATOR_WEIGHT) {
+            assert(op->get_num_output_tensors() == 1);
+            init_weight_tensor(op->get_output_tensor(0));
+            weight_ops.push_back((WeightOperator*) op);
+        }
+        if (op->get_type() == OPERATOR_IDEN) {
+            assert(op->get_num_output_tensors() == 1);
+            init_identity_tensor(op->get_output_tensor(0));
+        }
+    }
+    std::vector<DataType*> weights_data;
+    std::vector<size_t> weight_num_elements;
+    for (WeightOperator * op: weight_ops) {
+        Tensor * tensor = op->get_output_tensor(0);
+        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        DataType * cpu_data = resource->get_cpu_data();
+        weights_data.push_back(cpu_data);
+        size_t num_elements = 1;
+        for (int i = 0; i < tensor->num_dims; ++ i) {
+            num_elements *= tensor->dims[i];
+        }
+        weight_num_elements.push_back(num_elements);
+    }
+
+    int num_versions = WeightLoader::get_num_versions(weight_file);
+    double highest_valid_acc = 0;
+    double target_test_acc = 0;
+    int version_highest_valid_acc = 0;
+    for (int version = 0; version < num_versions; ++ version) {
+        WeightLoader::load_weight_ops(weight_file, weights_data, version);
+        int idx = 0;
+        for (WeightOperator * op: weight_ops) {
+            Tensor * tensor = op->get_output_tensor(0);
+            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+            DataType * cpu_data = resource->get_cpu_data();
+            DataType * gpu_data = resource->get_gpu_data();
+            size_t num_elements = weight_num_elements[idx];
+            checkCUDA(cudaMemcpy(gpu_data, cpu_data, sizeof(DataType) * num_elements, cudaMemcpyHostToDevice));
+            idx ++;
+        }
+        execute_computation_graph_forward(operators); // the forward pass (activation)
+        double train_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,0);
+        double valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
+        double test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
+        printf("Version %d\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", version, train_accuracy, valid_accuracy, test_accuracy);
+        if (valid_accuracy > highest_valid_acc) {
+            highest_valid_acc = valid_accuracy;
+            target_test_acc = test_accuracy;
+            version_highest_valid_acc = version;
+        }
+        fflush(stdout);
+    }
+    printf("Version %d achieved the highest validation accuracy %.4f (test accuracy: %.4f)\n",
+            version_highest_valid_acc, highest_valid_acc, target_test_acc);
+
+    // releasing the resource of all tensors
+    for (Operator * op: operators) {
+        assert(op != NULL);
+        int num_output_tensors = op->get_num_output_tensors();
+        for (int i = 0; i < num_output_tensors; ++ i) {
+            Tensor * tensor = op->get_output_tensor(i);
+            assert(tensor->resource != NULL);
+            tensor->resource->unmap();
+            delete tensor->resource;
+            tensor->resource = NULL;
+        }
+    }
+    // release the std tensor
+    std_tensor->resource->unmap();
+    delete std_tensor->resource;
+    delete std_tensor;
+    delete [] per_op_runtime_;
+
+}
 

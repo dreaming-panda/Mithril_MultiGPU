@@ -1,26 +1,29 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 01:00:00 
+#SBATCH -t 00:10:00 
+#SBATCH --nodes 4
 #SBATCH --gpus-per-node 1
-#SBATCH --nodes 1
-#SBATCH --ntasks-per-node 1 
+#SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
+#SBATCH --output output.txt
 
 hostname
 nvidia-smi
 module list
 
-cd build 
+cd build
 make -j
 
-### run single-node without async
-#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/reddit --layers 2 --hunits 256 --epoch 1000 --lr 1e-3 --decay 0
-#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_products --layers 2 --hunits 256 --epoch 1000 --lr 1e-3 --decay 0  | tee ../results/test_acc_large_graphs_small_lr/sync/products_gcn.txt
-#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_arxiv --layers 2 --hunits 256 --epoch 5000 --lr 1e-3 --decay 0  | tee ../results/test_acc_large_graphs_small_lr/sync/arxiv_gcn.txt
+# setting up the hyper-parameters
+num_layers=4
+hunits=128
+lr=1e-3
+graph=ogbn_products
+epoch=3000
+decay=0
+dropout=0.5
 
-## run single-node with async
-#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/reddit --layers 2 --hunits 256 --epoch 5500 --lr 1e-3 --decay 0  --part hybrid | tee ../results/test_acc_large_graphs_small_lr/async/reddit_gcn.txt
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_products --layers 3 --hunits 256 --epoch 1000 --lr 1e-3 --decay 0 --part hybrid 
-#mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/ogbn_arxiv --layers 2 --hunits 256 --epoch 5500 --lr 1e-3 --decay 0 --part hybrid  | tee ../results/test_acc_large_graphs_small_lr/async/arxiv_gcn.txt
-#
+mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn_graph_parallel --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --dropout $dropout --weight_file saved_weights
+
+./applications/single_gpu/gcn_inference --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --weight_file saved_weights

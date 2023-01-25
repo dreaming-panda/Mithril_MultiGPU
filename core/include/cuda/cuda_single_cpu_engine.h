@@ -1,5 +1,9 @@
 #ifndef CUDA_ENGINE_H
 #define CUDA_ENGINE_H
+
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "application.h"
 #include "engine.h"
 #include "graph.h"
@@ -11,6 +15,9 @@
 #include "cuda/cuda_graph_loader.h"
 #include "cuda/cuda_loss.h"
 #include "cudnn.h"
+#include <string>
+#include <map>
+
 class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
     private:
         // returning the loss
@@ -67,6 +74,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
             inference_mode_ = true;
         }
         double execute_application(AbstractApplication * application, int num_epoch);
+        void model_inference(AbstractApplication * application, std::string weight_file);
         void set_lr_scheduler(LearningRateScheduler * lr_scheduler){
             this->lr_scheduler_ = lr_scheduler;
         };
