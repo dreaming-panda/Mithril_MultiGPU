@@ -15,7 +15,7 @@ cd build
 make -j
 cd ..
 
-graph=ogbn_products
+graph=reddit
 decay=1e-5
 lr=3e-3
 
