@@ -48,6 +48,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 3:
         learning_rates = [float(sys.argv[3])]
 
+    if len(sys.argv) > 4:
+        decays = [float(sys.argv[4])]
+
     print("Running the grid search on graph %s" % (
         graph
         ))

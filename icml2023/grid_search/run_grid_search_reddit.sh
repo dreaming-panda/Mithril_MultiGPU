@@ -18,6 +18,6 @@ cd ..
 
 date
 echo "Running grid search on Reddit"
-python ./icml2023/grid_search/run.py reddit checkpointed_weights_reddit_3e-3 3e-3
+python ./icml2023/grid_search/run.py reddit /anvil/projects/x-cis220117/checkpointed_weights/checkpointed_weights_reddit_3e-3 3e-3
 date
 

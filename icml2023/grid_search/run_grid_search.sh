@@ -15,11 +15,12 @@ cd build
 make -j
 cd ..
 
+graph=ogbn_products
 decay=1e-5
 lr=3e-3
 
 date
-echo "Running grid search on ogbn-arxiv"
-python ./icml2023/grid_search/run.py ogbn_arxiv /anvil/projects/x-cis220117/checkpointed_weights/checkpointed_weights_ogbn_arxiv_${lr}_${decay} ${lr} ${decay}
+echo "Running grid search on ${graph}"
+python ./icml2023/grid_search/run.py ${graph} /anvil/projects/x-cis220117/checkpointed_weights/checkpointed_weights_${graph}_${lr}_${decay} ${lr} ${decay}
 date
 
