@@ -84,6 +84,7 @@ private:
       DataType *d_inter_;
       DataType *cuda_acc;
       cudnnTensorDescriptor_t data_descriptor;
+      std::string graph_path;
 
       std::string weight_file_ = "checkpointed_weights";
 
@@ -155,6 +156,9 @@ public:
           weight_file_ = weight_file;
       }
       double execute_application(AbstractApplication * application, int num_epoch);
+      void set_graph_path(std::string graph_path){
+            this->graph_path = graph_path;
+      }
 };
 
 #endif

@@ -258,8 +258,10 @@ int main(int argc, char ** argv) {
     execution_engine->set_optimizer(optimizer);
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
-    execution_engine->set_max_dim(num_hidden_units);
-    
+    int max_dim = std::max<int>(num_hidden_units, graph_non_structural_data->get_num_feature_dimensions());
+    max_dim = std::max<int>(max_dim, graph_non_structural_data->get_num_labels());
+    execution_engine->set_max_dim(max_dim);
+    execution_engine->set_graph_path(graph_path);
     execution_engine->execute_application(gcn, num_epoch);
 
     // destroy the model and the engine

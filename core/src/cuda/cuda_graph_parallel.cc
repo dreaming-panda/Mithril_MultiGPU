@@ -4,6 +4,7 @@
 #include "cuda/cuda_weight_manager.h"
 #include <set>
 #include <algorithm>
+#include <fstream>
 void CUDAGraphParallelEngine::prepare_distributed_graph()
 {
     int node_id = DistributedSys::get_instance()->get_node_id();
@@ -25,27 +26,45 @@ void CUDAGraphParallelEngine::prepare_distributed_graph()
     this->local_start_ = new VertexId[num_nodes];
     this->local_end_ = new VertexId[num_nodes];
     assert(this->vertices_hosts_ != nullptr);
-    int num_local_vertices = graph_structure_->get_num_global_vertices() / num_nodes;
-    int max_node_id = num_nodes - 1;
-    for(int v = 0; v < graph_structure_->get_num_global_vertices(); ++v){
-        this->vertices_hosts_[v] = int(graph_structure_->get_num_global_vertices() / num_local_vertices);
-        if(this->vertices_hosts_[v] > max_node_id) this->vertices_hosts_[v] = max_node_id;
+    const std::string bdpath = this->graph_path + "/bd.txt";
+    std::ifstream bd(bdpath);
+    memset(this->local_start_, 0, num_nodes * sizeof(VertexId));
+    memset(this->local_end_, 0, num_nodes * sizeof(VertexId));
+    int t_num_vertices = 0;
+    for(int i = 0; i < num_nodes; ++i){
+        int x;
+        bd >> x;
+        t_num_vertices += x;
+        if(i != num_nodes - 1)local_start_[i+1] = t_num_vertices;
+        local_end_[i] = t_num_vertices;
     }
-    this->start_vertex_ = node_id * num_local_vertices;
-    this->end_vertex_ = (node_id + 1) * num_local_vertices;
-    if(node_id == max_node_id) this->end_vertex_ = graph_structure_->get_num_global_vertices();
-    for(int n = 0; n < num_nodes; ++n){
-        this->local_start_[n] = n * num_local_vertices;
-        this->local_end_[n] = (n + 1) * num_local_vertices;
+    this->start_vertex_ = local_start_[node_id];
+    this->end_vertex_ = local_end_[node_id];
+    assert(local_end_[num_nodes - 1] == graph_structure_->get_num_global_vertices());
+    if(node_id == 0){
+    for(int i = 0; i < num_nodes; ++i){
+        printf("start[%d]: %d, end[%d]: %d", i, local_start_[i], i, local_end_[i]);
     }
-    this->local_end_[max_node_id] =  graph_structure_->get_num_global_vertices();
+    }
+
+    
+    
+    
+    
     for(int v = start_vertex_; v < end_vertex_; ++v){
             OutEdgeList o_list = graph_structure_->get_out_edges(v);
             for(int i = 0; i < o_list.num_out_edges; ++i){
                     OutEdge o = o_list.ptx[i];
                     VertexId dst = o.dst;
-                    int host = dst / num_local_vertices;
-                    if(host > max_node_id) host = max_node_id;
+                    int host = -1;
+                    for(int h = 0; h < num_nodes; ++h){
+                        if(dst >= local_start_[h] && dst < local_end_[h]){
+                            host = h;
+                            break;
+                        }
+                    }
+                    assert(host >= 0);
+                    assert(host < num_nodes);
                     in_send_vertices_[host].push_back(v);
                     out_recv_vertices_[host].push_back(dst);
             }
@@ -53,8 +72,15 @@ void CUDAGraphParallelEngine::prepare_distributed_graph()
             for(int i = 0; i < i_list.num_in_edges; ++i){
                     InEdge o = i_list.ptx[i];
                     VertexId src = o.src;
-                    int host = src / num_local_vertices;
-                    if(host > max_node_id) host = max_node_id;
+                    int host = -1;
+                    for(int h = 0; h < num_nodes; ++h){
+                        if(src >= local_start_[h] && src < local_end_[h]){
+                            host = h;
+                            break;
+                        }
+                    }
+                    assert(host >= 0);
+                    assert(host < num_nodes);
                     in_recv_vertices_[host].push_back(src);
                     out_send_vertices_[host].push_back(v);
             }
@@ -94,17 +120,19 @@ void CUDAGraphParallelEngine::prepare_distributed_graph()
     }
     int max_send_vertices = 0;
     int max_recv_vertices = 0;
-    
+    int total_send_vertices = 0;
     for(int n = 0; n < num_nodes; ++n){
         if(n == node_id) continue;
         max_send_vertices = std::max<int>(in_send_vertices_[n].size(), max_send_vertices);
         max_send_vertices = std::max<int>(out_send_vertices_[n].size(), max_send_vertices);
         max_recv_vertices = std::max<int>(in_recv_vertices_[n].size(), max_recv_vertices);
         max_recv_vertices = std::max<int>(out_recv_vertices_[n].size(), max_recv_vertices);
+        total_send_vertices += in_send_vertices_[n].size();
+        total_send_vertices += out_send_vertices_[n].size();
     }
     send_buffer_size_ = max_send_vertices;
     recv_buffer_size_ = max_recv_vertices;
-    printf("[Node %d]: distributed graph prepared: start: %d, end: %d , send vertices: %d.\n", node_id, start_vertex_, end_vertex_, max_send_vertices);
+    printf("[Node %d]: distributed graph prepared: start: %d, end: %d , send vertices: %d.\n", node_id, start_vertex_, end_vertex_, total_send_vertices);
     AllocateCUDAMemory<DataType>(&send_buffer_, max_send_vertices * max_dim, __FILE__, __LINE__);
     AllocateCUDAMemory<DataType>(&recv_buffer_, max_recv_vertices * max_dim, __FILE__, __LINE__);    
     int max_vertices = std::max<int>(max_send_vertices, max_recv_vertices);

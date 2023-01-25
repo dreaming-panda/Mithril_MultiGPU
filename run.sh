@@ -59,9 +59,10 @@
 # Launch MPI code... 
 
 #ibrun ./build/tests/test_cuda_pipeline_parallel         # Use ibrun instead of mpirun or mpiexec
-//mpirun -np 4 ./build/applications/async_multi_gpus/gcn --graph ../dataset/Products --layers 2 --hunits 128 --epoch 50 --lr 1e-2 --decay 5e-4
-mpirun -np 4 ./build/applications/async_multi_gpus/gcn --graph ../dataset/Products --layers 2 --hunits 128 --epoch 50 --lr 1e-2 --decay 5e-4
-#./build/applications/single_gpu/gcn --graph ../dataset/APRO --layers 2 --hunits 128 --epoch 1000 --lr 1e-2 --decay 5e-4
+mpirun -np 4 ./build/applications/async_multi_gpus/gcn_graph_parallel --graph /data1/zimiao/zhuoming/products_metis/reorder/bin --layers 2 --hunits 128 --epoch 50 --lr 1e-2 --decay 5e-4 --part hybrid
+#./build/applications/single_gpu/gcn --graph ../dataset/Products --layers 2 --hunits 128 --epoch 50 --lr 1e-2 --decay 5e-4
+
+
 # ---------------------------------------------------
 #
 #
