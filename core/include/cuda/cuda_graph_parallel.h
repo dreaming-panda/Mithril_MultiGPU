@@ -83,6 +83,7 @@ private:
       DataType *d_inter_;
       DataType *cuda_acc;
       cudnnTensorDescriptor_t data_descriptor;
+      std::string graph_path;
 
 public:
       CUDAGraphParallelEngine()
@@ -146,6 +147,9 @@ public:
             this->max_dim = max_dim;
       }
       double execute_application(AbstractApplication * application, int num_epoch);
+      void set_graph_path(std::string graph_path){
+            this->graph_path = graph_path;
+      }
 };
 
 #endif

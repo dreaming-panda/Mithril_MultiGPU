@@ -246,7 +246,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
     execution_engine->set_max_dim(num_hidden_units);
-    
+    execution_engine->set_graph_path(graph_path);
     execution_engine->execute_application(gcn, num_epoch);
 
     // destroy the model and the engine
