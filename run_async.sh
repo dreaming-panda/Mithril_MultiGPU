@@ -17,14 +17,14 @@ make -j
 
 # setting up the hyper-parameters
 num_layers=4
-hunits=512
-lr=5e-3
-graph=reddit
-epoch=8000
+hunits=256
+lr=3e-3
+graph=ogbn_mag
+epoch=3000
 decay=0
 chunks=32
-dropout=0.5
-seed=532
+dropout=0.3
+seed=1234
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file saved_weights --dropout $dropout --seed $seed
 
