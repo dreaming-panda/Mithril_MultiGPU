@@ -4,9 +4,9 @@ import time
 import json
 
 # number of combinations:
-# 4 x 2 s 4 x 3 = 96
+# 3 x 2 s 4 x 3 = 72
 learning_rates = [
-        3e-4, 1e-3, 3e-3, 1e-2
+        3e-4, 1e-3, 3e-3
         ]
 decays = [
         0, 1e-5

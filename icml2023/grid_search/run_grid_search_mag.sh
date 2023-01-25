@@ -6,6 +6,7 @@
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
+#SBATCH --output grid_search_mag_3e-3.txt
 
 hostname
 nvidia-smi
@@ -17,6 +18,6 @@ cd ..
 
 date
 echo "Running grid search on ogbn-mag"
-python ./icml2023/grid_search/run.py ogbn_mag checkpointed_weights_ogbn_mag
+python ./icml2023/grid_search/run.py ogbn_mag checkpointed_weights_ogbn_mag_3e-3 3e-3
 date
 

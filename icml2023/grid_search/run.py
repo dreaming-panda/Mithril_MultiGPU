@@ -2,10 +2,8 @@ import os
 import sys
 import time
 
-# number of combinations:
-# 4 x 2 s 4 x 3 = 96
 learning_rates = [
-        3e-4, 1e-3, 3e-3, 1e-2
+        3e-4, 1e-3, 3e-3
         ]
 decays = [
         0, 1e-5
@@ -26,7 +24,7 @@ def train_gcn(lr, decay, hunit, dropout, full_graph_path, graph, weight_file):
 
     t = - time.time()
     result_file = result_dir + "/result.txt"
-    command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/single_gpu/gcn --graph %s --layers 4 --hunits %s --epoch 3000 --lr %s --decay %s --dropout %s --weight_file %s > %s 2>&1" % (
+    command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/single_gpu/gcn --graph %s --layers 4 --hunits %s --epoch 10000 --lr %s --decay %s --dropout %s --weight_file %s > %s 2>&1" % (
             full_graph_path, hunit, lr, decay, dropout, weight_file, result_file
             )
     os.system(command)
@@ -46,6 +44,9 @@ if __name__ == "__main__":
     weight_file = "checkpointed_weights"
     if len(sys.argv) > 2:
         weight_file = sys.argv[2]
+
+    if len(sys.argv) > 3:
+        learning_rates = [float(sys.argv[3])]
 
     print("Running the grid search on graph %s" % (
         graph

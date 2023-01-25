@@ -6,6 +6,7 @@
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
+#SBATCH --output grid_search_arxiv.txt
 
 hostname
 nvidia-smi
