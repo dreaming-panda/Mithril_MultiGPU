@@ -390,6 +390,7 @@ void CUDAGraphParallelEngine::SyncTensorNCCLP2P(Tensor * tensor, int type){
                 cudaDeviceSynchronize();
                 cudaFree(dbuffer);
             
+              comm_ += in_send_vertices_[j].size() * output_size * sizeof(DataType);
               ncclSend(send_buffer_, in_send_vertices_[j].size() * output_size, ncclFloat32, j, *nccl_comm_, nccl_stream_);
                
               cudaDeviceSynchronize();
@@ -459,6 +460,7 @@ void CUDAGraphParallelEngine::SyncTensorNCCLP2P(Tensor * tensor, int type){
                 cudaDeviceSynchronize();
                 cudaFree(dbuffer);
     
+               comm_ += out_send_vertices_[j].size() * output_size * sizeof(DataType);
                ncclSend(send_buffer_, out_send_vertices_[j].size() * output_size, ncclFloat32, j, *nccl_comm_, nccl_stream_);
                 //ncclSend(cuda_data + start_vertex_ * output_size, (end_vertex_ - start_vertex_) * output_size, ncclFloat32, j, *nccl_comm_, nccl_stream_);
                 cudaDeviceSynchronize();
@@ -619,6 +621,7 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
 
     prepare_distributed_graph();
 
+    comm_ = 0;
     
     
     assert(application != NULL);
@@ -825,17 +828,29 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
 
        
     }
-     printf("\nAverage per-epoch runtime: %.3f (s)\n",
-            total_runtime / double(epoch + 1 - num_warmups));
-    // printf("Total Time: %.3f(s)\n",total_runtime);
-    // printf("loss Time: %.3f(s)\n",loss_time);
-    // printf("calacc Time: %.3f(s)\n",calacc_time);
-    // printf("calgra Time: %.3f(s)\n",calgra_time);
-    // printf("cf Time: %.3f(s)\n",cf_time);
-    // printf("cb Time: %.3f(s)\n",cb_time);
-    printf("Highest validation acc: %.4f\n", highest_valid_acc);
-    printf("Target test acc: %.4f\n", target_test_acc);
-    printf("Epochs to reach the target acc: %d\n", epoch_to_reach_the_target_acc);
+
+    MPI_Allreduce(
+            MPI_IN_PLACE, &comm_, 1, 
+            DistributedSys::get_mpi_data_type<size_t>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    comm_ /= num_epoch;
+
+    if (node_id == 0) {
+        printf("\nAverage per-epoch runtime: %.3f (s)\n",
+                total_runtime / double(epoch + 1 - num_warmups));
+        // printf("Total Time: %.3f(s)\n",total_runtime);
+        // printf("loss Time: %.3f(s)\n",loss_time);
+        // printf("calacc Time: %.3f(s)\n",calacc_time);
+        // printf("calgra Time: %.3f(s)\n",calgra_time);
+        // printf("cf Time: %.3f(s)\n",cf_time);
+        // printf("cb Time: %.3f(s)\n",cb_time);
+        printf("Highest validation acc: %.4f\n", highest_valid_acc);
+        printf("Target test acc: %.4f\n", target_test_acc);
+        printf("Epochs to reach the target acc: %d\n", epoch_to_reach_the_target_acc);
+        printf("Communication volume (cluster-wide, per-epoch): %.3f GB\n",
+                comm_ / 1024. / 1024. / 1024.);
+    }
     // releasing the resource of all tensors
     for (Operator * op: operators) {
         assert(op != NULL);

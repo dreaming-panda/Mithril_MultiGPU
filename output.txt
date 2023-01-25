@@ -1,5 +1,5 @@
-g001.anvil.rcac.purdue.edu
-Mon Jan 23 18:10:03 2023       
+g010.anvil.rcac.purdue.edu
+Wed Jan 25 14:55:51 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 470.57.02    Driver Version: 470.57.02    CUDA Version: 11.4     |
 |-------------------------------+----------------------+----------------------+
@@ -7,8 +7,20 @@ Mon Jan 23 18:10:03 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA A100-SXM...  On   | 00000000:C1:00.0 Off |                    0 |
-| N/A   28C    P0    70W / 400W |      0MiB / 40536MiB |      0%      Default |
+|   0  NVIDIA A100-SXM...  On   | 00000000:01:00.0 Off |                    0 |
+| N/A   29C    P0    52W / 400W |      0MiB / 40536MiB |      0%      Default |
+|                               |                      |             Disabled |
++-------------------------------+----------------------+----------------------+
+|   1  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
+| N/A   28C    P0    52W / 400W |      0MiB / 40536MiB |      0%      Default |
+|                               |                      |             Disabled |
++-------------------------------+----------------------+----------------------+
+|   2  NVIDIA A100-SXM...  On   | 00000000:81:00.0 Off |                    0 |
+| N/A   30C    P0    50W / 400W |      0MiB / 40536MiB |      0%      Default |
+|                               |                      |             Disabled |
++-------------------------------+----------------------+----------------------+
+|   3  NVIDIA A100-SXM...  On   | 00000000:C1:00.0 Off |                    0 |
+| N/A   27C    P0    48W / 400W |      0MiB / 40536MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -28,43 +40,43 @@ Currently Loaded Modules:
 
  
 
-[  9%] Built target context
+[  4%] Built target context
+[ 14%] Built target parallel
 [ 19%] Built target core
-[ 19%] Built target parallel
 [ 40%] Built target cudahelp
-[ 49%] Built target test_cuda_graph
-[ 57%] Built target test_mpi_gpu_model_parallel
-[ 60%] Built target test_mpi_combined
-[ 60%] Built target test_cuda_model_parallel
-[ 60%] Built target test_trivial
-[ 78%] Built target test_hello_world
-[ 88%] Built target test_single_node_training
-[ 80%] Built target test_mpi_non_structual_graph
-[ 88%] Built target test_full_structual_graph
-[ 80%] Built target test_nccl_thread
-[ 88%] Built target test_mpi_pipelined_model_parallel
-[ 88%] Built target test_mpi_loader
-[ 80%] Built target test_graph
-[ 80%] Built target estimate_comm_volume
-[ 80%] Built target test_mpi_gpu_pipelined_model_parallel
-[ 88%] Built target test_mpi_structual_graph
-[ 88%] Built target test_cuda
+[ 64%] Built target test_cuda_graph
+[ 72%] Built target test_single_node_fullgpu_training
+[ 72%] Built target test_single_node_training
+[ 72%] Built target test_mpi_gpu_hybrid
+[ 72%] Built target test_hello_world
+[ 72%] Built target test_cuda
+[ 74%] Built target test_mpi_structual_graph
+[ 89%] Built target test_mpi_non_structual_graph
 [ 89%] Built target test_nccl_mpi
+[ 89%] Built target test_trivial
 [ 89%] Built target test_single_node_gpu_training
-[ 88%] Built target test_full_non_structual_graph
-[ 88%] Built target test_single_node_fullgpu_training
-[ 89%] Built target test_mpi_model_parallel
-[ 80%] Built target test_mpi_gpu_hybrid
-[ 88%] Built target test_cuda_pipeline_parallel
-[ 96%] Built target OSDI2023_SINGLE_NODE_gcn_inference
+[ 88%] Built target test_mpi_model_parallel
+[ 89%] Built target test_full_non_structual_graph
+[ 89%] Built target test_mpi_gpu_pipelined_model_parallel
+[ 89%] Built target test_mpi_gpu_model_parallel
+[ 89%] Built target estimate_comm_volume
+[ 89%] Built target test_mpi_loader
+[ 86%] Built target test_cuda_pipeline_parallel
+[ 89%] Built target test_cuda_model_parallel
+[ 89%] Built target test_mpi_pipelined_model_parallel
+[ 89%] Built target test_graph
+[ 89%] Built target test_full_structual_graph
+[ 89%] Built target test_nccl_thread
+[ 89%] Built target test_mpi_combined
+[ 96%] Built target OSDI2023_MULTI_NODES_gcn
+[ 98%] Built target OSDI2023_SINGLE_NODE_gcn_inference
 [100%] Built target OSDI2023_MULTI_NODES_gcn_graph_parallel
-[100%] Built target OSDI2023_SINGLE_NODE_gcn
-[100%] Built target OSDI2023_MULTI_NODES_gcn
 [100%] Built target test_two_layer_hybrid_parallelism_designer
+[100%] Built target OSDI2023_SINGLE_NODE_gcn
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
 The number of GCN layers: 4
 The number of hidden units: 128
-The number of training epoches: 3000
+The number of training epoches: 100
 The number of startup epoches: 0
 Learning rate: 0.001000
 The partition strategy: hybrid
@@ -72,7 +84,7 @@ The dropout rate: 0.500
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
 The number of GCN layers: 4
 The number of hidden units: 128
-The number of training epoches: 3000
+The number of training epoches: 100
 The number of startup epoches: 0
 Learning rate: 0.001000
 The partition strategy: hybrid
@@ -80,7 +92,7 @@ The dropout rate: 0.500
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
 The number of GCN layers: 4
 The number of hidden units: 128
-The number of training epoches: 3000
+The number of training epoches: 100
 The number of startup epoches: 0
 Learning rate: 0.001000
 The partition strategy: hybrid
@@ -88,47 +100,47 @@ The dropout rate: 0.500
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
 The number of GCN layers: 4
 The number of hidden units: 128
-The number of training epoches: 3000
+The number of training epoches: 100
 The number of startup epoches: 0
 Learning rate: 0.001000
 The partition strategy: hybrid
 The dropout rate: 0.500
-Initialized node g006.anvil.rcac.purdue.edu
-Initialized node g004.anvil.rcac.purdue.edu
-Initialized node g005.anvil.rcac.purdue.edu
-Initialized node g001.anvil.rcac.purdue.edu
+Initialized node g010.anvil.rcac.purdue.edu
+Initialized node g010.anvil.rcac.purdue.edu
+Initialized node g010.anvil.rcac.purdue.edu
+Initialized node g010.anvil.rcac.purdue.edu
 Building the CSR structure...
 Building the CSR structure...
 Building the CSR structure...
 Building the CSR structure...
-        It takes 1.865 seconds.
+        It takes 2.108 seconds.
 Building the CSC structure...
-        It takes 1.926 seconds.
+        It takes 2.263 seconds.
 Building the CSC structure...
-        It takes 1.937 seconds.
+        It takes 2.278 seconds.
 Building the CSC structure...
-        It takes 1.963 seconds.
+        It takes 2.281 seconds.
 Building the CSC structure...
-        It takes 1.819 seconds.
-        It takes 1.880 seconds.
-        It takes 1.906 seconds.
-        It takes 1.922 seconds.
+        It takes 1.973 seconds.
+        It takes 2.031 seconds.
+        It takes 2.083 seconds.
+        It takes 2.100 seconds.
 Building the Feature Vector...
 Building the Feature Vector...
 Building the Feature Vector...
 Building the Feature Vector...
-        It takes 0.576 seconds.
+        It takes 0.772 seconds.
 Building the Label Vector...
-        It takes 0.607 seconds.
+        It takes 0.805 seconds.
 Building the Label Vector...
-        It takes 0.575 seconds.
+        It takes 0.805 seconds.
 Building the Label Vector...
-        It takes 0.612 seconds.
+        It takes 0.827 seconds.
 Building the Label Vector...
-        It takes 0.311 seconds.
-        It takes 0.309 seconds.
-        It takes 0.328 seconds.
-        It takes 0.333 seconds.
+        It takes 0.560 seconds.
+        It takes 0.963 seconds.
+        It takes 0.734 seconds.
+        It takes 0.673 seconds.
 Number of classes: 47
 Number of feature dimensions: 100
 Number of classes: 47
@@ -138,260 +150,130 @@ Number of feature dimensions: 100
 Number of classes: 47
 Number of feature dimensions: 100
 train nodes 196615, valid nodes 39323, test nodes 2213091
+gcn_graph_parallel: /home/x-jchen5/baseline/Mithril_MultiGPU/core/src/cuda/cuda_graph_parallel.cc:43: void CUDAGraphParallelEngine::prepare_distributed_graph(): Assertion `local_end_[num_nodes - 1] == graph_structure_->get_num_global_vertices()' failed.
+[g010:1544715] *** Process received signal ***
+[g010:1544715] Signal: Aborted (6)
+[g010:1544715] Signal code:  (-6)
+[g010:1544715] [ 0] /lib64/libc.so.6(+0x37410)[0x14a3c8041410]
+[g010:1544715] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x14a3c804138f]
+[g010:1544715] [ 2] /lib64/libc.so.6(abort+0x127)[0x14a3c802bdc5]
+[g010:1544715] [ 3] /lib64/libc.so.6(+0x21c99)[0x14a3c802bc99]
+[g010:1544715] [ 4] /lib64/libc.so.6(+0x2fa86)[0x14a3c8039a86]
+[g010:1544715] [ 5] ./applications/async_multi_gpus/gcn_graph_parallel(_ZN23CUDAGraphParallelEngine25prepare_distributed_graphEv+0x2307)[0x459317]
+[g010:1544715] [ 6] ./applications/async_multi_gpus/gcn_graph_parallel(_ZN23CUDAGraphParallelEngine19execute_applicationEP19AbstractApplicationi+0x35)[0x459895]
+[g010:1544715] [ 7] ./applications/async_multi_gpus/gcn_graph_parallel(main+0x1ae7)[0x429c77]
+[g010:1544715] [ 8] /lib64/libc.so.6(__libc_start_main+0xf3)[0x14a3c802d4a3]
+[g010:1544715] [ 9] ./applications/async_multi_gpus/gcn_graph_parallel(_start+0x2e)[0x42cd7e]
+[g010:1544715] *** End of error message ***
 train nodes 196615, valid nodes 39323, test nodes 2213091
+gcn_graph_parallel: /home/x-jchen5/baseline/Mithril_MultiGPU/core/src/cuda/cuda_graph_parallel.cc:43: void CUDAGraphParallelEngine::prepare_distributed_graph(): Assertion `local_end_[num_nodes - 1] == graph_structure_->get_num_global_vertices()' failed.
+[g010:1544716] *** Process received signal ***
+[g010:1544716] Signal: Aborted (6)
+[g010:1544716] Signal code:  (-6)
 train nodes 196615, valid nodes 39323, test nodes 2213091
+[g010:1544716] [ 0] /lib64/libc.so.6(+0x37410)[0x147bc5638410]
+[g010:1544716] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x147bc563838f]
+[g010:1544716] [ 2] /lib64/libc.so.6(abort+0x127)[0x147bc5622dc5]
+[g010:1544716] [ 3] /lib64/libc.so.6(+0x21c99)[0x147bc5622c99]
+[g010:1544716] [ 4] /lib64/libc.so.6(+0x2fa86)[0x147bc5630a86]
+[g010:1544716] [ 5] ./applications/async_multi_gpus/gcn_graph_parallel(_ZN23CUDAGraphParallelEngine25prepare_distributed_graphEv+0x2307)[0x459317]
+[g010:1544716] [ 6] ./applications/async_multi_gpus/gcn_graph_parallel(_ZN23CUDAGraphParallelEngine19execute_applicationEP19AbstractApplicationi+0x35)[0x459895]
+[g010:1544716] [ 7] ./applications/async_multi_gpus/gcn_graph_parallel(main+0x1ae7)[0x429c77]
+[g010:1544716] [ 8] /lib64/libc.so.6(__libc_start_main+0xf3)[0x147bc56244a3]
+[g010:1544716] [ 9] ./applications/async_multi_gpus/gcn_graph_parallel(_start+0x2e)[0x42cd7e]
+[g010:1544716] *** End of error message ***
+gcn_graph_parallel: /home/x-jchen5/baseline/Mithril_MultiGPU/core/src/cuda/cuda_graph_parallel.cc:43: void CUDAGraphParallelEngine::prepare_distributed_graph(): Assertion `local_end_[num_nodes - 1] == graph_structure_->get_num_global_vertices()' failed.
+[g010:1544718] *** Process received signal ***
+[g010:1544718] Signal: Aborted (6)
+[g010:1544718] Signal code:  (-6)
+[g010:1544718] [ 0] /lib64/libc.so.6(+0x37410)[0x153b2cd7a410]
+[g010:1544718] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x153b2cd7a38f]
+[g010:1544718] [ 2] /lib64/libc.so.6(abort+0x127)[0x153b2cd64dc5]
+[g010:1544718] [ 3] /lib64/libc.so.6(+0x21c99)[0x153b2cd64c99]
+[g010:1544718] [ 4] /lib64/libc.so.6(+0x2fa86)[0x153b2cd72a86]
+[g010:1544718] [ 5] ./applications/async_multi_gpus/gcn_graph_parallel(_ZN23CUDAGraphParallelEngine25prepare_distributed_graphEv+0x2307)[0x459317]
+[g010:1544718] [ 6] ./applications/async_multi_gpus/gcn_graph_parallel(_ZN23CUDAGraphParallelEngine19execute_applicationEP19AbstractApplicationi+0x35)[0x459895]
+[g010:1544718] [ 7] ./applications/async_multi_gpus/gcn_graph_parallel(main+0x1ae7)[0x429c77]
+[g010:1544718] [ 8] /lib64/libc.so.6(__libc_start_main+0xf3)[0x153b2cd664a3]
+[g010:1544718] [ 9] ./applications/async_multi_gpus/gcn_graph_parallel(_start+0x2e)[0x42cd7e]
+[g010:1544718] *** End of error message ***
 train nodes 196615, valid nodes 39323, test nodes 2213091
-[Node 2]: distributed graph prepared: start: 1224514, end: 1836771 , send vertices: 171315.
-*** Allocating resources for all tensors...
-    OP_TYPE: OPERATOR_INPUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_SOFTMAX
-*** Done allocating resource.
-*** Preparing the input tensor...
-[Node 0]: distributed graph prepared: start: 0, end: 612257 , send vertices: 219013.
-*** Allocating resources for all tensors...
-    OP_TYPE: OPERATOR_INPUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_SOFTMAX
-*** Done allocating resource.
-*** Preparing the input tensor...
-*** Done preparing the input tensor.
-*** Preparing the STD tensor...
-    Number of labels: 47
-    Number of vertices: 2449029
-*** Done preparing the STD tensor.
-*** Done preparing the input tensor.
-*** Preparing the STD tensor...
-    Number of labels: 47
-    Number of vertices: 2449029
-[Node 1]: distributed graph prepared: start: 612257, end: 1224514 , send vertices: 199323.
-*** Allocating resources for all tensors...
-    OP_TYPE: OPERATOR_INPUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-[Node 3]: distributed graph prepared: start: 1836771, end: 2449029 , send vertices: 230898.
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-*** Allocating resources for all tensors...
-    OP_TYPE: OPERATOR_INPUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-*** Done preparing the STD tensor.
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-*** Done preparing the weight tensor.
-
-****** Start model training... ******
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_SOFTMAX
-    OP_TYPE: OPERATOR_RELU
-*** Done allocating resource.
-*** Preparing the input tensor...
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_SOFTMAX
-*** Done allocating resource.
-*** Preparing the input tensor...
-*** Done preparing the input tensor.
-*** Preparing the STD tensor...
-    Number of labels: 47
-    Number of vertices: 2449029
-*** Done preparing the input tensor.
-*** Preparing the STD tensor...
-    Number of labels: 47
-    Number of vertices: 2449029
-*** Done preparing the STD tensor.
-*** Done preparing the weight tensor.
-
-****** Start model training... ******
-*** Done preparing the weight tensor.
-
-****** Start model training... ******
-*** Done preparing the STD tensor.
-*** Done preparing the weight tensor.
-
-****** Start model training... ******
-2449029
-2449029
-2449029
-2449029
-    Epoch 9:	Loss 2.71317	TrainAcc 0.3084	ValidAcc 0.3084	TestAcc 0.2684
-    Epoch 19:	Loss 1.73285	TrainAcc 0.6223	ValidAcc 0.6285	TestAcc 0.4802
-    Epoch 29:	Loss 1.17942	TrainAcc 0.7768	ValidAcc 0.7715	TestAcc 0.5862
-    Epoch 39:	Loss 0.87331	TrainAcc 0.8237	ValidAcc 0.8194	TestAcc 0.6402
-    Epoch 49:	Loss 0.72899	TrainAcc 0.8416	ValidAcc 0.8368	TestAcc 0.6632
-    Epoch 59:	Loss 0.65225	TrainAcc 0.8549	ValidAcc 0.8503	TestAcc 0.6756
-    Epoch 69:	Loss 0.60332	TrainAcc 0.8631	ValidAcc 0.8587	TestAcc 0.6844
-    Epoch 79:	Loss 0.56972	TrainAcc 0.8700	ValidAcc 0.8653	TestAcc 0.6903
-    Epoch 89:	Loss 0.54445	TrainAcc 0.8738	ValidAcc 0.8681	TestAcc 0.6944
-    Epoch 99:	Loss 0.52328	TrainAcc 0.8776	ValidAcc 0.8710	TestAcc 0.6973
-    Epoch 109:	Loss 0.50504	TrainAcc 0.8810	ValidAcc 0.8729	TestAcc 0.7023
-    Epoch 119:	Loss 0.49222	TrainAcc 0.8832	ValidAcc 0.8755	TestAcc 0.7057
-    Epoch 129:	Loss 0.48143	TrainAcc 0.8841	ValidAcc 0.8774	TestAcc 0.7109
-    Epoch 139:	Loss 0.47073	TrainAcc 0.8860	ValidAcc 0.8785	TestAcc 0.7129
-    Epoch 149:	Loss 0.46190	TrainAcc 0.8880	ValidAcc 0.8809	TestAcc 0.7149
-    Epoch 159:	Loss 0.45470	TrainAcc 0.8890	ValidAcc 0.8821	TestAcc 0.7176
-    Epoch 169:	Loss 0.44660	TrainAcc 0.8905	ValidAcc 0.8843	TestAcc 0.7194
-    Epoch 179:	Loss 0.44204	TrainAcc 0.8913	ValidAcc 0.8848	TestAcc 0.7215
-    Epoch 189:	Loss 0.43384	TrainAcc 0.8928	ValidAcc 0.8859	TestAcc 0.7227
-    Epoch 199:	Loss 0.42976	TrainAcc 0.8932	ValidAcc 0.8867	TestAcc 0.7259
-    Epoch 209:	Loss 0.42641	TrainAcc 0.8945	ValidAcc 0.8884	TestAcc 0.7262
-    Epoch 219:	Loss 0.42271	TrainAcc 0.8944	ValidAcc 0.8876	TestAcc 0.7270
-    Epoch 229:	Loss 0.41744	TrainAcc 0.8957	ValidAcc 0.8883	TestAcc 0.7302
-    Epoch 239:	Loss 0.41463	TrainAcc 0.8962	ValidAcc 0.8900	TestAcc 0.7311
-    Epoch 249:	Loss 0.41014	TrainAcc 0.8968	ValidAcc 0.8897	TestAcc 0.7325
-    Epoch 259:	Loss 0.40829	TrainAcc 0.8974	ValidAcc 0.8905	TestAcc 0.7332
-    Epoch 269:	Loss 0.40437	TrainAcc 0.8990	ValidAcc 0.8919	TestAcc 0.7348
-    Epoch 279:	Loss 0.40138	TrainAcc 0.8990	ValidAcc 0.8918	TestAcc 0.7353
-    Epoch 289:	Loss 0.39876	TrainAcc 0.8997	ValidAcc 0.8928	TestAcc 0.7346
-    Epoch 299:	Loss 0.39518	TrainAcc 0.9008	ValidAcc 0.8941	TestAcc 0.7366
-    Epoch 309:	Loss 0.39410	TrainAcc 0.9010	ValidAcc 0.8931	TestAcc 0.7368
-    Epoch 319:	Loss 0.39077	TrainAcc 0.9015	ValidAcc 0.8937	TestAcc 0.7379
-    Epoch 329:	Loss 0.38893	TrainAcc 0.9022	ValidAcc 0.8943	TestAcc 0.7383
-    Epoch 339:	Loss 0.38660	TrainAcc 0.9026	ValidAcc 0.8947	TestAcc 0.7383
-    Epoch 349:	Loss 0.38494	TrainAcc 0.9026	ValidAcc 0.8942	TestAcc 0.7403
-    Epoch 359:	Loss 0.38175	TrainAcc 0.9033	ValidAcc 0.8958	TestAcc 0.7412
-    Epoch 369:	Loss 0.38148	TrainAcc 0.9035	ValidAcc 0.8943	TestAcc 0.7399
-    Epoch 379:	Loss 0.37874	TrainAcc 0.9037	ValidAcc 0.8963	TestAcc 0.7429
-    Epoch 389:	Loss 0.37642	TrainAcc 0.9045	ValidAcc 0.8968	TestAcc 0.7419
-    Epoch 399:	Loss 0.37549	TrainAcc 0.9049	ValidAcc 0.8959	TestAcc 0.7403
-    Epoch 409:	Loss 0.37374	TrainAcc 0.9046	ValidAcc 0.8962	TestAcc 0.7398
-    Epoch 419:	Loss 0.37091	TrainAcc 0.9066	ValidAcc 0.8971	TestAcc 0.7423
-    Epoch 429:	Loss 0.36974	TrainAcc 0.9062	ValidAcc 0.8974	TestAcc 0.7426
-    Epoch 439:	Loss 0.36865	TrainAcc 0.9065	ValidAcc 0.8979	TestAcc 0.7427
-    Epoch 449:	Loss 0.36609	TrainAcc 0.9070	ValidAcc 0.8989	TestAcc 0.7445
-    Epoch 459:	Loss 0.36514	TrainAcc 0.9062	ValidAcc 0.8991	TestAcc 0.7443
-    Epoch 469:	Loss 0.36480	TrainAcc 0.9073	ValidAcc 0.8979	TestAcc 0.7456
-    Epoch 479:	Loss 0.36164	TrainAcc 0.9078	ValidAcc 0.8977	TestAcc 0.7452
-    Epoch 489:	Loss 0.36063	TrainAcc 0.9083	ValidAcc 0.9001	TestAcc 0.7451
-    Epoch 499:	Loss 0.35928	TrainAcc 0.9079	ValidAcc 0.9004	TestAcc 0.7461
-    Epoch 509:	Loss 0.35845	TrainAcc 0.9089	ValidAcc 0.9016	TestAcc 0.7470
-    Epoch 519:	Loss 0.35724	TrainAcc 0.9089	ValidAcc 0.9008	TestAcc 0.7452
-    Epoch 529:	Loss 0.35599	TrainAcc 0.9087	ValidAcc 0.8994	TestAcc 0.7466
-    Epoch 539:	Loss 0.35511	TrainAcc 0.9097	ValidAcc 0.9009	TestAcc 0.7474
-    Epoch 549:	Loss 0.35308	TrainAcc 0.9094	ValidAcc 0.9021	TestAcc 0.7459
-    Epoch 559:	Loss 0.35320	TrainAcc 0.9096	ValidAcc 0.9013	TestAcc 0.7467
-    Epoch 569:	Loss 0.35171	TrainAcc 0.9103	ValidAcc 0.9001	TestAcc 0.7472
-    Epoch 579:	Loss 0.34989	TrainAcc 0.9104	ValidAcc 0.9027	TestAcc 0.7468
-    Epoch 589:	Loss 0.34834	TrainAcc 0.9112	ValidAcc 0.9019	TestAcc 0.7459
-    Epoch 599:	Loss 0.34814	TrainAcc 0.9106	ValidAcc 0.9018	TestAcc 0.7462
-    Epoch 609:	Loss 0.34792	TrainAcc 0.9106	ValidAcc 0.9017	TestAcc 0.7459
-    Epoch 619:	Loss 0.34546	TrainAcc 0.9116	ValidAcc 0.9011	TestAcc 0.7482
-    Epoch 629:	Loss 0.34506	TrainAcc 0.9107	ValidAcc 0.9022	TestAcc 0.7471
-    Epoch 639:	Loss 0.34440	TrainAcc 0.9121	ValidAcc 0.9023	TestAcc 0.7457
-    Epoch 649:	Loss 0.34194	TrainAcc 0.9127	ValidAcc 0.9014	TestAcc 0.7469
-    Epoch 659:	Loss 0.34174	TrainAcc 0.9120	ValidAcc 0.9018	TestAcc 0.7479
-    Epoch 669:	Loss 0.34134	TrainAcc 0.9119	ValidAcc 0.9019	TestAcc 0.7475
-    Epoch 679:	Loss 0.33926	TrainAcc 0.9124	ValidAcc 0.9021	TestAcc 0.7478
-    Epoch 689:	Loss 0.33925	TrainAcc 0.9126	ValidAcc 0.9031	TestAcc 0.7485
-    Epoch 699:	Loss 0.33872	TrainAcc 0.9138	ValidAcc 0.9023	TestAcc 0.7464
-    Epoch 709:	Loss 0.33642	TrainAcc 0.9140	ValidAcc 0.9038	TestAcc 0.7478
-    Epoch 719:	Loss 0.33551	TrainAcc 0.9145	ValidAcc 0.9052	TestAcc 0.7461
-    Epoch 729:	Loss 0.33593	TrainAcc 0.9135	ValidAcc 0.9041	TestAcc 0.7474
-    Epoch 739:	Loss 0.33428	TrainAcc 0.9140	ValidAcc 0.9039	TestAcc 0.7479
-    Epoch 749:	Loss 0.33385	TrainAcc 0.9144	ValidAcc 0.9052	TestAcc 0.7474
-    Epoch 759:	Loss 0.33229	TrainAcc 0.9145	ValidAcc 0.9037	TestAcc 0.7475
-    Epoch 769:	Loss 0.33158	TrainAcc 0.9147	ValidAcc 0.9053	TestAcc 0.7478
-    Epoch 779:	Loss 0.33082	TrainAcc 0.9148	ValidAcc 0.9048	TestAcc 0.7473
-    Epoch 789:	Loss 0.33113	TrainAcc 0.9145	ValidAcc 0.9028	TestAcc 0.7474
-    Epoch 799:	Loss 0.33026	TrainAcc 0.9151	ValidAcc 0.9046	TestAcc 0.7468
-    Epoch 809:	Loss 0.32818	TrainAcc 0.9157	ValidAcc 0.9048	TestAcc 0.7477
-    Epoch 819:	Loss 0.32821	TrainAcc 0.9156	ValidAcc 0.9032	TestAcc 0.7468
-    Epoch 829:	Loss 0.32766	TrainAcc 0.9164	ValidAcc 0.9054	TestAcc 0.7482
-    Epoch 839:	Loss 0.32600	TrainAcc 0.9162	ValidAcc 0.9047	TestAcc 0.7489
-    Epoch 849:	Loss 0.32680	TrainAcc 0.9153	ValidAcc 0.9048	TestAcc 0.7472
-    Epoch 859:	Loss 0.32569	TrainAcc 0.9157	ValidAcc 0.9054	TestAcc 0.7470
-    Epoch 869:	Loss 0.32447	TrainAcc 0.9162	ValidAcc 0.9051	TestAcc 0.7482
-    Epoch 879:	Loss 0.32357	TrainAcc 0.9162	ValidAcc 0.9060	TestAcc 0.7485
-    Epoch 889:	Loss 0.32265	TrainAcc 0.9167	ValidAcc 0.9051	TestAcc 0.7481
-    Epoch 899:	Loss 0.32267	TrainAcc 0.9168	ValidAcc 0.9061	TestAcc 0.7469
-    Epoch 909:	Loss 0.32189	TrainAcc 0.9169	ValidAcc 0.9053	TestAcc 0.7484
-    Epoch 919:	Loss 0.32175	TrainAcc 0.9166	ValidAcc 0.9048	TestAcc 0.7474
-    Epoch 929:	Loss 0.32062	TrainAcc 0.9165	ValidAcc 0.9043	TestAcc 0.7467
-    Epoch 939:	Loss 0.32000	TrainAcc 0.9173	ValidAcc 0.9064	TestAcc 0.7475
-    Epoch 949:	Loss 0.31959	TrainAcc 0.9176	ValidAcc 0.9057	TestAcc 0.7458
-    Epoch 959:	Loss 0.31878	TrainAcc 0.9176	ValidAcc 0.9055	TestAcc 0.7485
-    Epoch 969:	Loss 0.31741	TrainAcc 0.9182	ValidAcc 0.9062	TestAcc 0.7478
-    Epoch 979:	Loss 0.31682	TrainAcc 0.9174	ValidAcc 0.9056	TestAcc 0.7469
-    Epoch 989:	Loss 0.31739	TrainAcc 0.9179	ValidAcc 0.9053	TestAcc 0.7476
-    Epoch 999:	Loss 0.31737	TrainAcc 0.9175	ValidAcc 0.9056	TestAcc 0.7481
-    Epoch 1009:	Loss 0.31543	TrainAcc 0.9185	ValidAcc 0.9058	TestAcc 0.7463
-    Epoch 1019:	Loss 0.31554	TrainAcc 0.9174	ValidAcc 0.9061	TestAcc 0.7470
-    Epoch 1029:	Loss 0.31467	TrainAcc 0.9185	ValidAcc 0.9063	TestAcc 0.7472
-    Epoch 1039:	Loss 0.31435	TrainAcc 0.9186	ValidAcc 0.9070	TestAcc 0.7457
-    Epoch 1049:	Loss 0.31354	TrainAcc 0.9187	ValidAcc 0.9070	TestAcc 0.7457
-    Epoch 1059:	Loss 0.31381	TrainAcc 0.9183	ValidAcc 0.9076	TestAcc 0.7467
-    Epoch 1069:	Loss 0.31279	TrainAcc 0.9184	ValidAcc 0.9066	TestAcc 0.7467
-    Epoch 1079:	Loss 0.31223	TrainAcc 0.9190	ValidAcc 0.9072	TestAcc 0.7451
-    Epoch 1089:	Loss 0.31114	TrainAcc 0.9196	ValidAcc 0.9064	TestAcc 0.7468
-    Epoch 1099:	Loss 0.31066	TrainAcc 0.9195	ValidAcc 0.9063	TestAcc 0.7462
-slurmstepd: error: *** JOB 1076756 ON g001 CANCELLED AT 2023-01-23T18:20:29 DUE TO TIME LIMIT ***
+gcn_graph_parallel: /home/x-jchen5/baseline/Mithril_MultiGPU/core/src/cuda/cuda_graph_parallel.cc:43: void CUDAGraphParallelEngine::prepare_distributed_graph(): Assertion `local_end_[num_nodes - 1] == graph_structure_->get_num_global_vertices()' failed.
+[g010:1544717] *** Process received signal ***
+[g010:1544717] Signal: Aborted (6)
+[g010:1544717] Signal code:  (-6)
+[g010:1544717] [ 0] /lib64/libc.so.6(+0x37410)[0x1553c57b3410]
+[g010:1544717] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x1553c57b338f]
+[g010:1544717] [ 2] /lib64/libc.so.6(abort+0x127)[0x1553c579ddc5]
+[g010:1544717] [ 3] /lib64/libc.so.6(+0x21c99)[0x1553c579dc99]
+[g010:1544717] [ 4] /lib64/libc.so.6(+0x2fa86)[0x1553c57aba86]
+[g010:1544717] [ 5] ./applications/async_multi_gpus/gcn_graph_parallel(_ZN23CUDAGraphParallelEngine25prepare_distributed_graphEv+0x2307)[0x459317]
+[g010:1544717] [ 6] ./applications/async_multi_gpus/gcn_graph_parallel(_ZN23CUDAGraphParallelEngine19execute_applicationEP19AbstractApplicationi+0x35)[0x459895]
+[g010:1544717] [ 7] ./applications/async_multi_gpus/gcn_graph_parallel(main+0x1ae7)[0x429c77]
+[g010:1544717] [ 8] /lib64/libc.so.6(__libc_start_main+0xf3)[0x1553c579f4a3]
+[g010:1544717] [ 9] ./applications/async_multi_gpus/gcn_graph_parallel(_start+0x2e)[0x42cd7e]
+[g010:1544717] *** End of error message ***
 --------------------------------------------------------------------------
-ORTE has lost communication with a remote daemon.
-
-  HNP daemon   : [[65247,0],0] on node g001
-  Remote daemon: [[65247,0],3] on node g006
-
-This is usually due to either a failure of the TCP network
-connection to the node, or possibly an internal failure of
-the daemon itself. We cannot recover from this failure, and
-therefore will terminate the job.
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
 --------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun noticed that process rank 2 with PID 1544717 on node g010 exited on signal 6 (Aborted).
+--------------------------------------------------------------------------
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCN layers: 4
+The number of hidden units: 128
+The number of training epoches: 0
+Learning rate: 0.000000
+Initialized node g010.anvil.rcac.purdue.edu
+Building the CSR structure...
+        It takes 1.972 seconds.
+Building the CSC structure...
+        It takes 1.931 seconds.
+Building the Feature Vector...
+        It takes 0.621 seconds.
+Building the Label Vector...
+        It takes 0.364 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Dropout: 0.000 
+train nodes 196615, valid nodes 39323, test nodes 2213091
+*** Allocating resources for all tensors...
+    OP_TYPE: OPERATOR_INPUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_RELU
+    OP_TYPE: OPERATOR_DROPOUT
+    OP_TYPE: OPERATOR_WEIGHT
+    OP_TYPE: OPERATOR_MATMUL
+    OP_TYPE: OPERATOR_AGGREGATION
+    OP_TYPE: OPERATOR_SOFTMAX
+*** Done allocating resource.
+*** Preparing the input tensor...
+*** Done preparing the input tensor.
+*** Preparing the STD tensor...
+    Number of labels: 47
+    Number of vertices: 2449029
+*** Done preparing the STD tensor.
+Version 0	TrainAcc 0.3084	ValidAcc 0.3084	TestAcc 0.2693
+Version 1	TrainAcc 0.6293	ValidAcc 0.6354	TestAcc 0.5045
+Version 2	TrainAcc 0.7843	ValidAcc 0.7807	TestAcc 0.6165
+Version 3	TrainAcc 0.8290	ValidAcc 0.8268	TestAcc 0.6625
+Version 4	TrainAcc 0.8461	ValidAcc 0.8429	TestAcc 0.6838
+Version 5	TrainAcc 0.8571	ValidAcc 0.8544	TestAcc 0.6954
+Version 6	TrainAcc 0.8648	ValidAcc 0.8613	TestAcc 0.7014
+Version 7	TrainAcc 0.8724	ValidAcc 0.8678	TestAcc 0.7073
+Version 8	TrainAcc 0.8765	ValidAcc 0.8716	TestAcc 0.7109
+Version 9	TrainAcc 0.8804	ValidAcc 0.8749	TestAcc 0.7150
+Version 9 achieved the highest validation accuracy 0.8749 (test accuracy: 0.7150)

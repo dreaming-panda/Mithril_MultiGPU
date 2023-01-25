@@ -87,6 +87,7 @@ private:
       std::string graph_path;
 
       std::string weight_file_ = "checkpointed_weights";
+      size_t comm_;
 
 public:
       CUDAGraphParallelEngine()
