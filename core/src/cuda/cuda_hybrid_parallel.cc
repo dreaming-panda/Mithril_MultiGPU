@@ -13,7 +13,7 @@
 #define FIXPART
 
 #define NUM_CHUNKS (16)
-#define SCALE_DOWN_FACTOR (0.5)
+#define SCALE_DOWN_FACTOR (0.1)
 #define SCALE_UP_FACTOR (1.)
 
 //#define SHOW_SCHEDULE_DETAILS
