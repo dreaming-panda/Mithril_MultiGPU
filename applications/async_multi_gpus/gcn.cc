@@ -224,7 +224,7 @@ int main(int argc, char ** argv) {
     // initialize the engine
     GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features, dropout);
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
-    AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay);
+    AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
     cublasHandle_t cublas;
     cublasCreate(&cublas);
