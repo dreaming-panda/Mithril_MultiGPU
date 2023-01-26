@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 00:45:00 
-#SBATCH --nodes 3
+#SBATCH -t 00:15:00 
+#SBATCH --nodes 1
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
@@ -16,11 +16,11 @@ cd build
 make -j
 
 # setting up the hyper-parameters
-num_layers=3
+num_layers=4
 hunits=128
 lr=1e-3
-graph=ogbn_arxiv
-epoch=200
+graph=ogbn_products
+epoch=100
 decay=0
 chunks=16
 dropout=0.5

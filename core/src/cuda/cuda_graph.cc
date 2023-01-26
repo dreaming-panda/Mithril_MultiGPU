@@ -1,7 +1,9 @@
 #include<cuda/cuda_graph.h>
 #include<cuda_runtime.h>
 #include<iostream>
+
 using namespace std;
+
 CUDAFullyStructualGraph::~CUDAFullyStructualGraph()
 {
     if(is_alive_)destroy();

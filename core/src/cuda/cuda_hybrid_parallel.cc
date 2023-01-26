@@ -12,6 +12,10 @@
 #define OPTIMIZE
 #define FIXPART
 
+#define NUM_CHUNKS (16)
+#define SCALE_DOWN_FACTOR (0.5)
+#define SCALE_UP_FACTOR (1.)
+
 //#define SHOW_SCHEDULE_DETAILS
 
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
@@ -4571,6 +4575,10 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
 void CUDABPIPLocalGraph::InitCsr()
 {
+    // FIXME
+    VertexId vertices_per_chunk = (num_master_vertices_ + NUM_CHUNKS - 1) / NUM_CHUNKS;
+    printf("Number of vertices per chunk: %u\n", vertices_per_chunk);
+
     assert(host_csrColIn_In_ != nullptr);
     assert(host_csrColIn_Out_ != nullptr);
     assert(host_csrRowOffsets_In_ != nullptr);
@@ -4625,6 +4633,7 @@ void CUDABPIPLocalGraph::InitCsr()
                     addself = true;
                //     if(node_id == 0)out<<i<<" ("<<InToGlobal(i)<<") ";
                 }
+                bool same_chunk = src / vertices_per_chunk == i / vertices_per_chunk;
                 host_csrColIn_In_[nnz_in_count] = src;
                 host_csrValue_In_[nnz_in_count] = norm_factor;
                 nnz_in_count++;
@@ -4685,8 +4694,9 @@ void CUDABPIPLocalGraph::InitCsr()
                 addself = true;
            //     if(node_id == 0)out<<i<<"("<<OutToGlobal(i)<<")  ";
             }
+            bool same_chunk = dst / vertices_per_chunk == i / vertices_per_chunk;
             host_csrColIn_Out_[nnz_out_count] = dst;
-            host_csrValue_Out_[nnz_out_count] = norm_factor;
+            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? SCALE_UP_FACTOR: SCALE_DOWN_FACTOR);
             nnz_out_count++;
           //  if(node_id == 0)out<<dst<<"("<<OutToGlobal(dst)<<")  ";
         }
