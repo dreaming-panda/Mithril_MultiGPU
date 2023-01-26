@@ -749,9 +749,6 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
    
     int epoch;
     for (epoch = 0; epoch < num_epoch || num_epoch == -1; ++ epoch) {
-        if(node_id == 0 && (epoch + 1) % 10 == 0){
-            printf("    Epoch %d:", epoch);
-        }
         double epoch_time = - get_time();
 
         double cf = -get_time();
@@ -770,7 +767,7 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
         loss_time += lt;
         
         double ca = -get_time();
-        if ((epoch + 1) % 10 == 0) {
+        if ((epoch + 1) % 10 == 0) { 
             train_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,0);
             valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
             test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
@@ -801,7 +798,7 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
             total_runtime += epoch_time;
         }
         if(node_id == 0 && (epoch + 1) % 10 == 0){
-            printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", loss, train_accuracy, valid_accuracy, test_accuracy);
+            printf("    Epoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", epoch, loss, train_accuracy, valid_accuracy, test_accuracy);
             // dump the weights
             weight_dumper->next_version();
             for (WeightOperator * op: weight_ops) {
@@ -811,7 +808,6 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
                 weight_dumper->save_weight(op, cuda_data);
             }
         }
-       
 
         if (valid_accuracy > highest_valid_acc) {
             highest_valid_acc = valid_accuracy;
