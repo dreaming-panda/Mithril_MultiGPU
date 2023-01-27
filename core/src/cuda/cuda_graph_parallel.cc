@@ -350,6 +350,7 @@ void CUDAGraphParallelEngine::SyncTensorNCCL(Tensor * tensor, int type){
 }
 
 void CUDAGraphParallelEngine::SyncTensorNCCLP2P(Tensor * tensor, int type){
+    comm_time_ -= get_time();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int node_id = DistributedSys::get_instance()->get_node_id();
     assert(tensor->type == VERTEX_TENSOR);
@@ -502,6 +503,7 @@ void CUDAGraphParallelEngine::SyncTensorNCCLP2P(Tensor * tensor, int type){
     }
     //ncclGroupEnd();
     
+    comm_time_ += get_time();
 }
 void CUDAGraphParallelEngine::execute_computation_graph_forward(const std::vector<Operator*> &operators) {
     assert(executor_ != nullptr);
@@ -622,7 +624,7 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
     prepare_distributed_graph();
 
     comm_ = 0;
-    
+    comm_time_ = 0;
     
     assert(application != NULL);
     const std::vector<Operator*>& operators = application->get_operators();
@@ -831,6 +833,7 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
             MPI_SUM, MPI_COMM_WORLD
             );
     comm_ /= num_epoch;
+    comm_time_ /= num_epoch;
 
     if (node_id == 0) {
         printf("\nAverage per-epoch runtime: %.3f (s)\n",
@@ -846,6 +849,7 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
         printf("Epochs to reach the target acc: %d\n", epoch_to_reach_the_target_acc);
         printf("Communication volume (cluster-wide, per-epoch): %.3f GB\n",
                 comm_ / 1024. / 1024. / 1024.);
+        printf("Communication time: %.3f s\n", comm_time_);
     }
     // releasing the resource of all tensors
     for (Operator * op: operators) {
