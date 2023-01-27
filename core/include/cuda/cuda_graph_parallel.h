@@ -60,6 +60,7 @@ private:
       float LaunchCalculate_Accuracy_Mask(DataType *cuda_acc_data, DataType *cuda_output_data, DataType *cuda_std_data, int num_vertices, int outputsize, int type);
       void SyncTensorNCCL(Tensor * tensor, int type);
       void SyncTensorNCCLP2P(Tensor * tensor, int type);
+      void SyncTensorMPIP2P(Tensor * tensor, int type);
       void execute_computation_graph_forward(const std::vector<Operator*> &operators);
       void execute_computation_graph_backward(const std::vector<Operator*> &operators, const std::vector<bool> &operator_mask, Tensor * output_tensor);
       void collect_mirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, DataType* src, DataType* dst);
@@ -83,6 +84,7 @@ private:
       DataType *d_hit_;
       DataType *d_inter_;
       DataType *cuda_acc;
+            
       cudnnTensorDescriptor_t data_descriptor;
       std::string graph_path;
 

@@ -505,6 +505,124 @@ void CUDAGraphParallelEngine::SyncTensorNCCLP2P(Tensor * tensor, int type){
     
     comm_time_ += get_time();
 }
+
+void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
+    comm_time_ -= get_time();
+
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    assert(tensor->type == VERTEX_TENSOR);
+    int output_size = tensor->dims[1];
+    TensorResourceGPU * resource =  (TensorResourceGPU*)tensor->resource;
+    DataType * cuda_data = nullptr;
+
+    if (type == 0) {
+        cuda_data = resource->get_gpu_data();
+
+        // sync the activation
+        for (int offset = 1; offset < num_nodes; ++ offset) {
+            // send the activation
+            // gather the data
+            int j = (node_id + offset) % num_nodes;
+
+            cusparseDnMatDescr_t InputData, OutputData;
+            cusparseCreateDnMat(&InputData, graph_structure_->get_num_global_vertices(), output_size, output_size, (void*)cuda_data, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+            cusparseCreateDnMat(&OutputData, in_send_vertices_[j].size(), output_size, output_size, (void*)send_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+            float alpha = 1.0;
+            float beta = 0.0;
+
+            cusparseSpMM_bufferSize(cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, in_send_spcsr_[j], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, &dbuffer_size
+            );
+            cudaMalloc(&dbuffer, dbuffer_size);
+            
+            cusparseSpMM(
+                cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                 &alpha, in_send_spcsr_[j], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, dbuffer
+            );
+            cudaDeviceSynchronize();
+            cudaFree(dbuffer);
+
+            size_t data_size = in_send_vertices_[j].size() * output_size * sizeof(DataType);
+            uint8_t * send_buff_cpu = (uint8_t*) malloc(data_size);
+            assert(send_buff_cpu);
+
+            checkCUDA(cudaMemcpy(send_buff_cpu, send_buffer_, data_size, 
+                    cudaMemcpyDeviceToHost));
+
+            // send the data with non-blocking MPI calls
+            MPI_Request request;
+            MPI_Isend(
+                    send_buff_cpu, data_size, MPI_CHAR,
+                    (node_id + offset) % num_nodes, 2333,
+                    MPI_COMM_WORLD, &request
+                    );
+
+            // receive the activation 
+            {
+                int i = (node_id + num_nodes - offset) % num_nodes;
+                size_t data_size = in_recv_vertices_[i].size() * output_size * sizeof(DataType);
+                uint8_t * recv_buff_cpu = (uint8_t*) malloc(data_size);
+                assert(recv_buff_cpu);
+
+                MPI_Status status;
+                MPI_Recv(
+                        recv_buff_cpu, data_size, MPI_CHAR, i,
+                        2333, MPI_COMM_WORLD, &status
+                        );
+                checkCUDA(cudaMemcpy(
+                            recv_buffer_, recv_buff_cpu, data_size,
+                            cudaMemcpyHostToDevice
+                            ));
+
+                free(recv_buff_cpu);
+
+                cusparseDnMatDescr_t InputData, OutputData;
+                cusparseCreateDnMat(&InputData, in_recv_vertices_[i].size(), output_size, output_size, (void*)recv_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+                cusparseCreateDnMat(&OutputData, local_end_[i] - local_start_[i], output_size, output_size, (void*)(cuda_data + local_start_[i] * output_size), CUDA_R_32F,CUSPARSE_ORDER_ROW);
+
+                float alpha = 1.0;
+                float beta = 0.0;
+                cusparseSpMM_bufferSize(cusparse_h,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    &alpha, in_recv_spcsc_[i], InputData, &beta, OutputData, CUDA_R_32F,
+                    CUSPARSE_SPMM_COO_ALG4, &dbuffer_size
+                );
+                cudaMalloc(&dbuffer, dbuffer_size);
+            
+                cusparseSpMM(
+                     cusparse_h,
+                     CUSPARSE_OPERATION_NON_TRANSPOSE,
+                     CUSPARSE_OPERATION_NON_TRANSPOSE,
+                      &alpha, in_recv_spcsc_[i], InputData, &beta, OutputData, CUDA_R_32F,
+                     CUSPARSE_SPMM_COO_ALG4, dbuffer
+                 );
+                 cudaDeviceSynchronize();
+                 cudaFree(dbuffer);
+
+                 cudaDeviceSynchronize();
+            }
+
+            MPI_Status status;
+            MPI_Wait(&request, &status);
+
+            free(send_buff_cpu);
+        }
+    } else {
+        // sync the gradients
+        // TODO
+    }
+
+    comm_time_ += get_time();
+}
+
 void CUDAGraphParallelEngine::execute_computation_graph_forward(const std::vector<Operator*> &operators) {
     assert(executor_ != nullptr);
     for (Operator* op: operators) {
@@ -529,7 +647,8 @@ void CUDAGraphParallelEngine::execute_computation_graph_forward(const std::vecto
                 break;
             case OPERATOR_AGGREGATION:
                 input = op->get_input_tensor(0);
-                SyncTensorNCCLP2P(input, 0);
+                //SyncTensorNCCLP2P(input, 0);
+                SyncTensorMPIP2P(input, 0);
                 executor_->aggregation_forward((AggregationOperator*) op, start_vertex_, end_vertex_);
                 break;
             case OPERATOR_ADD:
