@@ -516,6 +516,45 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
     TensorResourceGPU * resource =  (TensorResourceGPU*)tensor->resource;
     DataType * cuda_data = nullptr;
 
+    {
+        // set up the communication buff
+        // sync_tensor_cpu_send_buff_
+        // sync_tensor_cpu_recv_buff_
+        size_t max_data_size = 0;
+        for (int j = 0; j < num_nodes; ++ j) {
+            if (j != node_id) {
+                size_t data_size = in_send_vertices_[j].size() * output_size * sizeof(DataType);
+                max_data_size = std::max(max_data_size, data_size);
+                data_size = out_send_vertices_[j].size() * output_size * sizeof(DataType);
+                max_data_size = std::max(max_data_size, data_size);
+            }
+        }
+        if (max_data_size > sync_tensor_cpu_send_buff_size_) {
+            if (sync_tensor_cpu_send_buff_size_ > 0) {
+                free(sync_tensor_cpu_send_buff_);
+            }
+            sync_tensor_cpu_send_buff_size_ = max_data_size;
+            sync_tensor_cpu_send_buff_ = (uint8_t*) malloc(max_data_size);
+        }
+
+        max_data_size = 0;
+        for (int i = 0; i < num_nodes; ++ i) {
+            if (i != node_id) {
+                size_t data_size = in_recv_vertices_[i].size() * output_size * sizeof(DataType);
+                max_data_size = std::max(max_data_size, data_size);
+                data_size = out_recv_vertices_[i].size() * output_size * sizeof(DataType);
+                max_data_size = std::max(max_data_size, data_size);
+            }
+        }
+        if (max_data_size > sync_tensor_cpu_recv_buff_size_) {
+            if (sync_tensor_cpu_recv_buff_size_ > 0) {
+                free(sync_tensor_cpu_recv_buff_);
+            }
+            sync_tensor_cpu_recv_buff_size_ = max_data_size;
+            sync_tensor_cpu_recv_buff_ = (uint8_t*) malloc(max_data_size);
+        }
+    }
+
     if (type == 0) {
         cuda_data = resource->get_gpu_data();
 
@@ -550,7 +589,8 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
             cudaFree(dbuffer);
 
             size_t data_size = in_send_vertices_[j].size() * output_size * sizeof(DataType);
-            uint8_t * send_buff_cpu = (uint8_t*) malloc(data_size);
+            //uint8_t * send_buff_cpu = (uint8_t*) malloc(data_size);
+            uint8_t * send_buff_cpu = sync_tensor_cpu_send_buff_;
             assert(send_buff_cpu);
             comm_ += data_size;
 
@@ -569,7 +609,8 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
             {
                 int i = (node_id + num_nodes - offset) % num_nodes;
                 size_t data_size = in_recv_vertices_[i].size() * output_size * sizeof(DataType);
-                uint8_t * recv_buff_cpu = (uint8_t*) malloc(data_size);
+                //uint8_t * recv_buff_cpu = (uint8_t*) malloc(data_size);
+                uint8_t * recv_buff_cpu = sync_tensor_cpu_recv_buff_;
                 assert(recv_buff_cpu);
 
                 MPI_Status status;
@@ -582,7 +623,7 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
                             cudaMemcpyHostToDevice
                             ));
 
-                free(recv_buff_cpu);
+                //free(recv_buff_cpu);
 
                 cusparseDnMatDescr_t InputData, OutputData;
                 cusparseCreateDnMat(&InputData, in_recv_vertices_[i].size(), output_size, output_size, (void*)recv_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
@@ -614,7 +655,7 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
             MPI_Status status;
             MPI_Wait(&request, &status);
 
-            free(send_buff_cpu);
+            //free(send_buff_cpu);
         }
     } else {
         // sync the gradients
@@ -652,7 +693,8 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
 
             size_t data_size = out_send_vertices_[j].size() * output_size * sizeof(DataType);
             comm_ += data_size;
-            uint8_t * send_buff_cpu = (uint8_t*) malloc(data_size);
+            //uint8_t * send_buff_cpu = (uint8_t*) malloc(data_size);
+            uint8_t * send_buff_cpu = sync_tensor_cpu_send_buff_;
             assert(send_buff_cpu);
 
             checkCUDA(cudaMemcpy(
@@ -670,7 +712,8 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
                 // receive the gradients
                 int i = (node_id + num_nodes - offset) % num_nodes;
                 size_t data_size = out_recv_vertices_[i].size() * output_size * sizeof(DataType);
-                uint8_t * recv_buff_cpu = (uint8_t*) malloc(data_size);
+                //uint8_t * recv_buff_cpu = (uint8_t*) malloc(data_size);
+                uint8_t * recv_buff_cpu = sync_tensor_cpu_recv_buff_;
                 assert(recv_buff_cpu);
 
                 MPI_Status status;
@@ -682,7 +725,7 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
                             recv_buffer_, recv_buff_cpu, data_size,
                             cudaMemcpyHostToDevice
                             ));
-                free(recv_buff_cpu);
+                //free(recv_buff_cpu);
 
                 cusparseDnMatDescr_t InputData, OutputData;
                 cusparseCreateDnMat(&InputData, out_recv_vertices_[i].size(), output_size, output_size, (void*)recv_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
@@ -713,7 +756,7 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
 
             MPI_Status status;
             MPI_Wait(&request, &status);
-            free(send_buff_cpu);
+            //free(send_buff_cpu);
         }
     }
 
@@ -946,6 +989,7 @@ double CUDAGraphParallelEngine::execute_application(AbstractApplication * applic
             );
     }
     printf("*** Done preparing the weight tensor.\n");
+
     
     FILE * weight_fout = NULL;
     

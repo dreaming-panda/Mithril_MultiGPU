@@ -92,6 +92,11 @@ private:
       size_t comm_;
       double comm_time_;
 
+      uint8_t * sync_tensor_cpu_send_buff_;
+      size_t sync_tensor_cpu_send_buff_size_ = 0;
+      uint8_t * sync_tensor_cpu_recv_buff_;
+      size_t sync_tensor_cpu_recv_buff_size_ = 0;
+
 public:
       CUDAGraphParallelEngine()
       {
