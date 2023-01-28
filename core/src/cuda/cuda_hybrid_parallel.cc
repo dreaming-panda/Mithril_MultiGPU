@@ -16,7 +16,7 @@
 #define SCALE_DOWN_FACTOR (1.)
 #define SCALE_UP_FACTOR (1.)
 
-#define SHOW_SCHEDULE_DETAILS
+//#define SHOW_SCHEDULE_DETAILS
 
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
@@ -950,6 +950,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 }
             }
         }
+
+        // FIXME: calculate the loss if necessary
         
         //double end_time = get_time();
         //printf("It takes node %d %.3f s to finish the computation.\n",
