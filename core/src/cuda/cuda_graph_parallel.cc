@@ -522,9 +522,9 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
         // sync the activation
         for (int offset = 1; offset < num_nodes; ++ offset) {
             // send the activation
-            // gather the data
             int j = (node_id + offset) % num_nodes;
 
+            // gather the data
             cusparseDnMatDescr_t InputData, OutputData;
             cusparseCreateDnMat(&InputData, graph_structure_->get_num_global_vertices(), output_size, output_size, (void*)cuda_data, CUDA_R_32F,CUSPARSE_ORDER_ROW);
             cusparseCreateDnMat(&OutputData, in_send_vertices_[j].size(), output_size, output_size, (void*)send_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
@@ -552,6 +552,7 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
             size_t data_size = in_send_vertices_[j].size() * output_size * sizeof(DataType);
             uint8_t * send_buff_cpu = (uint8_t*) malloc(data_size);
             assert(send_buff_cpu);
+            comm_ += data_size;
 
             checkCUDA(cudaMemcpy(send_buff_cpu, send_buffer_, data_size, 
                     cudaMemcpyDeviceToHost));
@@ -617,7 +618,103 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
         }
     } else {
         // sync the gradients
-        // TODO
+        cuda_data = resource->get_gpu_grad();
+        assert(send_buffer_ != nullptr);
+
+        for (int offset = 1; offset < num_nodes; ++ offset) {
+            // send the gradients
+            int j = (node_id + offset) % num_nodes;
+
+            // gather the data
+            cusparseDnMatDescr_t InputData, OutputData;
+            cusparseCreateDnMat(&InputData, graph_structure_->get_num_global_vertices(), output_size, output_size, (void*)cuda_data, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+            cusparseCreateDnMat(&OutputData, out_send_vertices_[j].size(), output_size, output_size, (void*)send_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+            float alpha = 1.0;
+            float beta = 0.0;
+
+            cusparseSpMM_bufferSize(cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, out_send_spcsr_[j], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, &dbuffer_size
+            );
+            cudaMalloc(&dbuffer, dbuffer_size);
+            
+            cusparseSpMM(
+                cusparse_h,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                 &alpha, out_send_spcsr_[j], InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, dbuffer
+            );
+            cudaDeviceSynchronize();
+            cudaFree(dbuffer);
+
+            size_t data_size = out_send_vertices_[j].size() * output_size * sizeof(DataType);
+            comm_ += data_size;
+            uint8_t * send_buff_cpu = (uint8_t*) malloc(data_size);
+            assert(send_buff_cpu);
+
+            checkCUDA(cudaMemcpy(
+                        send_buff_cpu, send_buffer_, data_size,
+                        cudaMemcpyDeviceToHost
+                        ));
+            
+            MPI_Request request;
+            MPI_Isend(
+                    send_buff_cpu, data_size, MPI_CHAR,
+                    j, 2333, MPI_COMM_WORLD, &request
+                    );
+
+            {
+                // receive the gradients
+                int i = (node_id + num_nodes - offset) % num_nodes;
+                size_t data_size = out_recv_vertices_[i].size() * output_size * sizeof(DataType);
+                uint8_t * recv_buff_cpu = (uint8_t*) malloc(data_size);
+                assert(recv_buff_cpu);
+
+                MPI_Status status;
+                MPI_Recv(
+                        recv_buff_cpu, data_size, MPI_CHAR, 
+                        i, 2333, MPI_COMM_WORLD, &status
+                        );
+                checkCUDA(cudaMemcpy(
+                            recv_buffer_, recv_buff_cpu, data_size,
+                            cudaMemcpyHostToDevice
+                            ));
+                free(recv_buff_cpu);
+
+                cusparseDnMatDescr_t InputData, OutputData;
+                cusparseCreateDnMat(&InputData, out_recv_vertices_[i].size(), output_size, output_size, (void*)recv_buffer_, CUDA_R_32F,CUSPARSE_ORDER_ROW);
+                cusparseCreateDnMat(&OutputData, local_end_[i] - local_start_[i], output_size, output_size, (void*)(cuda_data + local_start_[i] * output_size), CUDA_R_32F,CUSPARSE_ORDER_ROW);
+                float alpha = 1.0;
+                float beta = 0.0;
+
+                cusparseSpMM_bufferSize(cusparse_h,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    &alpha, out_recv_spcsc_[i], InputData, &beta, OutputData, CUDA_R_32F,
+                    CUSPARSE_SPMM_COO_ALG4, &dbuffer_size
+                );
+                cudaMalloc(&dbuffer, dbuffer_size);
+            
+                cusparseSpMM(
+                    cusparse_h,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                     &alpha, out_recv_spcsc_[i], InputData, &beta, OutputData, CUDA_R_32F,
+                    CUSPARSE_SPMM_COO_ALG4, dbuffer
+                );
+                cudaDeviceSynchronize();
+                cudaFree(dbuffer);
+
+                cudaDeviceSynchronize();
+            }
+
+            MPI_Status status;
+            MPI_Wait(&request, &status);
+            free(send_buff_cpu);
+        }
     }
 
     comm_time_ += get_time();
@@ -718,7 +815,8 @@ void CUDAGraphParallelEngine::execute_computation_graph_backward(
                 break;
             case OPERATOR_AGGREGATION:
                 output = op->get_output_tensor(0);
-                SyncTensorNCCLP2P(output, 1);
+                //SyncTensorNCCLP2P(output, 1);
+                SyncTensorMPIP2P(output, 1);
                 executor_->aggregation_backward((AggregationOperator*) op, start_vertex_, end_vertex_);
                 break;
             case OPERATOR_ADD:
