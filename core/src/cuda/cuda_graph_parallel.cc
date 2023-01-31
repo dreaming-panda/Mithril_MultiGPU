@@ -531,10 +531,13 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
         }
         if (max_data_size > sync_tensor_cpu_send_buff_size_) {
             if (sync_tensor_cpu_send_buff_size_ > 0) {
-                free(sync_tensor_cpu_send_buff_);
+                //free(sync_tensor_cpu_send_buff_);
+                checkCUDA(cudaFreeHost(sync_tensor_cpu_send_buff_));
             }
             sync_tensor_cpu_send_buff_size_ = max_data_size;
-            sync_tensor_cpu_send_buff_ = (uint8_t*) malloc(max_data_size);
+            //sync_tensor_cpu_send_buff_ = (uint8_t*) malloc(max_data_size);
+            sync_tensor_cpu_send_buff_ = NULL;
+            checkCUDA(cudaMallocHost(&sync_tensor_cpu_send_buff_, max_data_size));
         }
 
         max_data_size = 0;
@@ -548,10 +551,13 @@ void CUDAGraphParallelEngine::SyncTensorMPIP2P(Tensor * tensor, int type) {
         }
         if (max_data_size > sync_tensor_cpu_recv_buff_size_) {
             if (sync_tensor_cpu_recv_buff_size_ > 0) {
-                free(sync_tensor_cpu_recv_buff_);
+                //free(sync_tensor_cpu_recv_buff_);
+                checkCUDA(cudaFreeHost(sync_tensor_cpu_recv_buff_));
             }
             sync_tensor_cpu_recv_buff_size_ = max_data_size;
-            sync_tensor_cpu_recv_buff_ = (uint8_t*) malloc(max_data_size);
+            //sync_tensor_cpu_recv_buff_ = (uint8_t*) malloc(max_data_size);
+            sync_tensor_cpu_recv_buff_ = NULL;
+            checkCUDA(cudaMallocHost(&sync_tensor_cpu_recv_buff_, max_data_size));
         }
     }
 

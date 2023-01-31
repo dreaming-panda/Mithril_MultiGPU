@@ -2,9 +2,9 @@
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
 #SBATCH -t 00:45:00 
-#SBATCH --nodes 4
-#SBATCH --gpus-per-node 1
-#SBATCH --ntasks-per-node 1
+#SBATCH --nodes 1
+#SBATCH --gpus-per-node 4
+#SBATCH --ntasks-per-node 4
 #SBATCH --cpus-per-task 32
 #SBATCH --output output.txt
 
@@ -20,7 +20,7 @@ num_layers=8
 hunits=48
 lr=1e-3
 graph=ogbn_products
-epoch=100
+epoch=3000
 decay=0
 dropout=0.5
 
