@@ -951,26 +951,30 @@ class CUDABPIPLocalGraph:public BPIPLocalGraph
         int * cuda_csrColIn_Out_;
         int * cuda_csrRowOffsets_Out_;
         DataType * cuda_csrValue_Out_;
+        int num_chunks_;
+        double scaledown_;
     public:
-        CUDABPIPLocalGraph(AbstractGraphStructure * global_graph, CUDAVertexIdTranslationTable * vid_translation):
+        CUDABPIPLocalGraph(AbstractGraphStructure * global_graph, CUDAVertexIdTranslationTable * vid_translation, int num_chunks, double scaledown):
         BPIPLocalGraph(global_graph,vid_translation){
-        host_csrColIn_In_ = nullptr;
-        host_csrRowOffsets_In_ = nullptr;
-        host_csrValue_In_ = nullptr;
-        host_csrColIn_Out_ = nullptr;
-        host_csrRowOffsets_Out_ = nullptr;
-        host_csrValue_Out_ = nullptr;
-        cuda_csrColIn_In_ = nullptr;
-        cuda_csrRowOffsets_In_ = nullptr;
-        cuda_csrValue_In_ = nullptr;
-        cuda_csrColIn_Out_ = nullptr;
-        cuda_csrRowOffsets_Out_ = nullptr;
-        cuda_csrValue_Out_ = nullptr;
-        nnz_in_ = num_master_vertices_ + num_in_edges_;
-        nnz_out_ = num_master_vertices_ + num_out_edges_;
-        global_graph_ = global_graph;
-        vid_translation_ = vid_translation;
-        memoryalive = false;
+            host_csrColIn_In_ = nullptr;
+            host_csrRowOffsets_In_ = nullptr;
+            host_csrValue_In_ = nullptr;
+            host_csrColIn_Out_ = nullptr;
+            host_csrRowOffsets_Out_ = nullptr;
+            host_csrValue_Out_ = nullptr;
+            cuda_csrColIn_In_ = nullptr;
+            cuda_csrRowOffsets_In_ = nullptr;
+            cuda_csrValue_In_ = nullptr;
+            cuda_csrColIn_Out_ = nullptr;
+            cuda_csrRowOffsets_Out_ = nullptr;
+            cuda_csrValue_Out_ = nullptr;
+            nnz_in_ = num_master_vertices_ + num_in_edges_;
+            nnz_out_ = num_master_vertices_ + num_out_edges_;
+            global_graph_ = global_graph;
+            vid_translation_ = vid_translation;
+            memoryalive = false;
+            num_chunks_ = num_chunks;
+            scaledown_ = scaledown;
         }
         ~CUDABPIPLocalGraph(){
             if(memoryalive)
@@ -1633,6 +1637,12 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         // random seed
         int random_seed_ = 23;
 
+        // scaledown factor
+        double scaledown_ = 1.;
+
+        inline void set_scaledown(double scaledown) {
+            scaledown_ = scaledown;
+        }
         inline int get_num_epoch() {
             return num_epoch_;
         }

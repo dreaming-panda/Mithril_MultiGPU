@@ -12,9 +12,9 @@
 #define OPTIMIZE
 #define FIXPART
 
-#define NUM_CHUNKS (16)
-#define SCALE_DOWN_FACTOR (0.01)
-#define SCALE_UP_FACTOR (1.)
+//#define NUM_CHUNKS (16)
+//#define SCALE_DOWN_FACTOR (0.01)
+//#define SCALE_UP_FACTOR (1.)
 
 //#define SHOW_SCHEDULE_DETAILS
 
@@ -4228,7 +4228,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     shadow_gradients_ = new CUDAShadowGradientsMasterVertices(vid_translation_, chunk_manager_);
     //local_graph_ = new PIPLocalGraph(graph_structure_, vid_translation_);
     
-    CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_);
+    CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_, scaledown_);
     lgraph->InitMemory();
     lgraph->InitCsr();
     
@@ -4563,8 +4563,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
 void CUDABPIPLocalGraph::InitCsr()
 {
-    // FIXME
-    VertexId vertices_per_chunk = (num_master_vertices_ + NUM_CHUNKS - 1) / NUM_CHUNKS;
+    VertexId vertices_per_chunk = (num_master_vertices_ + num_chunks_ - 1) / num_chunks_;
     printf("Number of vertices per chunk: %u\n", vertices_per_chunk);
 
     assert(host_csrColIn_In_ != nullptr);
@@ -4684,7 +4683,7 @@ void CUDABPIPLocalGraph::InitCsr()
             }
             bool same_chunk = dst / vertices_per_chunk == i / vertices_per_chunk;
             host_csrColIn_Out_[nnz_out_count] = dst;
-            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? SCALE_UP_FACTOR: SCALE_DOWN_FACTOR);
+            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: scaledown_);
             nnz_out_count++;
           //  if(node_id == 0)out<<dst<<"("<<OutToGlobal(dst)<<")  ";
         }

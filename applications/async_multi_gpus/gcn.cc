@@ -151,7 +151,8 @@ int main(int argc, char ** argv) {
         ("chunks", po::value<int>()->default_value(32), "The number of chunks.")
         ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.")
         ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The file storing the checkpointed weights.")
-        ("seed", po::value<int>()->default_value(1234), "The random seed.");
+        ("seed", po::value<int>()->default_value(1234), "The random seed.")
+        ("scaledown", po::value<double>()->default_value(0.1), "The scaling down factor of out-of-chunk gradients.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -180,6 +181,7 @@ int main(int argc, char ** argv) {
     double dropout = vm["dropout"].as<double>();
     std::string weight_file = vm["weight_file"].as<std::string>();
     int random_seed = vm["seed"].as<int>();
+    double scaledown = vm["scaledown"].as<double>();
 
     printf("The graph dataset locates at %s\n", graph_path.c_str());
     printf("The number of GCN layers: %d\n", num_layers);
@@ -190,6 +192,8 @@ int main(int argc, char ** argv) {
     printf("The partition strategy: %s\n", partition_strategy.c_str());
     printf("The dropout rate: %.3f\n", dropout);
     printf("The checkpointed weight file: %s\n", weight_file.c_str());
+    printf("The random seed: %d\n", random_seed);
+    printf("The scaling down factor of out-of-chunk gradients: %f\n", scaledown);
 
     volatile bool terminated = false;
     Context::init_context();
@@ -285,6 +289,7 @@ int main(int argc, char ** argv) {
     int num_gpus = DistributedSys::get_instance()->get_num_nodes();
     printf("Number of GPUs: %d\n", num_gpus);
     if (partition_strategy == "hybrid") {
+        assert(false);
         ParallelismDesigner parallelism_designer(graph_structure, 0.1);
         CUDAPIPPartitioning partition = parallelism_designer.co_partition_model_and_graph(
                 gcn, num_gpus, num_hidden_units
