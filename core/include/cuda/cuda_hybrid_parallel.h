@@ -1640,9 +1640,6 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         // scaledown factor
         double scaledown_ = 1.;
 
-        inline void set_scaledown(double scaledown) {
-            scaledown_ = scaledown;
-        }
         inline int get_num_epoch() {
             return num_epoch_;
         }
@@ -1858,6 +1855,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         void set_random_seed(int random_seed) {
             random_seed_ = random_seed;
+        }
+        void set_scaledown(double scaledown) {
+            scaledown_ = scaledown;
         }
 };
 

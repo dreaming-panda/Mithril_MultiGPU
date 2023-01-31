@@ -284,6 +284,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_operator_executor(executor);
     execution_engine->set_loss(loss);
     execution_engine->set_weight_file(weight_file);
+    execution_engine->set_scaledown(scaledown);
 
     // determine the partitioning 
     int num_gpus = DistributedSys::get_instance()->get_num_nodes();
