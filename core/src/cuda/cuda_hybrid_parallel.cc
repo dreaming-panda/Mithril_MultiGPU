@@ -13,7 +13,7 @@
 #define FIXPART
 
 #define NUM_CHUNKS (16)
-#define SCALE_DOWN_FACTOR (1.)
+#define SCALE_DOWN_FACTOR (0.01)
 #define SCALE_UP_FACTOR (1.)
 
 //#define SHOW_SCHEDULE_DETAILS
@@ -952,6 +952,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
 
         // FIXME: calculate the loss if necessary
+        if (engine_->is_bottommost_node_) {
+            engine_->accum_loss_ = engine_->loss_->get_loss(
+                    engine_->output_tensor_, engine_->std_tensor_,
+                    0, engine_->graph_structure_->get_num_global_vertices()
+                    );
+        }
         
         //double end_time = get_time();
         //printf("It takes node %d %.3f s to finish the computation.\n",
@@ -983,7 +989,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 //printf("\n********* Epoch %d: *********\n", epoch_id);
                 printf("    Epoch %d:", epoch_id);
             }
-            engine_->accum_loss_ /= 10;
+            //engine_->accum_loss_ /= 10;
             engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
             if (valid_acc > highest_valid_acc) {
                 highest_valid_acc = valid_acc;
