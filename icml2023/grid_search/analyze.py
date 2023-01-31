@@ -3,20 +3,22 @@ import sys
 import time
 import json
 
-# number of combinations:
-# 3 x 2 s 4 x 3 = 72
+# products
+# combinations: 3 x 1 x 3 x 5 = 45
 learning_rates = [
-        3e-4, 1e-3, 3e-3
+        1e-3, 3e-4, 3e-3
         ]
 decays = [
-        0, 1e-5
+        0
         ]
 hunits = [
-        64, 128, 256, 512
+        16, 32, 48
         ]
 dropouts = [
-        0.3, 0.5, 0.7
+        0.3, 0.4, 0.5, 0.6, 0.7
         ]
+
+
 
 def get_valid_acc(graph, lr, decay, hunit, dropout):
     result_file = "./results/%s/%s/%s/%s/%s/result.txt" % (

@@ -6,7 +6,6 @@
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
-#SBATCH --output grid_search_products_3e-3.txt
 
 hostname
 nvidia-smi
@@ -16,7 +15,9 @@ cd build
 make -j
 cd ..
 
+lr=3e-3
+
 date
 echo "Running grid search on ogbn-products"
-python ./icml2023/grid_search/run.py ogbn_products /anvil/projects/x-cis220117/checkpointed_weights/checkpointed_weights_ogbn_products_3e-3 3e-3
+python ./icml2023/grid_search/run.py ogbn_products /anvil/projects/x-cis220117/checkpointed_weights/checkpointed_weights_ogbn_products_${lr} ${lr}
 date
