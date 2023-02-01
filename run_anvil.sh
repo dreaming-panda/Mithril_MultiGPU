@@ -17,15 +17,15 @@ make -j
 
 # setting up the hyper-parameters
 num_layers=8
-hunits=48
+hunits=128
 lr=1e-3
-graph=ogbn_products
-epoch=5000
+graph=reddit
+epoch=100
 decay=0
-chunks=32
+chunks=16
 dropout=0.5
 seed=1234
-scaledown=0.0
+scaledown=0.1
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown
 $HOME/baseline/Mithril_MultiGPU/build/applications/single_gpu/gcn_inference --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --weight_file saved_weights_pipe
