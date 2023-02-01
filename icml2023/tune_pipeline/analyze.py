@@ -21,13 +21,14 @@ def get_test_Acc(result_file):
     epoch = []
     accs = []
     with open(result_file, "r") as f:
-        line = f.readline()
-        if line == None or len(line) == 0:
-            break
-        if "Version" in line and "TestAcc" in line:
-            line = line.strip().split()
-            accs.append(float(line[-1]))
-            epoch.append(len(accs) * 10)
+        while True:
+            line = f.readline()
+            if line == None or len(line) == 0:
+                break
+            if "Version" in line and "TestAcc" in line:
+                line = line.strip().split()
+                accs.append(float(line[-1]))
+                epoch.append(len(accs) * 10)
     return epoch, accs
 
 if __name__ == "__main__":
@@ -49,8 +50,26 @@ if __name__ == "__main__":
         plt.xlabel("Training time")
         plt.ylabel("Test accuracy")
         plt.title("Chunks = %s" % (chunk))
+        plt.ylim([0.7, 0.8])
         plt.show()
 
+    # analyze the scaling down factor
+    for scaledown in scaledowns:
+        for chunk in chunks:
+            result_file = "%s/%s/%s/result.txt" % (
+                    seed, scaledown, chunk
+                    )
+            epoch_time = get_epoch_time(result_file)
+            x, y = get_test_Acc(result_file)
+            for i in range(len(x)):
+                x[i] *= epoch_time
+            plt.plot(x, y, label = "chunks = %s" % (chunk))
+        plt.legend()
+        plt.xlabel("Training time")
+        plt.ylabel("Test accuracy")
+        plt.title("Scaledown = %s" % (scaledown))
+        plt.ylim([0.7, 0.8])
+        plt.show()
 
 
 
