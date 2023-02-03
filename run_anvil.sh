@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 01:30:00 
+#SBATCH -t 00:30:00 
 #SBATCH --nodes 1
-#SBATCH --gpus-per-node 4
-#SBATCH --ntasks-per-node 4
+#SBATCH --gpus-per-node 1
+#SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
 #SBATCH --output output.txt
 
@@ -17,10 +17,10 @@ make -j
 
 # setting up the hyper-parameters
 num_layers=8
-hunits=128
+hunits=48
 lr=1e-3
-graph=reddit
-epoch=100
+graph=ogbn_products
+epoch=2000
 decay=0
 chunks=16
 dropout=0.5

@@ -7,6 +7,7 @@
 #include "cuda/cuda_utils.h"
 #include "cuda/cuda_data_compressor.h"
 #include "profiler.h"
+#include "omp.h"
 
 #define MODEL
 #define OPTIMIZE
@@ -55,12 +56,12 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     double comm = 0;
     double comm_time = 0;
     if (engine_->is_topmost_node()) {
+        auto rand_gen = std::default_random_engine(rand());
 
         // FIXME: a simple dispatching strategy of the topmost nodes not considering load balancing is used here
         dispatch_algorithm_ = RandomDispatch;
         if (dispatch_algorithm_ == RandomDispatch) {
             printf("RANDOMLY DISPATCH THE CHUNKS...\n");
-            auto rand_gen = std::default_random_engine(rand());
             std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
         } else if (dispatch_algorithm_ == HighDegreeFirstDispatch) {
             printf("DISPATCH THE HIGH-DEGREE CHUNKS FIRST...\n");
@@ -139,6 +140,8 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
             if (true) { // FIXME
+                std::reverse(local_chunk_ids.begin(), local_chunk_ids.end());
+                //std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
                 for (int chunk_id: local_chunk_ids) {
                     task.epoch_id = epoch_id;
                     task.chunk_id = chunk_id;
@@ -751,6 +754,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     int num_local_chunks = local_chunk_ids.size();
     bool is_bottommost_node = engine_->is_bottommost_node();
     int num_epoch = engine_->get_num_epoch();
+    VertexId num_vertices = engine_->graph_structure_->get_num_global_vertices();
 
     LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(num_local_chunks * num_epoch);
     LockFreeQueue<CUDAPIPBackwardTask> * grad_gpu2cpu_queue = new LockFreeQueue<CUDAPIPBackwardTask>(num_local_chunks * num_epoch);
@@ -820,6 +824,34 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     assert(num_epoch > warmup_epoches);
     double all_epoches_time = 0;
 
+    std::vector<Operator*> aggr_ops;
+    for (int op_idx = engine_->partitioning_.partition_op_begin[node_id]; 
+            op_idx < engine_->partitioning_.partition_op_end[node_id]; ++ op_idx) {
+        Operator * op = engine_->op_ten_manager_->get_operator(op_idx);
+        if (op->get_type() == OPERATOR_AGGREGATION) {
+            aggr_ops.push_back(op);
+        }
+    }
+
+    //// track the error rate of each layer
+    //std::vector<Operator*> aggr_ops;
+    //std::map<Operator*, DataType*> before_epoch;
+    //std::map<Operator*, DataType*> after_epoch;
+    //for (int op_idx = engine_->partitioning_.partition_op_begin[node_id]; 
+    //        op_idx < engine_->partitioning_.partition_op_end[node_id]; ++ op_idx) {
+    //    Operator * op = engine_->op_ten_manager_->get_operator(op_idx);
+    //    if (op->get_type() == OPERATOR_AGGREGATION) {
+    //        aggr_ops.push_back(op);
+    //        Tensor * tensor = op->get_input_tensor(0);
+    //        size_t num_elements_per_vertex = tensor->dims[1];
+    //        size_t num_elements = engine_->graph_structure_->get_num_global_vertices() * num_elements_per_vertex;
+    //        DataType * data = new DataType [num_elements];
+    //        before_epoch[op] = data;
+    //        data = new DataType [num_elements];
+    //        after_epoch[op] = data;
+    //    }
+    //}
+
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         if (epoch_id == warmup_epoches) {
             all_epoches_time = - get_time();
@@ -832,6 +864,19 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         MPI_Barrier(MPI_COMM_WORLD);
         pthread_barrier_wait(barrier_);
         double start_time = get_time();
+
+        //// backup the activation
+        //for (Operator * op: aggr_ops) {
+        //    Tensor * tensor = op->get_input_tensor(0);
+        //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        //    size_t num_elements_per_vertex = tensor->dims[1];
+        //    size_t num_elements = engine_->graph_structure_->get_num_global_vertices() * num_elements_per_vertex;
+        //    DataType * data = before_epoch[op];
+        //    checkCUDA(cudaMemcpy(
+        //                data, resource->get_gpu_grad(), num_elements * sizeof(DataType),
+        //                cudaMemcpyDeviceToHost
+        //                ));
+        //}
 
         Profiler::submit_main_thread_event(CrossEpochSyncCompleteEvent);
 
@@ -858,6 +903,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         double fastest_chunk = 1e100;
         bool has_prev_task = false;
         CUDAPIPForwardTask prev_task;
+
+        std::vector<CUDAPIPBackwardTask> backward_tasks;
+        backward_tasks.clear();
 
         while (num_scheduled_forward_tasks < num_local_chunks) {
 #ifdef BOOST_ARCH_X86
@@ -900,7 +948,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         CUDAPIPBackwardTask back_task;
                         back_task.epoch_id = task.epoch_id;
                         back_task.chunk_id = task.chunk_id;
-                        backward_task_dispatcher_->insert_new_task(back_task);
+                        backward_tasks.push_back(back_task);
+                        //backward_task_dispatcher_->insert_new_task(back_task);
                     }
                     engine_->act_update_sender_->insert_new_task(task);
                     ++ num_scheduled_forward_tasks;
@@ -908,6 +957,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     slowest_chunk = std::max(slowest_chunk, t);
                     fastest_chunk = std::min(fastest_chunk, t);
                 }
+            }
+        }
+        if (is_bottommost_node) {
+            for (int i = (int) backward_tasks.size() - 1; i >= 0; -- i) {
+                CUDAPIPBackwardTask task = backward_tasks[i];
+                backward_task_dispatcher_->insert_new_task(task);
             }
         }
         //printf("Node %d, slowest / fastest chunk time: %.3f\n", node_id, slowest_chunk / fastest_chunk);
@@ -936,6 +991,19 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     }
 #endif
                     engine_->perform_backward_task(task); 
+
+                    VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
+                    VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
+                    for (Operator * op: aggr_ops) { 
+                        Tensor * tensor = op->get_output_tensor(0);
+                        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                        size_t num_elements_per_vertex = tensor->dims[1];
+                        size_t num_elements = (chunk_end - chunk_begin) * num_elements_per_vertex;
+                        DataType * grad = resource->get_gpu_grad();
+                        engine_->scale_down(grad + num_elements_per_vertex * chunk_begin, 
+                                num_elements, engine_->scaledown_);
+                    }
+
 #ifdef SHOW_SCHEDULE_DETAILS
                     if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
                         double time_elapsed = (get_time() - start_time) * 1000;    
@@ -951,13 +1019,33 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
         }
 
-        // FIXME: calculate the loss if necessary
+        //int num_aggr_ops = aggr_ops.size();
+        //for (int i = 0; i < num_aggr_ops; ++ i) {
+        //    Operator * op = aggr_ops[i];
+        //    Tensor * tensor = op->get_output_tensor(0);
+        //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        //    size_t num_elements_per_vertex = tensor->dims[1];
+        //    size_t num_elements = num_vertices * num_elements_per_vertex;
+        //    DataType * data = resource->get_gpu_data();
+        //    DataType * grad = resource->get_gpu_grad();
+        //    //if (i > 0) { // scale it down if not the first layer
+        //    //    engine_->scale_down(data, num_elements, 0.1);
+        //    //}
+        //    if (i < num_aggr_ops - 1) { // scale it down if not the last layer
+        //        engine_->scale_down(grad, num_elements, 0.1);
+        //    }
+        //}
+
+        // calculate the loss if necessary
         if (engine_->is_bottommost_node_) {
             engine_->accum_loss_ = engine_->loss_->get_loss(
                     engine_->output_tensor_, engine_->std_tensor_,
                     0, engine_->graph_structure_->get_num_global_vertices()
                     );
         }
+
+
+        //engine_->add_white_noise(); // 
         
         //double end_time = get_time();
         //printf("It takes node %d %.3f s to finish the computation.\n",
@@ -978,6 +1066,43 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         //double end_time = get_time();
         //printf("    Normal compute takes %.3f ms", (end_time - start_time) * 1000.);
+        
+        //for (Operator * op: aggr_ops) {
+        //    Tensor * tensor = op->get_input_tensor(0);
+        //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        //    size_t num_elements_per_vertex = tensor->dims[1];
+        //    size_t num_elements = engine_->graph_structure_->get_num_global_vertices() * num_elements_per_vertex;
+        //    DataType * data_before = before_epoch[op];
+        //    DataType * data_after = after_epoch[op];
+        //    checkCUDA(cudaMemcpy(
+        //                data_after, resource->get_gpu_grad(), num_elements * sizeof(DataType),
+        //                cudaMemcpyDeviceToHost
+        //                ));
+        //    double diff_l2_norm = 0;
+        //    double before_l2_nrom = 0;
+        //    for (size_t i = 0; i < num_elements; ++ i) {
+        //        double diff = data_before[i] - data_after[i];
+        //        diff_l2_norm += diff * diff;
+        //        before_l2_nrom += data_before[i] * data_before[i];
+        //    }
+        //    diff_l2_norm /= num_elements;
+        //    before_l2_nrom /= num_elements;
+        //    checkCUDA(
+        //            cudaMemcpy(
+        //                data_after, resource->get_gpu_grad(), num_elements * sizeof(DataType),
+        //                cudaMemcpyDeviceToHost
+        //                )
+        //            );
+        //    double grad_l2_norm = 0;
+        //    for (size_t i = 0; i < num_elements; ++ i) {
+        //        grad_l2_norm += data_after[i] * data_after[i];
+        //    }
+        //    grad_l2_norm /= num_elements;
+        //    printf("Epoch %d op %d, diff_l2_norm: %f, before_l2_nrom: %f, ratio: %f, grad_l2_norm: %.20f\n",
+        //            epoch_id, engine_->op_ten_manager_->get_operator_index(op),
+        //            diff_l2_norm, before_l2_nrom, diff_l2_norm / before_l2_nrom, 
+        //            grad_l2_norm);
+        //}
 
         double train_acc;
         double valid_acc;
@@ -3803,6 +3928,49 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     Profiler::submit_main_thread_event(BackwardTaskCompleteEvent);
 }
 
+void DistributedPIPHybridParallelExecutionEngineGPU::add_white_noise() {
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    VertexId num_vertices = graph_structure_->get_num_global_vertices();
+
+    int op_begin = partitioning_.partition_op_begin[node_id];
+    int op_end = partitioning_.partition_op_end[node_id];
+    for (int op_idx = op_begin; op_idx < op_end; ++ op_idx) {
+        Operator * op = op_ten_manager_->get_operator(op_idx);
+        if (op->get_type() == OPERATOR_AGGREGATION) {
+            Tensor * in_tensor = op->get_input_tensor(0);
+            size_t num_elements_per_vertex = in_tensor->dims[1];
+            size_t num_elements = num_elements_per_vertex * num_vertices;
+            TensorResourceGPU * resource = (TensorResourceGPU*) in_tensor->resource;
+            DataType * gpu_data = resource->get_gpu_data();
+            DataType * cpu_data = new DataType [num_elements];
+            checkCUDA(cudaMemcpy(cpu_data, gpu_data, 
+                        sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost));
+            int num_threads = 24;
+#pragma omp parallel num_threads(num_threads)
+            {
+                std::default_random_engine generator;
+                std::normal_distribution<double> distribution(0.0, 1.0);
+
+                int thread_id = omp_get_thread_num();
+                size_t begin = num_elements / num_threads * thread_id;
+                size_t end = num_elements / num_threads * (thread_id + 1);
+                if (thread_id == num_threads - 1) {
+                    end = num_elements;
+                }
+                for (size_t i = begin; i < end; ++ i) {
+                    cpu_data[i] += distribution(generator);
+                }
+            }
+            checkCUDA(cudaMemcpy(
+                        gpu_data, cpu_data, sizeof(DataType) * num_elements,
+                        cudaMemcpyHostToDevice
+                        ));
+            delete [] cpu_data;
+        }
+    }
+}
+
 void DistributedPIPHybridParallelExecutionEngineGPU::generate_backward_operator_mask(
         const std::vector<Operator*>& operators
         ) {
@@ -4683,7 +4851,8 @@ void CUDABPIPLocalGraph::InitCsr()
             }
             bool same_chunk = dst / vertices_per_chunk == i / vertices_per_chunk;
             host_csrColIn_Out_[nnz_out_count] = dst;
-            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: scaledown_);
+            //host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: scaledown_); FIXME
+            host_csrValue_Out_[nnz_out_count] = norm_factor;
             nnz_out_count++;
           //  if(node_id == 0)out<<dst<<"("<<OutToGlobal(dst)<<")  ";
         }

@@ -1787,6 +1787,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         // invoke by the scheduler
         void perform_forward_task(CUDAPIPForwardTask task);
         void perform_backward_task(CUDAPIPBackwardTask task);
+        void add_white_noise();
+        void scale_down(DataType * data, size_t N, double factor);
 
         // some initialization functions
         void generate_backward_operator_mask(const std::vector<Operator*>& operators);
