@@ -141,7 +141,10 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
             if (true) { // FIXME
-                std::reverse(local_chunk_ids.begin(), local_chunk_ids.end());
+                //std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
+                if (epoch_id % 5 == 0) {
+                    std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
+                }
                 //std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
                 for (int chunk_id: local_chunk_ids) {
                     task.epoch_id = epoch_id;
@@ -868,6 +871,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     //    }
     //}
 
+    engine_->weight_aggregator_->clear_gradients();
+
     for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
         if (epoch_id == warmup_epoches) {
             all_epoches_time = - get_time();
@@ -897,7 +902,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         Profiler::submit_main_thread_event(CrossEpochSyncCompleteEvent);
 
         //engine_->parameter_server_->clear_accum_buffer();
-        engine_->weight_aggregator_->clear_gradients();
+        //engine_->weight_aggregator_->clear_gradients();
         // pull the latest weights
         for (WeightOperator * op: engine_->local_weight_ops_) {
             assert(op != NULL);
@@ -1075,10 +1080,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         int num_startup_epoches = engine_->num_startup_epoches_;
         Profiler::submit_main_thread_event(GradSyncStartEvent);
-        if (true) {
-            //engine_->parameter_server_->commit_grad();
-            engine_->weight_aggregator_->commit_grad();
-        }
+        //if ((epoch_id + 1) % 2 == 0) { // FIXME
+        //engine_->parameter_server_->commit_grad();
+        engine_->weight_aggregator_->commit_grad();
+        engine_->weight_aggregator_->clear_gradients();
+        //}
         Profiler::submit_main_thread_event(GradSyncCompleteEvent);
 
         //double end_time = get_time();
