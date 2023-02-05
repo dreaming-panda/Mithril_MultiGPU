@@ -14,6 +14,8 @@
 #define FIXPART
 //#define USE_RDMA
 
+#define REVERSE_PERIOD (20)
+
 //#define NUM_CHUNKS (16)
 //#define SCALE_DOWN_FACTOR (0.01)
 //#define SCALE_UP_FACTOR (1.)
@@ -142,10 +144,10 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             // dispatch the chunk-based forwarding tasks
             if (true) { // FIXME
                 //std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
-                if (epoch_id % 5 == 0) {
+                if (epoch_id % REVERSE_PERIOD == 0) {
                     std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
+                    //std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
                 }
-                //std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
                 for (int chunk_id: local_chunk_ids) {
                     task.epoch_id = epoch_id;
                     task.chunk_id = chunk_id;
@@ -844,11 +846,18 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double all_epoches_time = 0;
 
     std::vector<Operator*> aggr_ops;
+    std::vector<DataType*> historical_data;
     for (int op_idx = engine_->partitioning_.partition_op_begin[node_id]; 
             op_idx < engine_->partitioning_.partition_op_end[node_id]; ++ op_idx) {
         Operator * op = engine_->op_ten_manager_->get_operator(op_idx);
         if (op->get_type() == OPERATOR_AGGREGATION) {
             aggr_ops.push_back(op);
+            Tensor * tensor = op->get_input_tensor(0);
+            size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+            DataType * data = NULL;
+            checkCUDA(cudaMalloc(&data, sizeof(DataType) * num_elements));
+            assert(data);
+            historical_data.push_back(data);
         }
     }
 
@@ -900,6 +909,30 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         //}
 
         Profiler::submit_main_thread_event(CrossEpochSyncCompleteEvent);
+
+        if (epoch_id % REVERSE_PERIOD == 0) {
+            for (int i = 0; i < aggr_ops.size(); ++ i) {
+                Operator * op = aggr_ops[i];
+                DataType * h_data = historical_data[i];
+                Tensor * tensor = op->get_input_tensor(0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                DataType * data = resource->get_gpu_data();
+                size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+                checkCUDA(cudaMemcpy(h_data, data, sizeof(DataType) * num_elements,
+                            cudaMemcpyDeviceToDevice));
+            }
+        } else {
+            for (int i = 0; i < aggr_ops.size(); ++ i) {
+                Operator * op = aggr_ops[i];
+                DataType * h_data = historical_data[i];
+                Tensor * tensor = op->get_input_tensor(0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                DataType * data = resource->get_gpu_data();
+                size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+                checkCUDA(cudaMemcpy(data, h_data, sizeof(DataType) * num_elements,
+                            cudaMemcpyDeviceToDevice));
+            }
+        }
 
         //engine_->parameter_server_->clear_accum_buffer();
         //engine_->weight_aggregator_->clear_gradients();
@@ -981,6 +1014,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
         }
         if (is_bottommost_node) {
+            //for (int i = 0; i < backward_tasks.size(); ++ i) {
             for (int i = (int) backward_tasks.size() - 1; i >= 0; -- i) {
                 CUDAPIPBackwardTask task = backward_tasks[i];
                 backward_task_dispatcher_->insert_new_task(task);
@@ -1054,7 +1088,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             //}
             //engine_->scale_down(data, num_elements, engine_->scaledown_);
             //engine_->scale_down(grad, num_elements, engine_->scaledown_);
-            checkCUDA(cudaMemset(data, 0, sizeof(DataType) * num_elements));
+            //checkCUDA(cudaMemset(data, 0, sizeof(DataType) * num_elements));
             checkCUDA(cudaMemset(grad, 0, sizeof(DataType) * num_elements));
         }
 
