@@ -140,7 +140,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
             if (true) { // FIXME
-                std::reverse(local_chunk_ids.begin(), local_chunk_ids.end());
+                //std::reverse(local_chunk_ids.begin(), local_chunk_ids.end());
                 //std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
                 for (int chunk_id: local_chunk_ids) {
                     task.epoch_id = epoch_id;

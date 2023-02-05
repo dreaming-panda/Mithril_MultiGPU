@@ -17,10 +17,10 @@ make -j
 
 # setting up the hyper-parameters
 num_layers=8
-hunits=48
-lr=1e-3
-graph=ogbn_products
-epoch=2000
+hunits=128
+lr=3e-3
+graph=reddit
+epoch=300
 decay=0
 chunks=16
 dropout=0.5
