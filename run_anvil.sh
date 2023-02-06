@@ -17,10 +17,10 @@ make -j
 
 # setting up the hyper-parameters
 num_layers=8
-hunits=64
+hunits=128
 lr=1e-3
-graph=ogbn_mag
-epoch=2000
+graph=ogbn_arxiv
+epoch=5000
 decay=0
 chunks=16
 dropout=0.5
