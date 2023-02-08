@@ -3,19 +3,20 @@ import sys
 import time
 
 # products
-# combinations: 3 x 1 x 3 x 5 = 45
+# combinations: 72
 learning_rates = [
-        1e-3, 3e-4, 3e-3
+        1e-4, 3e-4, 1e-3, 3e-3
         ]
 decays = [
-        0
+        0, 1e-5
         ]
 hunits = [
-        16, 32, 48
+        16, 32, 48, 64
         ]
 dropouts = [
-        0.3, 0.4, 0.5, 0.6, 0.7
+        0.3, 0.5, 0.7
         ]
+num_layers = 6
 
 graph_path = "$PROJECT/gnn_datasets/reordered"
 
@@ -27,17 +28,16 @@ def train_gcn(lr, decay, hunit, dropout, full_graph_path, graph, weight_file):
 
     t = - time.time()
     result_file = result_dir + "/result.txt"
-    command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/single_gpu/gcn --graph %s --layers 8 --hunits %s --epoch 5000 --lr %s --decay %s --dropout %s --weight_file %s > %s 2>&1" % (
-            full_graph_path, hunit, lr, decay, dropout, weight_file, result_file
+    command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/single_gpu/gcn --graph %s --layers %s --hunits %s --epoch 3000 --lr %s --decay %s --dropout %s --weight_file %s > %s 2>&1" % (
+            full_graph_path, num_layers, hunit, lr, decay, dropout, weight_file, result_file
             )
     os.system(command)
-    command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/single_gpu/gcn_inference --graph %s --layers 8 --hunits %s --weight_file %s >> %s 2>&1" % (
-            full_graph_path, hunit, weight_file, result_file
+    command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/single_gpu/gcn_inference --graph %s --layers %s --hunits %s --weight_file %s >> %s 2>&1" % (
+            full_graph_path, num_layers, hunit, weight_file, result_file
             )
     os.system(command)
     t += time.time()
     print("    It takes %.3f s" % (t))
-
 
 if __name__ == "__main__":
 
