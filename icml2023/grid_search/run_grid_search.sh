@@ -15,11 +15,8 @@ cd build
 make -j
 cd ..
 
-graph=ogbn_products
-#lr=1e-4
-#lr=3e-4
-#lr=1e-3
-lr=3e-3
+graph=$1
+lr=$2
 
 date
 echo "Running grid search on ${graph}"
