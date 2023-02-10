@@ -113,24 +113,40 @@ If we notice that the system is computation bounded, we will consider adding GPU
 
 Profile the system to check whether there is some unnecessary performance overhead and try to eliminate them.
 
-# Related Works:
+## Related Works:
 
 ATC 2021:
+
 GLIST: Towards In-Storage Graph Learning
+
 Eurosys 2021:
+
 FlexGraph: A flexible and efficient distributed framework for GNN training
+
 Seastar: Vertex-Centric Programming for Graph Neural Networks
+
 Eurosys 2022:
+
 GNNLab: A Factored System for Sample-based GNN Training over GPUs.
+
 MLsys 2022:
+
 Understanding GNN Computational Graph: A Coordinated Computation, IO, and Memory Perspective
+
 BNS-GCN: Efficient Full-Graph Training of Graph Convolutional Networks with Partition-Parallelism and Random Boundary Node Sampling
+
 Graphiler: Optimizing Graph Neural Networks with Message Passing Data Flow Graph
+
 Sequential Aggregation and Rematerialization: Distributed Full-batch Training of Graph Neural Networks on Large Graphs
+
 Accelerating Training and Inference of Graph Neural Networks with Fast Sampling and Pipelining
+
 OSDI 2021:
+
 Dorylus: Affordable, Scalable, and Accurate GNN Training with Distributed CPU Servers and Serverless Threads
+
 GNNAdvisor: An Adaptive and Efficient Runtime System for GNN Acceleration on GPUs
+
 P3: Distributed Deep Graph Learning at Scale
 
 
