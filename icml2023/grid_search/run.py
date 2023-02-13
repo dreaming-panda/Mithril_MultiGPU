@@ -18,10 +18,26 @@ import time
 #        ]
 #num_layers = 6
 
-## reddit
+# reddit
+# combinations: 3 x 2 x 3 x 3 = 54
+learning_rates = [
+        3e-4, 1e-3, 3e-3
+        ]
+decays = [
+        0, 1e-5
+        ]
+hunits = [
+        64, 128, 256
+        ]
+dropouts = [
+        0.3, 0.5, 0.7
+        ]
+num_layers = 6
+
+## ogbn-arxiv
 ## combinations: 3 x 2 x 3 x 3 = 54
 #learning_rates = [
-#        3e-4, 1e-3, 3e-3
+#        1e-4, 3e-4, 1e-3
 #        ]
 #decays = [
 #        0, 1e-5
@@ -33,22 +49,6 @@ import time
 #        0.3, 0.5, 0.7
 #        ]
 #num_layers = 8
-
-# ogbn-arxiv
-# combinations: 3 x 2 x 3 x 3 = 54
-learning_rates = [
-        1e-4, 3e-4, 1e-3
-        ]
-decays = [
-        0, 1e-5
-        ]
-hunits = [
-        64, 128, 256
-        ]
-dropouts = [
-        0.3, 0.5, 0.7
-        ]
-num_layers = 8
 
 graph_path = "$PROJECT/gnn_datasets/reordered"
 

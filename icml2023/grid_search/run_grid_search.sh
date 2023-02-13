@@ -16,10 +16,9 @@ make -j
 cd ..
 
 graph=$1
-lr=$2
 
 date
 echo "Running grid search on ${graph}"
-python ./icml2023/grid_search/run.py ${graph} /anvil/projects/x-cis220117/checkpointed_weights/checkpointed_weights_${graph}_${lr} ${lr}
+python ./icml2023/grid_search/run.py ${graph} /anvil/projects/x-cis220117/checkpointed_weights/checkpointed_weights_${graph}
 date
 

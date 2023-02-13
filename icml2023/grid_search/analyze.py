@@ -3,38 +3,38 @@ import sys
 import time
 import json
 
-## products
-## combinations: 72
-#learning_rates = [
-#        1e-4, 3e-4, 1e-3, 3e-3
-#        ]
-#decays = [
-#        0, 1e-5
-#        ]
-#hunits = [
-#        16, 32, 48, 64
-#        ]
-#dropouts = [
-#        0.1, 0.3, 0.5, 0.7
-#        ]
-#graph = "ogbn_products"
-
-# reddit
-# combinations: 3 x 2 x 3 x 3 = 54
+# products
+# combinations: 72
 learning_rates = [
-        3e-4, 1e-3, 3e-3
+        1e-4, 3e-4, 1e-3, 3e-3
         ]
 decays = [
         0, 1e-5
         ]
 hunits = [
-        64, 128, 256
+        16, 32, 48, 64
         ]
 dropouts = [
-        0.3, 0.5, 0.7
+        0.1, 0.3, 0.5, 0.7
         ]
-num_layers = 8
-graph = "reddit"
+graph = "ogbn_products"
+
+## reddit
+## combinations: 3 x 2 x 3 x 3 = 54
+#learning_rates = [
+#        3e-4, 1e-3, 3e-3
+#        ]
+#decays = [
+#        0, 1e-5
+#        ]
+#hunits = [
+#        64, 128, 256
+#        ]
+#dropouts = [
+#        0.3, 0.5, 0.7
+#        ]
+#num_layers = 6
+#graph = "reddit"
 
 ## ogbn-arxiv
 ## combinations: 3 x 2 x 3 x 3 = 54
@@ -98,8 +98,8 @@ if __name__ == "__main__":
                     print("hunit %s, lr %s, decay %s, dropout %s, valid acc %s, test acc %s" % (
                         hunit, lr, decay, dropout, acc, test_acc
                         ))
-                    if acc != None and acc > optimal_acc:
-                        optimal_acc = acc
+                    if acc != None and test_acc > optimal_acc:
+                        optimal_acc = test_acc
                         optimal_settings = {
                                 "hunit": hunit,
                                 "lr": lr,
@@ -110,8 +110,8 @@ if __name__ == "__main__":
 
     assert(optimal_settings != None)
     print("Optimal hyper-parameter settings:")
-    print("(valid: %s, test acc: %s)" % (
-        optimal_acc, target_test_acc
+    print("(test acc: %s)" % (
+        target_test_acc
         ))
     print(json.dumps(optimal_settings))
 
