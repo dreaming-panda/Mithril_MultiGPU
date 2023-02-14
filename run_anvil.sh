@@ -2,7 +2,7 @@
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
 #SBATCH -t 00:20:00 
-#SBATCH --nodes 3
+#SBATCH --nodes 1
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
@@ -18,15 +18,16 @@ make -j
 # setting up the hyper-parameters
 # products: {"hunit": 64, "lr": 0.003, "decay": 1e-05, "dropout": 0.3}
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
-# reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
+# reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
+
 num_layers=6
-hunits=64
+hunits=256
 lr=3e-3
-graph=ogbn_products
+graph=reddit
 epoch=3000
-decay=1e-5
+decay=0
 chunks=12
-dropout=0.3
+dropout=0.5
 seed=2333
 scaledown=0.1
 

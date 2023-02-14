@@ -5,18 +5,16 @@ import random
 datasets = [
         #"ogbn_mag",
         #"reddit",
-        "ogbn_products",
-        #"ogbn_arxiv"
+        #"ogbn_products",
+        "ogbn_arxiv"
         ]
 settings = {
-        #"ogbn_mag": {"hunit": 256, "lr": 0.001, "decay": 1e-05, "dropout": 0.3, "epoch": 10000},
-        #"reddit": {"hunit": 512, "lr": 0.003, "decay": 1e-05, "dropout": 0.7, "epoch": 5000},
         "ogbn_products": {"layers": 6, "hunit": 64, "lr": 0.003, "decay": 0, "dropout": 0.3, "epoch": 1500},
         "ogbn_arxiv": {"layers": 8, "hunit": 256, "lr": 0.001, "decay": 1e-05, "dropout": 0.5, "epoch": 5000}
         }
 num_runs = 5
 scale = 1.
-chunks = 24 # TODO
+chunks = 32 # TODO
 
 if __name__ == "__main__":
 
