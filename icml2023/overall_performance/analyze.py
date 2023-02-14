@@ -7,7 +7,7 @@ datasets = [
         "reddit",
         "ogbn_products"
         ]
-num_runs = 3
+num_runs = 5
 
 def get_test_acc(result_file):
     with open(result_file, "r") as f:

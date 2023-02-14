@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 00:30:00 
-#SBATCH --nodes 1
+#SBATCH -t 00:20:00 
+#SBATCH --nodes 3
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
@@ -16,15 +16,18 @@ cd build
 make -j
 
 # setting up the hyper-parameters
-num_layers=8
-hunits=128
-lr=1e-3
-graph=ogbn_arxiv
-epoch=5000
-decay=0
-chunks=16
-dropout=0.5
-seed=1234
+# products: {"hunit": 64, "lr": 0.003, "decay": 1e-05, "dropout": 0.3}
+# arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
+# reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
+num_layers=6
+hunits=64
+lr=3e-3
+graph=ogbn_products
+epoch=3000
+decay=1e-5
+chunks=12
+dropout=0.3
+seed=2333
 scaledown=0.1
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown
