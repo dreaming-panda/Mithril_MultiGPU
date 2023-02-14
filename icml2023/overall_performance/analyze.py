@@ -8,6 +8,10 @@ datasets = [
         "ogbn_products",
         "ogbn_arxiv"
         ]
+num_gpus = {
+        "ogbn_products": [3],
+        "ogbn_arxiv": [4]
+        }
 num_runs = 5
 
 def get_test_acc(result_file):
@@ -33,28 +37,29 @@ def get_runtime(result_file):
 if __name__ == "__main__":
 
     for dataset in datasets:
-        avg_acc = 0
-        accs = []
-        avg_runtime = 0
-        runtimes = []
-        for run in range(num_runs):
-            result_file = "./results/%s/result_%s.txt" % (
-                    dataset, run
-                    )
-            acc = get_test_acc(result_file)
-            avg_acc += acc
-            accs.append(acc)
-            runtime = get_runtime(result_file)
-            avg_runtime += runtime
-            runtimes.append(runtime)
+        for gpus in num_gpus[dataset]:
+            avg_acc = 0
+            accs = []
+            avg_runtime = 0
+            runtimes = []
+            for run in range(num_runs):
+                result_file = "./results/%s/%s_gpu/result_%s.txt" % (
+                        dataset, gpus, run
+                        )
+                acc = get_test_acc(result_file)
+                avg_acc += acc
+                accs.append(acc)
+                runtime = get_runtime(result_file)
+                avg_runtime += runtime
+                runtimes.append(runtime)
 
-        avg_acc /= num_runs
-        acc_stddev = statistics.stdev(accs)
-        avg_runtime /= num_runs
-        runtime_stddev = statistics.stdev(runtimes)
+            avg_acc /= num_runs
+            acc_stddev = statistics.stdev(accs)
+            avg_runtime /= num_runs
+            runtime_stddev = statistics.stdev(runtimes)
 
-        print("Graph %s, Test Acc %.4f (+- %.4f), Runtime %.4f (+- %.4f)" % (
-            dataset, avg_acc, acc_stddev, avg_runtime, runtime_stddev
-            ))
+            print("Graph %s, Num GPU %s, Test Acc %.4f (+- %.4f), Runtime %.4f (+- %.4f)" % (
+                dataset, gpus, avg_acc, acc_stddev, avg_runtime, runtime_stddev
+                ))
 
 

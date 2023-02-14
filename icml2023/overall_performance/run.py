@@ -25,7 +25,7 @@ if __name__ == "__main__":
             seed = run + 1
             setting = settings[dataset]
             weight_file = "checkpointed_weights_%s" % (dataset)
-            command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/async_multi_gpus/gcn_graph_parallel --graph $PROJECT/gnn_datasets/metis_4_gpu/%s/reorder/bin --layers %s --hunits %s --epoch %s --lr %s --decay %s --dropout %s --weight_file %s --seed %s > %s 2>&1" % (
+            command = "mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./build/applications/async_multi_gpus/gcn_graph_parallel --graph $PROJECT/gnn_datasets/metis_8_gpu/%s/reorder/bin --layers %s --hunits %s --epoch %s --lr %s --decay %s --dropout %s --weight_file %s --seed %s > %s 2>&1" % (
                     dataset, setting["layers"], setting["hunit"], setting["epoch"], setting["lr"],
                     setting["decay"], setting["dropout"], weight_file, seed,
                     result_dir + "/" + result_file
