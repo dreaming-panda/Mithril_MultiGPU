@@ -10,7 +10,7 @@ datasets = [
         ]
 num_gpus = {
         "ogbn_products": [3],
-        "ogbn_arxiv": [4]
+        "ogbn_arxiv": [4, 8]
         }
 num_runs = 5
 
