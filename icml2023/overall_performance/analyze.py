@@ -5,7 +5,8 @@ import statistics
 
 datasets = [
         #"reddit",
-        "ogbn_products"
+        "ogbn_products",
+        "ogbn_arxiv"
         ]
 num_runs = 5
 
