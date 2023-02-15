@@ -3,9 +3,9 @@ import sys
 import random
 
 datasets = [
-        #"reddit",
         #"ogbn_products",
-        "ogbn_arxiv",
+        #"ogbn_arxiv",
+        "reddit",
         ]
 settings = {
         "ogbn_products": {"layers": 6, "hunit": 64, "lr": 0.003, "decay": 0, "dropout": 0.3, "epoch": 1500},
@@ -13,7 +13,7 @@ settings = {
         "reddit": {"layers": 6, "hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5, "epoch": 5000},
         }
 num_runs = 5
-num_gpus = 8
+num_gpus = 6
 
 if __name__ == "__main__":
 

@@ -28,7 +28,7 @@ epoch=3000
 decay=0
 dropout=0.5
 
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn_graph_parallel --graph $PROJECT/gnn_datasets/metis_3_gpu/reddit/reorder/bin --layers 6 --hunits 256 --epoch 5000 --lr 0.003 --decay 0 --dropout 0.5 --weight_file checkpointed_weights_reddit --seed 1
+mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn_graph_parallel --graph $PROJECT/gnn_datasets/metis_3_gpu/$graph/reorder/bin --layers 6 --hunits 256 --epoch 5000 --lr 0.003 --decay 0 --dropout 0.5 --weight_file checkpointed_weights_reddit --seed 1
 
 ##mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn_graph_parallel --graph $PROJECT/gnn_datasets/metis_3_gpu/$graph/reorder/bin --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --dropout $dropout --weight_file saved_weights
 #mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/single_gpu/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --dropout $dropout --weight_file saved_weights
