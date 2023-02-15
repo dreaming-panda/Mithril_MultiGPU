@@ -11,7 +11,7 @@ datasets = [
 num_gpus = {
         "ogbn_products": [3],
         "ogbn_arxiv": [4, 8],
-        "reddit": [3]
+        "reddit": [3, 6]
         }
 num_runs = 5
 
@@ -59,8 +59,8 @@ if __name__ == "__main__":
             avg_runtime /= num_runs
             runtime_stddev = statistics.stdev(runtimes)
 
-            print("Graph %s, Num GPU %s, Test Acc %.4f (+- %.4f), Runtime %.4f (+- %.4f)" % (
-                dataset, gpus, avg_acc, acc_stddev, avg_runtime, runtime_stddev
+            print("Graph %s, Num GPU %s, Test Acc %.2f (+- %.2f), Runtime %.4f (+- %.4f)" % (
+                dataset, gpus, avg_acc * 100, acc_stddev * 100, avg_runtime, runtime_stddev
                 ))
 
 
