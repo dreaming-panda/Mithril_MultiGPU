@@ -4,9 +4,9 @@ import random
 import statistics
 
 datasets = [
-        "ogbn_products",
+        #"ogbn_products",
         "ogbn_arxiv",
-        "reddit",
+        #"reddit",
         ]
 num_gpus = {
         "ogbn_products": [3, 6],
