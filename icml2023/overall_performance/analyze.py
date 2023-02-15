@@ -4,13 +4,14 @@ import random
 import statistics
 
 datasets = [
-        #"reddit",
         "ogbn_products",
-        "ogbn_arxiv"
+        "ogbn_arxiv",
+        "reddit",
         ]
 num_gpus = {
         "ogbn_products": [3],
-        "ogbn_arxiv": [4, 8]
+        "ogbn_arxiv": [4, 8],
+        "reddit": [3]
         }
 num_runs = 5
 
