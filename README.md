@@ -115,6 +115,9 @@ Profile the system to check whether there is some unnecessary performance overhe
 
 ## Related Works:
 
+NeurIPS 2021:
+VQ-GNN: A Universal Framework to Scale-up Graph Neural Networks using Vector Quantization
+
 ATC 2021:
 
 GLIST: Towards In-Storage Graph Learning
@@ -124,6 +127,18 @@ Eurosys 2021:
 FlexGraph: A flexible and efficient distributed framework for GNN training
 
 Seastar: Vertex-Centric Programming for Graph Neural Networks
+
+VLDB 2021:
+
+Large Graph Convolutional Network Training with GPU-Oriented Data Communication Architecture
+
+Scaling Attributed Network Embedding to Massive Graphs
+
+Accelerating Large Scale Real-Time GNN Inference using Channel Pruning
+
+VLDB 2022:
+
+ByteGNN: Efficient Graph Neural Network Training at Large Scale
 
 Eurosys 2022:
 
@@ -148,6 +163,10 @@ Dorylus: Affordable, Scalable, and Accurate GNN Training with Distributed CPU Se
 GNNAdvisor: An Adaptive and Efficient Runtime System for GNN Acceleration on GPUs
 
 P3: Distributed Deep Graph Learning at Scale
+
+ASPLOS 2023:
+Betty: Enabling Large-Scale GNN Training with Batch-Level Graph Partitioning
+
 
 
 
