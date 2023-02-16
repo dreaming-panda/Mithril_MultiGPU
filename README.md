@@ -115,7 +115,12 @@ Profile the system to check whether there is some unnecessary performance overhe
 
 ## Related Works:
 
+MLSys 2020:
+
+Improving the Accuracy, Scalability, and Performance of Graph Neural Networks with Roc
+
 NeurIPS 2021:
+
 VQ-GNN: A Universal Framework to Scale-up Graph Neural Networks using Vector Quantization
 
 ATC 2021:
