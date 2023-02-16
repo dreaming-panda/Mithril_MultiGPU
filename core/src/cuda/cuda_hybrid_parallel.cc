@@ -59,13 +59,13 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     double comm = 0;
     double comm_time = 0;
     if (engine_->is_topmost_node()) {
-        auto rand_gen = std::default_random_engine(rand());
+        auto rand_gen = std::default_random_engine(engine_->random_seed_);
 
-        // FIXME: a simple dispatching strategy of the topmost nodes not considering load balancing is used here
+        // a simple dispatching strategy of the topmost nodes not considering load balancing is used here
         dispatch_algorithm_ = RandomDispatch;
         if (dispatch_algorithm_ == RandomDispatch) {
             printf("RANDOMLY DISPATCH THE CHUNKS...\n");
-            std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
+            std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
         } else if (dispatch_algorithm_ == HighDegreeFirstDispatch) {
             printf("DISPATCH THE HIGH-DEGREE CHUNKS FIRST...\n");
             std::vector<std::pair<int, EdgeId>> degree_sum_each_chunk;
@@ -142,12 +142,12 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             pthread_barrier_wait(barrier_);
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
-            if (true) { // FIXME
+            if (true) { 
                 //std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
                 ////std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
                 if (epoch_id % REVERSE_PERIOD == 0) {
                     //std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
-                    std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
+                    std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
                 }
                 for (int chunk_id: local_chunk_ids) {
                     task.epoch_id = epoch_id;

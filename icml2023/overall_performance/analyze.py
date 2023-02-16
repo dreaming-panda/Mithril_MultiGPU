@@ -4,16 +4,16 @@ import random
 import statistics
 
 datasets = [
-        "ogbn_products",
+        #"ogbn_products",
         "ogbn_arxiv",
-        "reddit",
+        #"reddit",
         ]
 num_gpus = {
         "ogbn_products": [3, 6],
         "ogbn_arxiv": [4, 8],
         "reddit": [3, 6]
         }
-num_runs = 5
+num_runs = 10
 
 def get_test_acc(result_file):
     with open(result_file, "r") as f:

@@ -20,15 +20,15 @@ make -j
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
-num_layers=6
+num_layers=8
 hunits=256
 lr=3e-3
-graph=reddit
-epoch=3000
+graph=ogbn_arxiv
+epoch=100
 decay=0
 chunks=12
 dropout=0.5
-seed=2333
+seed=17
 scaledown=0.1
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown

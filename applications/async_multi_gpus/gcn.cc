@@ -64,7 +64,7 @@ class GCN: public AbstractApplication {
                     t = softmax(t); 
                 } else {
                     t = relu(t);  
-                    t = dropout(t, dropout_rate_);
+                    t = dropout(t, dropout_rate_); 
                 }
             }
             return t;

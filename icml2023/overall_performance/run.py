@@ -3,17 +3,17 @@ import sys
 import random
 
 datasets = [
-        "ogbn_products",
-        #"ogbn_arxiv",
-        "reddit",
+        #"ogbn_products",
+        "ogbn_arxiv",
+        #"reddit",
         ]
 settings = {
         "ogbn_products": {"layers": 6, "hunit": 64, "lr": 0.003, "decay": 0, "dropout": 0.3, "epoch": 1500},
         "ogbn_arxiv": {"layers": 8, "hunit": 256, "lr": 0.001, "decay": 1e-05, "dropout": 0.5, "epoch": 5000},
         "reddit": {"layers": 6, "hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5, "epoch": 5000},
         }
-num_runs = 5
-num_gpus = 3 # TODO
+num_runs = 10 # TODO
+num_gpus = 4 # TODO
 scale = 1.
 chunks = num_gpus * 4 
 
