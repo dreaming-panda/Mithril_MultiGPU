@@ -14,7 +14,8 @@
 #define FIXPART
 #define USE_RDMA
 
-#define REVERSE_PERIOD (10) 
+#define REVERSE_PERIOD (100) 
+#define EVAL_FREQUENCY (10)
 
 //#define NUM_CHUNKS (16)
 //#define SCALE_DOWN_FACTOR (0.01)
@@ -1167,7 +1168,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         double test_acc;
         double loss;
 
-        if ((epoch_id + 1) % 10 == 0) {
+        if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {  
             if (node_id == 0) {
                 //printf("\n********* Epoch %d: *********\n", epoch_id);
                 printf("    Epoch %d:", epoch_id);
@@ -3260,7 +3261,7 @@ void CUDAPIPWeightAggregator::commit_grad() {
                 );
         cudaStreamSynchronize(0);
     }
-    if ((epoch_id_ + 1) % 10 == 0) {
+    if ((epoch_id_ + 1) % EVAL_FREQUENCY == 0) { 
         // check point the weights
         weight_dumper_->next_version();
         for (int i = 0; i < num_weight_operators; ++ i) {
@@ -4465,7 +4466,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         }
     }
     WeightDumper * weight_dumper = new WeightDumper(
-            num_epoch / 10 + 1, weight_file_, weight_ops
+            num_epoch / EVAL_FREQUENCY + 1, weight_file_, weight_ops
             );
     
     local_graph_ = lgraph;
