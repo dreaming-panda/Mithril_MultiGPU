@@ -13,7 +13,7 @@ num_gpus = {
         "ogbn_arxiv": [4, 8],
         "reddit": [3, 6]
         }
-num_runs = 10
+num_runs = 5
 
 def get_test_acc(result_file):
     with open(result_file, "r") as f:
