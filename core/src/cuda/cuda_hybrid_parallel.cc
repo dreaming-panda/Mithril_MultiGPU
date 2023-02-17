@@ -14,7 +14,7 @@
 #define FIXPART
 #define USE_RDMA
 
-#define REVERSE_PERIOD (20) 
+#define REVERSE_PERIOD (100) 
 #define EVAL_FREQUENCY (10)
 
 //#define NUM_CHUNKS (16)
@@ -144,12 +144,12 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
             if (true) { 
-                //std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
+                std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
                 ////std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
-                if (epoch_id % REVERSE_PERIOD == 0) {
-                    //std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
-                    std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
-                }
+                //if (epoch_id % REVERSE_PERIOD == 0) {
+                //    //std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
+                //    std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
+                //}
                 for (int chunk_id: local_chunk_ids) {
                     task.epoch_id = epoch_id;
                     task.chunk_id = chunk_id;
