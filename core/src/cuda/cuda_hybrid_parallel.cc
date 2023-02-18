@@ -14,8 +14,8 @@
 #define FIXPART
 #define USE_RDMA
 
-#define REVERSE_PERIOD (5)
-#define EVAL_FREQUENCY (10)
+#define REVERSE_PERIOD (20)
+#define EVAL_FREQUENCY (5)
 
 //#define NUM_CHUNKS (16)
 //#define SCALE_DOWN_FACTOR (0.01)
@@ -1088,7 +1088,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             //if (i > 0) { // scale it down if not the first layer
             //    engine_->scale_down(data, num_elements, 0.1);
             //}
-            //engine_->scale_down(data, num_elements, engine_->scaledown_);
+            //engine_->scale_down(data, num_elements, 0.5); 
             //engine_->scale_down(grad, num_elements, engine_->scaledown_);
             //checkCUDA(cudaMemset(data, 0, sizeof(DataType) * num_elements));
             checkCUDA(cudaMemset(grad, 0, sizeof(DataType) * num_elements));
@@ -4854,6 +4854,7 @@ void CUDABPIPLocalGraph::InitCsr()
                 bool same_chunk = src / vertices_per_chunk == i / vertices_per_chunk;
                 host_csrColIn_In_[nnz_in_count] = src;
                 host_csrValue_In_[nnz_in_count] = norm_factor;
+                //host_csrValue_In_[nnz_in_count] = norm_factor * (same_chunk ? 1.: 2. - 0.5); 
                 nnz_in_count++;
             //    if(node_id == 0)out<<src<<" ("<<InToGlobal(src)<<") ";
             }

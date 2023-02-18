@@ -26,9 +26,9 @@ lr=3e-3
 graph=reddit
 epoch=5000
 decay=0
-chunks=16
+chunks=12
 dropout=0.5
-seed=2
+seed=3
 scaledown=0.1
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcn --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file $PROJECT/saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown
