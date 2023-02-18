@@ -3,9 +3,9 @@ import sys
 import random
 
 datasets = [
-        "ogbn_products",
+        #"ogbn_products",
         #"ogbn_arxiv",
-        #"reddit",
+        "reddit",
         ]
 settings = {
         "ogbn_products": {"layers": 6, "hunit": 64, "lr": 0.003, "decay": 0, "dropout": 0.3, "epoch": 1500},

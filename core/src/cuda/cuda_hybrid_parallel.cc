@@ -4914,8 +4914,8 @@ void CUDABPIPLocalGraph::InitCsr()
             }
             bool same_chunk = dst / vertices_per_chunk == i / vertices_per_chunk;
             host_csrColIn_Out_[nnz_out_count] = dst;
-            //host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: scaledown_); FIXME
-            host_csrValue_Out_[nnz_out_count] = norm_factor;
+            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 2.);  // FIXME: for unbaised gradient estimation
+            //host_csrValue_Out_[nnz_out_count] = norm_factor;
             nnz_out_count++;
           //  if(node_id == 0)out<<dst<<"("<<OutToGlobal(dst)<<")  ";
         }
