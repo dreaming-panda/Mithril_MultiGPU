@@ -14,7 +14,7 @@
 #define FIXPART
 #define USE_RDMA
 
-#define REVERSE_PERIOD (100) 
+#define REVERSE_PERIOD (20) 
 #define EVAL_FREQUENCY (10)
 
 //#define NUM_CHUNKS (16)
