@@ -3,7 +3,7 @@ import sys
 import random
 
 datasets = [
-        #"ogbn_products",
+        "ogbn_products",
         #"ogbn_arxiv",
         "reddit",
         ]
