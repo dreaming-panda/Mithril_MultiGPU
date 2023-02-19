@@ -44,8 +44,8 @@ if __name__ == "__main__":
             avg_runtime = 0
             runtimes = []
             for run in range(num_runs):
-                result_file = "./results/%s/result_%s.txt" % (
-                        dataset, run
+                result_file = "./results/%s/%s_gpu/result_%s.txt" % (
+                        dataset, gpus, run
                         )
                 acc = get_test_acc(result_file)
                 avg_acc += acc

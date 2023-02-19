@@ -57,16 +57,23 @@ class GCN: public AbstractApplication {
                     output_size = num_classes_;
                 }
 
-                t = fc(t, output_size); 
-                t = aggregation(t, NORM_SUM);    
+                //t = fc(t, output_size); 
+                //t = aggregation(t, NORM_SUM);    
 
-                //if (i == 0) {
-                //    t = fc(t, output_size); 
-                //    t = aggregation(t, NORM_SUM);    
-                //} else {
-                //    t = aggregation(t, NORM_SUM);    
-                //    t = fc(t, output_size); 
-                //}
+                if (i == 0) {
+                    // do the dimention reduction first
+                    // otherwise, the aggregation operator has to deal with 
+                    // feature vectors longer than 1000
+                    t = fc(t, output_size); 
+                    t = aggregation(t, NORM_SUM);    
+                } else {
+                    // the ordering is important
+                    // the output of the aggregation operation is approximate
+                    // should not be directly followed by a non-linear 
+                    // activation operator
+                    t = aggregation(t, NORM_SUM);    
+                    t = fc(t, output_size); 
+                }
 
                 if (i == num_layers_ - 1) { 
                     t = softmax(t); 

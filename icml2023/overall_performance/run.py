@@ -5,7 +5,7 @@ import random
 datasets = [
         "ogbn_products",
         #"ogbn_arxiv",
-        "reddit",
+        #"reddit",
         ]
 settings = {
         "ogbn_products": {"layers": 6, "hunit": 64, "lr": 0.003, "decay": 0, "dropout": 0.3, "epoch": 1500},
@@ -13,7 +13,7 @@ settings = {
         "reddit": {"layers": 6, "hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5, "epoch": 5000},
         }
 num_runs = 5 
-num_gpus = 3 # TODO
+num_gpus = 6
 scale = 1.
 chunks = num_gpus * 4 
 
