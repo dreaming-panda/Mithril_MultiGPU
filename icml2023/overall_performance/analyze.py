@@ -9,7 +9,7 @@ datasets = [
         "reddit",
         ]
 num_gpus = {
-        "ogbn_products": [3],
+        "ogbn_products": [3, 6],
         "ogbn_arxiv": [4, 8],
         "reddit": [3, 6]
         }
