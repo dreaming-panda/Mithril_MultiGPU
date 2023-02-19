@@ -15,7 +15,7 @@
 #define USE_RDMA
 
 #define REVERSE_PERIOD (20)
-#define EVAL_FREQUENCY (5)
+#define EVAL_FREQUENCY (10)
 
 //#define NUM_CHUNKS (16)
 //#define SCALE_DOWN_FACTOR (0.01)

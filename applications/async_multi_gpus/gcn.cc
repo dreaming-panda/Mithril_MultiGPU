@@ -57,13 +57,16 @@ class GCN: public AbstractApplication {
                     output_size = num_classes_;
                 }
 
-                if (i == 0) {
-                    t = fc(t, output_size); 
-                    t = aggregation(t, NORM_SUM);    
-                } else {
-                    t = aggregation(t, NORM_SUM);    
-                    t = fc(t, output_size); 
-                }
+                t = fc(t, output_size); 
+                t = aggregation(t, NORM_SUM);    
+
+                //if (i == 0) {
+                //    t = fc(t, output_size); 
+                //    t = aggregation(t, NORM_SUM);    
+                //} else {
+                //    t = aggregation(t, NORM_SUM);    
+                //    t = fc(t, output_size); 
+                //}
 
                 if (i == num_layers_ - 1) { 
                     t = softmax(t); 
