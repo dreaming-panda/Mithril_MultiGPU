@@ -688,10 +688,12 @@ void SingleNodeExecutionEngineGPU::model_inference(AbstractApplication * applica
             idx ++;
         }
         execute_computation_graph_forward(operators); // the forward pass (activation)
+        double loss = loss_->get_loss(application->get_output_tensor(), std_tensor);
         double train_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,0);
         double valid_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,1);
         double test_accuracy = calculate_accuracy_mask(application->get_output_tensor(), std_tensor,2);
-        printf("Version %d\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", version, train_accuracy, valid_accuracy, test_accuracy);
+        printf("Version %d\tLoss %.4f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", 
+                version, loss, train_accuracy, valid_accuracy, test_accuracy);
         if (valid_accuracy > highest_valid_acc) {
             highest_valid_acc = valid_accuracy;
             target_test_acc = test_accuracy;
