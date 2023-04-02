@@ -643,10 +643,19 @@ void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * s
 
 
     VertexId num_vertices = output_resource->get_num_vertices();
-   
+
     int output_size = output_tensor->dims[1];
-    LaunchCalculateGradientsMaskWithStart(d_std_data + left * output_size, d_output_data + left * output_size, 
-    d_output_grad + left * output_size, right - left, output_size, left
+    DataType * adjusted_std_data = d_std_data + left * output_size;
+    DataType * adjusted_output_data = d_output_data + left * output_size;
+    DataType * adjusted_output_grad = d_output_grad + left * output_size;
+
+    if (output_tensor->is_grad_transient) {
+        adjusted_output_grad = d_output_grad; // only a chunk of gradient memory is allocated
+    }
+   
+    LaunchCalculateGradientsMaskWithStart(
+            adjusted_std_data, adjusted_output_data, 
+            adjusted_output_grad, right - left, output_size, left
     );
 
     //DataType grads[(right - left) * output_size]; 

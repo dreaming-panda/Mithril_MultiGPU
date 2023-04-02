@@ -1451,9 +1451,10 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
         CUDAOperatorsAndTensorsManager * op_ten_manager, 
         CUDAVertexIdTranslationTable * vid_translation,
         int local_op_begin_idx, int local_op_end_idx
-        ): op_ten_manager_(op_ten_manager), vid_translation_(vid_translation) {
+        ): op_ten_manager_(op_ten_manager), vid_translation_(vid_translation), max_chunk_size_(max_chunk_size) {
     // locate all local vertex tensors first
     local_tensors_.clear();
+
     for (int op_idx = local_op_begin_idx; op_idx < local_op_end_idx; ++ op_idx) {
         Operator * op = op_ten_manager_->get_operator(op_idx);
         assert(op != NULL);
@@ -1468,10 +1469,16 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
                     LocalVertexTensor local_tensor;
                     local_tensor.tensor = input_tensor;
                     local_tensor.type = 0;
+                    local_tensor.is_mirror_tensor = true;
                     local_tensors_[input_tensor] = local_tensor;
                 }
             }
         }
+    }
+
+    for (int op_idx = local_op_begin_idx; op_idx < local_op_end_idx; ++ op_idx) {
+        Operator * op = op_ten_manager_->get_operator(op_idx);
+        assert(op != NULL);
         // add all output tensors
         int num_output_tensors = op->get_num_output_tensors();
         for (int i = 0; i < num_output_tensors; ++ i) {
@@ -1483,11 +1490,13 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
                     LocalVertexTensor local_tensor;
                     local_tensor.tensor = output_tensor;
                     local_tensor.type = 0;
+                    local_tensor.is_mirror_tensor = false;
                     local_tensors_[output_tensor] = local_tensor;
                 }
             }
         }
     }
+
     // determine the type of each local vertex tensor
     for (int op_idx = local_op_begin_idx; op_idx < local_op_end_idx; ++ op_idx) {
         Operator * op = op_ten_manager_->get_operator(op_idx);
@@ -1519,8 +1528,10 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
         VertexId num_master_vertices = vid_translation_->get_num_master_vertices();
         VertexId num_incoming_mirror_vertices = vid_translation_->get_num_incoming_mirror_vertices();
         VertexId num_outgoing_mirror_vertices = vid_translation_->get_num_outgoing_mirror_vertices();
+
         // allocate memory for the activation data
         if ((lvt.type & InputToAggregation) != 0) {
+            // need to allocate the tensor in whole 
             // mirror data is needed
             size_t num_elements = lvt.num_elements_per_vertex * (
                     num_master_vertices + num_incoming_mirror_vertices
@@ -1534,12 +1545,28 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // mirror data isn't needed
             size_t num_elements = lvt.num_elements_per_vertex * 
                 num_master_vertices;
+
+            // determine whether we can only allocate a chunk of memory (a partial tensor)
+            // i.e., recomputable 
+            // conditions:
+            // 1) the users mark the operator as transient (ok to recompute as it is lightweighted)
+            // 2) the tensor is produced by a local operator (is able to recompute it)
+            // 3) the tensor is NOT the input to a aggregation operator
+            //if (lvt.tensor->op->get_is_transient() &&  TODO
+            //        lvt.tensor.is_mirror_tensor == false) {
+            //    // only allocate the memory sufficient to store a chunk (rather than for all vertices)
+            //    num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
+            //    // also mark the tensor 
+            //    lvt.tensor->is_data_transient = true;
+            //}
+
             //lvt.data = new DataType [num_elements];
             AllocateCUDAMemory<DataType>(&lvt.data, num_elements, __FILE__, __LINE__);
             assert(lvt.data != NULL);
             //memset(lvt.data, 0, sizeof(DataType) * num_elements);
             SetCUDAMemory<DataType>(lvt.data, 0, num_elements, __FILE__, __LINE__);
         }
+
         // allocate memory for the gradient data
         if ((lvt.type & OutputFromAggregation) != 0) {
             // mirror grad is needed
@@ -1555,6 +1582,14 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // mirro grad isn't needed
             size_t num_elements = lvt.num_elements_per_vertex * 
                 num_master_vertices;
+            // determine whether we can only allocate a chunk of memory (a partial tensor)
+            // conditions:
+            // 1) not the output tensor of an aggregation operator
+            {
+                num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
+                lvt.tensor->is_grad_transient = true;
+            }
+
             // lvt.grad = new DataType [num_elements];
             // assert(lvt.grad != NULL);
             // memset(lvt.grad, 0, sizeof(DataType) * num_elements);
@@ -4248,10 +4283,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::set_up_tensor_resourses() {
                 assert(grad != NULL);
                 resource->set_gpu_data_from_gpu(data);
                 resource->set_gpu_grad_from_gpu(grad);
-                 DataType * cpu_data = new DataType[num_elements];
-                 DataType * cpu_grad = new DataType[num_elements];
-                 resource->set_cpu_data(cpu_data);
-                 resource->set_cpu_grad(cpu_grad);
+                DataType * cpu_data = new DataType[num_elements];
+                DataType * cpu_grad = new DataType[num_elements];
+                resource->set_cpu_data(cpu_data);
+                resource->set_cpu_grad(cpu_grad);
             }
         } else if (tensor->type == NORMAL_TENSOR) {
             assert(tensor->op->get_type() == OPERATOR_WEIGHT);
@@ -4437,16 +4472,20 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             graph_structure_, 
             partitioning.partition_vid_begin[node_id], partitioning.partition_vid_end[node_id]
             );
-    
+
+    VertexId max_chunk_size = (graph_structure_->get_num_global_vertices() + user_specified_num_chunks_ - 1) /
+        user_specified_num_chunks_;
     vtensor_manager_ = new CUDAVertexTensorDataGradManager(
             op_ten_manager_, vid_translation_,
-            partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id]
+            partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id],
+            max_chunk_size
             );
    
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //graph_structure_->get_num_global_vertices()
-             (graph_structure_->get_num_global_vertices() + user_specified_num_chunks_ - 1) / user_specified_num_chunks_ 
+             //(graph_structure_->get_num_global_vertices() + user_specified_num_chunks_ - 1) / user_specified_num_chunks_ 
+             max_chunk_size
             //graph_structure_->get_num_global_vertices() / 4
             );
     data_dependencies_tracker_ = new CUDADataDependenciesTracker(

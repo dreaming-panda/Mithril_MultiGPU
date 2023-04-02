@@ -59,6 +59,8 @@ struct Tensor {
     int dims[MAX_NUM_DIM];
     Operator * op;
     int idx;
+    bool is_data_transient; // transient: need to be recomputed
+    bool is_grad_transient; // only need to store the grad of a single chunk
 
     // the resource data managed by the execution engine
     AbstractTensorResource * resource;
@@ -71,20 +73,22 @@ class Operator {
         int num_input_tensors_;
         int num_output_tensors_;
         OperatorType type_;
+        bool is_transient_;
 
         void init_output_tensors();
 
     public:
-        Operator(int num_output_tensors, OperatorType type);
-        Operator(Tensor * t, int num_output_tensors, OperatorType type);
-        Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType type);
-        Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, OperatorType type);
+        Operator(int num_output_tensors, OperatorType type, bool is_transient = false);
+        Operator(Tensor * t, int num_output_tensors, OperatorType type, bool is_transient = false);
+        Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType type, is_transient = false);
+        Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, OperatorType type, is_transient = false);
         virtual ~Operator() {}
         Tensor * get_output_tensor(int idx);
         int get_num_output_tensors();
         Tensor * get_input_tensor(int idx);
         int get_num_input_tensors();
         OperatorType get_type();
+        bool get_is_transient() {return is_transient_};
 };
 
 // the input operator outputs a single vertex tensor
@@ -99,7 +103,7 @@ class InputOperator: public Operator {
 
 class ReluOperator: public Operator {
     public:
-        ReluOperator(Tensor * t);
+        ReluOperator(Tensor * t, bool is_transient = false);
         ~ReluOperator() {}
 };
 
@@ -124,7 +128,7 @@ class MatmulAddOperator: public Operator{
 };
 class SoftmaxOperator: public Operator {
     public:
-        SoftmaxOperator(Tensor * t);
+        SoftmaxOperator(Tensor * t, bool is_transient = false);
         ~SoftmaxOperator() {}
 };
 class AddOperator: public Operator {
@@ -142,7 +146,7 @@ class IDentityOperator: public Operator {
 };
 class DropoutOperator: public Operator {
     public:
-        DropoutOperator(Tensor * a, double dropout_rate);
+        DropoutOperator(Tensor * a, double dropout_rate, bool is_transient = false);
         ~DropoutOperator() {}
         double dropout_rate_;
 };

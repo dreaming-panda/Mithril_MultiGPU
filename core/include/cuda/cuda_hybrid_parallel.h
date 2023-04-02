@@ -445,17 +445,20 @@ class CUDAVertexTensorDataGradManager {
             DataType * grad;
             size_t num_elements_per_vertex;
             int type;
+            bool is_mirror_tensor;
         };
 
         CUDAOperatorsAndTensorsManager * op_ten_manager_;
         CUDAVertexIdTranslationTable * vid_translation_;
         std::map<Tensor*, LocalVertexTensor> local_tensors_;
+        VertexId max_chunk_size_;
 
     public:
         CUDAVertexTensorDataGradManager(
                 CUDAOperatorsAndTensorsManager * op_ten_manager, 
                 CUDAVertexIdTranslationTable * vid_translation,
-                int local_op_begin_idx, int local_op_end_idx
+                int local_op_begin_idx, int local_op_end_idx,
+                VertexId max_chunk_size
                 );
         ~CUDAVertexTensorDataGradManager();
 
@@ -492,6 +495,9 @@ class CUDAVertexTensorDataGradManager {
             num_elements = local_tensor.num_elements_per_vertex * (
                     local_vid_end - local_vid_begin
                     );
+            if (tensor->is_grad_transient) {
+                grad = local_tensor.grad;
+            }
         }
         inline void get_incoming_mirror_vertices_data(
                 Tensor * tensor,

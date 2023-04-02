@@ -49,6 +49,13 @@ class GCN: public AbstractApplication {
         }
         ~GCN() {}
 
+        // the purpose is to reduce the memory consumption
+        // 1) not store the activation of some tensors => recomputation when backwarding
+        //      a) lightweight to recompute (avoid recomputing feed-forward or aggregation)
+        //      b) the tensor is not the input of an aggregation op (i.e., need to store the embeddings of all vertices)
+        // 2) not allocate space enough to store all gradients of some tensor => as gradients can be used and discarded
+        //      a) the tensor is not the output of an aggregation op
+
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
             for (int i = 0; i < num_layers_; ++ i) {
@@ -75,11 +82,13 @@ class GCN: public AbstractApplication {
                     t = fc(t, output_size); 
                 }
 
+                // NOTE: the user indication (is_transient) is just a hint
+                // the system right still store the whole tensor for some performance reason
                 if (i == num_layers_ - 1) { 
-                    t = softmax(t); 
+                    t = softmax(t, true); // enable recomputation for softmax
                 } else {
-                    t = relu(t);  
-                    t = dropout(t, dropout_rate_); 
+                    t = relu(t, true); // enable recomputation for relu
+                    t = dropout(t, dropout_rate_, true);  // enable recomputation for dropout
                 }
             }
             return t;

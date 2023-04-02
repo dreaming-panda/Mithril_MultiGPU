@@ -245,6 +245,7 @@ void CrossEntropyLossGPU::LaunchCalculateGradientsMask(DataType * std_data, Data
     CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, gntrain,outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
     cudaStreamSynchronize(0);
 }
+
 void CrossEntropyLossGPU::LaunchCalculateGradientsMaskWithStart(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize, int start)
 {
     //printf("LaunchCalculateGradientsMaskWithStart invoked, ntrain: %d, gntrain: %d\n",
@@ -256,6 +257,7 @@ void CrossEntropyLossGPU::LaunchCalculateGradientsMaskWithStart(DataType * std_d
     //CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, ntrain, outputsize, ThreadNumber, BlockNumber, per_thread_nodes); FIXME
     cudaStreamSynchronize(0);
 }
+
 double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type){
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;

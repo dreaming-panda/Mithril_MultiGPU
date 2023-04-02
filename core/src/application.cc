@@ -66,8 +66,8 @@ int AbstractApplication::get_num_features() {
     return num_features_;
 }
 
-Tensor * AbstractApplication::relu(Tensor * t) {
-    Operator * relu = new ReluOperator(t);
+Tensor * AbstractApplication::relu(Tensor * t, bool is_transient) {
+    Operator * relu = new ReluOperator(t, is_transient);
     operators_.push_back(relu);
     return relu->get_output_tensor(0);
 }
@@ -112,8 +112,8 @@ Tensor * AbstractApplication::fc(Tensor * a, int num_hunits, std::string activat
     return t;
 }
 
-Tensor * AbstractApplication::softmax(Tensor * t) {
-    Operator * softmax = new SoftmaxOperator(t);
+Tensor * AbstractApplication::softmax(Tensor * t, bool is_transient) {
+    Operator * softmax = new SoftmaxOperator(t, is_transient);
     operators_.push_back(softmax);
     return softmax->get_output_tensor(0);
 }
@@ -134,8 +134,8 @@ Tensor * AbstractApplication::add(Tensor * a, Tensor * b, DataType alpha, DataTy
     operators_.push_back(add);
     return add->get_output_tensor(0);
 }
-Tensor * AbstractApplication::dropout(Tensor * a, double dropout_rate) {
-    Operator * dropout = new DropoutOperator(a, dropout_rate);
+Tensor * AbstractApplication::dropout(Tensor * a, double dropout_rate, bool is_transient) {
+    Operator * dropout = new DropoutOperator(a, dropout_rate, is_transient);
     operators_.push_back(dropout);
     return dropout->get_output_tensor(0);
 }

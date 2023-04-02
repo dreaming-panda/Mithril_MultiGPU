@@ -55,20 +55,23 @@ void Operator::init_output_tensors() {
         output_tensors_[i].op = this;
         output_tensors_[i].idx = i;
         output_tensors_[i].resource = NULL;
+        output_tensors_[i].is_data_transient = false;
+        output_tensors_[i].is_grad_transient = false;
     }
 }
 
-Operator::Operator(int num_output_tensors, OperatorType type) {
+Operator::Operator(int num_output_tensors, OperatorType type, bool is_transient) {
     assert(num_output_tensors >= 1);
 
     num_input_tensors_ = 0;
     num_output_tensors_ = num_output_tensors;
     type_ = type;
+    is_transient_ = is_transient;
 
     init_output_tensors();
 }
 
-Operator::Operator(Tensor * t, int num_output_tensors, OperatorType type) {
+Operator::Operator(Tensor * t, int num_output_tensors, OperatorType type, bool is_transient) {
     assert(num_output_tensors >= 1);
     assert(t != NULL);
 
@@ -76,11 +79,12 @@ Operator::Operator(Tensor * t, int num_output_tensors, OperatorType type) {
     num_output_tensors_ = num_output_tensors;
     input_tensors_[0] = t;
     type_ = type;
+    is_transient_ = is_transient;
 
     init_output_tensors();
 }
 
-Operator::Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType type) {
+Operator::Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType type, bool is_transient) {
     assert(num_output_tensors >= 1);
     assert(a != NULL);
     assert(b != NULL);
@@ -90,11 +94,12 @@ Operator::Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType 
     input_tensors_[0] = a;
     input_tensors_[1] = b;
     type_ = type;
+    is_transient_ = is_transient;
 
     init_output_tensors();
 }
 
-Operator::Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, OperatorType type) {
+Operator::Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, OperatorType type, bool is_transient) {
     assert(num_output_tensors >= 1);
     assert(a != NULL);
     assert(b != NULL);
@@ -106,6 +111,7 @@ Operator::Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, O
     input_tensors_[1] = b;
     input_tensors_[2] = c;
     type_ = type;
+    is_transient_ = is_transient;
 
     init_output_tensors();
 }
