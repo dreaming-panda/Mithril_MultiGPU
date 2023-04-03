@@ -4090,6 +4090,8 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
         void * reserve_space = NULL;
         checkCUDA(cudaMalloc(&reserve_space, reserve_space_size));
         assert(reserve_space);
+        //printf("The dropout reserved state is %.4f of the activation space.\n",
+        //        1. * reserve_space_size / (sizeof(DataType) * (end_idx - start_idx)));
         // cache the result
         DropoutOpState dropout_op_state;
         dropout_op_state.dropout_descriptor = dropout_descriptor;
