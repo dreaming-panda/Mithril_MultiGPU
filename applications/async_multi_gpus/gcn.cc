@@ -85,7 +85,7 @@ class GCN: public AbstractApplication {
                 // NOTE: the user indication (is_transient) is just a hint
                 // the system right still store the whole tensor for some performance reason
                 if (i == num_layers_ - 1) { 
-                    t = softmax(t, true); // enable recomputation for softmax
+                    t = softmax(t); 
                 } else {
                     t = relu(t, true); // enable recomputation for relu
                     t = dropout(t, dropout_rate_, true);  // enable recomputation for dropout

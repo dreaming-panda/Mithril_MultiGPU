@@ -652,6 +652,9 @@ void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * s
     if (output_tensor->is_grad_transient) {
         adjusted_output_grad = d_output_grad; // only a chunk of gradient memory is allocated
     }
+    if (output_tensor->is_data_transient) {
+        adjusted_output_data = d_output_data;
+    }
    
     LaunchCalculateGradientsMaskWithStart(
             adjusted_std_data, adjusted_output_data, 

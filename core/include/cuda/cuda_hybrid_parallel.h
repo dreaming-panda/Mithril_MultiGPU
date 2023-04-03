@@ -479,6 +479,9 @@ class CUDAVertexTensorDataGradManager {
             num_elements = local_tensor.num_elements_per_vertex * (
                     local_vid_end - local_vid_begin
                     );
+            if (tensor->is_data_transient) {
+                data = local_tensor.data;
+            }
         }
         inline void get_master_vertices_grad(
                 Tensor * tensor,

@@ -1553,13 +1553,13 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // 1) the users mark the operator as transient (ok to recompute as it is lightweighted)
             // 2) the tensor is produced by a local operator (is able to recompute it)
             // 3) the tensor is NOT the input to a aggregation operator
-            //if (lvt.tensor->op->get_is_transient() &&  TODO
-            //        lvt.tensor.is_mirror_tensor == false) {
-            //    // only allocate the memory sufficient to store a chunk (rather than for all vertices)
-            //    num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
-            //    // also mark the tensor 
-            //    lvt.tensor->is_data_transient = true;
-            //}
+            if (lvt.tensor->op->get_is_transient() &&  
+                    lvt.tensor.is_mirror_tensor == false) {
+                // only allocate the memory sufficient to store a chunk (rather than for all vertices)
+                num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
+                // also mark the tensor 
+                lvt.tensor->is_data_transient = true;
+            }
 
             //lvt.data = new DataType [num_elements];
             AllocateCUDAMemory<DataType>(&lvt.data, num_elements, __FILE__, __LINE__);
@@ -3920,6 +3920,55 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
 
     // backward the gradients
     compute_time_ -= get_time();
+    // recomputation
+    for (int op_idx = op_idx_begin; op_idx < op_idx_end; ++ op_idx) {
+        Operator * op = op_ten_manager->get_operator(op_idx);
+        assert(op != NULL);
+        bool need_recomputation = false;
+        int num_output_tensors = op->get_num_output_tensors();
+        for (int i = 0; i < num_output_tensors; ++ i) {
+            if (op->get_output_tensor(i)->is_data_transient) {
+                need_recomputation = true;
+                break;
+            }
+        }
+        if (! need_recomputation) {
+            continue;
+        }
+        switch (op->get_type()) {
+            case OPERATOR_INPUT:
+                // do nothing
+                break;
+            case OPERATOR_WEIGHT:
+                // do nothing
+                break;
+            case OPERATOR_ADD:
+                executor_->add_forward((AddOperator*)op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_RELU:
+                executor_->relu_forward((ReluOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_MATMUL:
+                executor_->matmul_forward((MatmulOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_MATMULADD:
+                executor_->matmuladd_forward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_SOFTMAX:
+                executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_AGGREGATION:
+                executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
+                break;
+            default:
+                fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
+                exit(-1);
+        }
+    }
+    // doing the actual backwarding
     for (int op_idx = op_idx_end - 1; op_idx >= op_idx_begin; -- op_idx) {
         if (! backward_operator_mask_[op_idx]) {
             continue;
