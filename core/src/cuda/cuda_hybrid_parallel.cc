@@ -1450,7 +1450,8 @@ CUDAVertexIdTranslationTable::~CUDAVertexIdTranslationTable() {
 CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
         CUDAOperatorsAndTensorsManager * op_ten_manager, 
         CUDAVertexIdTranslationTable * vid_translation,
-        int local_op_begin_idx, int local_op_end_idx
+        int local_op_begin_idx, int local_op_end_idx,
+        VertexId max_chunk_size
         ): op_ten_manager_(op_ten_manager), vid_translation_(vid_translation), max_chunk_size_(max_chunk_size) {
     // locate all local vertex tensors first
     local_tensors_.clear();

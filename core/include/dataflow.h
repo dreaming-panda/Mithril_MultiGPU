@@ -80,15 +80,15 @@ class Operator {
     public:
         Operator(int num_output_tensors, OperatorType type, bool is_transient = false);
         Operator(Tensor * t, int num_output_tensors, OperatorType type, bool is_transient = false);
-        Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType type, is_transient = false);
-        Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, OperatorType type, is_transient = false);
+        Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType type, bool is_transient = false);
+        Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, OperatorType type, bool is_transient = false);
         virtual ~Operator() {}
         Tensor * get_output_tensor(int idx);
         int get_num_output_tensors();
         Tensor * get_input_tensor(int idx);
         int get_num_input_tensors();
         OperatorType get_type();
-        bool get_is_transient() {return is_transient_};
+        bool get_is_transient() {return is_transient_;}
 };
 
 // the input operator outputs a single vertex tensor

@@ -2675,7 +2675,7 @@ void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op, VertexId left, 
          adjusted_output_grad,
          M,
          &alpha,
-         adjusted_input_grad_0.
+         adjusted_input_grad_0,
          K
      );
      

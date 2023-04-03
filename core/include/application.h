@@ -66,17 +66,17 @@ class AbstractApplication {
         // 1) relu
         // 2) softmax
         // 3) dropout
-        Tensor * relu(Tensor * t, is_transient = false);
+        Tensor * relu(Tensor * t, bool is_transient = false);
         Tensor * weight(int length);
         Tensor * weight(int height, int width);
         Tensor * fc(Tensor * a, int num_hunits, std::string activation_fun = "None");
         Tensor * matmul(Tensor * a, Tensor * b);
         Tensor * matmuladd(Tensor * a, Tensor * b, DataType alpha, DataType beta);
-        Tensor * softmax(Tensor * t, is_transient = false);
+        Tensor * softmax(Tensor * t, bool is_transient = false);
         Tensor * aggregation(Tensor * t, AggregationType type);
         Tensor * identity(int height, int width);
         Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta);
-        Tensor * dropout(Tensor * a, double dropout_rate, is_transient = false);
+        Tensor * dropout(Tensor * a, double dropout_rate, bool is_transient = false);
     public:
         const std::vector<Operator*>& get_operators();
         AbstractApplication(int num_features);

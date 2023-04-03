@@ -150,7 +150,7 @@ InputOperator::InputOperator(int feature_size): Operator(1, OPERATOR_INPUT) {
 
 // ReluOperator
 
-ReluOperator::ReluOperator(Tensor * t): Operator(t, 1, OPERATOR_RELU) {
+ReluOperator::ReluOperator(Tensor * t, bool is_transient): Operator(t, 1, OPERATOR_RELU, is_transient) {
     assert(t->type == VERTEX_TENSOR);
     assert(t->num_dims == 2);
     assert(t->dims[0] == -1);
@@ -222,7 +222,7 @@ MatmulAddOperator::MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, Dat
 }
 // SoftmaxOperator
 
-SoftmaxOperator::SoftmaxOperator(Tensor * t): Operator(t, 1, OPERATOR_SOFTMAX) {
+SoftmaxOperator::SoftmaxOperator(Tensor * t, bool is_transient): Operator(t, 1, OPERATOR_SOFTMAX, is_transient) {
     assert(t->type == VERTEX_TENSOR);
     assert(t->num_dims == 2);
     assert(t->dims[0] == -1);
@@ -296,8 +296,8 @@ AggregationType AggregationOperator::get_aggregation_type() {
 
 // DropoutOperator
 
-DropoutOperator::DropoutOperator(Tensor * a, double dropout_rate): 
-    Operator(a, 1, OPERATOR_DROPOUT), dropout_rate_(dropout_rate) {
+DropoutOperator::DropoutOperator(Tensor * a, double dropout_rate, bool is_transient): 
+    Operator(a, 1, OPERATOR_DROPOUT, is_transient), dropout_rate_(dropout_rate) {
     assert(a->type == VERTEX_TENSOR);
     assert(a->num_dims == 2);
     assert(a->dims[0] == -1);
