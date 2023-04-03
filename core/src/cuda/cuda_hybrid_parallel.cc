@@ -1586,7 +1586,7 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // determine whether we can only allocate a chunk of memory (a partial tensor)
             // conditions:
             // 1) not the output tensor of an aggregation operator
-            {
+            {   
                 num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
                 lvt.tensor->is_grad_transient = true;
             }
