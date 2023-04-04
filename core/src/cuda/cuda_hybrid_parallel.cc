@@ -1553,8 +1553,8 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // 1) the users mark the operator as transient (ok to recompute as it is lightweighted)
             // 2) the tensor is produced by a local operator (is able to recompute it)
             // 3) the tensor is NOT the input to a aggregation operator
-            if (lvt.tensor->op->get_is_transient() &&  
-                    lvt.tensor.is_mirror_tensor == false) {
+            if (lvt.tensor->op->get_is_transient() &&   
+                    lvt.is_mirror_tensor == false) {
                 // only allocate the memory sufficient to store a chunk (rather than for all vertices)
                 num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
                 // also mark the tensor 
@@ -1586,7 +1586,7 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // determine whether we can only allocate a chunk of memory (a partial tensor)
             // conditions:
             // 1) not the output tensor of an aggregation operator
-            {   
+            {    
                 num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
                 lvt.tensor->is_grad_transient = true;
             }
@@ -3922,7 +3922,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     compute_time_ -= get_time();
     // recomputation
     for (int op_idx = op_idx_begin; op_idx < op_idx_end; ++ op_idx) {
-        Operator * op = op_ten_manager->get_operator(op_idx);
+        Operator * op = op_ten_manager_->get_operator(op_idx);
         assert(op != NULL);
         bool need_recomputation = false;
         int num_output_tensors = op->get_num_output_tensors();

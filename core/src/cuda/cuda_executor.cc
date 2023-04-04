@@ -2160,6 +2160,15 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, V
     DataType * d_input_data_1 = input_tensor_resource_1->get_gpu_data();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
 
+    size_t K = input_tensor_0->dims[1];
+    assert(input_tensor_1->dims[0] == K);
+    size_t M = input_tensor_1->dims[1];
+    size_t N = right - left;
+    int input_start_idx = left * K;
+    int output_start_idx = left * M;
+    float alpha = 1.0;
+    float beta = 0.0;
+
     DataType * adjusted_input_data_0 = d_input_data_0 + input_start_idx;
     DataType * adjusted_output_data = d_output_data + output_start_idx;
 
@@ -2170,14 +2179,6 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, V
         adjusted_output_data = d_output_data;
     }
 
-    size_t K = input_tensor_0->dims[1];
-    assert(input_tensor_1->dims[0] == K);
-    size_t M = input_tensor_1->dims[1];
-    size_t N = right - left;
-    int input_start_idx = left * K;
-    int output_start_idx = left * M;
-    float alpha = 1.0;
-    float beta = 0.0;
     cublasSgemm(
         *cublas_handle_,
         CUBLAS_OP_N,
@@ -2194,6 +2195,7 @@ void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op, VertexId left, V
         adjusted_output_data,
         M
     );
+
     #ifdef TIMETAG
     cudaStreamSynchronize(0);
      t += get_time();

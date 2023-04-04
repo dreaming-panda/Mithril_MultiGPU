@@ -1,5 +1,5 @@
 g002.anvil.rcac.purdue.edu
-Sun Apr  2 23:41:20 2023       
+Mon Apr  3 21:55:24 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -7,8 +7,8 @@ Sun Apr  2 23:41:20 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA A100-SXM...  On   | 00000000:81:00.0 Off |                    0 |
-| N/A   43C    P0    59W / 400W |      0MiB / 40960MiB |      0%      Default |
+|   0  NVIDIA A100-SXM...  On   | 00000000:01:00.0 Off |                    0 |
+| N/A   30C    P0    51W / 400W |      0MiB / 40960MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -28,278 +28,37 @@ Currently Loaded Modules:
 
  
 
+Consolidate compiler generated dependencies of target cudahelp
 [  4%] Built target context
-[ 15%] Built target parallel
+[ 17%] Built target parallel
 [ 19%] Built target core
-[ 20%] Building CXX object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o
-[ 21%] Linking CXX static library libcudahelp.a
 [ 39%] Built target cudahelp
-[ 40%] Linking CXX executable test_mpi_loader
-[ 44%] Linking CXX executable test_cuda_graph
-[ 44%] Linking CXX executable test_full_non_structual_graph
-[ 44%] Linking CXX executable test_nccl_mpi
-[ 47%] Linking CXX executable test_cuda
-[ 48%] Linking CXX executable test_cuda_data_compression
-[ 47%] Linking CXX executable test_hello_world
-[ 48%] Linking CXX executable test_graph
-[ 50%] Linking CXX executable test_mpi_combined
-[ 52%] Linking CXX executable test_nccl_thread
-[ 54%] Linking CXX executable test_cuda_model_parallel
-[ 56%] Linking CXX executable test_trivial
-[ 56%] Linking CXX executable test_mpi_gpu_hybrid
-[ 56%] Linking CXX executable test_mpi_non_structual_graph
-[ 64%] Linking CXX executable test_mpi_structual_graph
-[ 61%] Linking CXX executable test_single_node_training
-[ 61%] Linking CXX executable test_single_node_gpu_training
-[ 65%] Linking CXX executable test_mpi_gpu_model_parallel
-[ 65%] Linking CXX executable test_mpi_gpu_pipelined_model_parallel
-[ 65%] Linking CXX executable test_full_structual_graph
-[ 65%] Linking CXX executable test_cuda_pipeline_parallel
-[ 61%] Linking CXX executable test_mpi_model_parallel
-[ 61%] Linking CXX executable test_mpi_pipelined_model_parallel
-[ 65%] Linking CXX executable test_single_node_fullgpu_training
-[ 61%] Linking CXX executable estimate_comm_volume
-[ 69%] Linking CXX executable gcn_inference
-[ 69%] Linking CXX executable test_two_layer_hybrid_parallelism_designer
-[ 69%] Linking CXX executable gcn
-[ 69%] Linking CXX executable gcn
-[ 70%] Built target test_graph
-[ 71%] Built target test_cuda_graph
-[ 72%] Built target estimate_comm_volume
+[ 44%] Built target test_cuda_data_compression
+[ 48%] Built target test_cuda_graph
+[ 48%] Built target test_mpi_gpu_hybrid
+[ 56%] Built target test_trivial
+[ 56%] Built target test_cuda_pipeline_parallel
+[ 56%] Built target test_mpi_gpu_pipelined_model_parallel
+[ 62%] Built target test_nccl_thread
+[ 62%] Built target test_hello_world
+[ 67%] Built target test_mpi_gpu_model_parallel
+[ 67%] Built target test_mpi_non_structual_graph
+[ 67%] Built target test_mpi_combined
+[ 67%] Built target test_mpi_structual_graph
+[ 71%] Built target test_graph
+[ 75%] Built target test_cuda_model_parallel
 [ 75%] Built target test_cuda
-[ 75%] Built target test_full_structual_graph
-[ 77%] Built target test_single_node_training
-[ 77%] Built target test_mpi_loader
-[ 78%] Built target test_full_non_structual_graph
-[ 79%] Built target test_mpi_structual_graph
-[ 80%] Built target test_cuda_data_compression
-[ 81%] Built target test_hello_world
-[ 82%] Built target test_mpi_combined
-[ 83%] Built target test_trivial
-[ 84%] Built target test_single_node_gpu_training
-[ 86%] Built target test_mpi_non_structual_graph
-[ 86%] Built target test_mpi_pipelined_model_parallel
-[ 87%] Built target test_mpi_model_parallel
-[ 88%] Built target test_two_layer_hybrid_parallelism_designer
-[ 89%] Built target test_mpi_gpu_model_parallel
-[ 90%] Built target test_mpi_gpu_pipelined_model_parallel
-[ 91%] Built target test_mpi_gpu_hybrid
-[ 92%] Built target OSDI2023_SINGLE_NODE_gcn
-[ 93%] Built target test_single_node_fullgpu_training
-[ 94%] Built target OSDI2023_SINGLE_NODE_gcn_inference
-[ 95%] Built target test_cuda_pipeline_parallel
-[ 96%] Built target OSDI2023_MULTI_NODES_gcn
-[ 97%] Built target test_nccl_thread
-[ 98%] Built target test_nccl_mpi
-[100%] Built target test_cuda_model_parallel
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
-The number of GCN layers: 3
-The number of hidden units: 128
-The number of training epoches: 1000
-The number of startup epoches: 0
-Learning rate: 0.003000
-The partition strategy: model
-The dropout rate: 0.500
-The checkpointed weight file: /anvil/projects/x-cis220117/saved_weights_pipe
-The random seed: 3
-The scaling down factor of out-of-chunk gradients: 0.100000
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
-The number of GCN layers: 3
-The number of hidden units: 128
-The number of training epoches: 1000
-The number of startup epoches: 0
-Learning rate: 0.003000
-The partition strategy: model
-The dropout rate: 0.500
-The checkpointed weight file: /anvil/projects/x-cis220117/saved_weights_pipe
-The random seed: 3
-The scaling down factor of out-of-chunk gradients: 0.100000
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
-The number of GCN layers: 3
-The number of hidden units: 128
-The number of training epoches: 1000
-The number of startup epoches: 0
-Learning rate: 0.003000
-The partition strategy: model
-The dropout rate: 0.500
-The checkpointed weight file: /anvil/projects/x-cis220117/saved_weights_pipe
-The random seed: 3
-The scaling down factor of out-of-chunk gradients: 0.100000
-Initialized node 2 on machine g010.anvil.rcac.purdue.edu
-Initialized node 1 on machine g009.anvil.rcac.purdue.edu
-Initialized node 0 on machine g002.anvil.rcac.purdue.edu
-Building the CSR structure...
-Building the CSR structure...
-Building the CSR structure...
-        It takes 1.916 seconds.
-Building the CSC structure...
-        It takes 1.971 seconds.
-Building the CSC structure...
-        It takes 2.051 seconds.
-Building the CSC structure...
-        It takes 1.879 seconds.
-        It takes 1.936 seconds.
-        It takes 1.960 seconds.
-Building the Feature Vector...
-Building the Feature Vector...
-Building the Feature Vector...
-        It takes 0.681 seconds.
-Building the Label Vector...
-        It takes 0.649 seconds.
-Building the Label Vector...
-        It takes 0.676 seconds.
-Building the Label Vector...
-        It takes 0.346 seconds.
-Number of classes: 47
-Number of feature dimensions: 100
-Number of vertices: 2449029
-        It takes 0.367 seconds.
-Number of classes: 47
-Number of feature dimensions: 100
-Number of vertices: 2449029
-        It takes 0.379 seconds.
-Number of classes: 47
-Number of feature dimensions: 100
-Number of vertices: 2449029
-train nodes 196615, valid nodes 39323, test nodes 2213091
-Number of GPUs: 3
-GPU 0, layer [0, 1)
-GPU 1, layer [1, 2)
-GPU 2, layer [2, 3)
-WARNING: the current version only applies to linear GNN models!
-*** Node 1, starting model training...
-Number of operators: 15
-0 2449029 0 6
-0 2449029 6 11
-0 2449029 11 15
-Node 1, Pipeline Input Tensor: OPERATOR_DROPOUT
-Node 1, Pipeline Output Tensor: OPERATOR_DROPOUT
-*** Node 1 owns the partition [6, 11) x [0, 2449029)
-*** Node 1, constructing the helper classes...
-(Forwarding) Node 1 (fragment 0) depends on nodes: 0 (Tensor: 5)
-(Backwarding) Node 1 (fragment 0) depends on nodes: 2 (Tensor: 10)
-(I-link dependencies): node 1 should send activation to nodes: 2 (tensor: 10)
-(I-link dependencies): node 1 should receive activation from nodes: 0 (tensor: 5)
-(I-link dependencies): node 1 should send gradient to nodes:
-(I-link dependencies): node 1 should receive gradient from nodes:
-train nodes 196615, valid nodes 39323, test nodes 2213091
-Number of GPUs: 3
-GPU 0, layer [0, 1)
-GPU 1, layer [1, 2)
-GPU 2, layer [2, 3)
-WARNING: the current version only applies to linear GNN models!
-*** Node 0, starting model training...
-Number of operators: 15
-0 2449029 0 6
-0 2449029 6 11
-0 2449029 11 15
-Node 0, Pipeline Input Tensor: NULL
-Node 0, Pipeline Output Tensor: OPERATOR_DROPOUT
-*** Node 0 owns the partition [0, 6) x [0, 2449029)
-*** Node 0, constructing the helper classes...
-Operators:
-    Op 0: type OPERATOR_INPUT, output tensors: 0
-    Op 1: type OPERATOR_WEIGHT, output tensors: 1
-    Op 2: type OPERATOR_MATMUL, output tensors: 2
-    Op 3: type OPERATOR_AGGREGATION, output tensors: 3
-    Op 4: type OPERATOR_RELU, output tensors: 4
-    Op 5: type OPERATOR_DROPOUT, output tensors: 5
-    Op 6: type OPERATOR_AGGREGATION, output tensors: 6
-    Op 7: type OPERATOR_WEIGHT, output tensors: 7
-    Op 8: type OPERATOR_MATMUL, output tensors: 8
-    Op 9: type OPERATOR_RELU, output tensors: 9
-    Op 10: type OPERATOR_DROPOUT, output tensors: 10
-    Op 11: type OPERATOR_AGGREGATION, output tensors: 11
-    Op 12: type OPERATOR_WEIGHT, output tensors: 12
-    Op 13: type OPERATOR_MATMUL, output tensors: 13
-    Op 14: type OPERATOR_SOFTMAX, output tensors: 14
-Boundaries: 0 0 0 2449029 2449029 2449029
-Fragments: [0, 2449029)
-Chunks (number of global chunks: 12): 0-[0, 204086) 1-[204086, 408172) 2-[408172, 612258) 3-[612258, 816344) 4-[816344, 1020430) 5-[1020430, 1224516) 6-[1224516, 1428602) 7-[1428602, 1632688) 8-[1632688, 1836774) ... 11-[2244946, 2449029)
-(Forwarding) Node 0 (fragment 0) depends on nodes:
-(Backwarding) Node 0 (fragment 0) depends on nodes: 1 (Tensor: 5)
-(I-link dependencies): node 0 should send activation to nodes: 1 (tensor: 5)
-(I-link dependencies): node 0 should receive activation from nodes:
-(I-link dependencies): node 0 should send gradient to nodes:
-(I-link dependencies): node 0 should receive gradient from nodes:
-2449029, 126167053, 126167053
-Number of vertices per chunk: 204086
-2449029, 126167053, 126167053
-Number of vertices per chunk: 204086
-train nodes 196615, valid nodes 39323, test nodes 2213091
-Number of GPUs: 3
-GPU 0, layer [0, 1)
-GPU 1, layer [1, 2)
-GPU 2, layer [2, 3)
-WARNING: the current version only applies to linear GNN models!
-*** Node 2, starting model training...
-Number of operators: 15
-0 2449029 0 6
-0 2449029 6 11
-0 2449029 11 15
-Node 2, Pipeline Input Tensor: OPERATOR_DROPOUT
-Node 2, Pipeline Output Tensor: NULL
-*** Node 2 owns the partition [11, 15) x [0, 2449029)
-*** Node 2, constructing the helper classes...
-(Forwarding) Node 2 (fragment 0) depends on nodes: 1 (Tensor: 10)
-(Backwarding) Node 2 (fragment 0) depends on nodes:
-(I-link dependencies): node 2 should send activation to nodes:
-(I-link dependencies): node 2 should receive activation from nodes: 1 (tensor: 10)
-(I-link dependencies): node 2 should send gradient to nodes:
-(I-link dependencies): node 2 should receive gradient from nodes:
-2449029, 126167053, 126167053
-Number of vertices per chunk: 204086
-csr in-out ready !*** Node 0, setting up some other necessary information...
-csr in-out ready !*** Node 2, setting up some other necessary information...
-csr in-out ready !*** Node 1, setting up some other necessary information...
-*** Node 0, starting the helper threads...
-*** Node 1, starting the helper threads...
-*** Node 2, starting the helper threads...
-+++++++++ Node 1 initializing the weights for op[6, 11)...
-+++++++++ Node 1, mapping weight op 7
-+++++++++ Node 2 initializing the weights for op[11, 15)...
-+++++++++ Node 2, mapping weight op 12
-+++++++++ Node 0 initializing the weights for op[0, 6)...
-+++++++++ Node 0, mapping weight op 1
-RANDOMLY DISPATCH THE CHUNKS...
-*** Node 0, starting task scheduling...
-
-
-
-The learning rate specified by the user: 0.003000000
-*** Node 2, starting task scheduling...
-The learning rate specified by the user: 0.003000000
-*** Node 1, starting task scheduling...
-The learning rate specified by the user: 0.003000000
-    Epoch 9:	Loss 1.76389	TrainAcc 0.5838	ValidAcc 0.5856	TestAcc 0.4588
-    Epoch 19:	Loss 1.02678	TrainAcc 0.7996	ValidAcc 0.7922	TestAcc 0.6257
-    Epoch 29:	Loss 0.73301	TrainAcc 0.8471	ValidAcc 0.8421	TestAcc 0.6711
-    Epoch 39:	Loss 0.63751	TrainAcc 0.8628	ValidAcc 0.8582	TestAcc 0.6853
-    Epoch 49:	Loss 0.56548	TrainAcc 0.8735	ValidAcc 0.8692	TestAcc 0.6957
-    Epoch 59:	Loss 0.52743	TrainAcc 0.8798	ValidAcc 0.8746	TestAcc 0.7002
-    Epoch 69:	Loss 0.49486	TrainAcc 0.8852	ValidAcc 0.8784	TestAcc 0.7045
-    Epoch 79:	Loss 0.47655	TrainAcc 0.8876	ValidAcc 0.8804	TestAcc 0.7076
-    Epoch 89:	Loss 0.45772	TrainAcc 0.8904	ValidAcc 0.8837	TestAcc 0.7131
-    Epoch 99:	Loss 0.44734	TrainAcc 0.8928	ValidAcc 0.8843	TestAcc 0.7155
-    Epoch 109:	Loss 0.43498	TrainAcc 0.8948	ValidAcc 0.8876	TestAcc 0.7185
-    Epoch 119:	Loss 0.42673	TrainAcc 0.8964	ValidAcc 0.8896	TestAcc 0.7220
-    Epoch 129:	Loss 0.41782	TrainAcc 0.8981	ValidAcc 0.8911	TestAcc 0.7244
-    Epoch 139:	Loss 0.41144	TrainAcc 0.8992	ValidAcc 0.8909	TestAcc 0.7272
-    Epoch 149:	Loss 0.40557	TrainAcc 0.9006	ValidAcc 0.8932	TestAcc 0.7292
-    Epoch 159:	Loss 0.40056	TrainAcc 0.9023	ValidAcc 0.8941	TestAcc 0.7314
-    Epoch 169:	Loss 0.39478	TrainAcc 0.9030	ValidAcc 0.8940	TestAcc 0.7319
-    Epoch 179:	Loss 0.39143	TrainAcc 0.9034	ValidAcc 0.8954	TestAcc 0.7341
-    Epoch 189:	Loss 0.38654	TrainAcc 0.9046	ValidAcc 0.8966	TestAcc 0.7337
-    Epoch 199:	Loss 0.38331	TrainAcc 0.9050	ValidAcc 0.8971	TestAcc 0.7344
-    Epoch 209:	Loss 0.37917	TrainAcc 0.9062	ValidAcc 0.8964	TestAcc 0.7366
-    Epoch 219:	Loss 0.37631	TrainAcc 0.9069	ValidAcc 0.8974	TestAcc 0.7366
-    Epoch 229:	Loss 0.37228	TrainAcc 0.9082	ValidAcc 0.8985	TestAcc 0.7389
-    Epoch 239:	Loss 0.36965	TrainAcc 0.9090	ValidAcc 0.8994	TestAcc 0.7383
-    Epoch 249:	Loss 0.36712	TrainAcc 0.9089	ValidAcc 0.8999	TestAcc 0.7388
-    Epoch 259:	Loss 0.36359	TrainAcc 0.9100	ValidAcc 0.9007	TestAcc 0.7391
-    Epoch 269:	Loss 0.36114	TrainAcc 0.9106	ValidAcc 0.9008	TestAcc 0.7393
-    Epoch 279:	Loss 0.35833	TrainAcc 0.9114	ValidAcc 0.9011	TestAcc 0.7386
-    Epoch 289:	Loss 0.35601	TrainAcc 0.9119	ValidAcc 0.9014	TestAcc 0.7407
-    Epoch 299:	Loss 0.35440	TrainAcc 0.9113	ValidAcc 0.9011	TestAcc 0.7398
-    Epoch 309:	Loss 0.35109	TrainAcc 0.9121	ValidAcc 0.9018	TestAcc 0.7411
-    Epoch 319:	Loss 0.34920	TrainAcc 0.9132	ValidAcc 0.9025	TestAcc 0.7407
+[ 79%] Built target test_full_non_structual_graph
+[ 79%] Built target test_mpi_loader
+[ 81%] Built target test_mpi_pipelined_model_parallel
+[ 81%] Built target test_full_structual_graph
+[ 83%] Built target test_single_node_training
+[ 85%] Built target test_nccl_mpi
+[ 85%] Built target test_single_node_fullgpu_training
+[ 91%] Built target estimate_comm_volume
+[ 91%] Built target test_mpi_model_parallel
+[ 91%] Built target test_single_node_gpu_training
+[100%] Built target OSDI2023_SINGLE_NODE_gcn_inference
+[100%] Built target OSDI2023_MULTI_NODES_gcn
+[100%] Built target OSDI2023_SINGLE_NODE_gcn
+[100%] Built target test_two_layer_hybrid_parallelism_designer
