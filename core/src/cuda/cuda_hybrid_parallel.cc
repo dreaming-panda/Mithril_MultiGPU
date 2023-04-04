@@ -375,12 +375,12 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                         );
                 assert(grad != NULL);
                 assert(num_elements_this_chunk > 0);
-                DataType * shadow_grad = shadow_gradients->get_shadow_grad(
-                        engine_->pipeline_output_tensor_, task.chunk_id
-                        );
 
                 comm_time -= get_time();
                 if (! COMPRESS_DATA) { 
+                    DataType * shadow_grad = shadow_gradients->get_shadow_grad(
+                            engine_->pipeline_output_tensor_, task.chunk_id
+                            );
                     if (len == 0) {
                         data_buff = new DataType [num_elements_this_chunk];
                         assert(data_buff);
@@ -1187,6 +1187,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     }
     t += get_time();
     all_epoches_time += get_time();
+
+    size_t free_mem_size = 0;
+    size_t total_mem_size = 0;
+    checkCUDA(cudaMemGetInfo(&free_mem_size, &total_mem_size));
+    printf("Node %d, GPU memory consumption: %.3f GB\n", node_id, (total_mem_size - free_mem_size) / 1024. / 1024. / 1024.);
 
     printf("Node %d, compression time: %.3fs, compression size: %.3fGB, throughput: %.3fGBps\n", 
             node_id, engine_->compression_time_, engine_->compression_size_ / 1024. / 1024. / 1024.,

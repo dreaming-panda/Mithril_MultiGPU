@@ -1659,14 +1659,14 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op)
     //void* dbuffer = nullptr;
     //size_t buffer_size = 0;
     if(has_dbuffer_ == false){
-    cusparseSpMM_bufferSize(*cusparse_handle_,
-    CUSPARSE_OPERATION_TRANSPOSE,
-    CUSPARSE_OPERATION_NON_TRANSPOSE,
-    &alpha, SpCsr_, InputData, &beta, OutputData, CUDA_R_32F,
-    CUSPARSE_SPMM_CSR_ALG2, &buffer_size_
-    );
-    cudaMalloc(&dbuffer_, buffer_size_);
-    has_dbuffer_ = true;
+        cusparseSpMM_bufferSize(*cusparse_handle_,
+            CUSPARSE_OPERATION_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE,
+            &alpha, SpCsr_, InputData, &beta, OutputData, CUDA_R_32F,
+            CUSPARSE_SPMM_CSR_ALG2, &buffer_size_
+        );
+        cudaMalloc(&dbuffer_, buffer_size_);
+        has_dbuffer_ = true;
     }
     #ifdef TIMETAG
     cudaStreamSynchronize(0);
@@ -2418,39 +2418,39 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, Vertex
     // VertexId N = num_vertices;
     assert(csr_.number_matrix > 0);
     if(csr_.number_matrix == 2){
-    int N = right - left;
-    int K = csr_.inMatrixSize;
-    assert(K * activation_size > 0);
-    int gid = get_localgraph_In(left, right);
-    cusparseSpMatDescr_t SpCsr = lginfo_forward[gid].spcsr;
+        int N = right - left;
+        int K = csr_.inMatrixSize;
+        assert(K * activation_size > 0);
+        int gid = get_localgraph_In(left, right);
+        cusparseSpMatDescr_t SpCsr = lginfo_forward[gid].spcsr;
 
-    DataType * adjusted_output_data = d_output_data + left * activation_size;
+        DataType * adjusted_output_data = d_output_data + left * activation_size;
 
-    assert(! input_tensor->is_data_transient);
-    if (output_tensor->is_data_transient) {
-        adjusted_output_data = d_output_data;
-    }
+        assert(! input_tensor->is_data_transient);
+        if (output_tensor->is_data_transient) {
+            adjusted_output_data = d_output_data;
+        }
     
-    cusparseDnMatDescr_t InputData, OutputData;
-    assert(d_input_data != nullptr);
-    assert(d_output_data != nullptr);
-    cusparseCreateDnMat(&InputData, K, activation_size, activation_size, (void*)d_input_data,CUDA_R_32F,CUSPARSE_ORDER_ROW);
-    cusparseCreateDnMat(&OutputData, N, activation_size, activation_size, (void*)(adjusted_output_data),CUDA_R_32F,CUSPARSE_ORDER_ROW);
-    float alpha = 1.0;
-    float beta = 0.0;
-    //void* dbuffer = lginfo_forward[gid].dbuffer;
+        cusparseDnMatDescr_t InputData, OutputData;
+        assert(d_input_data != nullptr);
+        assert(d_output_data != nullptr);
+        cusparseCreateDnMat(&InputData, K, activation_size, activation_size, (void*)d_input_data,CUDA_R_32F,CUSPARSE_ORDER_ROW);
+        cusparseCreateDnMat(&OutputData, N, activation_size, activation_size, (void*)(adjusted_output_data),CUDA_R_32F,CUSPARSE_ORDER_ROW);
+        float alpha = 1.0;
+        float beta = 0.0;
+        //void* dbuffer = lginfo_forward[gid].dbuffer;
     
-    if(lginfo_forward[gid].alloc == false)
-    {
-        size_t buffer_size = 0;
-        cusparseSpMM_bufferSize(*cusparse_handle_,
-        CUSPARSE_OPERATION_NON_TRANSPOSE,
-        CUSPARSE_OPERATION_NON_TRANSPOSE,
-        &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
-        CUSPARSE_SPMM_CSR_ALG2, &buffer_size
-        );
-        cudaMalloc(&lginfo_forward[gid].dbuffer, buffer_size);
-        lginfo_forward[gid].alloc = true;
+        if(lginfo_forward[gid].alloc == false)
+        {
+            size_t buffer_size = 0;
+            cusparseSpMM_bufferSize(*cusparse_handle_,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
+                CUSPARSE_SPMM_CSR_ALG2, &buffer_size
+            );
+            cudaMalloc(&lginfo_forward[gid].dbuffer, buffer_size);
+            lginfo_forward[gid].alloc = true;
         }
         cusparseSpMM(
             *cusparse_handle_,
@@ -2459,9 +2459,9 @@ void OperatorExecutorGPUV2::aggregation_forward(AggregationOperator * op, Vertex
             &alpha, SpCsr, InputData, &beta, OutputData, CUDA_R_32F,
             CUSPARSE_SPMM_CSR_ALG2, lginfo_forward[gid].dbuffer
         );
-        
-        //cudaFree(lginfo_forward[gid].dbuffer);
-        //DeallocateCUDAMemory<int>(&lg.cuda_local_rowoffsets, __FILE__, __LINE__);
+
+            //cudaFree(lginfo_forward[gid].dbuffer);
+            //DeallocateCUDAMemory<int>(&lg.cuda_local_rowoffsets, __FILE__, __LINE__);
     }
     #ifdef TIMETAG
     cudaStreamSynchronize(0);
@@ -3067,10 +3067,10 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
     if(lginfo_backward[gid].alloc == false){
         size_t buffer_size = 0;
         cusparseSpMM_bufferSize(*cusparse_handle_,
-        CUSPARSE_OPERATION_NON_TRANSPOSE,
-        CUSPARSE_OPERATION_NON_TRANSPOSE,
-        &alpha, SpCsr, InputData, &alpha, OutputData, CUDA_R_32F,
-        CUSPARSE_SPMM_CSR_ALG2, &buffer_size
+            CUSPARSE_OPERATION_NON_TRANSPOSE,
+            CUSPARSE_OPERATION_NON_TRANSPOSE,
+            &alpha, SpCsr, InputData, &alpha, OutputData, CUDA_R_32F,
+            CUSPARSE_SPMM_CSR_ALG2, &buffer_size
         );
         cudaMalloc(&lginfo_backward[gid].dbuffer, buffer_size);
         lginfo_backward[gid].alloc = true;
@@ -4225,7 +4225,6 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
         dropout_op_state.left = left;
         dropout_op_state.right = right;
         (*chunk2state)[chunk_id] = dropout_op_state;
-        printf("Dropout State Size: %.3f GB\n", (reserve_space_size + states_size) / 1024. / 1024. / 1024.);
     }
     DropoutOpState dropout_op_state = (*chunk2state)[chunk_id];
 
