@@ -4437,6 +4437,7 @@ void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {
 }
 
 double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
+
     fprintf(stderr, "WARNING: the current version only applies to linear GNN models!\n");
 
     num_epoch += 10 * num_startup_epoches_;
@@ -4547,7 +4548,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_, scaledown_);
     lgraph->InitMemory();
     lgraph->InitCsr();
-    
+
     std::vector<WeightOperator*> weight_ops;
     for (Operator * op: operators) {
         if (op->get_type() == OPERATOR_WEIGHT) {
@@ -4724,6 +4725,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     
     hybrid_prepare_input_tensor();
     hybrid_prepare_std_tensor();
+
     accum_loss_ = 0.;
     OperatorExecutorCPU * executor = (OperatorExecutorCPU*) executor_;
     executor->set_graph(local_graph_);
@@ -4748,7 +4750,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         if (local_valid_mask_[i] == 1)local_nvalid++;
         if (local_test_mask_[i] == 1)local_ntest++;
     }
-    
     
     AllocateCUDAMemory<int>(&local_gpu_training_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
     AllocateCUDAMemory<int>(&local_gpu_valid_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);

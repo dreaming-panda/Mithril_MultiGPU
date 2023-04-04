@@ -4225,6 +4225,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
         dropout_op_state.left = left;
         dropout_op_state.right = right;
         (*chunk2state)[chunk_id] = dropout_op_state;
+        printf("Dropout State Size: %.3f GB\n", (reserve_space_size + states_size) / 1024. / 1024. / 1024.);
     }
     DropoutOpState dropout_op_state = (*chunk2state)[chunk_id];
 
