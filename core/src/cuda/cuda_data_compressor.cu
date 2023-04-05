@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <mpi.h>
 #include <pthread.h>
+#include <assert.h>
 
 #include <thrust/execution_policy.h>
 #include <thrust/scan.h>
@@ -17,6 +18,64 @@
 #include "utilities.h"
 
 #define BLOCK_SIZE 1024
+
+SharedDataBuffer::SharedDataBuffer(int num_buffers) {
+    num_buffers_ = num_buffers;
+    max_buff_size_ = 0;
+    while (! free_buffers_.empty()) free_buffers_.pop();
+    assert(pthread_cond_init(&has_free_buffers_, NULL) == 0);
+    assert(pthread_mutex_init(&mutex_, NULL) == 0);
+    buffer_allocated_ = false;
+}
+
+SharedDataBuffer::~SharedDataBuffer() {
+    assert(pthread_cond_destroy(&has_free_buffers_) == 0);
+    assert(pthread_mutex_destroy(&mutex_) == 0);
+    if (buffer_allocated_) {
+        assert(num_buffers_ == free_buffers_.size()); // otherwise there is memory leakage
+        while (! free_buffers_.empty()) {
+            uint8_t * buff = free_buffers_.top();
+            free_buffers_.pop();
+            checkCUDA(cudaFree(buff));
+        }
+    }
+    buffer_allocated_ = false;
+}
+
+void SharedDataBuffer::request_buffer(size_t buffer_size) {
+    max_buff_size_ = std::max(max_buff_size_, buffer_size);
+}
+
+void SharedDataBuffer::init_all_buffers() {
+    if (max_buff_size_ > 0) {
+        for (int i = 0; i < num_buffers_; ++ i) {
+            uint8_t * buff = NULL;
+            checkCUDA(cudaMalloc(&buff, max_buff_size_));
+            free_buffers_.push(buff);
+        }
+        buffer_allocated_ = true;
+    }
+}
+
+uint8_t * SharedDataBuffer::get_buffer() {
+    assert(pthread_mutex_lock(&mutex_) == 0);
+    while (free_buffers_.empty()) {
+        assert(pthread_cond_wait(&has_free_buffers_, &mutex_));
+    }
+    uint8_t * buff = free_buffers_.top();
+    free_buffers_.pop();
+    assert(pthread_mutex_unlock(&mutex_) == 0);
+    return buff;
+}
+
+void SharedDataBuffer::free_buffer(uint8_t* buff) {
+    assert(pthread_mutex_lock(&mutex_) == 0);
+    if (free_buffers_.empty()) {
+        assert(pthread_cond_signal(&has_free_buffers_) == 0);
+    }
+    free_buffers_.push(buff);
+    assert(pthread_mutex_unlock(&mutex_) == 0);
+}
 
 DataCompressor::DataCompressor(size_t data_size) {
     data_compressed_ = false;
@@ -166,6 +225,9 @@ DataDecompressor::DataDecompressor(size_t data_size) {
     gpu_bitmap_ = &gpu_buff_[0];
     gpu_non_zero_elements_ = (DataType*) &gpu_buff_[(data_size / 32 + 1) * sizeof(uint32_t)];
     checkCUDA(cudaMalloc(&gpu_data_decompression_index_, sizeof(uint32_t) * data_size));
+
+    printf("The data decompressor takes: %.3f GB\n", (sizeof(uint32_t) * data_size + gpu_buff_size_ + 1024)
+        / 1024. / 1024. / 1024.);
 
     cpu_buff_size_ = gpu_buff_size_;
     //cpu_buff_ = new uint8_t [cpu_buff_size_];

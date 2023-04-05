@@ -15,6 +15,7 @@
 #include"utilities.h"
 #include"nccl.h"
 #include"mpi.h"
+
 template <typename T>
 void AllocateCUDAMemory(T** out_ptr, size_t size, const char* file, const int line) {
   void* tmp_ptr = nullptr;
@@ -92,6 +93,15 @@ void DeallocateCUDAMemory(T** ptr, const char* file, const int line) {
   }
 }
 
+inline void print_cuda_mem_usage(int node_id) {
+  size_t total_mem_size = 0;
+  size_t free_mem_size = 0;
+  cudaMemGetInfo(&free_mem_size, &total_mem_size);
+  size_t used_mem_size = total_mem_size - free_mem_size;
+  printf("Node %d, GPU memory usage: %.3f GB / %.3f GB\n", node_id, 
+    used_mem_size / 1024. / 1024. / 1024., total_mem_size / 1024. / 1024. / 1024.);
+}
+
 void PrintLastCUDAError();
 
 template <typename T>
@@ -164,6 +174,7 @@ class CUDAVector {
   void SetValue(int value) {
     SetCUDAMemory<T>(data_, value, size_, __FILE__, __LINE__);
   }
+
 
  private:
   T* data_;

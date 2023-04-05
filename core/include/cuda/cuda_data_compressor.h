@@ -3,12 +3,32 @@
 
 #include <cuda.h>
 #include <mpi.h>
+#include <pthread.h>
 
 #include <functional>
+#include <stack>
 
 #include "types.h"
 
 #define COMM_BATCH_SIZE (4 * 1024 * 1024) 
+
+class SharedDataBuffer {
+    private:
+        int num_buffers_; // 2 => double buffering, the larger num_buffers_, the higher performance and the larger memory cost
+        size_t max_buff_size_;
+        std::stack<uint8_t*> free_buffers_;
+        pthread_cond_t has_free_buffers_;
+        pthread_mutex_t mutex_;
+        bool buffer_allocated_;
+
+    public:
+        SharedDataBuffer(int num_buffers);
+        ~SharedDataBuffer();
+        void request_buffer(size_t buffer_size);
+        void init_all_buffers();
+        uint8_t * get_buffer();
+        void free_buffer(uint8_t* buff);
+};
 
 class DataCompressor {
     private:
