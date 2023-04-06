@@ -87,7 +87,7 @@ DataCompressor::DataCompressor(size_t data_size, SharedDataBuffer * shared_gpu_b
     gpu_buff_size_ = (data_size / 32 + 1) * sizeof(uint32_t) 
         + sizeof(DataType) * data_size;
     assert(gpu_buff_size_ % sizeof(uint32_t) == 0);
-    shared_gpu_buff_->request_buffer(gpu_buff_size_);
+    shared_gpu_buff_->request_buffer(gpu_buff_size_ + 1024);
     curr_gpu_buff_ = NULL;
     //checkCUDA(cudaMalloc(&gpu_buff_, gpu_buff_size_ + 1024));
     //gpu_bitmap_ = &gpu_buff_[0];
@@ -228,20 +228,29 @@ void DataCompressor::wait_for_data_movement() {
     //shared_gpu_buff_->free_buffer(curr_gpu_buff_);
 }
 
-DataDecompressor::DataDecompressor(size_t data_size) {
+DataDecompressor::DataDecompressor(size_t data_size, SharedDataBuffer * shared_gpu_buff, SharedDataBuffer * shared_index_buff) {
+    shared_gpu_buff_ = shared_gpu_buff;
+    shared_index_buff_ = shared_index_buff;
+
     data_size_ = data_size;
     compressed_data_set_ = false;
     compressed_data_on_cpu_ = false;
 
     gpu_buff_size_ = (data_size_ / 32 + 1) * sizeof(uint32_t)
         + sizeof(DataType) * data_size;
-    checkCUDA(cudaMalloc(&gpu_buff_, gpu_buff_size_ + 1024));
-    gpu_bitmap_ = &gpu_buff_[0];
-    gpu_non_zero_elements_ = (DataType*) &gpu_buff_[(data_size / 32 + 1) * sizeof(uint32_t)];
-    checkCUDA(cudaMalloc(&gpu_data_decompression_index_, sizeof(uint32_t) * data_size));
+    shared_gpu_buff_->request_buffer(gpu_buff_size_ + 1024);
+    curr_gpu_buff_ = NULL;
 
-    printf("The data decompressor takes: %.3f GB\n", (sizeof(uint32_t) * data_size + gpu_buff_size_ + 1024)
-        / 1024. / 1024. / 1024.);
+    //checkCUDA(cudaMalloc(&gpu_buff_, gpu_buff_size_ + 1024));
+    //gpu_bitmap_ = &gpu_buff_[0];
+    //gpu_non_zero_elements_ = (DataType*) &gpu_buff_[(data_size / 32 + 1) * sizeof(uint32_t)];
+
+    shared_index_buff_->request_buffer(sizeof(uint32_t) * data_size);
+    curr_index_buff_ = NULL;
+    //checkCUDA(cudaMalloc(&gpu_data_decompression_index_, sizeof(uint32_t) * data_size));
+
+    //printf("The data decompressor takes: %.3f GB\n", (sizeof(uint32_t) * data_size + gpu_buff_size_ + 1024)
+    //    / 1024. / 1024. / 1024.);
 
     cpu_buff_size_ = gpu_buff_size_;
     //cpu_buff_ = new uint8_t [cpu_buff_size_];
@@ -252,8 +261,8 @@ DataDecompressor::DataDecompressor(size_t data_size) {
 }
 
 DataDecompressor::~DataDecompressor() {
-    checkCUDA(cudaFree(gpu_buff_));
-    checkCUDA(cudaFree(gpu_data_decompression_index_));
+    //checkCUDA(cudaFree(gpu_buff_));
+    //checkCUDA(cudaFree(gpu_data_decompression_index_));
     //delete [] cpu_buff_;
     checkCUDA(cudaFreeHost(cpu_buff_));
     // destroy the stream
@@ -269,7 +278,8 @@ void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * bu
         compressed_data_size_ = recv_data(cpu_buff_, cpu_buff_size_);
         t_network += get_time();
     } else {
-        compressed_data_size_ = recv_data(gpu_buff_, gpu_buff_size_);
+        assert(false); // disallow the usage
+        compressed_data_size_ = recv_data(curr_gpu_buff_, gpu_buff_size_);
     }
 
     compressed_data_set_ = true;
@@ -391,9 +401,11 @@ void DataDecompressor::decompress_data(DataType * data) {
     size_t num_non_zero_elements = compressed_data_size_ - (data_size / 32 + 1) * sizeof(uint32_t);
     assert(num_non_zero_elements % sizeof(DataType) == 0);
     num_non_zero_elements /= sizeof(DataType);
-    uint8_t * bitmap = gpu_bitmap_;
-    DataType * non_zero_elements = gpu_non_zero_elements_;
-    uint32_t * decompression_index = gpu_data_decompression_index_;
+    assert(curr_gpu_buff_);
+    uint8_t * bitmap = get_gpu_bitmap(curr_gpu_buff_);
+    DataType * non_zero_elements = get_gpu_non_zero_elements(curr_gpu_buff_);
+    assert(curr_index_buff_);
+    uint32_t * decompression_index = curr_index_buff_;
 
     //checkCUDA(cudaMemcpy(data, non_zero_elements, sizeof(DataType) * data_size,
     //            cudaMemcpyDeviceToDevice));
@@ -436,7 +448,14 @@ void DataDecompressor::get_cpu_buff(uint8_t * &buff, size_t &buff_size) {
 
 void DataDecompressor::move_compressed_data_to_gpu() {
     //double t = - get_time();
-    checkCUDA(cudaMemcpy(gpu_buff_, cpu_buff_, compressed_data_size_,
+    assert(! curr_gpu_buff_);
+    assert(! curr_index_buff_);
+    curr_gpu_buff_ = shared_gpu_buff_->get_buffer();
+    curr_index_buff_ = (uint32_t*) shared_index_buff_->get_buffer();
+    assert(curr_gpu_buff_);
+    assert(curr_index_buff_);
+
+    checkCUDA(cudaMemcpy(curr_gpu_buff_, cpu_buff_, compressed_data_size_,
                 cudaMemcpyHostToDevice));
     //t += get_time();
     //printf("CPU => GPU throughput: chunk size: %.3f MB, %.3f GBps\n", 
@@ -445,8 +464,15 @@ void DataDecompressor::move_compressed_data_to_gpu() {
 }
 
 void DataDecompressor::move_compressed_data_to_gpu_async() {
+    assert(! curr_gpu_buff_);
+    assert(! curr_index_buff_);
+    curr_gpu_buff_ = shared_gpu_buff_->get_buffer();
+    curr_index_buff_ = (uint32_t*) shared_index_buff_->get_buffer();
+    assert(curr_gpu_buff_);
+    assert(curr_index_buff_);
+
     //printf("Move the data to GPU\n");
-    checkCUDA(cudaMemcpyAsync(gpu_buff_, cpu_buff_, compressed_data_size_,
+    checkCUDA(cudaMemcpyAsync(curr_gpu_buff_, cpu_buff_, compressed_data_size_,
                 cudaMemcpyHostToDevice, 0));
 }
 
@@ -454,7 +480,16 @@ void DataDecompressor::wait_for_data_movement() {
     checkCUDA(cudaStreamSynchronize(0));
 }
 
+void DataDecompressor::release_gpu_buffers() {
+    checkCUDA(cudaStreamSynchronize(0));
 
+    assert(curr_gpu_buff_);
+    assert(curr_index_buff_);
+    shared_gpu_buff_->free_buffer(curr_gpu_buff_);
+    shared_index_buff_->free_buffer((uint8_t*) curr_index_buff_);
+    curr_gpu_buff_ = NULL;
+    curr_index_buff_ = NULL;
+}
 
 
 

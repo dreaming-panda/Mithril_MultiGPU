@@ -1013,6 +1013,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     slowest_chunk = std::max(slowest_chunk, t);
                     fastest_chunk = std::min(fastest_chunk, t);
                 }
+
+                if (node_id > 0) {
+                    engine_->data_decompressors_[task.chunk_id]->release_gpu_buffers();
+                }
             }
         }
         if (is_bottommost_node) {
@@ -1048,6 +1052,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     }
 #endif
                     engine_->perform_backward_task(task); 
+
+                    if (node_id < num_nodes - 1) {
+                        engine_->grad_decompressors_[task.chunk_id]->release_gpu_buffers();
+                    }
 
                     //VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
                     //VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
@@ -4595,7 +4603,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     // the shared buffers for data compression and decompression
     SharedDataBuffer * compression_buff = new SharedDataBuffer(2); // double buffering
+    SharedDataBuffer * decompression_data_buff = new SharedDataBuffer(1); 
+    SharedDataBuffer * decompression_index_buff = new SharedDataBuffer(1);
     assert(compression_buff);
+    assert(decompression_data_buff);
+    assert(decompression_index_buff);
 
     {
         // initialize the data compressors
@@ -4614,7 +4626,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                 VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
                 VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
                 size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
-                data_decompressors_[chunk_id] = new DataDecompressor(num_elements);
+                data_decompressors_[chunk_id] = new DataDecompressor(num_elements, decompression_data_buff, decompression_index_buff);
                 grad_compressors_[chunk_id] = new DataCompressor(num_elements, compression_buff);
                 assert(data_decompressors_[chunk_id]);
                 assert(grad_compressors_[chunk_id]);
@@ -4628,7 +4640,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                 VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
                 size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
                 data_compressors_[chunk_id] = new DataCompressor(num_elements, compression_buff);
-                grad_decompressors_[chunk_id] = new DataDecompressor(num_elements);
+                grad_decompressors_[chunk_id] = new DataDecompressor(num_elements, decompression_data_buff, decompression_index_buff);
                 assert(data_compressors_[chunk_id]);
                 assert(grad_decompressors_[chunk_id]);
             }
@@ -4693,6 +4705,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     }
 
     compression_buff->init_all_buffers();
+    decompression_data_buff->init_all_buffers();
+    decompression_index_buff->init_all_buffers();
 
     // create the helper threads 
     printf("*** Node %d, starting the helper threads...\n", node_id);
@@ -4823,6 +4837,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     release_resources();
     
     delete compression_buff;
+    delete decompression_data_buff;
+    delete decompression_index_buff;
 
     {
 #ifdef USE_RDMA
