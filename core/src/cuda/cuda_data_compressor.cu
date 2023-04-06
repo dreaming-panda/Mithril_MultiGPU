@@ -60,7 +60,7 @@ void SharedDataBuffer::init_all_buffers() {
 uint8_t * SharedDataBuffer::get_buffer() {
     assert(pthread_mutex_lock(&mutex_) == 0);
     while (free_buffers_.empty()) {
-        assert(pthread_cond_wait(&has_free_buffers_, &mutex_));
+        assert(pthread_cond_wait(&has_free_buffers_, &mutex_) == 0);
     }
     uint8_t * buff = free_buffers_.top();
     free_buffers_.pop();
@@ -77,7 +77,9 @@ void SharedDataBuffer::free_buffer(uint8_t* buff) {
     assert(pthread_mutex_unlock(&mutex_) == 0);
 }
 
-DataCompressor::DataCompressor(size_t data_size) {
+DataCompressor::DataCompressor(size_t data_size, SharedDataBuffer * shared_gpu_buff) {
+    shared_gpu_buff_ = shared_gpu_buff;
+
     data_compressed_ = false;
     compressed_data_on_cpu_ = false;
     // allocate the GPU buffer
@@ -85,9 +87,11 @@ DataCompressor::DataCompressor(size_t data_size) {
     gpu_buff_size_ = (data_size / 32 + 1) * sizeof(uint32_t) 
         + sizeof(DataType) * data_size;
     assert(gpu_buff_size_ % sizeof(uint32_t) == 0);
-    checkCUDA(cudaMalloc(&gpu_buff_, gpu_buff_size_ + 1024));
-    gpu_bitmap_ = &gpu_buff_[0];
-    gpu_non_zero_elements_ = (DataType*) &gpu_buff_[(data_size / 32 + 1) * sizeof(uint32_t)];
+    shared_gpu_buff_->request_buffer(gpu_buff_size_);
+    curr_gpu_buff_ = NULL;
+    //checkCUDA(cudaMalloc(&gpu_buff_, gpu_buff_size_ + 1024));
+    //gpu_bitmap_ = &gpu_buff_[0];
+    //gpu_non_zero_elements_ = (DataType*) &gpu_buff_[(data_size / 32 + 1) * sizeof(uint32_t)];
     // allocate the CPU buffer
     cpu_buff_size_ = gpu_buff_size_;
     //cpu_buff_ = new uint8_t [cpu_buff_size_];
@@ -99,7 +103,7 @@ DataCompressor::DataCompressor(size_t data_size) {
 
 DataCompressor::~DataCompressor() {
     // deallocate the buffers
-    checkCUDA(cudaFree(gpu_buff_));
+    //checkCUDA(cudaFree(gpu_buff_));
     //delete [] cpu_buff_;
     checkCUDA(cudaFreeHost(cpu_buff_));
     // destroy the stream
@@ -139,8 +143,9 @@ void DataCompressor::compress_data(DataType * data, bool send_to_cpu) {
     assert(! data_compressed_);
 
     size_t data_size = data_size_;
-    uint8_t * bitmap = gpu_bitmap_;
-    DataType * non_zero_elements = gpu_non_zero_elements_;
+    curr_gpu_buff_ = shared_gpu_buff_->get_buffer();
+    uint8_t * bitmap = get_gpu_bitmap(curr_gpu_buff_);
+    DataType * non_zero_elements = get_gpu_non_zero_elements(curr_gpu_buff_);
 
     // compress the data
     float * end_ptx = thrust::copy_if(
@@ -186,7 +191,7 @@ void DataCompressor::get_compressed_data(DataType * &buff, size_t &buff_size) {
         buff = (DataType*) cpu_buff_;
         buff_size = compressed_data_size_;
     } else {
-        buff = (DataType*) gpu_buff_;
+        buff = (DataType*) curr_gpu_buff_;
         buff_size = compressed_data_size_;
     }
 
@@ -196,22 +201,31 @@ void DataCompressor::get_compressed_data(DataType * &buff, size_t &buff_size) {
 
 void DataCompressor::move_compressed_data_to_cpu() {
     //double t = - get_time();
-    checkCUDA(cudaMemcpy(cpu_buff_, gpu_buff_, compressed_data_size_,
+    assert(curr_gpu_buff_);
+    checkCUDA(cudaMemcpy(cpu_buff_, curr_gpu_buff_, compressed_data_size_,
                 cudaMemcpyDeviceToHost));
+    // release the shared buffer
+    shared_gpu_buff_->free_buffer(curr_gpu_buff_);
+    curr_gpu_buff_ = NULL;
     //t += get_time();
     //printf("GPU => CPU throughput: %.3f GBps\n", 
     //        compressed_data_size_ / t / 1024. / 1024. / 1024.);
 }
 
 void DataCompressor::move_compressed_data_to_cpu_async() {
+    assert(false); // deprecate the function
+    assert(curr_gpu_buff_);
     checkCUDA(cudaMemcpyAsync(
-                cpu_buff_, gpu_buff_, compressed_data_size_, 
+                cpu_buff_, curr_gpu_buff_, compressed_data_size_, 
                 cudaMemcpyDeviceToHost, 0 
                 ));
 }
 
 void DataCompressor::wait_for_data_movement() {
+    assert(false); // deprecate the function
     checkCUDA(cudaStreamSynchronize(0));
+    // release the shared buffer
+    //shared_gpu_buff_->free_buffer(curr_gpu_buff_);
 }
 
 DataDecompressor::DataDecompressor(size_t data_size) {

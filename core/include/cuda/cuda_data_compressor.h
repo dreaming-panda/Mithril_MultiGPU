@@ -40,14 +40,25 @@ class DataCompressor {
         // the gpu_buff is divided into three parts
         // [bitmap] [non-zero elements]
         size_t gpu_buff_size_; // unit: bytes
-        uint8_t * gpu_buff_;
-        uint8_t * gpu_bitmap_;
-        DataType * gpu_non_zero_elements_;
+        uint8_t * curr_gpu_buff_;
+        //uint8_t * gpu_buff_;
+        //uint8_t * gpu_bitmap_;
+        //DataType * gpu_non_zero_elements_;
+        SharedDataBuffer * shared_gpu_buff_;
         // the cpu buffer
         size_t cpu_buff_size_; // unit: bytes
         uint8_t * cpu_buff_; 
 
         cudaStream_t cuda_stream_;
+
+        inline uint8_t * get_gpu_bitmap(uint8_t * gpu_buff) {
+            uint8_t * gpu_bitmap = &gpu_buff[0];
+            return gpu_bitmap;
+        }
+        inline DataType * get_gpu_non_zero_elements(uint8_t * gpu_buff) {
+            DataType * gpu_non_zero_elements = (DataType*) &gpu_buff[(data_size_ / 32 + 1) * sizeof(uint32_t)];
+            return gpu_non_zero_elements;
+        }
 
     public:
         // the whole data compression process is divided into three stages
@@ -56,7 +67,7 @@ class DataCompressor {
         // 2. perform the necessary computation to perform the data compression
         // 3. fetch the compressed results back
 
-        DataCompressor(size_t data_size);
+        DataCompressor(size_t data_size, SharedDataBuffer * shared_gpu_buff);
         ~DataCompressor();
         void compress_data(DataType * data, bool send_to_cpu); // the main thread invoke this function
         void get_compressed_data(DataType * &buff, size_t &buff_size); // the communication thread invoke this function

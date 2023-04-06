@@ -4593,6 +4593,10 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     partition_end_ = partitioning.partition_vid_end[node_id];
     num_chunks_ = chunk_manager_->get_num_global_chunks();
 
+    // the shared buffers for data compression and decompression
+    SharedDataBuffer * compression_buff = new SharedDataBuffer(2); // double buffering
+    assert(compression_buff);
+
     {
         // initialize the data compressors
         data_compressors_ = new DataCompressor* [num_chunks_];
@@ -4611,7 +4615,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                 VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
                 size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
                 data_decompressors_[chunk_id] = new DataDecompressor(num_elements);
-                grad_compressors_[chunk_id] = new DataCompressor(num_elements);
+                grad_compressors_[chunk_id] = new DataCompressor(num_elements, compression_buff);
                 assert(data_decompressors_[chunk_id]);
                 assert(grad_compressors_[chunk_id]);
             }
@@ -4623,7 +4627,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                 VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
                 VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
                 size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
-                data_compressors_[chunk_id] = new DataCompressor(num_elements);
+                data_compressors_[chunk_id] = new DataCompressor(num_elements, compression_buff);
                 grad_decompressors_[chunk_id] = new DataDecompressor(num_elements);
                 assert(data_compressors_[chunk_id]);
                 assert(grad_decompressors_[chunk_id]);
@@ -4687,6 +4691,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         }
 #endif
     }
+
+    compression_buff->init_all_buffers();
 
     // create the helper threads 
     printf("*** Node %d, starting the helper threads...\n", node_id);
@@ -4815,6 +4821,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     //}
 
     release_resources();
+    
+    delete compression_buff;
 
     {
 #ifdef USE_RDMA

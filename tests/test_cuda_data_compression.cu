@@ -38,7 +38,8 @@ int main(int argc, char ** argv) {
         printf("Checking the correctness (data size: %lu floats)...", data_size);
         cudaMemcpy(data_gpu, data_cpu, sizeof(DataType) * data_size, 
                 cudaMemcpyHostToDevice);
-        DataCompressor compressor(data_size);
+        SharedDataBuffer shared_compression_buff(1);
+        DataCompressor compressor(data_size, &shared_compression_buff);
         DataDecompressor decompressor(data_size);
         // verify the correctness first
         compressor.compress_data(data_gpu, true);
@@ -69,7 +70,8 @@ int main(int argc, char ** argv) {
     for (size_t data_size = min_data_size; data_size <= max_data_size; 
             data_size *= 2) {
         printf("Benchmarking the performance (data size: %lu floats)...", data_size);
-        DataCompressor compressor(data_size);
+        SharedDataBuffer shared_compression_buff(1);
+        DataCompressor compressor(data_size, &shared_compression_buff);
         DataDecompressor decompressor(data_size);
         auto start = std::chrono::system_clock::now();
         double com_t = 0;
