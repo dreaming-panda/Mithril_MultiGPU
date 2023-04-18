@@ -2569,7 +2569,8 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op, VertexId left, Vert
     cudnnCreateTensorDescriptor(&data_descriptor);
     cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, end_idx - start_idx);
     float alpha = 1.0;
-    float beta = 0.0;
+    //float beta = 0.0;
+    float beta = 1.0; // gradient aggregation
 
     DataType * adjusted_output_grad = d_output_grad + start_idx;
     DataType * adjusted_input_grad = d_input_grad + start_idx;
@@ -2895,7 +2896,8 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left
     cudnnCreateTensorDescriptor(&data_descriptor);
     cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, len, 1, 1, activation_size);
     float alpha = 1.0;
-    float beta = 0.0;
+    //float beta = 0.0;
+    float beta = 1.0; // gradient accumulation
 
     DataType * adjusted_output_grad = d_output_grad + start_idx;
     DataType * adjusted_input_grad = d_input_grad + start_idx;
@@ -3062,7 +3064,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
     cusparseCreateDnMat(&InputData, K, activation_size, activation_size, (void*)d_output_grad,CUDA_R_32F,CUSPARSE_ORDER_ROW);
     cusparseCreateDnMat(&OutputData, N, activation_size, activation_size, (void*)(adjusted_input_grad),CUDA_R_32F,CUSPARSE_ORDER_ROW);
     float alpha = 1.0;
-    float beta = 0.0;
+    //float beta = 0.0;
     //void* dbuffer = nullptr;
     if(lginfo_backward[gid].alloc == false){
         size_t buffer_size = 0;
