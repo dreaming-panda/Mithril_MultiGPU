@@ -144,6 +144,8 @@ AbstractApplication::AbstractApplication(int num_features): num_features_(num_fe
     input_tensor_ = NULL;
     output_tensor_ = NULL;
     is_computation_graph_ready_ = false;
+    operator_range_each_layer_.clear();
+    prev_layer_boundary_ = 0;
 }
 
 AbstractApplication::~AbstractApplication() {
@@ -152,6 +154,13 @@ AbstractApplication::~AbstractApplication() {
     }
 }
 
+void AbstractApplication::next_layer() {
+    int num_operators = operators_.size();
+    std::pair<int, int> range = std::make_pair(prev_layer_boundary_, num_operators);
+    operator_range_each_layer_.push_back(range);
+    prev_layer_boundary_ = num_operators;
+}
 
-
-
+const std::vector<std::pair<int, int>>& AbstractApplication::get_operator_range_each_layer() {
+    return operator_range_each_layer_;
+}

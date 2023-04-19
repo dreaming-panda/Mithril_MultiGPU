@@ -35,7 +35,8 @@ class AbstractApplication {
         Tensor * input_tensor_;
         Tensor * output_tensor_;
         bool is_computation_graph_ready_;
-        
+        std::vector<std::pair<int,int>> operator_range_each_layer_;
+        int prev_layer_boundary_;
 
         // we set these functions accessing the computation graph to be private
         // so that the user programs cannot invoke them
@@ -77,8 +78,10 @@ class AbstractApplication {
         Tensor * identity(int height, int width);
         Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta);
         Tensor * dropout(Tensor * a, double dropout_rate, bool is_transient = false);
+        void next_layer();
     public:
         const std::vector<Operator*>& get_operators();
+        const std::vector<std::pair<int, int>>& get_operator_range_each_layer();
         AbstractApplication(int num_features);
         virtual ~AbstractApplication();
         // users should symbolicly define the GNN model in this function

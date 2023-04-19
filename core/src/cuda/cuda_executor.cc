@@ -3392,9 +3392,8 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op){
     );
     }
 }
-void OperatorExecutorGPUV2::add_forward(AddOperator * op, VertexId left, VertexId right){
 
-    
+void OperatorExecutorGPUV2::add_forward(AddOperator * op, VertexId left, VertexId right) {
     assert(op->get_num_input_tensors() == 2);
     assert(op->get_num_output_tensors() == 1);
     Tensor * input_tensor0 = op->get_input_tensor(0);
@@ -3403,6 +3402,7 @@ void OperatorExecutorGPUV2::add_forward(AddOperator * op, VertexId left, VertexI
     assert(input_tensor0 != NULL);
     assert(input_tensor1 != NULL);
     assert(output_tensor != NULL);
+
     if(input_tensor0->type == VERTEX_TENSOR){
         assert(input_tensor0->type == VERTEX_TENSOR);
         assert(input_tensor1->type == VERTEX_TENSOR);
@@ -3489,28 +3489,29 @@ void OperatorExecutorGPUV2::add_forward(AddOperator * op, VertexId left, VertexI
         cudnnTensorDescriptor_t data_descriptor;
         cudnnCreateTensorDescriptor(&data_descriptor);
         cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+
         float one = 1.0;
         float zero = 0.0;
         float alpha = op->alpha;
         float beta = op->beta;
         
         cudnnAddTensor(
-        *cudnn_handle_,
-        &alpha,
-        data_descriptor,
-        d_input_data0,
-        &zero,
-        data_descriptor,
-        d_output_data
+            *cudnn_handle_,
+            &alpha,
+            data_descriptor,
+            d_input_data0,
+            &zero,
+            data_descriptor,
+            d_output_data
         );
         cudnnAddTensor(
-        *cudnn_handle_,
-        &beta,
-        data_descriptor,
-        d_input_data1,
-        &one,
-        data_descriptor,
-        d_output_data
+            *cudnn_handle_,
+            &beta,
+            data_descriptor,
+            d_input_data1,
+            &one,
+            data_descriptor,
+            d_output_data
         );
         cudnnDestroyTensorDescriptor(data_descriptor);
 
@@ -3518,7 +3519,7 @@ void OperatorExecutorGPUV2::add_forward(AddOperator * op, VertexId left, VertexI
     
 }
 
-void OperatorExecutorGPUV2::add_backward(AddOperator * op, VertexId left, VertexId right){
+void OperatorExecutorGPUV2::add_backward(AddOperator * op, VertexId left, VertexId right) {
     assert(op->get_num_input_tensors() == 2);
     assert(op->get_num_output_tensors() == 1);
     Tensor * input_tensor0 = op->get_input_tensor(0);
@@ -3554,10 +3555,14 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op, VertexId left, Vertex
         float beta = op->beta;
 
         DataType * adjusted_input_grad0 = d_input_grad0 + K * left;
+        DataType * adjusted_input_grad1 = d_input_grad1 + K * left;
         DataType * adjusted_output_grad = d_output_grad + K * left;
 
         if (input_tensor0->is_grad_transient) {
             adjusted_input_grad0 = d_input_grad0;
+        }
+        if (input_tensor1->is_grad_transient) {
+            adjusted_input_grad1 = d_input_grad1;
         }
         if (output_tensor->is_grad_transient) {
             adjusted_output_grad = d_output_grad;
@@ -3568,20 +3573,20 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op, VertexId left, Vertex
             &alpha,
             data_descriptor,
             adjusted_output_grad,
-            &zero,
+            &one, // grad accumulation
             data_descriptor,
             adjusted_input_grad0
         );
 
-        // cudnnAddTensor(
-        // *cudnn_handle_,
-        // &beta,
-        // data_descriptor,
-        // d_output_grad + K * left,
-        // &one,
-        // data_descriptor,
-        // d_input_grad1 + K * left
-        // );
+        cudnnAddTensor(
+            *cudnn_handle_,
+            &beta,
+            data_descriptor,
+            adjusted_output_grad,
+            &one, // grad accumulation
+            data_descriptor,
+            adjusted_input_grad1
+        );
     } else if(input_tensor0->type == NORMAL_TENSOR){
         assert(input_tensor0->type == NORMAL_TENSOR);
         assert(input_tensor1->type == NORMAL_TENSOR);
