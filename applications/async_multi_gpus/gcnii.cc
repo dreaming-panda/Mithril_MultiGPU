@@ -87,7 +87,7 @@ class GCNII: public AbstractApplication {
             }
             // classification
             t = fc(t, num_classes_);
-            t = softmax(t);
+            t = softmax(t, true); // log softmax 
             next_layer();
             return t;
         }
@@ -266,7 +266,8 @@ int main(int argc, char ** argv) {
     cusparseCreate(&cusparse);
     executor->set_activation_size(num_hidden_units,num_classes);
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
-    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
+    //CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
+    NLLLoss * loss = new NLLLoss();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
     int * training = new int[graph_structure->get_num_global_vertices()];
     int * valid = new int[graph_structure->get_num_global_vertices()];

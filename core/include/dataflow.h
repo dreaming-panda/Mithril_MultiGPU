@@ -127,9 +127,12 @@ class MatmulAddOperator: public Operator{
         DataType beta;
 };
 class SoftmaxOperator: public Operator {
+    private:
+        bool log_output_;
     public:
-        SoftmaxOperator(Tensor * t, bool is_transient = false);
+        SoftmaxOperator(Tensor * t, bool log_output = false, bool is_transient = false);
         ~SoftmaxOperator() {}
+        inline bool get_log_output() {return log_output_;}
 };
 class AddOperator: public Operator {
         public:

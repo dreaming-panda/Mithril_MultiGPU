@@ -1559,6 +1559,7 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op)
     cudaStreamSynchronize(0);
     double t = -get_time();
     #endif
+
     assert(op->get_num_input_tensors() == 1);
     assert(op->get_num_output_tensors() == 1);
 
@@ -1588,9 +1589,13 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op)
     assert(output_tensor->dims[1] == activation_size);
     float alpha = 1.0;
     float beta = 0.0;
+    cudnnSoftmaxAlgorithm_t algorithm = CUDNN_SOFTMAX_ACCURATE;
+    if (op->get_log_output()) {
+        algorithm = CUDNN_SOFTMAX_LOG;
+    }
     cudnnSoftmaxForward(
         *cudnn_handle_,
-        CUDNN_SOFTMAX_ACCURATE,
+        algorithm,
         CUDNN_SOFTMAX_MODE_INSTANCE,
         &alpha,
         data_descriptor_softmax_forward,
@@ -1910,9 +1915,13 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
 
     float alpha = 1.0;
     float beta = 0.0;
+    cudnnSoftmaxAlgorithm_t algorithm = CUDNN_SOFTMAX_ACCURATE;
+    if (op->get_log_output()) {
+        algorithm = CUDNN_SOFTMAX_LOG;
+    }
     cudnnSoftmaxBackward(
         *cudnn_handle_,
-        CUDNN_SOFTMAX_ACCURATE,
+        algorithm,
         CUDNN_SOFTMAX_MODE_INSTANCE,
         &alpha,
         data_descriptor_softmax_forward,
@@ -2295,9 +2304,13 @@ void OperatorExecutorGPUV2::softmax_forward(SoftmaxOperator * op, VertexId left,
 
     float alpha = 1.0;
     float beta = 0.0;
+    cudnnSoftmaxAlgorithm_t algorithm = CUDNN_SOFTMAX_ACCURATE;
+    if (op->get_log_output()) {
+        algorithm = CUDNN_SOFTMAX_LOG;
+    }
     cudnnSoftmaxForward(
         *cudnn_handle_,
-        CUDNN_SOFTMAX_ACCURATE,
+        algorithm,
         CUDNN_SOFTMAX_MODE_INSTANCE,
         &alpha,
         data_descriptor,
@@ -2913,9 +2926,13 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op, VertexId left
         adjusted_output_data = d_output_data;
     }
 
+    cudnnSoftmaxAlgorithm_t algorithm = CUDNN_SOFTMAX_ACCURATE;
+    if (op->get_log_output()) {
+        algorithm = CUDNN_SOFTMAX_LOG;
+    }
     cudnnSoftmaxBackward(
         *cudnn_handle_,
-        CUDNN_SOFTMAX_ACCURATE,
+        algorithm,
         CUDNN_SOFTMAX_MODE_INSTANCE,
         &alpha,
         data_descriptor,

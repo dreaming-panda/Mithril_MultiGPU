@@ -21,19 +21,18 @@ make -j
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
 num_layers=32
-hunits=256
+hunits=64
 lr=1e-2
-graph=citeseer
-epoch=1500
+graph=cora
+epoch=250
 decay=5e-4
 chunks=1
 dropout=0.6
-seed=3
+seed=31
 scaledown=0.1
 model=gcnii
-lambda=0.6
 
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/gcnii --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file $PROJECT/saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown --lambda $lambda
+mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/$model --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file $PROJECT/saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown 
 
 #$HOME/baseline/Mithril_MultiGPU/build/applications/single_gpu/gcn_inference --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --weight_file $PROJECT/saved_weights_pipe
 

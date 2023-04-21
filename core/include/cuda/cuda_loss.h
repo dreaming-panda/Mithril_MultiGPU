@@ -101,7 +101,7 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
         }
         
-    private:
+    protected:
         cudnnHandle_t cudnn_;
         DataType * loss_data_;
         DataType * loss_;
@@ -110,6 +110,7 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
         cudnnTensorDescriptor_t data_descriptor;
         cudnnTensorDescriptor_t loss_descriptor;
         cudnnReduceTensorDescriptor_t MeanDesc;
+
         void LaunchCalculateGradients(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize);
         void LaunchCalculateGradientsMask(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize);
         void LaunchCalculateGradientsMaskWithStart(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize, int start);
@@ -119,6 +120,7 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
         double LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type);
        
 };
+
 class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
 {
     public:
@@ -171,4 +173,18 @@ class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
         };
        
 };
+
+class NLLLoss: public CrossEntropyLossGPU {
+    private:
+        double launch_get_loss_kernel(DataType * std_data, DataType * output_data, int num_vertices, int output_size, int start_, int type);
+
+    public:
+        NLLLoss();
+        ~NLLLoss();
+        double get_loss(Tensor * output_tensor, Tensor * std_tensor);
+        void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor);
+        double get_loss(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right);
+        void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right);
+};
+
 #endif

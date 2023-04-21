@@ -137,6 +137,7 @@ void MSELossGPU::calculate_gradients(Tensor * output_tensor, Tensor * std_tensor
         }
     }*/
 }
+
 double MSELossGPU::get_loss(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right){
     assert(output_tensor != NULL);
     assert(std_tensor != NULL);
@@ -223,6 +224,7 @@ double MSELossGPU::get_loss(Tensor * output_tensor, Tensor * std_tensor, VertexI
     loss /= double(num_vertices);*/
     return loss;
 }
+
 void MSELossGPU::calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right){
     assert(output_tensor != NULL);
     assert(std_tensor != NULL);
@@ -641,7 +643,6 @@ void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * s
     DataType * d_std_data = std_resource->get_gpu_data();
     DataType * d_output_grad = output_resource->get_gpu_grad();
 
-
     VertexId num_vertices = output_resource->get_num_vertices();
 
     int output_size = output_tensor->dims[1];
@@ -712,3 +713,24 @@ void CrossEntropyLossGPU::calculate_gradients(Tensor * output_tensor, Tensor * s
 //     delete[] std_data;
 //     delete[] output_grad;
 }
+
+NLLLoss::NLLLoss() {
+    loss_data_ = nullptr;
+    loss_ = nullptr;
+}
+
+NLLLoss::~NLLLoss() {
+    // TODO
+}
+
+double NLLLoss::get_loss(Tensor * output_tensor, Tensor * std_tensor) {
+    assert(false);
+    return 0;
+}
+
+void NLLLoss::calculate_gradients(Tensor * output_tensor, Tensor * std_tensor) {
+    assert(false);
+}
+
+
+

@@ -222,11 +222,13 @@ MatmulAddOperator::MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, Dat
 }
 // SoftmaxOperator
 
-SoftmaxOperator::SoftmaxOperator(Tensor * t, bool is_transient): Operator(t, 1, OPERATOR_SOFTMAX, is_transient) {
+SoftmaxOperator::SoftmaxOperator(Tensor * t, bool log_output, bool is_transient): Operator(t, 1, OPERATOR_SOFTMAX, is_transient) {
     assert(t->type == VERTEX_TENSOR);
     assert(t->num_dims == 2);
     assert(t->dims[0] == -1);
     assert(t->dims[1] > 0);
+
+    log_output_ = log_output;
 
     output_tensors_[0].type = VERTEX_TENSOR;
     output_tensors_[0].num_dims = 2;

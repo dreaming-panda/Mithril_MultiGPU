@@ -112,8 +112,8 @@ Tensor * AbstractApplication::fc(Tensor * a, int num_hunits, std::string activat
     return t;
 }
 
-Tensor * AbstractApplication::softmax(Tensor * t, bool is_transient) {
-    Operator * softmax = new SoftmaxOperator(t, is_transient);
+Tensor * AbstractApplication::softmax(Tensor * t, bool log_output, bool is_transient) {
+    Operator * softmax = new SoftmaxOperator(t, log_output, is_transient);
     operators_.push_back(softmax);
     return softmax->get_output_tensor(0);
 }

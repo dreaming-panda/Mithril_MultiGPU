@@ -73,7 +73,8 @@ class AbstractApplication {
         Tensor * fc(Tensor * a, int num_hunits, std::string activation_fun = "None");
         Tensor * matmul(Tensor * a, Tensor * b);
         Tensor * matmuladd(Tensor * a, Tensor * b, DataType alpha, DataType beta);
-        Tensor * softmax(Tensor * t, bool is_transient = false);
+        // if log_output = true => this operator will be log-softmax
+        Tensor * softmax(Tensor * t, bool log_output = false, bool is_transient = false);
         Tensor * aggregation(Tensor * t, AggregationType type);
         Tensor * identity(int height, int width);
         Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta);
