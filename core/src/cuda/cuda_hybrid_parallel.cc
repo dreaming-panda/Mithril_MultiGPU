@@ -4229,10 +4229,24 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
             assert(num_elements / num_features == vid_end - vid_begin);
 
             size_t offset = 0;
+            printf("Doing row-based feature normalization.\n")
             for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
                 FeatureVector feature_vec = graph_non_structural_data_->get_feature(v_i);
                 assert(feature_vec.vec_len == num_features);
                 assert(feature_vec.data != NULL);
+                // feature row-based normalization
+                double sum = 0;
+                for (int i = 0; i < num_features; ++ i) {
+                    sum += feature_vec.data[i];
+                }
+                if (sum != 0) {
+                    for (int i = 0; i < num_features; ++ i) {
+                        feature_vec.data[i] /= sum;
+                        if (isinf(feature_vec.data[i]) || isnan(feature_vec.data[i])) {
+                            feature_vec.data[i] = 0.;
+                        }
+                    }
+                }
                 //memcpy(data + offset, feature_vec.data, sizeof(DataType) * num_features);
                 CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
                 offset += num_features;
@@ -4265,6 +4279,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
                 partitioning_.partition_vid_begin[node_id];
             size_t offset = 0;
             for (VertexId i = 0; i < num_incoming_mirror_vertices; ++ i) {
+                assert(false);
                 VertexId v = vid_translation_->get_global_vid_incoming_mirror(i + num_master_vertices);
                 FeatureVector feature_vec = graph_non_structural_data_->get_feature(v);
                 assert(feature_vec.vec_len == num_features);

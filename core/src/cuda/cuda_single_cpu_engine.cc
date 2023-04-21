@@ -190,17 +190,31 @@ void SingleNodeExecutionEngineGPU::init_weight_tensor_data(
         size_t num_elements,
         int N // dims[0]
         ) {
-    // Xavier Initialization
+    //// Xavier Initialization
+    //assert(N > 0);
+    //int M  = num_elements / N;
+    //assert(M > 0);
+    //double range = sqrt(6./(N + M));
+    //srand(23);
+    //for (size_t i = 0; i < num_elements; ++ i) {
+    //    double r = double(rand()) / double(RAND_MAX);
+    //    assert(r >= 0. && r <= 1.);
+    //    data[i] = (r - 0.5) * 2 * range;
+    //}
+
+    // using the Pytorch initialization (a variant of Xavier initialization)
+    printf("using the Pytorch initialization method.\n");
     assert(N > 0);
-    int M  = num_elements / N;
+    int M = num_elements / N; // out_features
     assert(M > 0);
-    double range = sqrt(6./(N + M));
+    double range = 1. / sqrt(M);
     srand(23);
     for (size_t i = 0; i < num_elements; ++ i) {
         double r = double(rand()) / double(RAND_MAX);
         assert(r >= 0. && r <= 1.);
         data[i] = (r - 0.5) * 2 * range;
     }
+
 }
 void SingleNodeExecutionEngineGPU::init_weight_tensor(Tensor * weight_tensor) {
     assert(weight_tensor != nullptr);

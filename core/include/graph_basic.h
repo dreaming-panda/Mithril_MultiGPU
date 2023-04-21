@@ -65,7 +65,7 @@ struct InEdgeList
 } __attribute__((packed));
 struct FeatureVector
 {
-    const DataType *data;
+    DataType *data;
     Dimension vec_len;
 } __attribute__((packed));
 
