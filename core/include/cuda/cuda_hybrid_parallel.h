@@ -1812,23 +1812,33 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         void calculate_accuracy_and_loss(double &train_acc, double &valid_acc, double &test_acc, double &loss);
         inline void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N){
-            
+            //printf("hybrid init called\n");
             DataType * data_buff = new DataType[num_elements];
             assert(N > 0);
-            int M  = num_elements / N;
+            int M  = num_elements / N; // out_features
             assert(M > 0);
-            double range = sqrt(6./(N + M));
+
+            // Xavier initialization
+            double range = sqrt(5./(N + M));
             srand(random_seed_);
             for (size_t i = 0; i < num_elements; ++ i) {
-            double r = double(rand()) / double(RAND_MAX);
-            assert(r >= 0. && r <= 1.);
-            data_buff[i] = (r - 0.5) * 2 * range;
-            
-    }
-    CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
-    delete [] data_buff;
+                double r = double(rand()) / double(RAND_MAX);
+                assert(r >= 0. && r <= 1.);
+                data_buff[i] = (r - 0.5) * 2 * range;
+            }
 
-    }
+            //// the default initialization method of Pytorch
+            //double range = 1. / sqrt(double(M));
+            //srand(random_seed_);
+            //for (size_t i = 0; i < num_elements; ++ i) {
+            //    double r = double(rand()) / double(RAND_MAX);
+            //    assert(r >= 0. && r <= 1.);
+            //    data_buff[i] = (r - 0.5) * 2 * range;
+            //}
+
+            CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
+            delete [] data_buff;
+        }
         void zero_out_unnecessary_grad(DataType* grad, DataType* data, size_t num_elements_this_chunk);
 
         friend class CUDAPIPForwardTaskDispatcher;

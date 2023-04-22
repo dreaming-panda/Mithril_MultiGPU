@@ -12,10 +12,10 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-#define USE_RDMA
+//#define USE_RDMA FIXME
 
 #define REVERSE_PERIOD (20)
-#define EVAL_FREQUENCY (10)
+#define EVAL_FREQUENCY (1)
 
 //#define NUM_CHUNKS (16)
 //#define SCALE_DOWN_FACTOR (0.01)

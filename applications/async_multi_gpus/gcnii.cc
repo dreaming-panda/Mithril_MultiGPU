@@ -52,11 +52,12 @@ class GCNII: public AbstractApplication {
     public:
         GCNII(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, double lambda, double alpha):
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate), lambda_(lambda), alpha_(alpha) {
-            assert(num_layers >= 1);
-            assert(num_hidden_units >= 1);
-            assert(num_classes >= 1);
-            enable_recomputation_ = false;
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), 
+            dropout_rate_(dropout_rate), lambda_(lambda), alpha_(alpha) {
+                assert(num_layers >= 1);
+                assert(num_hidden_units >= 1);
+                assert(num_classes >= 1);
+                enable_recomputation_ = false;
         }
         ~GCNII() {}
 
@@ -74,20 +75,21 @@ class GCNII: public AbstractApplication {
             // preparing for h0 (dimension reduction)
             t = dropout(t, dropout_rate_, enable_recomputation_); 
             t = fc(t, num_hidden_units_);
-            t = relu(t, true);
+            t = relu(t, enable_recomputation_);
             Tensor * h0 = t;
-            t = dropout(t, dropout_rate_, enable_recomputation_);
             next_layer();
             // L-layer GCNII convolutions
             for (int i = 0; i < num_layers_; ++ i) {
+                //t = dropout(t, dropout_rate_, enable_recomputation_);
                 t = graph_convolution(t, h0, i + 1);
-                t = relu(t, true);
-                t = dropout(t, dropout_rate_, enable_recomputation_);
+                t = relu(t, enable_recomputation_);
                 next_layer();
             }
             // classification
+            t = dropout(t, dropout_rate_, enable_recomputation_);
             t = fc(t, num_classes_);
-            t = softmax(t, true); // log softmax 
+            t = softmax(t); // softmax 
+            //t = softmax(t, true); // log softmax 
             next_layer();
             return t;
         }
@@ -266,8 +268,8 @@ int main(int argc, char ** argv) {
     cusparseCreate(&cusparse);
     executor->set_activation_size(num_hidden_units,num_classes);
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
-    //CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
-    NLLLoss * loss = new NLLLoss();
+    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
+    //NLLLoss * loss = new NLLLoss();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
     int * training = new int[graph_structure->get_num_global_vertices()];
     int * valid = new int[graph_structure->get_num_global_vertices()];

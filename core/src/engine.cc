@@ -219,7 +219,7 @@ void SingleNodeExecutionEngineCPU::init_weight_tensor_data(
         data[i] = (r - 0.5) * 2 * range;
     }
     */
-   assert(N > 0);
+    assert(N > 0);
     int M  = num_elements / N;
     assert(M > 0);
     double range = sqrt(6./(N + M));
@@ -310,8 +310,6 @@ double SingleNodeExecutionEngineCPU::execute_application(AbstractApplication * a
     }
     printf("*** Done allocating resource.\n");
 
-
-   
     // preparing the input tensor
     printf("*** Preparing the input tensor...\n");
     prepare_input_tensor(application->get_input_tensor());

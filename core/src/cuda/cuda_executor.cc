@@ -1765,6 +1765,8 @@ void OperatorExecutorGPUV2::relu_backward(ReluOperator * op) {
     #endif
 }
 void OperatorExecutorGPUV2::matmul_backward(MatmulOperator * op) {
+    assert(false); 
+
     #ifdef TIMETAG
     cudaStreamSynchronize(0);
     double t = -get_time();
@@ -1962,6 +1964,8 @@ void OperatorExecutorGPUV2::softmax_backward(SoftmaxOperator * op) {
 //
 }
 void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op) {
+    assert(false);
+
     #ifdef TIMETAG
     cudaStreamSynchronize(0);
     double t = -get_time();
@@ -3205,8 +3209,7 @@ void OperatorExecutorGPUV2::aggregation_backward(AggregationOperator * op, Verte
 }
 
 void OperatorExecutorGPUV2::add_forward(AddOperator * op){
-
-    
+    assert(false);
     assert(op->get_num_input_tensors() == 2);
     assert(op->get_num_output_tensors() == 1);
     Tensor * input_tensor0 = op->get_input_tensor(0);
@@ -3320,6 +3323,7 @@ void OperatorExecutorGPUV2::add_forward(AddOperator * op){
     
 }
 void OperatorExecutorGPUV2::add_backward(AddOperator * op){
+    assert(false);
     assert(op->get_num_input_tensors() == 2);
     assert(op->get_num_output_tensors() == 1);
     Tensor * input_tensor0 = op->get_input_tensor(0);
@@ -3356,13 +3360,13 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op){
     float alpha = op->alpha;
     float beta = op->beta;
     cudnnAddTensor(
-    *cudnn_handle_,
-    &alpha,
-    data_descriptor,
-    d_output_grad,
-    &zero,
-    data_descriptor,
-    d_input_grad0
+        *cudnn_handle_,
+        &alpha,
+        data_descriptor,
+        d_output_grad,
+        &zero,
+        data_descriptor,
+        d_input_grad0
     );
     // cudnnAddTensor(
     // *cudnn_handle_,
@@ -3374,39 +3378,39 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op){
     // d_input_grad1
     // );
     } else if(input_tensor0->type == NORMAL_TENSOR){
-    assert(input_tensor0->type == NORMAL_TENSOR);
-    assert(input_tensor1->type == NORMAL_TENSOR);
-    assert(output_tensor->type == NORMAL_TENSOR);
-    TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
-    TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
-    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
-    assert(input_tensor_resource0 != NULL);
-    assert(input_tensor_resource1 != NULL);
-    assert(output_tensor_resource != NULL);
-    size_t num_elements = input_tensor_resource0->get_num_elements();
-    assert(num_elements == input_tensor_resource1->get_num_elements());
-    VertexId K = input_tensor0->dims[1];
-    assert(K == input_tensor1->dims[1]);
-    DataType * d_input_grad0 = input_tensor_resource0->get_gpu_grad();
-    DataType * d_input_grad1 = input_tensor_resource1->get_gpu_grad();
-    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
-    //CopyFromCUDADeviceToCUDADevice<DataType>(d_input_grad0, d_output_grad, num_elements, __FILE__, __LINE__);
-    cudnnTensorDescriptor_t data_descriptor;
-    cudnnCreateTensorDescriptor(&data_descriptor);
-    cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
-    float one = 1.0;
-    float zero = 0.0;
-    float alpha = op->alpha;
-    float beta = op->beta;
-    cudnnAddTensor(
-    *cudnn_handle_,
-    &alpha,
-    data_descriptor,
-    d_output_grad,
-    &zero,
-    data_descriptor,
-    d_input_grad0
-    );
+        assert(input_tensor0->type == NORMAL_TENSOR);
+        assert(input_tensor1->type == NORMAL_TENSOR);
+        assert(output_tensor->type == NORMAL_TENSOR);
+        TensorResourceGPU * input_tensor_resource0 = (TensorResourceGPU*) input_tensor0->resource;
+        TensorResourceGPU * input_tensor_resource1 = (TensorResourceGPU*) input_tensor1->resource;
+        TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
+        assert(input_tensor_resource0 != NULL);
+        assert(input_tensor_resource1 != NULL);
+        assert(output_tensor_resource != NULL);
+        size_t num_elements = input_tensor_resource0->get_num_elements();
+        assert(num_elements == input_tensor_resource1->get_num_elements());
+        VertexId K = input_tensor0->dims[1];
+        assert(K == input_tensor1->dims[1]);
+        DataType * d_input_grad0 = input_tensor_resource0->get_gpu_grad();
+        DataType * d_input_grad1 = input_tensor_resource1->get_gpu_grad();
+        DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+        //CopyFromCUDADeviceToCUDADevice<DataType>(d_input_grad0, d_output_grad, num_elements, __FILE__, __LINE__);
+        cudnnTensorDescriptor_t data_descriptor;
+        cudnnCreateTensorDescriptor(&data_descriptor);
+        cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+        float one = 1.0;
+        float zero = 0.0;
+        float alpha = op->alpha;
+        float beta = op->beta;
+        cudnnAddTensor(
+            *cudnn_handle_,
+            &alpha,
+            data_descriptor,
+            d_output_grad,
+            &zero,
+            data_descriptor,
+            d_input_grad0
+        );
     }
 }
 
@@ -3480,8 +3484,7 @@ void OperatorExecutorGPUV2::add_forward(AddOperator * op, VertexId left, VertexI
             adjusted_output_data
         );
         cudnnDestroyTensorDescriptor(data_descriptor);
-    } else if(input_tensor0->type == NORMAL_TENSOR)
-    {
+    } else if(input_tensor0->type == NORMAL_TENSOR) {
     
         assert(input_tensor0->type == NORMAL_TENSOR);
         assert(input_tensor1->type == NORMAL_TENSOR);
@@ -4106,6 +4109,8 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
 }
 
 void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op) {
+    assert(false);
+
 #ifdef TIMETAG
     cudaStreamSynchronize(0);
 #endif
