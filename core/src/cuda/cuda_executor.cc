@@ -4328,6 +4328,17 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
     size_t end_idx = num_elements_per_vertex * right;
     assert(start_idx < end_idx);
 
+    size_t needed_tmp_buff_size = (end_idx - start_idx) * sizeof(DataType);
+    if (needed_tmp_buff_size > dropout_tmp_buff_size_) {
+        if (dropout_tmp_buff_) {
+            checkCUDA(cudaFree(dropout_tmp_buff_));
+        }
+        dropout_tmp_buff_size_ = needed_tmp_buff_size;
+        checkCUDA(cudaMalloc(&dropout_tmp_buff_, dropout_tmp_buff_size_));
+    }
+    assert(dropout_tmp_buff_);
+    assert(dropout_tmp_buff_size_ >= needed_tmp_buff_size);
+
     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
     assert(d_input_grad);
@@ -4340,16 +4351,19 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
         d_output_grad += start_idx;
     }
 
+    // calculate the gradients to a tmp buff
     checkCUDNN(cudnnDropoutBackward(
                 *cudnn_handle_,
                 dropout_descriptor,
                 tensor_descriptor,
                 (const void*) d_output_grad,
                 tensor_descriptor,
-                (void*) d_input_grad,
+                (void*) dropout_tmp_buff_,
                 (void*) reserved_space,
                 reserved_space_size
                 ));
+    // accumulate the gradients to the input gradient buffer
+    cuda_vector_add(dropout_tmp_buff_, d_input_grad, d_input_grad, end_idx - start_idx);
 
 #ifdef TIMETAG
     cudaStreamSynchronize(0);

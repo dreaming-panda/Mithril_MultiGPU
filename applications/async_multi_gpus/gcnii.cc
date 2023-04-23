@@ -80,7 +80,7 @@ class GCNII: public AbstractApplication {
             next_layer();
             // L-layer GCNII convolutions
             for (int i = 0; i < num_layers_; ++ i) {
-                //t = dropout(t, dropout_rate_, enable_recomputation_);
+                t = dropout(t, dropout_rate_, enable_recomputation_);
                 t = graph_convolution(t, h0, i + 1);
                 t = relu(t, enable_recomputation_);
                 next_layer();

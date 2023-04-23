@@ -208,6 +208,9 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             VertexId right;
         };
         std::map<DropoutOperator*, std::map<int, DropoutOpState>*> dropout_op_states; // mapping from (op, chunk_id) to the state
+        // a temporary buffer for dropout gradients
+        DataType * dropout_tmp_buff_ = NULL;
+        size_t dropout_tmp_buff_size_ = 0;
 
         cusparseSpMatDescr_t SpCsr_;
         cusparseSpMatDescr_t SpCsr_T;
@@ -234,6 +237,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
 
         // random seed
         int random_seed_ = 1234;
+
+        void cuda_vector_add(DataType * src_0, DataType * src_1, DataType * dst, int num_elements);
     public:
         OperatorExecutorGPUV2(){
             graph_ = nullptr;
