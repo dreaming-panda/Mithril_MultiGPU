@@ -1818,23 +1818,23 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int M  = num_elements / N; // out_features
             assert(M > 0);
 
-            // Xavier initialization
-            double range = sqrt(5./(N + M));
-            srand(random_seed_);
-            for (size_t i = 0; i < num_elements; ++ i) {
-                double r = double(rand()) / double(RAND_MAX);
-                assert(r >= 0. && r <= 1.);
-                data_buff[i] = (r - 0.5) * 2 * range;
-            }
-
-            //// the default initialization method of Pytorch
-            //double range = 1. / sqrt(double(M));
+            //// Xavier initialization
+            //double range = sqrt(5./(N + M));
             //srand(random_seed_);
             //for (size_t i = 0; i < num_elements; ++ i) {
             //    double r = double(rand()) / double(RAND_MAX);
             //    assert(r >= 0. && r <= 1.);
             //    data_buff[i] = (r - 0.5) * 2 * range;
             //}
+
+            // the default initialization method of Pytorch
+            double range = 1. / sqrt(double(M));
+            srand(random_seed_);
+            for (size_t i = 0; i < num_elements; ++ i) {
+                double r = double(rand()) / double(RAND_MAX);
+                assert(r >= 0. && r <= 1.);
+                data_buff[i] = (r - 0.5) * 2 * range;
+            }
 
             CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
             delete [] data_buff;
