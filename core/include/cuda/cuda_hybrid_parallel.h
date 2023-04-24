@@ -1829,7 +1829,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
             // the default initialization method of Pytorch
             double range = 1. / sqrt(double(M));
-            srand(random_seed_);
+            //srand(random_seed_);
             for (size_t i = 0; i < num_elements; ++ i) {
                 double r = double(rand()) / double(RAND_MAX);
                 assert(r >= 0. && r <= 1.);

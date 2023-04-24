@@ -4015,6 +4015,8 @@ void OperatorExecutorGPUV2::matmuladd_backward(MatmulAddOperator * op, VertexId 
 }
 
 void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
+    assert(false);
+
 #ifdef TIMETAG
     cudaStreamSynchronize(0);
 #endif
@@ -4226,7 +4228,9 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
                     dropout_descriptor, *cudnn_handle_,
                     op->dropout_rate_,
                     states, states_size,
-                    random_seed_
+                    rand()
+                    //time(NULL)
+                    //random_seed_
                     ));
         // set up the tensor descriptor
         cudnnTensorDescriptor_t tensor_descriptor;

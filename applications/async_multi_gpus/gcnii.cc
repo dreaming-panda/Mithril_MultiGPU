@@ -88,8 +88,8 @@ class GCNII: public AbstractApplication {
             // classification
             t = dropout(t, dropout_rate_, enable_recomputation_);
             t = fc(t, num_classes_);
-            t = softmax(t); // softmax 
-            //t = softmax(t, true); // log softmax 
+            //t = softmax(t); // softmax 
+            t = softmax(t, true); // log softmax 
             next_layer();
             return t;
         }
@@ -225,6 +225,8 @@ int main(int argc, char ** argv) {
     printf("GCN hyper-parameter alpha: %.6f\n", alpha);
     printf("GCN hyper-parameter lambda: %.6f\n", lambda);
 
+    srand(random_seed);
+
     volatile bool terminated = false;
     Context::init_context();
     int node_id = DistributedSys::get_instance()->get_node_id();
@@ -268,8 +270,8 @@ int main(int argc, char ** argv) {
     cusparseCreate(&cusparse);
     executor->set_activation_size(num_hidden_units,num_classes);
     executor->set_cuda_handle(&cublas, &cudnn, &cusparse);
-    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
-    //NLLLoss * loss = new NLLLoss();
+    //CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
+    NLLLoss * loss = new NLLLoss();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
     int * training = new int[graph_structure->get_num_global_vertices()];
     int * valid = new int[graph_structure->get_num_global_vertices()];
