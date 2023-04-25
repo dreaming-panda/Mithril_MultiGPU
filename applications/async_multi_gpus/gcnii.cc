@@ -34,10 +34,12 @@
 using namespace std;
 
 // TODO list for the new model
-// 1) support h0 communication // TODO
-// 2) refine the model partitioning algorithm
-// 3) the dropout recomputation issue
-// 4) the scale-and-add op
+// 1) [x] support h0 communication // TODO
+// 2) [x] refine the model partitioning algorithm
+// 3) [x] the dropout recomputation issue
+// 4) [x] the scale-and-add op
+// 5) [ ] enable rematerialization for GCNII
+// 6) [ ] the h0 broadcasting
 
 class GCNII: public AbstractApplication {
     private:

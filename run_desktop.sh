@@ -23,11 +23,11 @@ make -j
 num_layers=64
 hunits=64
 lr=1e-2
-graph=cora
-epoch=100
-decay=0
+graph=citeseer
+epoch=250
+decay=5e-4
 chunks=1
-dropout=0.5
+dropout=0.6
 seed=42
 scaledown=0.1
 model=gcnii
