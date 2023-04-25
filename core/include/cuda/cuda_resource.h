@@ -128,27 +128,27 @@ class TensorResourceGPU:public AbstractTensorResource{
             gpu_grad_ = new_grad;
         }
         size_t get_num_elements(){
-    size_t num_elements = 0;
-    if (tensor_->type == VERTEX_TENSOR) {
-        assert(tensor_->num_dims == 2);
-        assert(tensor_->dims[0] == -1);
-        assert(tensor_->dims[1] > 0);
-        num_elements = (size_t) num_vertices_ * tensor_->dims[1];
-    } else if (tensor_->type == EDGE_TENSOR) {
-        fprintf(stderr, "The EDGE_TENSOR type has not been supported.\n");
-        exit(-1);
-    } else if (tensor_->type == NORMAL_TENSOR) {
-        assert(tensor_->num_dims > 0);
-        num_elements = 1;
-        for (int i = 0; i < tensor_->num_dims; ++ i) {
-            num_elements *= tensor_->dims[i];
-        }
-    } else {
-        fprintf(stderr, "Unrecognized tensor type.\n");
-        exit(-1);
-    }
-    assert(num_elements > 0);
-    return num_elements;
+            size_t num_elements = 0;
+            if (tensor_->type == VERTEX_TENSOR) {
+                assert(tensor_->num_dims == 2);
+                assert(tensor_->dims[0] == -1);
+                assert(tensor_->dims[1] > 0);
+                num_elements = (size_t) num_vertices_ * tensor_->dims[1];
+            } else if (tensor_->type == EDGE_TENSOR) {
+                fprintf(stderr, "The EDGE_TENSOR type has not been supported.\n");
+                exit(-1);
+            } else if (tensor_->type == NORMAL_TENSOR) {
+                assert(tensor_->num_dims > 0);
+                num_elements = 1;
+                for (int i = 0; i < tensor_->num_dims; ++ i) {
+                    num_elements *= tensor_->dims[i];
+                }
+            } else {
+                fprintf(stderr, "Unrecognized tensor type.\n");
+                exit(-1);
+            }
+            assert(num_elements > 0);
+            return num_elements;
         }
         VertexId get_num_vertices(){
             return num_vertices_;

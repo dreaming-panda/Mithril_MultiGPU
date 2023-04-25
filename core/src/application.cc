@@ -39,6 +39,7 @@ void AbstractApplication::construct_computation_graph() {
     assert(input_tensor_ == NULL);
     assert(output_tensor_ == NULL);
     assert(is_computation_graph_ready_ == false);
+    assert(global_shared_tensor_ == NULL);
 
     // invoke the user-defined function to construct the computation graph
     Operator * input_operator = new InputOperator(num_features_);
@@ -163,4 +164,15 @@ void AbstractApplication::next_layer() {
 
 const std::vector<std::pair<int, int>>& AbstractApplication::get_operator_range_each_layer() {
     return operator_range_each_layer_;
+}
+
+void AbstractApplication::set_global_shared_tensor(Tensor * tensor) {
+    global_shared_tensor_ = tensor;
+}
+
+Tensor * AbstractApplication::get_global_shared_tensor() {
+    if (! is_computation_graph_ready_) {
+        construct_computation_graph();
+    }
+    return global_shared_tensor_;
 }

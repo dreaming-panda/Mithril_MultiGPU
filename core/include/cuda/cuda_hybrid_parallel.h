@@ -1649,6 +1649,11 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         // scaledown factor
         double scaledown_ = 1.;
 
+        // glboally shared tensor (i.e., h0 for GCNII)
+        Tensor * global_shared_tensor_;
+        DataType * global_shared_tensor_data_;
+        DataType * global_shared_tensor_grad_;
+
         inline int get_num_epoch() {
             return num_epoch_;
         }

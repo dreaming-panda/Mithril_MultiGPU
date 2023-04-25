@@ -79,6 +79,7 @@ class GCNII: public AbstractApplication {
             t = fc(t, num_hidden_units_);
             t = relu(t, enable_recomputation_);
             Tensor * h0 = t;
+            set_global_shared_tensor(h0); // the tensor that is shared across all GPUs
             t = dropout(t, enable_recomputation_);
             next_layer();
             // L-layer GCNII convolutions

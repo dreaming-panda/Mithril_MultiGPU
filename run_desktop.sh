@@ -23,7 +23,7 @@ make -j
 num_layers=64
 hunits=64
 lr=1e-2
-graph=citeseer
+graph=cora
 epoch=250
 decay=5e-4
 chunks=1
@@ -32,7 +32,7 @@ seed=42
 scaledown=0.1
 model=gcnii
 
-mpirun -n 1 -N 1 ./applications/async_multi_gpus/$model --graph /home/amadeus/ssd512/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown 
+mpirun -n 2 -N 2 ./applications/async_multi_gpus/$model --graph /home/amadeus/ssd512/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown 
 
 #$HOME/baseline/Mithril_MultiGPU/build/applications/single_gpu/gcn_inference --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --weight_file $PROJECT/saved_weights_pipe
 
