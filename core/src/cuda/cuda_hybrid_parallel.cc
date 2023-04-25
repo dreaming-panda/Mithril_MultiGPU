@@ -433,6 +433,22 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                             }, true // buff in CPU
                             );
                 }
+                // receive h0
+                if (engine_->global_shared_tensor_) {
+                    int num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
+                    VertexId left = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
+                    VertexId right = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
+                    int num_elements = (right - left) * num_elements_per_vertex;
+                    DataType * grad = engine_->global_shared_tensor_grad_ + left * num_elements_per_vertex;
+                    MPI_Status status;
+                    MPI_Recv(
+                        grad, num_elements, 
+                        DistributedSys::get_mpi_data_type<DataType>(),
+                        remote_node, BackwardGradientPassing,
+                        MPI_COMM_WORLD, &status
+                    );
+                    comm += sizeof(DataType) * num_elements;
+                }
                 comm_time += get_time();
 
                 Profiler::submit_backward_task_dispatcher_event(BackwardDispatcherCompleteReceiveData);
@@ -706,12 +722,20 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                             remote_node, BackwardGradientPassing,
                             MPI_COMM_WORLD
                             );
-
-                    //MPI_Send(
-                    //        compressed_data, compressed_data_size, MPI_CHAR,
-                    //        remote_node, BackwardGradientPassing,
-                    //        MPI_COMM_WORLD
-                    //        );
+                }
+                // send out the h0
+                if (engine_->global_shared_tensor_) {
+                    int num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
+                    VertexId left = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
+                    VertexId right = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
+                    size_t num_elements = (right - left) * num_elements_per_vertex;
+                    DataType * grad = engine_->global_shared_tensor_grad_ + left * num_elements_per_vertex;
+                    MPI_Send(
+                        grad, num_elements, 
+                        DistributedSys::get_mpi_data_type<DataType>(),
+                        remote_node, BackwardGradientPassing,
+                        MPI_COMM_WORLD
+                    );
                 }
             }
         }
@@ -842,6 +866,26 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                             grad_gpu2cpu_queue->pop_blocking(task);
                             if (node_id > 0) {
                                 engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
+                                if (engine_->global_shared_tensor_) {
+                                    int num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
+                                    VertexId left = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
+                                    VertexId right = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
+                                    DataType * cpu_grad = engine_->global_shared_tensor_grad_ + left * num_elements_per_vertex;
+                                    DataType * gpu_grad = NULL;
+                                    size_t num_elements = 0;
+                                    engine_->get_vertex_tensor_grad_by_chunk(
+                                        engine_->global_shared_tensor_, task.chunk_id,
+                                        gpu_grad, num_elements
+                                    );
+                                    assert(gpu_grad);
+                                    assert(num_elements == (right - left) * num_elements_per_vertex);
+                                    checkCUDA(
+                                        cudaMemcpy(
+                                            cpu_grad, gpu_grad, sizeof(DataType) * num_elements,
+                                            cudaMemcpyDeviceToHost
+                                        )
+                                    );
+                                }
                             }
                             backward_task_committer_queue_->push(task);
                         }
@@ -1001,7 +1045,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         );
                         assert(gpu_data);
                         assert(num_elements_gpu == num_elements);
-                        checkCUDA(cudaMemcpy(gpu_data, cpu_data, sizeof(DataType) * num_elements,
+                        checkCUDA(cudaMemcpyAsync(gpu_data, cpu_data, sizeof(DataType) * num_elements,
                             cudaMemcpyHostToDevice));
                     }
                 }
@@ -1069,6 +1113,27 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 {
                     if (node_id < num_nodes - 1) {
                         engine_->grad_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
+                        if (engine_->global_shared_tensor_) {
+                            int num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
+                            VertexId left = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
+                            VertexId right = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
+                            size_t num_elements_cpu = num_elements_per_vertex * (right - left);
+                            DataType * grad_cpu = engine_->global_shared_tensor_grad_ + left * num_elements_per_vertex;
+                            DataType * grad_gpu = NULL;
+                            size_t num_elements_gpu = 0;
+                            engine_->get_vertex_tensor_grad_by_chunk(
+                                engine_->global_shared_tensor_, task.chunk_id,
+                                grad_gpu, num_elements_gpu
+                            );
+                            assert(grad_gpu);
+                            assert(num_elements_cpu == num_elements_gpu);
+                            checkCUDA(
+                                cudaMemcpyAsync(
+                                    grad_gpu, grad_cpu, sizeof(DataType) * num_elements_cpu, 
+                                    cudaMemcpyHostToDevice
+                                )
+                            );
+                        }
                     }
                     assert(task.epoch_id == epoch_id);
 
@@ -3822,6 +3887,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     Profiler::submit_main_thread_event(BackwardTaskStartEvent);
     int chunk_id = task.chunk_id;
     int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
     VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
     VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
@@ -3893,6 +3959,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
 
     for (Tensor * tensor: *all_non_backward_dependent_tensors) {
         if (tensor == output_tensor_) {
+            continue;
+        }
+        if (node_id < num_nodes - 1 && tensor == global_shared_tensor_) {
             continue;
         }
         DataType * grad = NULL;
@@ -4281,42 +4350,40 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_std_tensor() {
+    if(is_bottommost_node_) {
+        Tensor * output_tensor = application_->get_output_tensor();
+        output_tensor_ = output_tensor;
+        assert(output_tensor->type == VERTEX_TENSOR);
+        std_tensor_ = new Tensor;
+        std_tensor_->type = VERTEX_TENSOR;
+        std_tensor_->num_dims = 2;
+        std_tensor_->dims[0] = -1;
+        std_tensor_->dims[1] = output_tensor->dims[1];
+        std_tensor_->op = NULL;
+        std_tensor_->idx = -1;
+        std_tensor_->resource = new TensorResourceGPU(
+                std_tensor_, vid_translation_->get_num_master_vertices()
+                );
+        std_tensor_->resource->map();
 
-    if(is_bottommost_node_)
-    {
-    Tensor * output_tensor = application_->get_output_tensor();
-    output_tensor_ = output_tensor;
-    assert(output_tensor->type == VERTEX_TENSOR);
-    std_tensor_ = new Tensor;
-    std_tensor_->type = VERTEX_TENSOR;
-    std_tensor_->num_dims = 2;
-    std_tensor_->dims[0] = -1;
-    std_tensor_->dims[1] = output_tensor->dims[1];
-    std_tensor_->op = NULL;
-    std_tensor_->idx = -1;
-    std_tensor_->resource = new TensorResourceGPU(
-            std_tensor_, vid_translation_->get_num_master_vertices()
-            );
-    std_tensor_->resource->map();
+        TensorResourceGPU * resource = (TensorResourceGPU*) std_tensor_->resource;
+        VertexId vid_begin = vid_translation_->get_partition_begin();
+        VertexId vid_end = vid_translation_->get_partition_end();
+        DataType * data = resource->get_gpu_data();
+        assert(data != NULL);
+        int num_labels = graph_non_structural_data_->get_num_labels(); 
+        assert(std_tensor_->dims[0] == -1);
+        assert(std_tensor_->dims[1] == num_labels); // must be in one-hot representation
 
-    TensorResourceGPU * resource = (TensorResourceGPU*) std_tensor_->resource;
-    VertexId vid_begin = vid_translation_->get_partition_begin();
-    VertexId vid_end = vid_translation_->get_partition_end();
-    DataType * data = resource->get_gpu_data();
-    assert(data != NULL);
-    int num_labels = graph_non_structural_data_->get_num_labels(); 
-    assert(std_tensor_->dims[0] == -1);
-    assert(std_tensor_->dims[1] == num_labels); // must be in one-hot representation
-
-    size_t offset = 0;
-    for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
-        LabelVector label_vec = graph_non_structural_data_->get_label(v_i);
-        assert(label_vec.vec_len == num_labels);
-        assert(label_vec.data != NULL);
-        //memcpy(data + offset, label_vec.data, sizeof(DataType) * num_labels);
-         CopyFromHostToCUDADevice<DataType>(data + offset, label_vec.data, num_labels, __FILE__, __LINE__);
-        offset += num_labels;
-    }
+        size_t offset = 0;
+        for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
+            LabelVector label_vec = graph_non_structural_data_->get_label(v_i);
+            assert(label_vec.vec_len == num_labels);
+            assert(label_vec.data != NULL);
+            //memcpy(data + offset, label_vec.data, sizeof(DataType) * num_labels);
+             CopyFromHostToCUDADevice<DataType>(data + offset, label_vec.data, num_labels, __FILE__, __LINE__);
+            offset += num_labels;
+        }
     }
 }
 
