@@ -834,24 +834,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         act_gpu2cpu_queue->pop_blocking(task);
                         if (node_id < num_nodes - 1) {
                             engine_->data_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
-                            if (node_id == 0 && engine_->global_shared_tensor_) {
-                                int num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
-                                VertexId left = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
-                                VertexId right = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
-                                DataType * cpu_data = engine_->global_shared_tensor_data_ + left * num_elements_per_vertex;
-                                DataType * gpu_data = NULL;
-                                size_t num_elements = 0;
-                                engine_->get_vertex_tensor_data_by_chunk(
-                                    engine_->global_shared_tensor_, task.chunk_id,
-                                    gpu_data, num_elements
-                                );
-                                assert(gpu_data);
-                                assert(num_elements == (right - left) * num_elements_per_vertex);
-                                checkCUDA(
-                                    cudaMemcpy(cpu_data, gpu_data, sizeof(DataType) * num_elements,
-                                        cudaMemcpyDeviceToHost)
-                                );
-                            }
                         }
                         forward_task_committer_queue_->push(task);
                     }
@@ -866,26 +848,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                             grad_gpu2cpu_queue->pop_blocking(task);
                             if (node_id > 0) {
                                 engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
-                                if (engine_->global_shared_tensor_) {
-                                    int num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
-                                    VertexId left = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
-                                    VertexId right = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
-                                    DataType * cpu_grad = engine_->global_shared_tensor_grad_ + left * num_elements_per_vertex;
-                                    DataType * gpu_grad = NULL;
-                                    size_t num_elements = 0;
-                                    engine_->get_vertex_tensor_grad_by_chunk(
-                                        engine_->global_shared_tensor_, task.chunk_id,
-                                        gpu_grad, num_elements
-                                    );
-                                    assert(gpu_grad);
-                                    assert(num_elements == (right - left) * num_elements_per_vertex);
-                                    checkCUDA(
-                                        cudaMemcpy(
-                                            cpu_grad, gpu_grad, sizeof(DataType) * num_elements,
-                                            cudaMemcpyDeviceToHost
-                                        )
-                                    );
-                                }
                             }
                             backward_task_committer_queue_->push(task);
                         }
@@ -3847,18 +3809,18 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 exit(-1);
         }
     }
-    // calculate the loss if applicable 
-    if (is_bottommost_node_) {
-        //printf("Node %d is going to calculate the loss of local vid [%u, %u)\n",
-        //        node_id, local_vid_begin, local_vid_end);
-        //double loss = loss_->get_loss( 
-        //        output_tensor_, std_tensor_, local_vid_begin, local_vid_end
-        //        );
-        //loss_->calculate_gradients(
-        //        output_tensor_, std_tensor_, local_vid_begin, local_vid_end
-        //        );
-        //accum_loss_ += loss;
-    }
+    //// calculate the loss if applicable 
+    //if (is_bottommost_node_) {
+    //    //printf("Node %d is going to calculate the loss of local vid [%u, %u)\n",
+    //    //        node_id, local_vid_begin, local_vid_end);
+    //    //double loss = loss_->get_loss( 
+    //    //        output_tensor_, std_tensor_, local_vid_begin, local_vid_end
+    //    //        );
+    //    //loss_->calculate_gradients(
+    //    //        output_tensor_, std_tensor_, local_vid_begin, local_vid_end
+    //    //        );
+    //    //accum_loss_ += loss;
+    //}
     compute_time_ += get_time();
 
     if (pipeline_output_tensor_ != NULL && COMPRESS_DATA) {
@@ -3877,6 +3839,24 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
         //printf("Compression size: %.3f MB\n", sizeof(DataType) * num_elements_this_chunk / 1024. / 1024.);
     }
 
+    if (node_id == 0 && global_shared_tensor_) {
+        int num_elements_per_vertex = global_shared_tensor_->dims[1];
+        VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
+        VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
+        DataType * cpu_data = global_shared_tensor_data_ + left * num_elements_per_vertex;
+        DataType * gpu_data = NULL;
+        size_t num_elements = 0;
+        get_vertex_tensor_data_by_chunk(
+            global_shared_tensor_, task.chunk_id,
+            gpu_data, num_elements
+        );
+        assert(gpu_data);
+        assert(num_elements == (right - left) * num_elements_per_vertex);
+        checkCUDA(
+            cudaMemcpy(cpu_data, gpu_data, sizeof(DataType) * num_elements,
+                cudaMemcpyDeviceToHost)
+        );
+    }
 
     //chunk_time += get_time();
     //fprintf(stderr, "Vertices: %u, Edges: %lu, ForwardRuntime: %.3f (ms)\n", global_vid_end - global_vid_begin, num_edges, chunk_time * 1000.);
@@ -4079,6 +4059,27 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         }
     }
     compute_time_ += get_time();
+
+    if (node_id > 0 && global_shared_tensor_) {
+        int num_elements_per_vertex = global_shared_tensor_->dims[1];
+        VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
+        VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
+        DataType * cpu_grad = global_shared_tensor_grad_ + left * num_elements_per_vertex;
+        DataType * gpu_grad = NULL;
+        size_t num_elements = 0;
+        get_vertex_tensor_grad_by_chunk(
+            global_shared_tensor_, task.chunk_id,
+            gpu_grad, num_elements
+        );
+        assert(gpu_grad);
+        assert(num_elements == (right - left) * num_elements_per_vertex);
+        checkCUDA(
+            cudaMemcpy(
+                cpu_grad, gpu_grad, sizeof(DataType) * num_elements,
+                cudaMemcpyDeviceToHost
+            )
+        );
+    }
 
     // apply the gradients by pushing them to the parameter server
     for (WeightOperator * op: local_weight_ops_) { 
