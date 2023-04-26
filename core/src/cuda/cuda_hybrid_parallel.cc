@@ -1515,13 +1515,13 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             assert(output_tensor != NULL);
             if (output_tensor->type == VERTEX_TENSOR) {
                 // only responsible for vertex tensor data management
-                if (local_tensors_.find(output_tensor) == local_tensors_.end()) {
-                    LocalVertexTensor local_tensor;
-                    local_tensor.tensor = output_tensor;
-                    local_tensor.type = 0;
-                    local_tensor.is_mirror_tensor = false;
-                    local_tensors_[output_tensor] = local_tensor;
-                }
+                //if (local_tensors_.find(output_tensor) == local_tensors_.end()) {
+                LocalVertexTensor local_tensor;
+                local_tensor.tensor = output_tensor;
+                local_tensor.type = 0;
+                local_tensor.is_mirror_tensor = false;
+                local_tensors_[output_tensor] = local_tensor;
+                //}
             }
         }
     }
@@ -1574,6 +1574,7 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // mirror data isn't needed
             size_t num_elements = lvt.num_elements_per_vertex * 
                 num_master_vertices;
+            //printf("TEST, %d %d\n", lvt.tensor->op->get_is_transient(), lvt.is_mirror_tensor);
 
             // determine whether we can only allocate a chunk of memory (a partial tensor)
             // i.e., recomputable 
@@ -1585,6 +1586,7 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
                     lvt.is_mirror_tensor == false) {
                 // only allocate the memory sufficient to store a chunk (rather than for all vertices)
                 num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
+                //printf("Found transient tensor\n");
                 // also mark the tensor 
                 lvt.tensor->is_data_transient = true;
             }
@@ -3986,6 +3988,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         if (! need_recomputation) {
             continue;
         }
+        //printf("Doing recomputation: OP %s\n",
+        //        get_op_type_str(op->get_type()).c_str());
         switch (op->get_type()) {
             case OPERATOR_INPUT:
                 // do nothing
