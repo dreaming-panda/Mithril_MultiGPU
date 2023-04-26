@@ -4219,7 +4219,9 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
         size_t states_size = 0;
         checkCUDNN(cudnnDropoutGetStatesSize(*cudnn_handle_, &states_size));
         void * states = NULL;
+        void * backup_states = NULL;
         checkCUDA(cudaMalloc(&states, states_size));
+        checkCUDA(cudaMalloc(&backup_states, states_size));
         assert(states);
         // set up the op descriptor
         cudnnDropoutDescriptor_t dropout_descriptor;

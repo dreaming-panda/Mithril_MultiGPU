@@ -204,6 +204,7 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
             size_t reserved_space_size;
             void * random_state;
             size_t random_state_size;
+            void * backup_random_state; // backup the random state for recomputation
             VertexId left;
             VertexId right;
         };

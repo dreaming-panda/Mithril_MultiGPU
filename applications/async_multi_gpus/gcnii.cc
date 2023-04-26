@@ -39,7 +39,7 @@ using namespace std;
 // 3) [x] the dropout recomputation issue
 // 4) [x] the scale-and-add op
 // 5) [ ] enable rematerialization for GCNII
-// 6) [ ] the h0 broadcasting
+// 6) [x] the h0 broadcasting
 
 class GCNII: public AbstractApplication {
     private:
