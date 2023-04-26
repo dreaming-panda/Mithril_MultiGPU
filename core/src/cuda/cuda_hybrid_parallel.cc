@@ -3971,6 +3971,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     // backward the gradients
     compute_time_ -= get_time();
     // recomputation
+    executor_->enable_recomputation_mode();
     for (int op_idx = op_idx_begin; op_idx < op_idx_end; ++ op_idx) {
         Operator * op = op_ten_manager_->get_operator(op_idx);
         assert(op != NULL);
@@ -4018,6 +4019,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 exit(-1);
         }
     }
+    executor_->disable_recomputation_mode();
     // doing the actual backwarding
     for (int op_idx = op_idx_end - 1; op_idx >= op_idx_begin; -- op_idx) {
         if (! backward_operator_mask_[op_idx]) {

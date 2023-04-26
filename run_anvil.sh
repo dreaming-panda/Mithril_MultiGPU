@@ -20,11 +20,11 @@ make -j
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
-num_layers=64
-hunits=64
-lr=1e-2
-graph=cora
-epoch=250
+num_layers=32
+hunits=32
+lr=1e-3
+graph=arxiv
+epoch=500
 decay=5e-4
 chunks=1
 dropout=0.5

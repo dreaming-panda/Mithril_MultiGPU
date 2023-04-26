@@ -4215,6 +4215,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
     std::map<int, DropoutOpState> * chunk2state = dropout_op_states[op];
     assert(chunk2state);
     if (chunk2state->find(chunk_id) == chunk2state->end()) {
+        assert(! is_in_recomputation_mode_);
         // allocate a new dropout state
         size_t states_size = 0;
         checkCUDNN(cudnnDropoutGetStatesSize(*cudnn_handle_, &states_size));
@@ -4223,6 +4224,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
         checkCUDA(cudaMalloc(&states, states_size));
         checkCUDA(cudaMalloc(&backup_states, states_size));
         assert(states);
+        assert(backup_states);
         // set up the op descriptor
         cudnnDropoutDescriptor_t dropout_descriptor;
         checkCUDNN(cudnnCreateDropoutDescriptor(&dropout_descriptor));
@@ -4256,12 +4258,28 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
         dropout_op_state.reserved_space = reserve_space;
         dropout_op_state.reserved_space_size = reserve_space_size;
         dropout_op_state.random_state = states;
+        dropout_op_state.backup_random_state = backup_states;
         dropout_op_state.random_state_size = states_size;
         dropout_op_state.left = left;
         dropout_op_state.right = right;
         (*chunk2state)[chunk_id] = dropout_op_state;
     }
     DropoutOpState dropout_op_state = (*chunk2state)[chunk_id];
+
+    if (! is_in_recomputation_mode_) {
+        // backup the random state for potential recomputation
+        checkCUDA(cudaMemcpy(dropout_op_state.backup_random_state,
+                    dropout_op_state.random_state, dropout_op_state.random_state_size,
+                    cudaMemcpyDeviceToDevice));
+    } else {
+        // use the backup random state for recomputation
+        checkCUDA(
+                cudaMemcpy(
+                    dropout_op_state.random_state, dropout_op_state.backup_random_state,
+                    dropout_op_state.random_state_size, cudaMemcpyDeviceToDevice
+                    )
+                );
+    }
 
     cudnnDropoutDescriptor_t dropout_descriptor = dropout_op_state.dropout_descriptor;
     cudnnTensorDescriptor_t tensor_descriptor = dropout_op_state.tensor_descriptor;
