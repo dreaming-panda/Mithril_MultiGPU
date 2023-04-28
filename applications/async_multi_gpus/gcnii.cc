@@ -34,7 +34,7 @@
 using namespace std;
 
 // TODO list for the new model
-// 1) [x] support h0 communication // TODO
+// 1) [x] support h0 communication 
 // 2) [x] refine the model partitioning algorithm
 // 3) [x] the dropout recomputation issue
 // 4) [x] the scale-and-add op
