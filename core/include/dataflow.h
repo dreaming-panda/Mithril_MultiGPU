@@ -164,7 +164,7 @@ class AggregationOperator: public Operator {
     private:
         AggregationType type_;
     public:
-        AggregationOperator(Tensor * t, AggregationType type);
+        AggregationOperator(Tensor * t, AggregationType type, bool is_transient = false);
         ~AggregationOperator() {}
         AggregationType get_aggregation_type();
 };

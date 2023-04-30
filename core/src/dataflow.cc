@@ -222,6 +222,7 @@ MatmulAddOperator::MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, Dat
     this->alpha = alpha;
     this->beta = beta;
 }
+
 // SoftmaxOperator
 
 SoftmaxOperator::SoftmaxOperator(Tensor * t, bool log_output, bool is_transient): Operator(t, 1, OPERATOR_SOFTMAX, is_transient) {
