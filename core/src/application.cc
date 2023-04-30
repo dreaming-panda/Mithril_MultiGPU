@@ -106,7 +106,7 @@ Tensor * AbstractApplication::fc(Tensor * a, int num_hunits, std::string activat
     } else if (activation_fun == "relu") {
         t = relu(t, is_transient);
     } else if (activation_fun == "softmax") {
-        t = softmax(t, false, is_transient);
+        t = softmax(t, is_transient);
     } else {
         fprintf(stderr, "ERROR: Unsupported activation function: %s\n",
                 activation_fun.c_str());
@@ -115,10 +115,16 @@ Tensor * AbstractApplication::fc(Tensor * a, int num_hunits, std::string activat
     return t;
 }
 
-Tensor * AbstractApplication::softmax(Tensor * t, bool log_output, bool is_transient) {
-    Operator * softmax = new SoftmaxOperator(t, log_output, is_transient);
+Tensor * AbstractApplication::softmax(Tensor * t, bool is_transient) {
+    Operator * softmax = new SoftmaxOperator(t, false, is_transient);
     operators_.push_back(softmax);
     return softmax->get_output_tensor(0);
+}
+
+Tensor * AbstractApplication::log_softmax(Tensor * t, bool is_transient) {
+    Operator * log_softmax = new SoftmaxOperator(t, true, is_transient);
+    operators_.push_back(softmax);
+    return softmax->get_output_tensor(0); 
 }
 
 Tensor * AbstractApplication::aggregation(Tensor * t, AggregationType type, bool is_transient) {

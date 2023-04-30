@@ -91,7 +91,7 @@ class GCNII: public AbstractApplication {
             }
             // classification
             t = fc(t, num_classes_);
-            t = softmax(t, true); // log softmax 
+            t = logsoftmax(t);
             next_layer();
             return t;
         }

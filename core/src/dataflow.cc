@@ -184,7 +184,8 @@ WeightOperator::WeightOperator(int dim_0, int dim_1): Operator(1, OPERATOR_WEIGH
 
 // MatmulOperator
 
-MatmulOperator::MatmulOperator(Tensor * a, Tensor * b): Operator(a, b, 1, OPERATOR_MATMUL) {
+MatmulOperator::MatmulOperator(Tensor * a, Tensor * b, bool is_transient): 
+        Operator(a, b, 1, OPERATOR_MATMUL, is_transient) {
     assert(a->type == VERTEX_TENSOR);
     assert(a->num_dims == 2);
     assert(a->dims[0] == -1);
@@ -201,6 +202,7 @@ MatmulOperator::MatmulOperator(Tensor * a, Tensor * b): Operator(a, b, 1, OPERAT
     output_tensors_[0].dims[0] = -1;
     output_tensors_[0].dims[1] = b->dims[1];
 }
+
 MatmulAddOperator::MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta): Operator(a, b, 1, OPERATOR_MATMULADD) {
     assert(a->type == VERTEX_TENSOR);
     assert(a->num_dims == 2);
@@ -235,6 +237,7 @@ SoftmaxOperator::SoftmaxOperator(Tensor * t, bool log_output, bool is_transient)
     output_tensors_[0].dims[0] = -1;
     output_tensors_[0].dims[1] = t->dims[1];
 }
+
 IDentityOperator::IDentityOperator(int dim_0, int dim_1): Operator(1, OPERATOR_IDEN) {
     assert(dim_0 > 0);
     assert(dim_1 > 0);
@@ -244,43 +247,45 @@ IDentityOperator::IDentityOperator(int dim_0, int dim_1): Operator(1, OPERATOR_I
     output_tensors_[0].dims[0] = dim_0;
     output_tensors_[0].dims[1] = dim_1;
 }
-AddOperator::AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta): Operator(a, b, 1, OPERATOR_ADD) {
-    
+
+AddOperator::AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient): 
+        Operator(a, b, 1, OPERATOR_ADD, is_transient) {
     if(a->type == VERTEX_TENSOR){
-    assert(a->type == VERTEX_TENSOR);
-    assert(b->type == VERTEX_TENSOR);
-    assert(a->num_dims == 2);
-    assert(a->dims[0] == -1);
-    assert(a->dims[1] > 0);
-    assert(b->num_dims == 2);
-    assert(b->dims[0] == -1);
-    assert(b->dims[1] > 0);
-    output_tensors_[0].type = VERTEX_TENSOR;
-    output_tensors_[0].num_dims = 2;
-    output_tensors_[0].dims[0] = -1;
-    output_tensors_[0].dims[1] = b->dims[1];
-    this->alpha = alpha;
-    this->beta = beta;
+        assert(a->type == VERTEX_TENSOR);
+        assert(b->type == VERTEX_TENSOR);
+        assert(a->num_dims == 2);
+        assert(a->dims[0] == -1);
+        assert(a->dims[1] > 0);
+        assert(b->num_dims == 2);
+        assert(b->dims[0] == -1);
+        assert(b->dims[1] > 0);
+        output_tensors_[0].type = VERTEX_TENSOR;
+        output_tensors_[0].num_dims = 2;
+        output_tensors_[0].dims[0] = -1;
+        output_tensors_[0].dims[1] = b->dims[1];
+        this->alpha = alpha;
+        this->beta = beta;
     } else if(a->type == NORMAL_TENSOR){
         assert(a->type == NORMAL_TENSOR);
         assert(b->type == NORMAL_TENSOR);
-    assert(a->num_dims == 2);
-    assert(a->dims[0] > 0);
-    assert(a->dims[1] > 0);
-    assert(b->num_dims == 2);
-    assert(b->dims[0] > 0);
-    assert(b->dims[1] > 0);
-    output_tensors_[0].type = NORMAL_TENSOR;
-    output_tensors_[0].num_dims = 2;
-    output_tensors_[0].dims[0] = b->dims[0];
-    output_tensors_[0].dims[1] = b->dims[1];
-    this->alpha = alpha;
-    this->beta = beta;
+        assert(a->num_dims == 2);
+        assert(a->dims[0] > 0);
+        assert(a->dims[1] > 0);
+        assert(b->num_dims == 2);
+        assert(b->dims[0] > 0);
+        assert(b->dims[1] > 0);
+        output_tensors_[0].type = NORMAL_TENSOR;
+        output_tensors_[0].num_dims = 2;
+        output_tensors_[0].dims[0] = b->dims[0];
+        output_tensors_[0].dims[1] = b->dims[1];
+        this->alpha = alpha;
+        this->beta = beta;
     }
 }
 // AggregationOperator
 
-AggregationOperator::AggregationOperator(Tensor * t, AggregationType type): Operator(t, 1, OPERATOR_AGGREGATION), type_(type) {
+AggregationOperator::AggregationOperator(Tensor * t, AggregationType type, bool is_transient): 
+        Operator(t, 1, OPERATOR_AGGREGATION, is_transient), type_(type) {
     assert(t->type == VERTEX_TENSOR);
     assert(t->num_dims == 2);
     assert(t->dims[0] == -1);
