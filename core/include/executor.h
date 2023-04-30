@@ -145,6 +145,8 @@ class AbstractOperatorExecutor {
     protected:
         GPUCsr csr_;
         CPUCsr cpu_csr_;
+        bool is_in_recomputation_mode_ = false;
+
     public:
         AbstractOperatorExecutor() {
             csr_.number_matrix = 0;
@@ -234,6 +236,13 @@ class AbstractOperatorExecutor {
         virtual void dropout_backward(DropoutOperator * op) {assert(false);}
         virtual void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {assert(false);}
         virtual void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {assert(false);}
+
+        void enable_recomputation_mode() {
+            is_in_recomputation_mode_ = true;
+        }
+        void disable_recomputation_mode() {
+            is_in_recomputation_mode_ = false;
+        }
 };
 
 // note that all CPU-version executor/optimizer/loss is not tuned and hence the performance is sub-optimal

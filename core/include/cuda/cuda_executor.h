@@ -239,8 +239,6 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
         // random seed
         int random_seed_ = 1234;
 
-        bool is_in_recomputation_mode_ = false;
-
         void cuda_vector_add(DataType * src_0, DataType * src_1, DataType * dst, int num_elements);
     public:
         OperatorExecutorGPUV2(){
@@ -439,12 +437,6 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor
 
         void set_random_seed(int random_seed) {
             random_seed_ = random_seed;
-        }
-        void enable_recomputation_mode() {
-            is_in_recomputation_mode_ = true;
-        }
-        void disable_recomputation_mode() {
-            is_in_recomputation_mode_ = false;
         }
 
         void Print(){
