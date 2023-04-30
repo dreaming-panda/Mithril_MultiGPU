@@ -85,26 +85,28 @@ Tensor * AbstractApplication::weight(int height, int width) {
     return weight->get_output_tensor(0);
 }
 
-Tensor * AbstractApplication::matmul(Tensor * a, Tensor * b) {
-    Operator * matmul = new MatmulOperator(a, b);
+Tensor * AbstractApplication::matmul(Tensor * a, Tensor * b, bool is_transient) {
+    Operator * matmul = new MatmulOperator(a, b, is_transient);
     operators_.push_back(matmul);
     return matmul->get_output_tensor(0);
 }
+
 Tensor * AbstractApplication::matmuladd(Tensor * a, Tensor * b, DataType alpha, DataType beta) {
     Operator * matmuladd = new MatmulAddOperator(a, b, alpha, beta);
     operators_.push_back(matmuladd);
     return matmuladd->get_output_tensor(0);
 }
-Tensor * AbstractApplication::fc(Tensor * a, int num_hunits, std::string activation_fun) {
+
+Tensor * AbstractApplication::fc(Tensor * a, int num_hunits, std::string activation_fun, bool is_transient) {
     Tensor * w = weight(a->dims[1], num_hunits);
     assert(w != NULL);
-    Tensor * t = matmul(a, w);
+    Tensor * t = matmul(a, w, is_transient);
     if (activation_fun == "None") {
         // no activation
     } else if (activation_fun == "relu") {
-        t = relu(t);
+        t = relu(t, is_transient);
     } else if (activation_fun == "softmax") {
-        t = softmax(t);
+        t = softmax(t, false, is_transient);
     } else {
         fprintf(stderr, "ERROR: Unsupported activation function: %s\n",
                 activation_fun.c_str());
@@ -119,8 +121,8 @@ Tensor * AbstractApplication::softmax(Tensor * t, bool log_output, bool is_trans
     return softmax->get_output_tensor(0);
 }
 
-Tensor * AbstractApplication::aggregation(Tensor * t, AggregationType type) {
-    Operator * aggregation = new AggregationOperator(t, type);
+Tensor * AbstractApplication::aggregation(Tensor * t, AggregationType type, bool is_transient) {
+    Operator * aggregation = new AggregationOperator(t, type, is_transient);
     operators_.push_back(aggregation);
     return aggregation->get_output_tensor(0);
 }
@@ -130,8 +132,8 @@ Tensor * AbstractApplication::identity(int height, int width) {
     operators_.push_back(identity);
     return identity->get_output_tensor(0);
 }
-Tensor * AbstractApplication::add(Tensor * a, Tensor * b, DataType alpha, DataType beta) {
-    Operator * add = new AddOperator(a, b, alpha, beta);
+Tensor * AbstractApplication::add(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient) {
+    Operator * add = new AddOperator(a, b, alpha, beta, is_transient);
     operators_.push_back(add);
     return add->get_output_tensor(0);
 }

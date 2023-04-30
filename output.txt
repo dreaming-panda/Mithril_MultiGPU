@@ -1,5 +1,5 @@
-g014.anvil.rcac.purdue.edu
-Mon Apr 24 23:38:28 2023       
+g013.anvil.rcac.purdue.edu
+Fri Apr 28 16:33:23 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -7,8 +7,8 @@ Mon Apr 24 23:38:28 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA A100-SXM...  On   | 00000000:01:00.0 Off |                    0 |
-| N/A   31C    P0    50W / 400W |      0MiB / 40960MiB |      0%      Default |
+|   0  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
+| N/A   30C    P0    56W / 400W |      0MiB / 40960MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -28,39 +28,24 @@ Currently Loaded Modules:
 
  
 
+Consolidate compiler generated dependencies of target context
+Consolidate compiler generated dependencies of target parallel
+Consolidate compiler generated dependencies of target core
 [  4%] Built target context
-[ 15%] Built target parallel
+[ 14%] Built target parallel
 [ 19%] Built target core
-[ 40%] Built target cudahelp
-[ 45%] Built target test_mpi_gpu_model_parallel
-[ 47%] Built target test_cuda_pipeline_parallel
-[ 49%] Built target test_mpi_combined
-[ 51%] Built target test_nccl_thread
-[ 54%] Built target test_cuda_graph
-[ 62%] Built target test_mpi_gpu_hybrid
-[ 73%] Built target test_cuda
-[ 73%] Built target test_mpi_structual_graph
-[ 73%] Built target test_trivial
-[ 73%] Built target test_cuda_model_parallel
-[ 73%] Built target test_hello_world
-[ 73%] Built target test_mpi_gpu_pipelined_model_parallel
-[ 80%] Built target test_full_non_structual_graph
-[ 80%] Built target test_full_structual_graph
-[ 80%] Built target test_mpi_loader
-[ 80%] Built target test_single_node_fullgpu_training
-[ 80%] Built target test_mpi_non_structual_graph
-[ 85%] Built target test_mpi_model_parallel
-[ 87%] Built target estimate_comm_volume
-[ 85%] Built target test_single_node_training
-[ 88%] Built target test_mpi_pipelined_model_parallel
-[ 88%] Built target test_nccl_mpi
-[ 88%] Built target test_single_node_gpu_training
-[ 89%] Built target test_graph
-[ 96%] Built target OSDI2023_MULTI_NODES_gcnii
-[ 96%] Built target test_two_layer_hybrid_parallelism_designer
-[100%] Built target OSDI2023_MULTI_NODES_gcn
-[100%] Built target OSDI2023_SINGLE_NODE_gcn_inference
-[100%] Built target OSDI2023_SINGLE_NODE_gcn
+Consolidate compiler generated dependencies of target cudahelp
+[ 20%] Building CXX object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o
+/home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_hybrid_parallel.cc: In member function 'void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAPIPBackwardTask)':
+/home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_hybrid_parallel.cc:3974:16: error: 'class AbstractOperatorExecutor' has no member named 'enable_recomputation_mode'
+ 3974 |     executor_->enable_recomputation_mode();
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_hybrid_parallel.cc:4022:16: error: 'class AbstractOperatorExecutor' has no member named 'disable_recomputation_mode'
+ 4022 |     executor_->disable_recomputation_mode();
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~
+make[2]: *** [CMakeFiles/cudahelp.dir/build.make:160: CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o] Error 1
+make[1]: *** [CMakeFiles/Makefile2:251: CMakeFiles/cudahelp.dir/all] Error 2
+make: *** [Makefile:91: all] Error 2
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/arxiv
 The number of GCNII layers: 32
 The number of hidden units: 32
@@ -74,26 +59,26 @@ The random seed: 13
 The scaling down factor of out-of-chunk gradients: 0.100000
 GCN hyper-parameter alpha: 0.100000
 GCN hyper-parameter lambda: 0.500000
-Initialized node 0 on machine g014.anvil.rcac.purdue.edu
+Initialized node 0 on machine g013.anvil.rcac.purdue.edu
 gcnii: /home/x-jchen5/Mithril_MultiGPU/core/src/graph.cc:221: virtual void GraphStructureFullyReplicatedV2::load_from_file(std::string, std::string, std::string): Assertion `f != NULL' failed.
-[g014:3939134] *** Process received signal ***
-[g014:3939134] Signal: Aborted (6)
-[g014:3939134] Signal code:  (-6)
-[g014:3939134] [ 0] /lib64/libc.so.6(+0x4eb80)[0x14e790787b80]
-[g014:3939134] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x14e790787aff]
-[g014:3939134] [ 2] /lib64/libc.so.6(abort+0x127)[0x14e79075aea5]
-[g014:3939134] [ 3] /lib64/libc.so.6(+0x21d79)[0x14e79075ad79]
-[g014:3939134] [ 4] /lib64/libc.so.6(+0x47456)[0x14e790780456]
-[g014:3939134] [ 5] /home/x-jchen5/Mithril_MultiGPU/build/libcore.so(_ZN31GraphStructureFullyReplicatedV214load_from_fileENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES5_S5_+0xbe6)[0x14e7a9c8abf6]
-[g014:3939134] [ 6] ./applications/async_multi_gpus/gcnii(_ZN24CUDAStructualGraphLoader20load_graph_structureENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES5_S5_+0x3cd)[0x46043d]
-[g014:3939134] [ 7] ./applications/async_multi_gpus/gcnii(main+0xba2)[0x43f4c2]
-[g014:3939134] [ 8] /lib64/libc.so.6(__libc_start_main+0xe5)[0x14e790773d85]
-[g014:3939134] [ 9] ./applications/async_multi_gpus/gcnii(_start+0x2e)[0x4407be]
-[g014:3939134] *** End of error message ***
+[g013:195582] *** Process received signal ***
+[g013:195582] Signal: Aborted (6)
+[g013:195582] Signal code:  (-6)
+[g013:195582] [ 0] /lib64/libc.so.6(+0x4eb80)[0x146180826b80]
+[g013:195582] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x146180826aff]
+[g013:195582] [ 2] /lib64/libc.so.6(abort+0x127)[0x1461807f9ea5]
+[g013:195582] [ 3] /lib64/libc.so.6(+0x21d79)[0x1461807f9d79]
+[g013:195582] [ 4] /lib64/libc.so.6(+0x47456)[0x14618081f456]
+[g013:195582] [ 5] /home/x-jchen5/Mithril_MultiGPU/build/libcore.so(_ZN31GraphStructureFullyReplicatedV214load_from_fileENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES5_S5_+0xbe6)[0x146199d29d16]
+[g013:195582] [ 6] ./applications/async_multi_gpus/gcnii(_ZN24CUDAStructualGraphLoader20load_graph_structureENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES5_S5_+0x3cd)[0x4620ed]
+[g013:195582] [ 7] ./applications/async_multi_gpus/gcnii(main+0xba2)[0x440502]
+[g013:195582] [ 8] /lib64/libc.so.6(__libc_start_main+0xe5)[0x146180812d85]
+[g013:195582] [ 9] ./applications/async_multi_gpus/gcnii(_start+0x2e)[0x44180e]
+[g013:195582] *** End of error message ***
 --------------------------------------------------------------------------
 Primary job  terminated normally, but 1 process returned
 a non-zero exit code. Per user-direction, the job has been aborted.
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
-mpirun noticed that process rank 0 with PID 3939134 on node g014 exited on signal 6 (Aborted).
+mpirun noticed that process rank 0 with PID 195582 on node g013 exited on signal 6 (Aborted).
 --------------------------------------------------------------------------

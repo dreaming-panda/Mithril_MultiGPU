@@ -71,14 +71,14 @@ class AbstractApplication {
         Tensor * relu(Tensor * t, bool is_transient = false);
         Tensor * weight(int length);
         Tensor * weight(int height, int width);
-        Tensor * fc(Tensor * a, int num_hunits, std::string activation_fun = "None");
-        Tensor * matmul(Tensor * a, Tensor * b);
+        Tensor * fc(Tensor * a, int num_hunits, std::string activation_fun = "None", is_transient = false);
+        Tensor * matmul(Tensor * a, Tensor * b, is_transient = false);
         Tensor * matmuladd(Tensor * a, Tensor * b, DataType alpha, DataType beta);
         // if log_output = true => this operator will be log-softmax
         Tensor * softmax(Tensor * t, bool log_output = false, bool is_transient = false);
-        Tensor * aggregation(Tensor * t, AggregationType type);
+        Tensor * aggregation(Tensor * t, AggregationType type, bool is_transient = false);
         Tensor * identity(int height, int width);
-        Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta);
+        Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta, is_transient = false);
         Tensor * dropout(Tensor * a, double dropout_rate, bool is_transient = false);
         void next_layer();
         void set_global_shared_tensor(Tensor * tensor);

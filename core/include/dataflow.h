@@ -116,9 +116,10 @@ class WeightOperator: public Operator {
 
 class MatmulOperator: public Operator {
     public:
-        MatmulOperator(Tensor * a, Tensor * b);
+        MatmulOperator(Tensor * a, Tensor * b, bool is_transient = false);
         ~MatmulOperator() {}
 };
+
 class MatmulAddOperator: public Operator{
     public:
         MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta);
@@ -126,6 +127,7 @@ class MatmulAddOperator: public Operator{
         DataType alpha;
         DataType beta;
 };
+
 class SoftmaxOperator: public Operator {
     private:
         bool log_output_;
@@ -134,19 +136,22 @@ class SoftmaxOperator: public Operator {
         ~SoftmaxOperator() {}
         inline bool get_log_output() {return log_output_;}
 };
+
 class AddOperator: public Operator {
         public:
-        AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta);
+        AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient = false);
         ~AddOperator() {}
         DataType alpha;
         DataType beta;
 };
+
 class IDentityOperator: public Operator {
     public:
         
         IDentityOperator(int dim_0, int dim_1);
         ~IDentityOperator() {}
 };
+
 class DropoutOperator: public Operator {
     public:
         DropoutOperator(Tensor * a, double dropout_rate, bool is_transient = false);
