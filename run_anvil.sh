@@ -28,7 +28,7 @@ epoch=5000
 decay=1e-5
 chunks=16
 dropout=0.5
-seed=13
+seed=1
 scaledown=0.1
 model=gcn
 

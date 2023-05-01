@@ -87,8 +87,8 @@ class GCN: public AbstractApplication {
                 if (i == num_layers_ - 1) { 
                     t = softmax(t); 
                 } else {
-                    t = relu(t, true); // enable recomputation for relu
-                    t = dropout(t, dropout_rate_, true);  // enable recomputation for dropout
+                    t = relu(t); // enable recomputation for relu
+                    t = dropout(t, dropout_rate_);  // enable recomputation for dropout
                 }
             }
             return t;

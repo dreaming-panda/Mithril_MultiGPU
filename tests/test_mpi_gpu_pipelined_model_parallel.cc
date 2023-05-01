@@ -131,7 +131,7 @@ int main(int argc, char ** argv) {
     // setup the execution engine
     AbstractExecutionEngine * execution_engine = new MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU();
     AbstractOptimizer * optimizer = new AdamOptimizerCPU(learning_rate, weight_decay);
-    OperatorExecutorGPU * executor = new OperatorExecutorGPU(graph_structure);
+    OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
     cublasHandle_t cublas;
     cublasCreate(&cublas);
     cudnnHandle_t cudnn;

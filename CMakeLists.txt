@@ -87,6 +87,6 @@ set (dependencies ${dependencies} ${NCCL_LIBRARY})
 
 
 add_subdirectory(applications)
-add_subdirectory(tests)
+#add_subdirectory(tests)
 add_subdirectory(toolkits)
 

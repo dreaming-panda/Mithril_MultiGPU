@@ -12,6 +12,7 @@
 
 #define COMM_BATCH_SIZE (4 * 1024 * 1024) 
 
+// use this class to facilitate gpu memory sharing between mutiple data compressors and decompressors
 class SharedDataBuffer {
     private:
         int num_buffers_; // 2 => double buffering, the larger num_buffers_, the higher performance and the larger memory cost
@@ -41,9 +42,6 @@ class DataCompressor {
         // [bitmap] [non-zero elements]
         size_t gpu_buff_size_; // unit: bytes
         uint8_t * curr_gpu_buff_;
-        //uint8_t * gpu_buff_;
-        //uint8_t * gpu_bitmap_;
-        //DataType * gpu_non_zero_elements_;
         SharedDataBuffer * shared_gpu_buff_;
         // the cpu buffer
         size_t cpu_buff_size_; // unit: bytes
@@ -72,8 +70,6 @@ class DataCompressor {
         void compress_data(DataType * data, bool send_to_cpu); // the main thread invoke this function
         void get_compressed_data(DataType * &buff, size_t &buff_size); // the communication thread invoke this function
         void move_compressed_data_to_cpu();
-        void move_compressed_data_to_cpu_async();
-        void wait_for_data_movement();
 };
 
 class DataDecompressor {
@@ -86,12 +82,8 @@ class DataDecompressor {
         size_t gpu_buff_size_; // unit: bytes
         SharedDataBuffer * shared_gpu_buff_;
         uint8_t * curr_gpu_buff_;
-        //uint8_t * gpu_buff_;
-        //uint8_t * gpu_bitmap_;
-        //DataType * gpu_non_zero_elements_;
         SharedDataBuffer * shared_index_buff_;
         uint32_t * curr_index_buff_;
-        //uint32_t * gpu_data_decompression_index_;
         // the CPU buffer
         size_t cpu_buff_size_; // unit: bytes
         uint8_t * cpu_buff_; 
@@ -116,27 +108,6 @@ class DataDecompressor {
         void move_compressed_data_to_gpu_async();
         void wait_for_data_movement();
         void release_gpu_buffers();
-};
-
-class DataCompressorV2 {
-    private:
-        bool data_compressed_;
-
-        size_t data_size_;
-        size_t compressed_data_size_;
-
-        size_t gpu_buff_size_;
-        uint8_t * gpu_buff_;
-        uint8_t * intra_block_pos_;
-        uint32_t * block_starting_pos_;
-        DataType * non_zero_elements_;
-
-        size_t cpu_buff_size_;
-        uint8_t * cpu_buff_;
-
-        // some helper buffers
-        uint64_t * helper_buff;
-
 };
 
 #endif

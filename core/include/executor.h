@@ -1,11 +1,11 @@
 /*
-Copyright 2021, University of Southern California
+   Copyright 2021, University of Southern California
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,6 +22,7 @@ limitations under the License.
 #include "dataflow.h"
 #include "graph.h"
 #include<float.h>
+
 class AbstractTensorResource {
     protected:
         Tensor * tensor_; // the corresponding tensor object
@@ -121,6 +122,7 @@ class AbstractLoss {
             this->gntest = gntest;
         }
 };
+
 struct GPUCsr{
     int number_matrix;
     int * cuda_col_in;
@@ -137,10 +139,12 @@ struct GPUCsr{
     int MatrixSize;
     int nnz;
 };
+
 struct CPUCsr{
     int * host_rowoffsets_in;
     int * host_rowoffsets_out;
 };
+
 class AbstractOperatorExecutor {
     protected:
         GPUCsr csr_;
@@ -151,92 +155,95 @@ class AbstractOperatorExecutor {
         AbstractOperatorExecutor() {
             csr_.number_matrix = 0;
         }
+
         virtual ~AbstractOperatorExecutor() {}
+
         void set_csr(int * cuda_col_in,
-                    DataType * cuda_value_in,
-                    int * cuda_rowoffsets_in,
-                    int nnz_in,
-                    int * cuda_col_out,
-                    DataType * cuda_value_out,
-                    int * cuda_rowoffsets_out,
-                    int nnz_out,
-                    int num_master_vertices,
-                    int inMatrixSize,
-                    int outMatrixSize){
-                        csr_.number_matrix = 2;
-                        csr_.cuda_col_in = cuda_col_in;
-                        csr_.cuda_col_out = cuda_col_out;
-                        csr_.cuda_rowoffsets_in = cuda_rowoffsets_in;
-                        csr_.cuda_rowoffsets_out = cuda_rowoffsets_out;
-                        csr_.cuda_value_in = cuda_value_in;
-                        csr_.cuda_value_out = cuda_value_out;
-                        csr_.inMatrixSize = inMatrixSize;
-                        csr_.outMatrixSize = outMatrixSize;
-                        csr_.num_master_vertices = num_master_vertices;
-                        csr_.nnz_in = nnz_in;
-                        csr_.nnz_out = nnz_out;
-                        csr_.MatrixSize = 0;
-                        csr_.nnz = 0;
-                    }
+                DataType * cuda_value_in,
+                int * cuda_rowoffsets_in,
+                int nnz_in,
+                int * cuda_col_out,
+                DataType * cuda_value_out,
+                int * cuda_rowoffsets_out,
+                int nnz_out,
+                int num_master_vertices,
+                int inMatrixSize,
+                int outMatrixSize){
+            csr_.number_matrix = 2;
+            csr_.cuda_col_in = cuda_col_in;
+            csr_.cuda_col_out = cuda_col_out;
+            csr_.cuda_rowoffsets_in = cuda_rowoffsets_in;
+            csr_.cuda_rowoffsets_out = cuda_rowoffsets_out;
+            csr_.cuda_value_in = cuda_value_in;
+            csr_.cuda_value_out = cuda_value_out;
+            csr_.inMatrixSize = inMatrixSize;
+            csr_.outMatrixSize = outMatrixSize;
+            csr_.num_master_vertices = num_master_vertices;
+            csr_.nnz_in = nnz_in;
+            csr_.nnz_out = nnz_out;
+            csr_.MatrixSize = 0;
+            csr_.nnz = 0;
+        }
+
         void set_csr(int * cuda_col_out,
-                     DataType * cuda_value_out,
-                     int * cuda_rowoffsets_out,
-                     int MatrixSize,
-                     int nnz){
-                        csr_.number_matrix = 1;
-                        csr_.cuda_col_out = cuda_col_out;
-                        csr_.cuda_rowoffsets_out = cuda_rowoffsets_out;
-                        csr_.cuda_value_out = cuda_value_out;
-                        csr_.MatrixSize = MatrixSize;
-                        csr_.nnz = nnz;
-                     }
+                DataType * cuda_value_out,
+                int * cuda_rowoffsets_out,
+                int MatrixSize,
+                int nnz){
+            csr_.number_matrix = 1;
+            csr_.cuda_col_out = cuda_col_out;
+            csr_.cuda_rowoffsets_out = cuda_rowoffsets_out;
+            csr_.cuda_value_out = cuda_value_out;
+            csr_.MatrixSize = MatrixSize;
+            csr_.nnz = nnz;
+        }
+
         void set_cpu_csr(
-            int * row_in,
-            int * row_out
-        ){
+                int * row_in,
+                int * row_out
+                ){
             cpu_csr_.host_rowoffsets_in = row_in;
             cpu_csr_.host_rowoffsets_out = row_out;
         }
-        // the forwarding phases
+
+        //// the forwarding phases
         virtual void relu_forward(ReluOperator * op) = 0;
         virtual void matmul_forward(MatmulOperator * op) = 0;
         virtual void softmax_forward(SoftmaxOperator * op) = 0;
         virtual void aggregation_forward(AggregationOperator * op) = 0;
+        virtual void add_forward(AddOperator * op) = 0;
+        virtual void matmuladd_forward(MatmulAddOperator * op) = 0;
+        virtual void dropout_forward(DropoutOperator * op) = 0;
 
         // the forwarding phases with graph chunking
         virtual void relu_forward(ReluOperator * op, VertexId left, VertexId right) = 0;
         virtual void matmul_forward(MatmulOperator * op, VertexId left, VertexId right) = 0;
         virtual void softmax_forward(SoftmaxOperator * op, VertexId left, VertexId right) = 0;
         virtual void aggregation_forward(AggregationOperator * op, VertexId left, VertexId right) = 0;
+        virtual void add_forward(AddOperator * op, VertexId left, VertexId right) = 0;
+        virtual void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right) = 0;
+        virtual void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) = 0;
 
-        // the backwarding phases
+        //// the backwarding phases
         virtual void relu_backward(ReluOperator * op) = 0;
         virtual void matmul_backward(MatmulOperator * op) = 0;
         virtual void softmax_backward(SoftmaxOperator * op) = 0;
         virtual void aggregation_backward(AggregationOperator * op) = 0;
+        virtual void add_backward(AddOperator * op) = 0;
+        virtual void matmuladd_backward(MatmulAddOperator * op) = 0;
+        virtual void dropout_backward(DropoutOperator * op) = 0;
 
         // the backwarding operations with graph chunking
         virtual void relu_backward(ReluOperator * op, VertexId left, VertexId right) = 0;
         virtual void matmul_backward(MatmulOperator * op, VertexId left, VertexId right) = 0;
         virtual void softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right) = 0;
         virtual void aggregation_backward(AggregationOperator * op, VertexId left, VertexId right) = 0;
-
-        virtual void add_forward(AddOperator * op) = 0;
-        virtual void add_backward(AddOperator * op) = 0;
-        virtual void add_forward(AddOperator * op, VertexId left, VertexId right) = 0;
         virtual void add_backward(AddOperator * op, VertexId left, VertexId right) = 0;
-
-        virtual void matmuladd_forward(MatmulAddOperator * op) = 0;
-        virtual void matmuladd_backward(MatmulAddOperator * op) = 0;
-        virtual void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right) = 0;
         virtual void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right) = 0;
+        virtual void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) = 0;
 
-        // the dropout op
-        virtual void dropout_forward(DropoutOperator * op) {assert(false);}
-        virtual void dropout_backward(DropoutOperator * op) {assert(false);}
-        virtual void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {assert(false);}
-        virtual void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {assert(false);}
-
+        // some operator might hehavior improperly if not telling the executor that
+        // recomputation is perform (e.g., dropout)
         void enable_recomputation_mode() {
             is_in_recomputation_mode_ = true;
         }

@@ -41,6 +41,7 @@
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDADataDependenciesTracker;
 class CUDAShadowGradientsMasterVertices;
+
 enum CUDAPIPParallelMessageType {
     ForwardActivationPassing,
     BackwardGradientPassing,
@@ -56,6 +57,16 @@ enum DispatchAlgorithm {
     HighDegreeFirstDispatch,
     LowDegreeFirstDispatch,
     DefaultOrderDispatch
+};
+
+enum WeightInitializationMethod {
+    XavierInitialization,
+    PytorchInitialization
+};
+
+enum FeaturePreprocessingMethod {
+    NoFeaturePreprocessing,
+    RowNormalizationPreprocessing
 };
 
 template<typename T>
@@ -162,6 +173,7 @@ struct CUDAPIPBackwardTask {
     int epoch_id;
     int chunk_id;
 } __attribute__((packed));
+
 struct CUDAPIPGraphDataActivationUpdateTask {
     int tensor_idx_begin;
     int tensor_idx_end;
@@ -179,6 +191,7 @@ struct CUDAPIPGraphDataGradientUpdateTask {
     VertexId vid_begin;
     VertexId vid_end;
 } __attribute__((packed));
+
 class CUDAPIPForwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPForwardTask> {
     private:
         // chunk_id -> number of ready remote nodes
@@ -1654,6 +1667,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         DataType * global_shared_tensor_data_;
         DataType * global_shared_tensor_grad_;
 
+        WeightInitializationMethod weight_init_method_ = XavierInitialization;
+
+        FeaturePreprocessingMethod feature_preprocess_method_ = NoFeaturePreprocessing;
+
         inline int get_num_epoch() {
             return num_epoch_;
         }
@@ -1823,22 +1840,27 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int M  = num_elements / N; // out_features
             assert(M > 0);
 
-            //// Xavier initialization
-            //double range = sqrt(5./(N + M));
-            //srand(random_seed_);
-            //for (size_t i = 0; i < num_elements; ++ i) {
-            //    double r = double(rand()) / double(RAND_MAX);
-            //    assert(r >= 0. && r <= 1.);
-            //    data_buff[i] = (r - 0.5) * 2 * range;
-            //}
-
-            // the default initialization method of Pytorch
-            double range = 1. / sqrt(double(M));
-            //srand(random_seed_);
-            for (size_t i = 0; i < num_elements; ++ i) {
-                double r = double(rand()) / double(RAND_MAX);
-                assert(r >= 0. && r <= 1.);
-                data_buff[i] = (r - 0.5) * 2 * range;
+            if (weight_init_method_ == XavierInitialization) {
+                // Xavier initialization
+                double range = sqrt(5./(N + M));
+                srand(random_seed_);
+                for (size_t i = 0; i < num_elements; ++ i) {
+                    double r = double(rand()) / double(RAND_MAX);
+                    assert(r >= 0. && r <= 1.);
+                    data_buff[i] = (r - 0.5) * 2 * range;
+                }
+            } else if (weight_init_method_ == PytorchInitialization) {
+                // the default initialization method of Pytorch 
+                double range = 1. / sqrt(double(M));
+                //srand(random_seed_);
+                for (size_t i = 0; i < num_elements; ++ i) {
+                    double r = double(rand()) / double(RAND_MAX);
+                    assert(r >= 0. && r <= 1.);
+                    data_buff[i] = (r - 0.5) * 2 * range;
+                }
+            } else {
+                fprintf(stderr, "Undefined initialization method!\n");
+                assert(false);
             }
 
             CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
@@ -1884,6 +1906,12 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         void set_scaledown(double scaledown) {
             scaledown_ = scaledown;
+        }
+        void set_weight_initialization_method(WeightInitializationMethod weight_init_method) {
+            weight_init_method_ = weight_init_method;
+        }
+        void set_feature_preprocessing_method(FeaturePreprocessingMethod feature_preprocess_method) {
+            feature_preprocess_method_ = feature_preprocess_method;
         }
 };
 
