@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 02:00:00 
-#SBATCH --nodes 1
+#SBATCH -t 00:10:00 
+#SBATCH --nodes 4
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
@@ -21,12 +21,12 @@ make -j
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
 num_layers=32
-hunits=32
+hunits=24
 lr=1e-3
-graph=arxiv
+graph=ogbn_products
 epoch=500
-decay=5e-4
-chunks=1
+decay=0
+chunks=16
 dropout=0.5
 seed=13
 scaledown=0.1

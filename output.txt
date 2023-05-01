@@ -1,5 +1,5 @@
-g013.anvil.rcac.purdue.edu
-Fri Apr 28 16:33:23 2023       
+g002.anvil.rcac.purdue.edu
+Mon May  1 07:28:42 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -8,7 +8,7 @@ Fri Apr 28 16:33:23 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
-| N/A   30C    P0    56W / 400W |      0MiB / 40960MiB |      0%      Default |
+| N/A   28C    P0    52W / 400W |      0MiB / 40960MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -28,27 +28,49 @@ Currently Loaded Modules:
 
  
 
-Consolidate compiler generated dependencies of target context
-Consolidate compiler generated dependencies of target parallel
-Consolidate compiler generated dependencies of target core
 [  4%] Built target context
-[ 14%] Built target parallel
+[ 17%] Built target parallel
 [ 19%] Built target core
-Consolidate compiler generated dependencies of target cudahelp
-[ 20%] Building CXX object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o
-/home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_hybrid_parallel.cc: In member function 'void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAPIPBackwardTask)':
-/home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_hybrid_parallel.cc:3974:16: error: 'class AbstractOperatorExecutor' has no member named 'enable_recomputation_mode'
- 3974 |     executor_->enable_recomputation_mode();
-      |                ^~~~~~~~~~~~~~~~~~~~~~~~~
-/home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_hybrid_parallel.cc:4022:16: error: 'class AbstractOperatorExecutor' has no member named 'disable_recomputation_mode'
- 4022 |     executor_->disable_recomputation_mode();
-      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~
-make[2]: *** [CMakeFiles/cudahelp.dir/build.make:160: CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o] Error 1
-make[1]: *** [CMakeFiles/Makefile2:251: CMakeFiles/cudahelp.dir/all] Error 2
-make: *** [Makefile:91: all] Error 2
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/arxiv
+[ 40%] Built target cudahelp
+[ 42%] Built target test_mpi_gpu_hybrid
+[ 48%] Built target test_cuda_pipeline_parallel
+[ 52%] Built target test_mpi_gpu_model_parallel
+[ 55%] Built target test_cuda_graph
+[ 52%] Built target test_cuda_model_parallel
+[ 57%] Built target test_mpi_combined
+[ 55%] Built target test_mpi_gpu_pipelined_model_parallel
+[ 60%] Built target test_nccl_thread
+[ 60%] Built target test_mpi_structual_graph
+[ 63%] Built target test_cuda
+[ 64%] Built target test_trivial
+[ 70%] Built target test_single_node_fullgpu_training
+[ 70%] Built target test_graph
+[ 74%] Built target test_mpi_loader
+[ 77%] Built target test_mpi_pipelined_model_parallel
+[ 74%] Built target test_full_non_structual_graph
+[ 79%] Built target test_hello_world
+[ 80%] Built target test_full_structual_graph
+[ 80%] Built target test_mpi_non_structual_graph
+[ 82%] Built target test_single_node_training
+[ 83%] Built target test_nccl_mpi
+[ 85%] Built target test_single_node_gpu_training
+[ 87%] Built target estimate_comm_volume
+[ 89%] Built target test_mpi_model_parallel
+[ 91%] Built target OSDI2023_MULTI_NODES_gcnii
+[ 97%] Built target OSDI2023_SINGLE_NODE_gcn
+[ 97%] Built target OSDI2023_MULTI_NODES_gcn
+[ 97%] Built target test_two_layer_hybrid_parallelism_designer
+[100%] Built target OSDI2023_SINGLE_NODE_gcn_inference
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
 The number of GCNII layers: 32
-The number of hidden units: 32
+The number of hidden units: 24
+The number of training epoches: 500
+The number of startup epoches: 0
+Learning rate: 0.001000
+The partition strategy: model
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCNII layers: 32
+The number of hidden units: 24
 The number of training epoches: 500
 The number of startup epoches: 0
 Learning rate: 0.001000
@@ -59,26 +81,527 @@ The random seed: 13
 The scaling down factor of out-of-chunk gradients: 0.100000
 GCN hyper-parameter alpha: 0.100000
 GCN hyper-parameter lambda: 0.500000
-Initialized node 0 on machine g013.anvil.rcac.purdue.edu
-gcnii: /home/x-jchen5/Mithril_MultiGPU/core/src/graph.cc:221: virtual void GraphStructureFullyReplicatedV2::load_from_file(std::string, std::string, std::string): Assertion `f != NULL' failed.
-[g013:195582] *** Process received signal ***
-[g013:195582] Signal: Aborted (6)
-[g013:195582] Signal code:  (-6)
-[g013:195582] [ 0] /lib64/libc.so.6(+0x4eb80)[0x146180826b80]
-[g013:195582] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x146180826aff]
-[g013:195582] [ 2] /lib64/libc.so.6(abort+0x127)[0x1461807f9ea5]
-[g013:195582] [ 3] /lib64/libc.so.6(+0x21d79)[0x1461807f9d79]
-[g013:195582] [ 4] /lib64/libc.so.6(+0x47456)[0x14618081f456]
-[g013:195582] [ 5] /home/x-jchen5/Mithril_MultiGPU/build/libcore.so(_ZN31GraphStructureFullyReplicatedV214load_from_fileENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES5_S5_+0xbe6)[0x146199d29d16]
-[g013:195582] [ 6] ./applications/async_multi_gpus/gcnii(_ZN24CUDAStructualGraphLoader20load_graph_structureENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES5_S5_+0x3cd)[0x4620ed]
-[g013:195582] [ 7] ./applications/async_multi_gpus/gcnii(main+0xba2)[0x440502]
-[g013:195582] [ 8] /lib64/libc.so.6(__libc_start_main+0xe5)[0x146180812d85]
-[g013:195582] [ 9] ./applications/async_multi_gpus/gcnii(_start+0x2e)[0x44180e]
-[g013:195582] *** End of error message ***
+The dropout rate: 0.500
+The checkpointed weight file: /anvil/projects/x-cis220117/saved_weights_pipe
+The random seed: 13
+The scaling down factor of out-of-chunk gradients: 0.100000
+GCN hyper-parameter alpha: 0.100000
+GCN hyper-parameter lambda: 0.500000
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCNII layers: 32
+The number of hidden units: 24
+The number of training epoches: 500
+The number of startup epoches: 0
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /anvil/projects/x-cis220117/saved_weights_pipe
+The random seed: 13
+The scaling down factor of out-of-chunk gradients: 0.100000
+GCN hyper-parameter alpha: 0.100000
+GCN hyper-parameter lambda: 0.500000
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_products
+The number of GCNII layers: 32
+The number of hidden units: 24
+The number of training epoches: 500
+The number of startup epoches: 0
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /anvil/projects/x-cis220117/saved_weights_pipe
+The random seed: 13
+The scaling down factor of out-of-chunk gradients: 0.100000
+GCN hyper-parameter alpha: 0.100000
+GCN hyper-parameter lambda: 0.500000
+Initialized node 0 on machine g002.anvil.rcac.purdue.edu
+Initialized node 3 on machine g013.anvil.rcac.purdue.edu
+Initialized node 2 on machine g011.anvil.rcac.purdue.edu
+Initialized node 1 on machine g008.anvil.rcac.purdue.edu
+Building the CSR structure...
+Building the CSR structure...
+Building the CSR structure...
+Building the CSR structure...
+        It takes 2.002 seconds.
+Building the CSC structure...
+        It takes 2.005 seconds.
+Building the CSC structure...
+        It takes 2.008 seconds.
+Building the CSC structure...
+        It takes 2.030 seconds.
+Building the CSC structure...
+        It takes 1.930 seconds.
+        It takes 1.928 seconds.
+        It takes 1.938 seconds.
+        It takes 1.957 seconds.
+Building the Feature Vector...
+Building the Feature Vector...
+Building the Feature Vector...
+Building the Feature Vector...
+        It takes 0.699 seconds.
+Building the Label Vector...
+        It takes 0.692 seconds.
+Building the Label Vector...
+        It takes 0.707 seconds.
+Building the Label Vector...
+        It takes 0.665 seconds.
+Building the Label Vector...
+        It takes 0.411 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Number of vertices: 2449029
+        It takes 0.405 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Number of vertices: 2449029
+        It takes 0.399 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Number of vertices: 2449029
+        It takes 0.399 seconds.
+Number of classes: 47
+Number of feature dimensions: 100
+Number of vertices: 2449029
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+GPU 0, layer [0, 9)
+GPU 1, layer [9, 18)
+GPU 2, layer [18, 26)
+GPU 3, layer [26, 34)
+WARNING: the current version only applies to linear GNN models!
+*** Node 3, starting model training...
+Number of operators: 233
+0 2449029 0 62
+0 2449029 62 125
+0 2449029 125 181
+0 2449029 181 233
+Node 3, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 3, Pipeline Output Tensor: NULL
+*** Node 3 owns the partition [181, 233) x [0, 2449029)
+*** Node 3, constructing the helper classes...
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+GPU 0, layer [0, 9)
+GPU 1, layer [9, 18)
+GPU 2, layer [18, 26)
+GPU 3, layer [26, 34)
+*** Node 0, starting model training...
+Number of operators: 233
+0 2449029 0 62
+0 2449029 62 125
+0 2449029 125 181
+0 2449029 181 233
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 0 owns the partition [0, 62) x [0, 2449029)
+*** Node 0, constructing the helper classes...
+WARNING: the current version only applies to linear GNN models!
+Operators:
+    Op 0: type OPERATOR_INPUT, output tensors: 0
+    Op 1: type OPERATOR_DROPOUT, output tensors: 1
+    Op 2: type OPERATOR_WEIGHT, output tensors: 2
+    Op 3: type OPERATOR_MATMUL, output tensors: 3
+    Op 4: type OPERATOR_RELU, output tensors: 4
+    Op 5: type OPERATOR_DROPOUT, output tensors: 5
+    Op 6: type OPERATOR_AGGREGATION, output tensors: 6
+    Op 7: type OPERATOR_ADD, output tensors: 7
+    Op 8: type OPERATOR_WEIGHT, output tensors: 8
+    Op 9: type OPERATOR_MATMUL, output tensors: 9
+    Op 10: type OPERATOR_ADD, output tensors: 10
+    Op 11: type OPERATOR_RELU, output tensors: 11
+    Op 12: type OPERATOR_DROPOUT, output tensors: 12
+    Op 13: type OPERATOR_AGGREGATION, output tensors: 13
+    Op 14: type OPERATOR_ADD, output tensors: 14
+    Op 15: type OPERATOR_WEIGHT, output tensors: 15
+    Op 16: type OPERATOR_MATMUL, output tensors: 16
+    Op 17: type OPERATOR_ADD, output tensors: 17
+    Op 18: type OPERATOR_RELU, output tensors: 18
+    Op 19: type OPERATOR_DROPOUT, output tensors: 19
+    Op 20: type OPERATOR_AGGREGATION, output tensors: 20
+    Op 21: type OPERATOR_ADD, output tensors: 21
+    Op 22: type OPERATOR_WEIGHT, output tensors: 22
+    Op 23: type OPERATOR_MATMUL, output tensors: 23
+    Op 24: type OPERATOR_ADD, output tensors: 24
+    Op 25: type OPERATOR_RELU, output tensors: 25
+    Op 26: type OPERATOR_DROPOUT, output tensors: 26
+    Op 27: type OPERATOR_AGGREGATION, output tensors: 27
+    Op 28: type OPERATOR_ADD, output tensors: 28
+    Op 29: type OPERATOR_WEIGHT, output tensors: 29
+    Op 30: type OPERATOR_MATMUL, output tensors: 30
+    Op 31: type OPERATOR_ADD, output tensors: 31
+    Op 32: type OPERATOR_RELU, output tensors: 32
+    Op 33: type OPERATOR_DROPOUT, output tensors: 33
+    Op 34: type OPERATOR_AGGREGATION, output tensors: 34
+    Op 35: type OPERATOR_ADD, output tensors: 35
+    Op 36: type OPERATOR_WEIGHT, output tensors: 36
+    Op 37: type OPERATOR_MATMUL, output tensors: 37
+    Op 38: type OPERATOR_ADD, output tensors: 38
+    Op 39: type OPERATOR_RELU, output tensors: 39
+    Op 40: type OPERATOR_DROPOUT, output tensors: 40
+    Op 41: type OPERATOR_AGGREGATION, output tensors: 41
+    Op 42: type OPERATOR_ADD, output tensors: 42
+    Op 43: type OPERATOR_WEIGHT, output tensors: 43
+    Op 44: type OPERATOR_MATMUL, output tensors: 44
+    Op 45: type OPERATOR_ADD, output tensors: 45
+    Op 46: type OPERATOR_RELU, output tensors: 46
+    Op 47: type OPERATOR_DROPOUT, output tensors: 47
+    Op 48: type OPERATOR_AGGREGATION, output tensors: 48
+    Op 49: type OPERATOR_ADD, output tensors: 49
+    Op 50: type OPERATOR_WEIGHT, output tensors: 50
+    Op 51: type OPERATOR_MATMUL, output tensors: 51
+    Op 52: type OPERATOR_ADD, output tensors: 52
+    Op 53: type OPERATOR_RELU, output tensors: 53
+    Op 54: type OPERATOR_DROPOUT, output tensors: 54
+    Op 55: type OPERATOR_AGGREGATION, output tensors: 55
+    Op 56: type OPERATOR_ADD, output tensors: 56
+    Op 57: type OPERATOR_WEIGHT, output tensors: 57
+    Op 58: type OPERATOR_MATMUL, output tensors: 58
+    Op 59: type OPERATOR_ADD, output tensors: 59
+    Op 60: type OPERATOR_RELU, output tensors: 60
+    Op 61: type OPERATOR_DROPOUT, output tensors: 61
+    Op 62: type OPERATOR_AGGREGATION, output tensors: 62
+    Op 63: type OPERATOR_ADD, output tensors: 63
+    Op 64: type OPERATOR_WEIGHT, output tensors: 64
+    Op 65: type OPERATOR_MATMUL, output tensors: 65
+    Op 66: type OPERATOR_ADD, output tensors: 66
+    Op 67: type OPERATOR_RELU, output tensors: 67
+    Op 68: type OPERATOR_DROPOUT, output tensors: 68
+    Op 69: type OPERATOR_AGGREGATION, output tensors: 69
+    Op 70: type OPERATOR_ADD, output tensors: 70
+    Op 71: type OPERATOR_WEIGHT, output tensors: 71
+    Op 72: type OPERATOR_MATMUL, output tensors: 72
+    Op 73: type OPERATOR_ADD, output tensors: 73
+    Op 74: type OPERATOR_RELU, output tensors: 74
+    Op 75: type OPERATOR_DROPOUT, output tensors: 75
+    Op 76: type OPERATOR_AGGREGATION, output tensors: 76
+    Op 77: type OPERATOR_ADD, output tensors: 77
+    Op 78: type OPERATOR_WEIGHT, output tensors: 78
+    Op 79: type OPERATOR_MATMUL, output tensors: 79
+    Op 80: type OPERATOR_ADD, output tensors: 80
+    Op 81: type OPERATOR_RELU, output tensors: 81
+    Op 82: type OPERATOR_DROPOUT, output tensors: 82
+    Op 83: type OPERATOR_AGGREGATION, output tensors: 83
+    Op 84: type OPERATOR_ADD, output tensors: 84
+    Op 85: type OPERATOR_WEIGHT, output tensors: 85
+    Op 86: type OPERATOR_MATMUL, output tensors: 86
+    Op 87: type OPERATOR_ADD, output tensors: 87
+    Op 88: type OPERATOR_RELU, output tensors: 88
+    Op 89: type OPERATOR_DROPOUT, output tensors: 89
+    Op 90: type OPERATOR_AGGREGATION, output tensors: 90
+    Op 91: type OPERATOR_ADD, output tensors: 91
+    Op 92: type OPERATOR_WEIGHT, output tensors: 92
+    Op 93: type OPERATOR_MATMUL, output tensors: 93
+    Op 94: type OPERATOR_ADD, output tensors: 94
+    Op 95: type OPERATOR_RELU, output tensors: 95
+    Op 96: type OPERATOR_DROPOUT, output tensors: 96
+    Op 97: type OPERATOR_AGGREGATION, output tensors: 97
+    Op 98: type OPERATOR_ADD, output tensors: 98
+    Op 99: type OPERATOR_WEIGHT, output tensors: 99
+    Op 100: type OPERATOR_MATMUL, output tensors: 100
+    Op 101: type OPERATOR_ADD, output tensors: 101
+    Op 102: type OPERATOR_RELU, output tensors: 102
+    Op 103: type OPERATOR_DROPOUT, output tensors: 103
+    Op 104: type OPERATOR_AGGREGATION, output tensors: 104
+    Op 105: type OPERATOR_ADD, output tensors: 105
+    Op 106: type OPERATOR_WEIGHT, output tensors: 106
+    Op 107: type OPERATOR_MATMUL, output tensors: 107
+    Op 108: type OPERATOR_ADD, output tensors: 108
+    Op 109: type OPERATOR_RELU, output tensors: 109
+    Op 110: type OPERATOR_DROPOUT, output tensors: 110
+    Op 111: type OPERATOR_AGGREGATION, output tensors: 111
+    Op 112: type OPERATOR_ADD, output tensors: 112
+    Op 113: type OPERATOR_WEIGHT, output tensors: 113
+    Op 114: type OPERATOR_MATMUL, output tensors: 114
+    Op 115: type OPERATOR_ADD, output tensors: 115
+    Op 116: type OPERATOR_RELU, output tensors: 116
+    Op 117: type OPERATOR_DROPOUT, output tensors: 117
+    Op 118: type OPERATOR_AGGREGATION, output tensors: 118
+    Op 119: type OPERATOR_ADD, output tensors: 119
+    Op 120: type OPERATOR_WEIGHT, output tensors: 120
+    Op 121: type OPERATOR_MATMUL, output tensors: 121
+    Op 122: type OPERATOR_ADD, output tensors: 122
+    Op 123: type OPERATOR_RELU, output tensors: 123
+    Op 124: type OPERATOR_DROPOUT, output tensors: 124
+    Op 125: type OPERATOR_AGGREGATION, output tensors: 125
+    Op 126: type OPERATOR_ADD, output tensors: 126
+    Op 127: type OPERATOR_WEIGHT, output tensors: 127
+    Op 128: type OPERATOR_MATMUL, output tensors: 128
+    Op 129: type OPERATOR_ADD, output tensors: 129
+    Op 130: type OPERATOR_RELU, output tensors: 130
+    Op 131: type OPERATOR_DROPOUT, output tensors: 131
+    Op 132: type OPERATOR_AGGREGATION, output tensors: 132
+    Op 133: type OPERATOR_ADD, output tensors: 133
+    Op 134: type OPERATOR_WEIGHT, output tensors: 134
+    Op 135: type OPERATOR_MATMUL, output tensors: 135
+    Op 136: type OPERATOR_ADD, output tensors: 136
+    Op 137: type OPERATOR_RELU, output tensors: 137
+    Op 138: type OPERATOR_DROPOUT, output tensors: 138
+    Op 139: type OPERATOR_AGGREGATION, output tensors: 139
+    Op 140: type OPERATOR_ADD, output tensors: 140
+    Op 141: type OPERATOR_WEIGHT, output tensors: 141
+    Op 142: type OPERATOR_MATMUL, output tensors: 142
+    Op 143: type OPERATOR_ADD, output tensors: 143
+    Op 144: type OPERATOR_RELU, output tensors: 144
+    Op 145: type OPERATOR_DROPOUT, output tensors: 145
+    Op 146: type OPERATOR_AGGREGATION, output tensors: 146
+    Op 147: type OPERATOR_ADD, output tensors: 147
+    Op 148: type OPERATOR_WEIGHT, output tensors: 148
+    Op 149: type OPERATOR_MATMUL, output tensors: 149
+    Op 150: type OPERATOR_ADD, output tensors: 150
+    Op 151: type OPERATOR_RELU, output tensors: 151
+    Op 152: type OPERATOR_DROPOUT, output tensors: 152
+    Op 153: type OPERATOR_AGGREGATION, output tensors: 153
+    Op 154: type OPERATOR_ADD, output tensors: 154
+    Op 155: type OPERATOR_WEIGHT, output tensors: 155
+    Op 156: type OPERATOR_MATMUL, output tensors: 156
+    Op 157: type OPERATOR_ADD, output tensors: 157
+    Op 158: type OPERATOR_RELU, output tensors: 158
+    Op 159: type OPERATOR_DROPOUT, output tensors: 159
+    Op 160: type OPERATOR_AGGREGATION, output tensors: 160
+    Op 161: type OPERATOR_ADD, output tensors: 161
+    Op 162: type OPERATOR_WEIGHT, output tensors: 162
+    Op 163: type OPERATOR_MATMUL, output tensors: 163
+    Op 164: type OPERATOR_ADD, output tensors: 164
+    Op 165: type OPERATOR_RELU, output tensors: 165
+    Op 166: type OPERATOR_DROPOUT, output tensors: 166
+    Op 167: type OPERATOR_AGGREGATION, output tensors: 167
+    Op 168: type OPERATOR_ADD, output tensors: 168
+    Op 169: type OPERATOR_WEIGHT, output tensors: 169
+    Op 170: type OPERATOR_MATMUL, output tensors: 170
+    Op 171: type OPERATOR_ADD, output tensors: 171
+    Op 172: type OPERATOR_RELU, output tensors: 172
+    Op 173: type OPERATOR_DROPOUT, output tensors: 173
+    Op 174: type OPERATOR_AGGREGATION, output tensors: 174
+    Op 175: type OPERATOR_ADD, output tensors: 175
+    Op 176: type OPERATOR_WEIGHT, output tensors: 176
+    Op 177: type OPERATOR_MATMUL, output tensors: 177
+    Op 178: type OPERATOR_ADD, output tensors: 178
+    Op 179: type OPERATOR_RELU, output tensors: 179
+    Op 180: type OPERATOR_DROPOUT, output tensors: 180
+    Op 181: type OPERATOR_AGGREGATION, output tensors: 181
+    Op 182: type OPERATOR_ADD, output tensors: 182
+    Op 183: type OPERATOR_WEIGHT, output tensors: 183
+    Op 184: type OPERATOR_MATMUL, output tensors: 184
+    Op 185: type OPERATOR_ADD, output tensors: 185
+    Op 186: type OPERATOR_RELU, output tensors: 186
+    Op 187: type OPERATOR_DROPOUT, output tensors: 187
+    Op 188: type OPERATOR_AGGREGATION, output tensors: 188
+    Op 189: type OPERATOR_ADD, output tensors: 189
+    Op 190: type OPERATOR_WEIGHT, output tensors: 190
+    Op 191: type OPERATOR_MATMUL, output tensors: 191
+    Op 192: type OPERATOR_ADD, output tensors: 192
+    Op 193: type OPERATOR_RELU, output tensors: 193
+    Op 194: type OPERATOR_DROPOUT, output tensors: 194
+    Op 195: type OPERATOR_AGGREGATION, output tensors: 195
+    Op 196: type OPERATOR_ADD, output tensors: 196
+    Op 197: type OPERATOR_WEIGHT, output tensors: 197
+    Op 198: type OPERATOR_MATMUL, output tensors: 198
+    Op 199: type OPERATOR_ADD, output tensors: 199
+    Op 200: type OPERATOR_RELU, output tensors: 200
+    Op 201: type OPERATOR_DROPOUT, output tensors: 201
+    Op 202: type OPERATOR_AGGREGATION, output tensors: 202
+    Op 203: type OPERATOR_ADD, output tensors: 203
+    Op 204: type OPERATOR_WEIGHT, output tensors: 204
+    Op 205: type OPERATOR_MATMUL, output tensors: 205
+    Op 206: type OPERATOR_ADD, output tensors: 206
+    Op 207: type OPERATOR_RELU, output tensors: 207
+    Op 208: type OPERATOR_DROPOUT, output tensors: 208
+    Op 209: type OPERATOR_AGGREGATION, output tensors: 209
+    Op 210: type OPERATOR_ADD, output tensors: 210
+    Op 211: type OPERATOR_WEIGHT, output tensors: 211
+    Op 212: type OPERATOR_MATMUL, output tensors: 212
+    Op 213: type OPERATOR_ADD, output tensors: 213
+    Op 214: type OPERATOR_RELU, output tensors: 214
+    Op 215: type OPERATOR_DROPOUT, output tensors: 215
+    Op 216: type OPERATOR_AGGREGATION, output tensors: 216
+    Op 217: type OPERATOR_ADD, output tensors: 217
+    Op 218: type OPERATOR_WEIGHT, output tensors: 218
+    Op 219: type OPERATOR_MATMUL, output tensors: 219
+    Op 220: type OPERATOR_ADD, output tensors: 220
+    Op 221: type OPERATOR_RELU, output tensors: 221
+    Op 222: type OPERATOR_DROPOUT, output tensors: 222
+    Op 223: type OPERATOR_AGGREGATION, output tensors: 223
+    Op 224: type OPERATOR_ADD, output tensors: 224
+    Op 225: type OPERATOR_WEIGHT, output tensors: 225
+    Op 226: type OPERATOR_MATMUL, output tensors: 226
+    Op 227: type OPERATOR_ADD, output tensors: 227
+    Op 228: type OPERATOR_RELU, output tensors: 228
+    Op 229: type OPERATOR_DROPOUT, output tensors: 229
+    Op 230: type OPERATOR_WEIGHT, output tensors: 230
+    Op 231: type OPERATOR_MATMUL, output tensors: 231
+    Op 232: type OPERATOR_SOFTMAX, output tensors: 232
+(Forwarding) Node 3 (fragment 0) depends on nodes: 0 (Tensor: 4) 2 (Tensor: 180)
+(Backwarding) Node 3 (fragment 0) depends on nodes:
+(I-link dependencies): node 3 should send activation to nodes:
+(I-link dependencies): node 3 should receive activation from nodes: 2 (tensor: 180)
+(I-link dependencies): node 3 should send gradient to nodes:
+(I-link dependencies): node 3 should receive gradient from nodes:
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+GPU 0, layer [0, 9)
+GPU 1, layer [9, 18)
+GPU 2, layer [18, 26)
+GPU 3, layer [26, 34)
+*** Node 2, starting model training...
+Number of operators: 233
+0 2449029 0 62
+0 2449029 62 125
+0 2449029 125 181
+0 2449029 181 233
+Node 2, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 2, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 2 owns the partition [125, 181) x [0, 2449029)
+*** Node 2, constructing the helper classes...
+WARNING: the current version only applies to linear GNN models!
+train nodes 196615, valid nodes 39323, test nodes 2213091
+Number of GPUs: 4
+GPU 0, layer [0, 9)
+GPU 1, layer [9, 18)
+GPU 2, layer [18, 26)
+GPU 3, layer [26, 34)
+WARNING: the current version only applies to linear GNN models!
+*** Node 1, starting model training...
+Number of operators: 233
+0 2449029 0 62
+0 2449029 62 125
+0 2449029 125 181
+0 2449029 181 233
+Node 1, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 1, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 1 owns the partition [62, 125) x [0, 2449029)
+*** Node 1, constructing the helper classes...
+Boundaries: 0 0 0 0 2449029 2449029 2449029 2449029
+Fragments: [0, 2449029)
+Chunks (number of global chunks: 16): 0-[0, 153065) 1-[153065, 306130) 2-[306130, 459195) 3-[459195, 612260) 4-[612260, 765325) 5-[765325, 918390) 6-[918390, 1071455) 7-[1071455, 1224520) 8-[1224520, 1377585) ... 15-[2295975, 2449029)
+(Forwarding) Node 0 (fragment 0) depends on nodes:
+(Backwarding) Node 0 (fragment 0) depends on nodes: 1 (Tensor: 4 61) 2 (Tensor: 4) 3 (Tensor: 4)
+(I-link dependencies): node 0 should send activation to nodes: 1 (tensor: 61)
+(I-link dependencies): node 0 should receive activation from nodes:
+(I-link dependencies): node 0 should send gradient to nodes:
+(I-link dependencies): node 0 should receive gradient from nodes:
+(Forwarding) Node 1 (fragment 0) depends on nodes: 0 (Tensor: 4 61)
+(Backwarding) Node 1 (fragment 0) depends on nodes: 2 (Tensor: 124)
+(I-link dependencies): node 1 should send activation to nodes: 2 (tensor: 124)
+(I-link dependencies): node 1 should receive activation from nodes: 0 (tensor: 61)
+(I-link dependencies): node 1 should send gradient to nodes:
+(I-link dependencies): node 1 should receive gradient from nodes:
+(Forwarding) Node 2 (fragment 0) depends on nodes: 0 (Tensor: 4) 1 (Tensor: 124)
+(Backwarding) Node 2 (fragment 0) depends on nodes: 3 (Tensor: 180)
+(I-link dependencies): node 2 should send activation to nodes: 3 (tensor: 180)
+(I-link dependencies): node 2 should receive activation from nodes: 1 (tensor: 124)
+(I-link dependencies): node 2 should send gradient to nodes:
+(I-link dependencies): node 2 should receive gradient from nodes:
+2449029, 126167053, 126167053
+Number of vertices per chunk: 153065
+2449029, 126167053, 126167053
+Number of vertices per chunk: 153065
+2449029, 126167053, 126167053
+Number of vertices per chunk: 153065
+2449029, 126167053, 126167053
+Number of vertices per chunk: 153065
+csr in-out ready !*** Node 0, setting up some other necessary information...
+csr in-out ready !*** Node 3, setting up some other necessary information...
+csr in-out ready !*** Node 2, setting up some other necessary information...
+csr in-out ready !*** Node 1, setting up some other necessary information...
+*** Node 3, starting the helper threads...
+*** Node 0, starting the helper threads...
++++++++++ Node 3 initializing the weights for op[181, 233)...
++++++++++ Node 3, mapping weight op 183
+using the Pytorch initialization method.
++++++++++ Node 3, mapping weight op 190
+using the Pytorch initialization method.
++++++++++ Node 3, mapping weight op 197
+using the Pytorch initialization method.
++++++++++ Node 3, mapping weight op 204
+using the Pytorch initialization method.
++++++++++ Node 3, mapping weight op 211
+using the Pytorch initialization method.
++++++++++ Node 3, mapping weight op 218
+using the Pytorch initialization method.
++++++++++ Node 3, mapping weight op 225
++++++++++ Node 0 initializing the weights for op[0, 62)...
++++++++++ Node 0, mapping weight op 2
+using the Pytorch initialization method.
++++++++++ Node 3, mapping weight op 230
+using the Pytorch initialization method.
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 8
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 15
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 22
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 29
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 36
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 43
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 50
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 57
+using the Pytorch initialization method.
+Doing row-based feature normalization.
+*** Node 2, starting the helper threads...
++++++++++ Node 2 initializing the weights for op[125, 181)...
++++++++++ Node 2, mapping weight op 127
+using the Pytorch initialization method.
++++++++++ Node 2, mapping weight op 134
+using the Pytorch initialization method.
++++++++++ Node 2, mapping weight op 141
+using the Pytorch initialization method.
++++++++++ Node 2, mapping weight op 148
+using the Pytorch initialization method.
++++++++++ Node 2, mapping weight op 155
+using the Pytorch initialization method.
++++++++++ Node 2, mapping weight op 162
+using the Pytorch initialization method.
++++++++++ Node 2, mapping weight op 169
+using the Pytorch initialization method.
++++++++++ Node 2, mapping weight op 176
+using the Pytorch initialization method.
+*** Node 1, starting the helper threads...
++++++++++ Node 1 initializing the weights for op[62, 125)...
++++++++++ Node 1, mapping weight op 64
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 71
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 78
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 85
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 92
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 99
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 106
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 113
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 120
+using the Pytorch initialization method.
+RANDOMLY DISPATCH THE CHUNKS...
+*** Node 0, starting task scheduling...
+*** Node 3, starting task scheduling...
+*** Node 2, starting task scheduling...
+*** Node 1, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.001000000
+The learning rate specified by the user: 0.001000000
+The learning rate specified by the user: 0.001000000
+The learning rate specified by the user: 0.001000000
+Cuda failure: 1
+/home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_data_compressor.cu:475
+Aborting...
 --------------------------------------------------------------------------
 Primary job  terminated normally, but 1 process returned
 a non-zero exit code. Per user-direction, the job has been aborted.
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
-mpirun noticed that process rank 0 with PID 195582 on node g013 exited on signal 6 (Aborted).
+mpirun detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+
+  Process name: [[17310,1],1]
+  Exit code:    1
 --------------------------------------------------------------------------

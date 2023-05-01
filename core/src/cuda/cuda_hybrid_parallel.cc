@@ -1479,7 +1479,7 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
         CUDAOperatorsAndTensorsManager * op_ten_manager, 
         CUDAVertexIdTranslationTable * vid_translation,
         int local_op_begin_idx, int local_op_end_idx,
-        VertexId max_chunk_size
+        VertexId max_chunk_size, Tensor * output_tensor
         ): op_ten_manager_(op_ten_manager), vid_translation_(vid_translation), max_chunk_size_(max_chunk_size) {
     // locate all local vertex tensors first
     local_tensors_.clear();
@@ -1583,7 +1583,8 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // 2) the tensor is produced by a local operator (is able to recompute it)
             // 3) the tensor is NOT the input to a aggregation operator
             if (lvt.tensor->op->get_is_transient() &&   
-                    lvt.is_mirror_tensor == false) {
+                    lvt.is_mirror_tensor == false && 
+                    lvt.tensor != output_tensor) {
                 // only allocate the memory sufficient to store a chunk (rather than for all vertices)
                 num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
                 //printf("Found transient tensor\n");
@@ -4619,7 +4620,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     vtensor_manager_ = new CUDAVertexTensorDataGradManager(
             op_ten_manager_, vid_translation_,
             partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id],
-            max_chunk_size
+            max_chunk_size, application->get_output_tensor()
             );
    
     chunk_manager_ = new CUDAVertexChunksManager(

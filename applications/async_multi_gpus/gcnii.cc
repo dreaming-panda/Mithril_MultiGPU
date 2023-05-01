@@ -38,7 +38,7 @@ using namespace std;
 // 2) [x] refine the model partitioning algorithm
 // 3) [x] the dropout recomputation issue
 // 4) [x] the scale-and-add op
-// 5) [ ] enable rematerialization for GCNII
+// 5) [x] enable rematerialization for GCNII
 // 6) [x] the h0 broadcasting
 
 class GCNII: public AbstractApplication {
@@ -59,16 +59,16 @@ class GCNII: public AbstractApplication {
                 assert(num_layers >= 1);
                 assert(num_hidden_units >= 1);
                 assert(num_classes >= 1);
-                enable_recomputation_ = false;
+                enable_recomputation_ = true;
         }
         ~GCNII() {}
 
         Tensor * graph_convolution(Tensor * t, Tensor * h0, int layer) {
             double theta = log(lambda_ / layer + 1);
             Tensor * hi = aggregation(t, NORM_SUM);
-            Tensor * support = add(hi, h0, 1 - alpha_, alpha_);
-            Tensor * fc_t = fc(support, num_hidden_units_);
-            Tensor * output = add(fc_t, support, theta, 1 - theta);
+            Tensor * support = add(hi, h0, 1 - alpha_, alpha_, enable_recomputation_);
+            Tensor * fc_t = fc(support, num_hidden_units_, "None");
+            Tensor * output = add(fc_t, support, theta, 1 - theta, enable_recomputation_);
             return output;
         }
 
@@ -76,7 +76,7 @@ class GCNII: public AbstractApplication {
             Tensor * t = input;
             // preparing for h0 (dimension reduction)
             t = dropout(t, dropout_rate_, enable_recomputation_); 
-            t = fc(t, num_hidden_units_);
+            t = fc(t, num_hidden_units_, "None");
             t = relu(t, enable_recomputation_);
             Tensor * h0 = t;
             set_global_shared_tensor(h0); // the tensor that is shared across all GPUs
@@ -90,8 +90,8 @@ class GCNII: public AbstractApplication {
                 next_layer();
             }
             // classification
-            t = fc(t, num_classes_);
-            t = log_softmax(t);
+            t = fc(t, num_classes_, "None");
+            t = log_softmax(t, enable_recomputation_);
             next_layer();
             return t;
         }
@@ -107,19 +107,6 @@ CUDAPIPPartitioning get_model_parallel_partition(
     const std::vector<Operator*>& operators = application->get_operators();
     int num_operators = (int) operators.size();
     const std::vector<std::pair<int, int>> &operators_each_layer = application->get_operator_range_each_layer();
-    //operators_each_layer.clear();
-    //int op_begin = 0;
-    //for (int i = 0; i < num_operators; ++ i) {
-    //    Operator * op = operators[i];
-    //    assert(op);
-    //    if (op->get_type() == OPERATOR_DROPOUT ||
-    //            op->get_type() == OPERATOR_SOFTMAX) {
-    //        operators_each_layer.push_back(
-    //                std::make_pair(op_begin, i + 1)
-    //                );
-    //        op_begin = i + 1;
-    //    }
-    //}
     assert(num_layers == operators_each_layer.size());
     // partition the layers
     double remained_cost = 0.;
@@ -295,15 +282,6 @@ int main(int argc, char ** argv) {
        if(y==2){ntest++; test[x] = 1;}
     }
     in_mask.close();
-    // int * gpu_training_mask_;
-    // int * gpu_valid_mask_;
-    // int * gpu_test_mask_;
-    // AllocateCUDAMemory<int>(&gpu_training_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // AllocateCUDAMemory<int>(&gpu_valid_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // AllocateCUDAMemory<int>(&gpu_test_mask_, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // CopyFromHostToCUDADevice<int>(gpu_training_mask_, training, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // CopyFromHostToCUDADevice<int>(gpu_valid_mask_, valid, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
-    // CopyFromHostToCUDADevice<int>(gpu_test_mask_, test, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
     printf("train nodes %d, valid nodes %d, test nodes %d\n", ntrain, nvalid, ntest);
 
     // set the random seed
