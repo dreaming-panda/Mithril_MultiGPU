@@ -529,6 +529,7 @@ class CUDAVertexTensorDataGradManager {
         CUDAVertexIdTranslationTable * vid_translation_;
         std::map<Tensor*, LocalVertexTensor> local_tensors_;
         VertexId max_chunk_size_;
+        std::vector<Tensor*> local_tensor_vec_;
 
     public:
         CUDAVertexTensorDataGradManager(
@@ -539,6 +540,9 @@ class CUDAVertexTensorDataGradManager {
                 );
         ~CUDAVertexTensorDataGradManager();
 
+        inline const std::vector<Tensor*>& get_local_tensors() {
+            return local_tensor_vec_;
+        }
         // utilities functions
         // input: global VID, the tensor must be a vertex tensor
         inline void get_master_vertices_data(

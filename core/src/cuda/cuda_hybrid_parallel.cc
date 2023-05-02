@@ -1521,9 +1521,12 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             }
         }
     }
+
     // allocate the memory for each local tensor accordingly
+    local_tensor_vec_.clear();
     for (auto p = local_tensors_.begin(); p != local_tensors_.end(); p ++) {
         Tensor * t = p->first;
+        local_tensor_vec_.push_back(t);
         LocalVertexTensor lvt = p->second;
         assert(t->type == VERTEX_TENSOR);
         assert(t->dims[0] == -1);
@@ -3867,12 +3870,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
 
     // copy the shadow gradients of tensor dependent on other nodes 
     // and zero out the gradients of other tensors
-    const std::set<Tensor*> * all_backward_dependent_tensors = 
-        data_dependencies_tracker_->get_all_backward_dependent_tensors(chunk_id);
-    const std::set<Tensor*> * all_non_backward_dependent_tensors = 
-        data_dependencies_tracker_->get_all_non_backward_dependent_tensors(chunk_id);
-    assert(all_backward_dependent_tensors != NULL);
-    assert(all_non_backward_dependent_tensors != NULL);
+    //const std::set<Tensor*> * all_backward_dependent_tensors = 
+    //    data_dependencies_tracker_->get_all_backward_dependent_tensors(chunk_id);
+    //const std::set<Tensor*> * all_non_backward_dependent_tensors = 
+    //    data_dependencies_tracker_->get_all_non_backward_dependent_tensors(chunk_id);
+    //assert(all_backward_dependent_tensors != NULL);
+    //assert(all_non_backward_dependent_tensors != NULL);
 
     assert(COMPRESS_DATA);
     // decompress the gradients if necessary
@@ -3892,8 +3895,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         decompression_size_ += sizeof(DataType) * num_elements_this_chunk;
     }
 
-    for (Tensor * tensor: *all_non_backward_dependent_tensors) {
-        if (tensor == output_tensor_) {
+    // clear the gradients of vertex tensors
+    const std::vector<Tensor*> local_vertex_tensors = vtensor_manager_->get_local_tensors(); 
+    for (Tensor * tensor: local_vertex_tensors) {
+        if (tensor == output_tensor_ || tensor == pipeline_output_tensor_) {
             continue;
         }
         if (node_id < num_nodes - 1 && tensor == global_shared_tensor_) {
@@ -3901,26 +3906,42 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         }
         DataType * grad = NULL;
         size_t num_elements = 0;
-        if (tensor->type == VERTEX_TENSOR) {
+        assert(tensor->type == VERTEX_TENSOR);
+        //if (tensor->type == VERTEX_TENSOR) {
             get_vertex_tensor_grad_by_chunk(
                     tensor, chunk_id, grad, num_elements
                     );
             assert(grad != NULL);
             assert(num_elements > 0);
-        } else {
-            assert(tensor->op->get_type() == OPERATOR_WEIGHT);
-            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-            assert(resource != NULL);
-            grad = resource->get_gpu_grad();
-            num_elements = resource->get_num_elements();
-            if (grad == NULL) {
-                printf("node %d, OP %d\n", node_id, op_ten_manager_->get_operator_index(tensor->op));
-            }
-            assert(grad != NULL);
-            assert(num_elements > 0);
-        }
+        //} else {
+        //    assert(tensor->op->get_type() == OPERATOR_WEIGHT);
+        //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        //    assert(resource != NULL);
+        //    grad = resource->get_gpu_grad();
+        //    num_elements = resource->get_num_elements();
+        //    if (grad == NULL) {
+        //        printf("node %d, OP %d\n", node_id, op_ten_manager_->get_operator_index(tensor->op));
+        //    }
+        //    assert(grad != NULL);
+        //    assert(num_elements > 0);
+        //}
         //memset(grad, 0, sizeof(DataType) * num_elements);
         SetCUDAMemory<DataType>(grad, 0, num_elements, __FILE__, __LINE__);
+    }
+    // clear the gradients of weight tensors
+    for (WeightOperator * op: local_weight_ops_) {
+        assert(op != NULL);
+        Tensor * tensor = op->get_output_tensor(0);
+        assert(tensor != NULL);
+        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        assert(resource != NULL);
+        DataType * grad = resource->get_gpu_grad();
+        assert(grad);
+        size_t num_elements = resource->get_num_elements();
+        assert(num_elements > 0);
+        checkCUDA(
+                cudaMemset(grad, 0, sizeof(DataType) * num_elements)
+                );
     }
 
     // backward the gradients

@@ -40,33 +40,33 @@ void CUDAPIPWeightAggregator::element_wise_add_gpu(
     cudaStreamSynchronize(0);
 }
 
-void CUDAPIPParallelParameterServer::element_wise_add_gpu(
-        DataType * src_0, DataType * src_1, DataType * dst,
-        size_t num_elements
-        ) {
-    const int block_size = 1024;
-    const int num_blocks = (num_elements + block_size - 1) / block_size;
-    element_wise_add_kernel<<<num_blocks, block_size>>>(
-            src_0, src_1, dst, num_elements
-            );
-    cudaStreamSynchronize(0);
-}
+//void CUDAPIPParallelParameterServer::element_wise_add_gpu(
+//        DataType * src_0, DataType * src_1, DataType * dst,
+//        size_t num_elements
+//        ) {
+//    const int block_size = 1024;
+//    const int num_blocks = (num_elements + block_size - 1) / block_size;
+//    element_wise_add_kernel<<<num_blocks, block_size>>>(
+//            src_0, src_1, dst, num_elements
+//            );
+//    cudaStreamSynchronize(0);
+//}
 
-void CUDAPIPGraphDataActivationUpdateSender::LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst){
-    const int block_size = 1024;
-    const int num_blocks = (mirror_vertices_number + block_size - 1) / block_size;
-    buffer_mirrors<<<num_blocks, block_size>>>(mirror_vertices_number, mirror_vertices_list, elements_per_vertex, begin, src, dst);
-    cudaStreamSynchronize(0);
-
-}
-
-void  CUDAPIPGraphDataGradientUpdateSender::LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst){
-    const int block_size = 1024;
-    const int num_blocks = (mirror_vertices_number + block_size - 1) / block_size;
-    buffer_mirrors<<<num_blocks, block_size>>>(mirror_vertices_number, mirror_vertices_list, elements_per_vertex, begin, src, dst);
-    cudaStreamSynchronize(0);
-
-}
+//void CUDAPIPGraphDataActivationUpdateSender::LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst){
+//    const int block_size = 1024;
+//    const int num_blocks = (mirror_vertices_number + block_size - 1) / block_size;
+//    buffer_mirrors<<<num_blocks, block_size>>>(mirror_vertices_number, mirror_vertices_list, elements_per_vertex, begin, src, dst);
+//    cudaStreamSynchronize(0);
+//
+//}
+//
+//void  CUDAPIPGraphDataGradientUpdateSender::LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst){
+//    const int block_size = 1024;
+//    const int num_blocks = (mirror_vertices_number + block_size - 1) / block_size;
+//    buffer_mirrors<<<num_blocks, block_size>>>(mirror_vertices_number, mirror_vertices_list, elements_per_vertex, begin, src, dst);
+//    cudaStreamSynchronize(0);
+//
+//}
 
 __global__ void zero_out_grad_kernel(
         DataType * grad, DataType * data, size_t num_elements_this_chunk
