@@ -1,37 +1,256 @@
 #include"cuda/cuda_executor.h"
 #define TIMETAG
 
-// 行优先转列优先，只改变存储方式，不改变矩阵尺寸
-void rToC(float *a, int ha, int wa)// 输入数组及其行数、列数
-{
-    int i;
-    float *temp = (float *)malloc(sizeof(float) * ha * wa);// 存放列优先存储的临时数组
+OperatorExecutorGPUV2::OperatorExecutorGPUV2(){
+    graph_ = nullptr;
+    cublas_handle_ = nullptr;
+    cudnn_handle_ = nullptr;
+    cusparse_handle_ = nullptr;
+    dbuffer_ = nullptr;
+    tp_weight = nullptr;
+    tp_grad = nullptr;
+    has_Spcsr_ = false;
+    has_dbuffer_ = false;
+    id_init = false;
+    reluforward_time = 0;
+    relubackward_time = 0;
+    softmaxforward_time = 0;
+    softmaxbackward_time = 0;
+    matmulforward_time = 0;
+    matmulbackward_time = 0;
+    aggforward_time = 0;
+    aggbackward_time = 0;
+    hidden_units = 0;
+    cudnnCreateActivationDescriptor(&relu_descriptor_forward);
+    cudnnSetActivationDescriptor(relu_descriptor_forward,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,100);
+};
 
-    for (i = 0; i < ha * wa; i++)         // 找出列优先的第 i 个位置对应行优先坐标进行赋值
-        temp[i] = a[i / ha + i % ha * wa];
-    for (i = 0; i < ha * wa; i++)         // 覆盖原数组
-        a[i] = temp[i];
-    free(temp);
-    return;
-}
+OperatorExecutorGPUV2::OperatorExecutorGPUV2(CUDAFullyStructualGraph * graph): graph_(graph){
+    cublas_handle_ = nullptr;
+    cudnn_handle_ = nullptr;
+    cusparse_handle_ = nullptr;
+    dbuffer_ = nullptr;
+    host_id = nullptr;
+    cuda_id = nullptr;
+    tp_weight = nullptr;
+    tp_grad = nullptr;
+    has_Spcsr_ = false;
+    has_dbuffer_ = false;
+    id_init = false;
+    reluforward_time = 0;
+    relubackward_time = 0;
+    softmaxforward_time = 0;
+    softmaxbackward_time = 0;
+    matmulforward_time = 0;
+    matmulbackward_time = 0;
+    aggforward_time = 0;
+    aggbackward_time = 0;
+    hidden_units = 0;
+    cudnnCreateActivationDescriptor(&relu_descriptor_forward);
+    cudnnSetActivationDescriptor(relu_descriptor_forward,CUDNN_ACTIVATION_RELU,CUDNN_NOT_PROPAGATE_NAN,100);
+};
 
-// 列优先转行优先
-void cToR(float *a, int ha, int wa)
-{
-    int i;
-    float *temp = (float *)malloc(sizeof(float) * ha * wa);
+OperatorExecutorGPUV2::~OperatorExecutorGPUV2() {
+    if(has_Spcsr_ == true)cusparseDestroySpMat(SpCsr_);
+    if(has_dbuffer_ == true)cudaFree(dbuffer_);
+    for(int i = 0; i < lginfo_forward.size(); ++i){
+        DeallocateCUDAMemory<int>(&lginfo_forward[i].lg.cuda_local_rowoffsets,__FILE__, __LINE__);
+        cusparseDestroySpMat(lginfo_forward[i].spcsr);
+        cudaFree(lginfo_forward[i].dbuffer);
+    }
+    for(int i = 0; i < lginfo_backward.size(); ++i){
+        DeallocateCUDAMemory<int>(&lginfo_backward[i].lg.cuda_local_rowoffsets,__FILE__, __LINE__);
+        cusparseDestroySpMat(lginfo_backward[i].spcsr);
+        cudaFree(lginfo_backward[i].dbuffer);
+    }
+    lginfo_forward.clear();
+    lginfo_backward.clear();
+    if(id_init == true){
+        delete [] host_id;
+        DeallocateCUDAMemory<DataType>(&cuda_id, __FILE__, __LINE__);
+        DeallocateCUDAMemory<DataType>(&tp_weight, __FILE__, __LINE__);
+        DeallocateCUDAMemory<DataType>(&tp_grad, __FILE__, __LINE__);
+    }
+};
 
-    for (i = 0; i < ha * wa; i++)         // 找出行优先的第 i 个位置对应列优先坐标进行赋值
-        temp[i] = a[i / wa + i % wa * ha];
-    for (i = 0; i < ha * wa; i++)
-        a[i] = temp[i];
-    free(temp);
-    return;
+void OperatorExecutorGPUV2::set_activation_size(int ac_s , int n_class){
+    activation_size_ = ac_s;
+    cudnnCreateTensorDescriptor(&data_descriptor_relu_forward);
+    cudnnSetTensor4dDescriptor(data_descriptor_relu_forward, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, ac_s * graph_->get_num_global_vertices());
+    cudnnCreateActivationDescriptor(&relu_descriptor_forward);
+    cudnnSetActivationDescriptor(relu_descriptor_forward,CUDNN_ACTIVATION_RELU,CUDNN_NOT_PROPAGATE_NAN, 100);
+    cudnnCreateTensorDescriptor(&data_descriptor_softmax_forward);
+    cudnnSetTensor4dDescriptor(data_descriptor_softmax_forward, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, graph_->get_num_global_vertices(), 1, 1, n_class);
 }
 
 void OperatorExecutorGPUV2::relu_forward(ReluOperator * op) {   
     VertexId num_vertices = graph_->get_num_global_vertices();
     relu_forward(op, (VertexId) 0, num_vertices);
+}
+
+void OperatorExecutorGPUV2::set_cuda_handle(cublasHandle_t* cublas_handle, cudnnHandle_t* cudnn_handle, cusparseHandle_t* cusparse_handle)
+{
+    assert(cublas_handle != nullptr);
+    assert(cudnn_handle != nullptr);
+    assert(cusparse_handle != nullptr);
+    cublas_handle_ = cublas_handle;
+    cudnn_handle_ = cudnn_handle;
+    cusparse_handle_ = cusparse_handle;
+}
+
+void OperatorExecutorGPUV2::build_inner_csr_(){
+    assert(has_Spcsr_ == false);
+    CUDAFullyStructualGraph * graph = graph_;
+    assert(graph != NULL);
+    VertexId num_vertices = graph->get_num_global_vertices();
+    DataType* values = graph->get_cuda_csrValues();
+    int* rowoffsets = graph->get_cuda_csrRowOffsets();
+    int* cols = graph->get_cuda_csrColInd();
+    int nnz = graph->get_nnz();
+    cusparseCreateCsr(&SpCsr_, num_vertices, num_vertices, nnz, (void *)rowoffsets, (void *)cols,(void *)values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+
+    int* t_rows = graph->get_cuda_cscRowInd();
+    int* t_cols = graph->get_cuda_cscColOffsets();
+    DataType* t_values = graph->get_cuda_cscValues();
+
+    cusparseCreateCsr(&SpCsr_T, num_vertices, num_vertices, nnz, (void *)t_cols, (void *)t_rows,(void *)t_values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+    has_Spcsr_ = true;
+}
+
+void OperatorExecutorGPUV2::init_identity(int hidden_units){
+    assert(id_init == false);
+    int num_elements = hidden_units * hidden_units;
+    host_id = new DataType[num_elements];
+    for(int i = 0; i < hidden_units; ++i){
+        for(int j = 0; j < hidden_units; ++j){
+            host_id[i * hidden_units + j] = (i == j ? 1 : 0);
+        }
+    }
+    this->hidden_units = hidden_units;
+    AllocateCUDAMemory<DataType>(&cuda_id, num_elements, __FILE__, __LINE__);
+    AllocateCUDAMemory<DataType>(&tp_weight, num_elements, __FILE__, __LINE__);
+    AllocateCUDAMemory<DataType>(&tp_grad, num_elements, __FILE__, __LINE__);
+    SetCUDAMemory<DataType>(tp_weight, 0, num_elements, __FILE__, __LINE__);
+    SetCUDAMemory<DataType>(tp_grad, 0, num_elements, __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<DataType>(cuda_id, host_id, num_elements, __FILE__, __LINE__);
+    id_init = true;
+}
+
+void OperatorExecutorGPUV2::Print() {
+    std::cout << "relu forward :"<<reluforward_time<<std::endl;
+    std::cout << "relu backward :"<<relubackward_time<<std::endl;
+    std::cout << "softmax forward :"<<softmaxforward_time<<std::endl;
+    std::cout << "softmax backward :"<<softmaxbackward_time<<std::endl;
+    std::cout << "matmul forward :"<<matmulforward_time<<std::endl;
+    std::cout << "matmul backward :"<<matmulbackward_time<<std::endl;
+    std::cout << "agg forward :"<<aggforward_time<<std::endl;
+    std::cout << "agg backward :"<<aggbackward_time<<std::endl;
+}
+
+unsigned int OperatorExecutorGPUV2::get_localgraph_In(VertexId left, VertexId right){
+    for(int i = 0; i < lginfo_forward.size(); ++i){
+        if(lginfo_forward[i].right == right && lginfo_forward[i].left == left){
+            return i;
+        }
+    }
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_master_vertices_ = csr_.num_master_vertices;
+    int * row_offsets_in = new int[num_master_vertices_ + 1];
+    memset(row_offsets_in, 0, sizeof(int) * (num_master_vertices_ + 1));
+    for(VertexId i = left + 1; i < right + 1; ++i){
+        row_offsets_in[i] = cpu_csr_.host_rowoffsets_in[i] - cpu_csr_.host_rowoffsets_in[left];
+    }
+    for(VertexId i = right + 1; i < num_master_vertices_ + 1; ++i){
+        row_offsets_in[i] = row_offsets_in[right];
+    }
+    int * cuda_rows = nullptr;
+    int local_nnz = cpu_csr_.host_rowoffsets_in[right] - cpu_csr_.host_rowoffsets_in[left];
+
+
+    assert(local_nnz == row_offsets_in[right]);
+    AllocateCUDAMemory<int>(&cuda_rows, num_master_vertices_ + 1, __FILE__, __LINE__);
+
+    CopyFromHostToCUDADevice<int>(cuda_rows, row_offsets_in, num_master_vertices_ + 1, __FILE__, __LINE__);
+    int skip = cpu_csr_.host_rowoffsets_in[left];
+    DataType * global_values = csr_.cuda_value_in;
+    DataType * local_values = global_values + skip;
+    int  * global_cols = csr_.cuda_col_in;
+    int * local_cols = global_cols + skip;
+    LocalGraphBasic lg;
+    lg.cuda_local_rowoffsets = cuda_rows;
+    lg.cuda_local_values = local_values;
+    lg.local_nnz = local_nnz;
+    lg.num_local_vertices = num_master_vertices_;
+    lg.cuda_local_cols = local_cols;
+    delete [] row_offsets_in;
+    LocalGraphInfo lginfo;
+    lginfo.left = left;
+    lginfo.right = right;
+    lginfo.lg = lg;
+    cusparseSpMatDescr_t SpCsr;
+    cusparseCreateCsr(&SpCsr, right - left, csr_.inMatrixSize, local_nnz, (void *)(cuda_rows + left), (void *)local_cols,(void *)local_values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+
+
+    lginfo.spcsr = SpCsr;
+    lginfo.dbuffer = nullptr;
+    lginfo.alloc = false;
+    lginfo_forward.push_back(lginfo);
+
+    return lginfo_forward.size() - 1;
+}
+
+unsigned int OperatorExecutorGPUV2::get_localgraph_Out(VertexId left, VertexId right){
+    for(int i = 0; i < lginfo_backward.size(); ++i){
+        if(lginfo_backward[i].right == right && lginfo_backward[i].left == left){
+            return i;
+        }
+    }
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_master_vertices_ = csr_.num_master_vertices;
+    int * row_offsets_out = new int[num_master_vertices_ + 1];
+    memset(row_offsets_out, 0, sizeof(int) * (num_master_vertices_ + 1));
+    for(VertexId i = left + 1; i < right + 1; ++i){
+        row_offsets_out[i] = cpu_csr_.host_rowoffsets_out[i] - cpu_csr_.host_rowoffsets_out[left];
+    }
+    for(VertexId i = right + 1; i < num_master_vertices_ + 1; ++i){
+        row_offsets_out[i] = row_offsets_out[right];
+    }
+    int * cuda_rows = nullptr;
+    int local_nnz = cpu_csr_.host_rowoffsets_out[right] - cpu_csr_.host_rowoffsets_out[left];
+
+
+    assert(local_nnz == row_offsets_out[right]);
+    AllocateCUDAMemory<int>(&cuda_rows, num_master_vertices_ + 1, __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(cuda_rows, row_offsets_out, num_master_vertices_ + 1, __FILE__, __LINE__);
+    int skip = cpu_csr_.host_rowoffsets_out[left];
+    DataType * global_values = csr_.cuda_value_out;
+    DataType * local_values = global_values + skip;
+    int  * global_cols = csr_.cuda_col_out;
+    int * local_cols = global_cols + skip;
+    LocalGraphBasic lg;
+    lg.cuda_local_rowoffsets = cuda_rows;
+    lg.cuda_local_values = local_values;
+    lg.local_nnz = local_nnz;
+    lg.num_local_vertices = num_master_vertices_;
+    lg.cuda_local_cols = local_cols;
+    delete [] row_offsets_out;
+    LocalGraphInfo lginfo;
+    lginfo.left = left;
+    lginfo.right = right;
+    lginfo.lg = lg;
+    cusparseSpMatDescr_t SpCsr;
+    cusparseCreateCsr(&SpCsr, right - left, csr_.outMatrixSize, local_nnz, (void *)(cuda_rows + left), (void *)local_cols,(void *)local_values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+    lginfo.spcsr = SpCsr;
+    lginfo.dbuffer = nullptr;
+    lginfo.alloc = false;
+    lginfo_backward.push_back(lginfo);
+
+    return lginfo_backward.size() - 1;
+
 }
 
 void OperatorExecutorGPUV2::matmul_forward(MatmulOperator * op) {   
@@ -914,148 +1133,13 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op, VertexId left, Vertex
 }
 
 void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
-    assert(false);
-
-#ifdef TIMETAG
-    cudaStreamSynchronize(0);
-#endif
-    assert(op);
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor);
-    assert(output_tensor);
-
-    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
-    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
-    size_t num_elements = input_tensor_resource->get_num_elements();
-    assert(num_elements == output_tensor_resource->get_num_elements());
-
-    DataType * d_input = input_tensor_resource->get_gpu_data();
-    DataType * d_output = output_tensor_resource->get_gpu_data();
-    assert(d_input);
-    assert(d_output);
-
-    //printf("Dropout Rate: %.3f\n", op->dropout_rate_);
-    if (dropout_op_descriptor.find(op) == dropout_op_descriptor.end()) {
-        // get the state size
-        size_t states_size = 0;
-        checkCUDNN(cudnnDropoutGetStatesSize(*cudnn_handle_, &states_size));
-        void * states = NULL;
-        checkCUDA(cudaMalloc(&states, states_size));
-        assert(states);
-        // the operator hasn't been setup before
-        cudnnDropoutDescriptor_t dropout_descriptor;
-        checkCUDNN(cudnnCreateDropoutDescriptor(&dropout_descriptor));
-        checkCUDNN(cudnnSetDropoutDescriptor(
-                    dropout_descriptor, *cudnn_handle_,
-                    op->dropout_rate_,
-                    states, states_size,
-                    random_seed_
-                    ));
-        // set up the tensor descriptor
-        cudnnTensorDescriptor_t tensor_descriptor;
-        checkCUDNN(cudnnCreateTensorDescriptor(&tensor_descriptor));
-        checkCUDNN(cudnnSetTensor4dDescriptor(
-                    tensor_descriptor, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT,
-                    1, 1, 1, 
-                    (size_t) input_tensor->dims[1] * graph_->get_num_global_vertices()
-                    ));
-        // allocate reserve space
-        size_t reserve_space_size = 0;
-        checkCUDNN(cudnnDropoutGetReserveSpaceSize(tensor_descriptor, &reserve_space_size));
-        void * reserve_space = NULL;
-        checkCUDA(cudaMalloc(&reserve_space, reserve_space_size));
-        // cache the results
-        dropout_op_descriptor[op] = dropout_descriptor;
-        dropout_op_tensor_descriptor[op] = tensor_descriptor;
-        dropout_op_reserve_space[op] = reserve_space;
-        dropout_op_reserve_space_size[op] = reserve_space_size;
-    } 
-
-    cudnnDropoutDescriptor_t dropout_descriptor = dropout_op_descriptor[op];
-    cudnnTensorDescriptor_t tensor_descriptor = dropout_op_tensor_descriptor[op];
-    void * reserve_space = dropout_op_reserve_space[op];
-    size_t reserve_space_size = dropout_op_reserve_space_size[op];
-    assert(reserve_space);
-
-    checkCUDNN(cudnnDropoutForward(
-                *cudnn_handle_,
-                dropout_descriptor,
-                tensor_descriptor,
-                (const void*) d_input,
-                tensor_descriptor,
-                (void*) d_output,
-                (void*) reserve_space,
-                reserve_space_size
-                ));
-
-#ifdef TIMETAG
-    cudaStreamSynchronize(0);
-#endif
-
-    //{  
-    //    DataType *cpu_data = new DataType[num_elements];
-    //    assert(cpu_data);
-    //    cudaMemcpy(cpu_data, d_output, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
-    //    int num_zero_elements = 0;
-    //    for (int i = 0; i < num_elements; ++ i) {
-    //        num_zero_elements += cpu_data[i] < 1e-20;
-    //    }
-    //    printf("The sparsity after the dropout op: %.6f\n", num_zero_elements * 1. / num_elements);
-    //    delete [] cpu_data;
-    //}
+    VertexId num_vertices = graph_->get_num_global_vertices();
+    dropout_forward(op, 0, num_vertices, 0);
 }
 
 void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op) {
-    assert(false);
-
-#ifdef TIMETAG
-    cudaStreamSynchronize(0);
-#endif
-
-    assert(op);
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor);
-    assert(output_tensor);
-
-    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*) input_tensor->resource;
-    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*) output_tensor->resource;
-    size_t num_elements = input_tensor_resource->get_num_elements();
-    assert(num_elements == output_tensor_resource->get_num_elements());
-
-    DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
-    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
-
-    assert(d_input_grad);
-    assert(d_output_grad);
-
-    cudnnDropoutDescriptor_t dropout_descriptor = dropout_op_descriptor[op];
-    cudnnTensorDescriptor_t tensor_descriptor = dropout_op_tensor_descriptor[op];
-    void * reserve_space = dropout_op_reserve_space[op];
-    size_t reserve_space_size = dropout_op_reserve_space_size[op];
-    assert(reserve_space);
-
-    checkCUDNN(cudnnDropoutBackward(
-                *cudnn_handle_,
-                dropout_descriptor,
-                tensor_descriptor,
-                (const void*) d_output_grad,
-                tensor_descriptor,
-                (void*) d_input_grad,
-                (void*) reserve_space,
-                reserve_space_size
-                ));
-
-#ifdef TIMETAG
-    cudaStreamSynchronize(0);
-#endif
+    VertexId num_vertices = graph_->get_num_global_vertices();
+    dropout_backward(op, 0, num_vertices, 0);
 }
 
 void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {
@@ -1085,7 +1169,6 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
     assert(output_tensor_resource);
 
     VertexId num_vertices = input_tensor_resource->get_num_vertices();
-    //printf("NumVertices: %u\n", num_vertices);
     size_t num_elements = input_tensor_resource->get_num_elements();
     assert(num_elements == output_tensor_resource->get_num_elements());
     assert(num_elements % num_vertices == 0);
@@ -1093,7 +1176,6 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
 
     size_t start_idx = num_elements_per_vertex * left;
     size_t end_idx = num_elements_per_vertex * right;
-    //printf("Start_idx: %lu, End_idx: %lu\n", start_idx, end_idx);
 
     DataType * d_input_data = input_tensor_resource->get_gpu_data();
     DataType * d_output_data = output_tensor_resource->get_gpu_data();
@@ -1132,8 +1214,6 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
                     op->dropout_rate_,
                     states, states_size,
                     rand() 
-                    //time(NULL)
-                    //random_seed_
                     ));
         // set up the tensor descriptor
         cudnnTensorDescriptor_t tensor_descriptor;

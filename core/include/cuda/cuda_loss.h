@@ -7,6 +7,7 @@
 #include"executor.h"
 #include"cuda/cuda_resource.h"
 #include "cuda/cuda_utils.h"
+
 class MSELossGPU:public MSELossCPU
 {
     public:
@@ -17,6 +18,7 @@ class MSELossGPU:public MSELossCPU
         double get_loss(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right);
         void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right);
 };
+
 class MSELossGPUV2:public MSELossCPU
 {   
     private:
@@ -69,6 +71,7 @@ class MSELossGPUV2:public MSELossCPU
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, num_class);
         }
 };
+
 class CrossEntropyLossGPU:public CrossEntropyLossCPU
 {
     public:
@@ -100,7 +103,7 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
             cudnnCreateTensorDescriptor(&data_descriptor);
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
         }
-        
+
     protected:
         cudnnHandle_t cudnn_;
         DataType * loss_data_;
@@ -118,7 +121,7 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
         double LaunchGetLossMaskWithStart(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int start, int type);
         double LaunchGetLoss(DataType * std_data, DataType * output_data, int num_vertices, int outputsize);
         double LaunchGetLossMask(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int type);
-       
+
 };
 
 class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
@@ -152,7 +155,7 @@ class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
             cudnnCreateTensorDescriptor(&data_descriptor);
             cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
         }
-       
+
     private:
         cudnnHandle_t cudnn_;
         DataType * loss_data_;
@@ -171,7 +174,7 @@ class CrossEntropyLossGPUV2:public CrossEntropyLossCPU
             assert(false);
             return 0.;
         };
-       
+
 };
 
 class NLLLoss: public CrossEntropyLossGPU {

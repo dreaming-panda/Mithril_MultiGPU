@@ -120,6 +120,7 @@ class CUDAAbstractTaskDispatcher {
             dispatcher_thread_ = NULL;
         }
 };
+
 template<typename T>
 class CUDAAbstractTaskCommitter {
     protected:
@@ -164,6 +165,7 @@ class CUDAAbstractTaskCommitter {
             committer_thread_ = NULL;
         }
 };
+
 struct CUDAPIPForwardTask {
     int epoch_id;
     int chunk_id;
@@ -180,9 +182,6 @@ struct CUDAPIPGraphDataActivationUpdateTask {
     VertexId vid_begin;
     VertexId vid_end;
     VertexId num_updated_vertices;
-    ///* the following two fields set up by the local node (receiver) */
-    //VertexId local_vid_begin;
-    //VertexId local_vid_end;
 } __attribute__((packed));
 
 struct CUDAPIPGraphDataGradientUpdateTask {
@@ -204,6 +203,7 @@ class CUDAPIPForwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPFor
         ~CUDAPIPForwardTaskDispatcher();
         double get_comm() {return comm_;}
 };
+
 class CUDAPIPBackwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPBackwardTask> {
     private:
         // chunk_id -> number of ready remote nodes
@@ -220,6 +220,7 @@ class CUDAPIPBackwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPBa
         void insert_new_task(CUDAPIPBackwardTask task); // only works for bottommost nodes
         double get_comm() {return comm_;}
 };
+
 class CUDAPIPForwardTaskCommitter: public CUDAAbstractTaskCommitter<CUDAPIPForwardTask> {
     protected:
         void thread_main();
@@ -227,6 +228,7 @@ class CUDAPIPForwardTaskCommitter: public CUDAAbstractTaskCommitter<CUDAPIPForwa
         CUDAPIPForwardTaskCommitter(int max_num_tasks, pthread_barrier_t * barrier);
         ~CUDAPIPForwardTaskCommitter();
 };
+
 class CUDAPIPBackwardTaskCommitter: public CUDAAbstractTaskCommitter<CUDAPIPBackwardTask> {
     protected:
         void thread_main();
@@ -234,6 +236,7 @@ class CUDAPIPBackwardTaskCommitter: public CUDAAbstractTaskCommitter<CUDAPIPBack
         CUDAPIPBackwardTaskCommitter(int max_num_tasks, pthread_barrier_t * barrier);
         ~CUDAPIPBackwardTaskCommitter();
 };
+
 class CUDAAbstractPIPScheduler {
     protected:
         // the dispatchers
@@ -648,6 +651,7 @@ class CUDAVertexChunksManager {
             assert(chunk_offset_[chunk_id] == local_partition_end_);
         }
 };
+
 struct CUDAPIPPartitioning {
     int num_partitions;
     VertexId * partition_vid_begin; // VertexId [num_partitions]
@@ -942,7 +946,8 @@ class BPIPLocalGraph: public AbstractGraphStructure {
             assert(false);
         }
 };
-class CUDABPIPLocalGraph:public BPIPLocalGraph
+
+class CUDABPIPLocalGraph: public BPIPLocalGraph
 {   
     private:
         int InToGlobal(VertexId v)
@@ -1223,6 +1228,7 @@ class CUDAWeightStashingManager {
              CopyFromCUDADeviceToCUDADevice<DataType>(data, mapping.latest_data, num_elements, __FILE__, __LINE__);
         }
 };
+
 struct CUDAPIPGraphActivationUpdateMetaData {
     int epoch_id;
     int chunk_id;

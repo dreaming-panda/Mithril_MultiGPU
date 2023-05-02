@@ -71,7 +71,7 @@ class DistributedModelParallelExecutionEngineGPU: public SingleNodeExecutionEngi
             gpu_rank_ = gpu_rank;
             assert(DistributedSys::get_instance()->get_node_id() == gpu_rank_);
 
-            
+
         }
     private:
         DataType * cuda_buff;
