@@ -264,7 +264,7 @@ class TwoLayerModelParallelismDesigner {
                         }
                         printf("***  GPU %d - Vertices [%u, %u), with %lu Edges and %u Vertices and %u Mirrors\n", gpu,
                                 curr_partition_begin, curr_partition_end, num_edges, curr_partition_end - curr_partition_begin,
-                              num_incoming_mirrors + num_outgoing_mirrors);
+                                num_incoming_mirrors + num_outgoing_mirrors);
                         break;
                     }
                 }
@@ -358,7 +358,7 @@ class TwoLayerModelParallelismDesigner {
             for (size_t i = 1; i < first_layer_graph_boundaries.size(); ++ i) {
                 printf("***  GPU %lu - Vertex [%u, %u)\n", 
                         i - 1, first_layer_graph_boundaries[i - 1], first_layer_graph_boundaries[i]
-                        );
+                      );
             }
 
             // assign the second-layer computation workload to GPUs
@@ -400,7 +400,7 @@ class TwoLayerModelParallelismDesigner {
                 printf("***  GPU %lu - Vertex [%u, %u)\n", 
                         i - 1 + second_layer_starting_gpu, 
                         second_layer_graph_boundaries[i - 1], second_layer_graph_boundaries[i]
-                        );
+                      );
             }
 
             // calculate the communication volume
@@ -528,7 +528,7 @@ class TwoLayerModelParallelismDesigner {
                 }
                 printf("    GPU %d, high vertices [%u, %u), low vertices [%u, %u)\n",
                         gpu, high_begin_idx, high_end_idx, low_begin_idx, low_end_idx
-                        );
+                      );
                 // calculate the comm
                 {
                     std::set<VertexId> local_vertices;

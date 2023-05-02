@@ -263,7 +263,7 @@ CUDAPIPPartitioning  ParallelismDesigner::co_partition_model_and_graph(
     std::vector<VertexId> graph_boundaries;
 
     // helper functions
-    
+
     auto get_amount_of_workload = [&](VertexId v_begin, VertexId v_end, int op_begin, int op_end) {
         // calculate the amount of workload of the specified model partition
         //double workload = 0;

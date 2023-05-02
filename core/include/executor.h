@@ -401,48 +401,4 @@ class CrossEntropyLossCPU: public AbstractLoss {
         void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right);
 };
 
-//class OperatorExecutorCPU: public AbstractOperatorExecutor {
-//    private:
-//        AbstractGraphStructure * graph_;
-//    public:
-//        OperatorExecutorCPU(AbstractGraphStructure * graph): graph_(graph) {}
-//        ~OperatorExecutorCPU() {}
-//
-//        void set_graph(AbstractGraphStructure * graph) {graph_ = graph;}
-//        // forwarding operations
-//        void relu_forward(ReluOperator * op);
-//        void matmul_forward(MatmulOperator * op);
-//        void softmax_forward(SoftmaxOperator * op);
-//        void aggregation_forward(AggregationOperator * op);
-//
-//        // the forwarding operations with graph chunking
-//        void relu_forward(ReluOperator * op, VertexId left, VertexId right);
-//        void matmul_forward(MatmulOperator * op, VertexId left, VertexId right);
-//        void softmax_forward(SoftmaxOperator * op, VertexId left, VertexId right);
-//        void aggregation_forward(AggregationOperator * op, VertexId left, VertexId right);
-//
-//        // backwarding operations
-//        void relu_backward(ReluOperator * op);
-//        void matmul_backward(MatmulOperator * op);
-//        void softmax_backward(SoftmaxOperator * op);
-//        void aggregation_backward(AggregationOperator * op);
-//
-//        // the backwarding operations with graph chunking
-//        void relu_backward(ReluOperator * op, VertexId left, VertexId right);
-//        void matmul_backward(MatmulOperator * op, VertexId left, VertexId right);
-//        void softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right);
-//        void aggregation_backward(AggregationOperator * op, VertexId left, VertexId right);
-//
-//        void add_forward(AddOperator * op){assert(false);};
-//        void add_backward(AddOperator * op){assert(false);};
-//        void add_forward(AddOperator * op, VertexId left, VertexId right){assert(false);};
-//        void add_backward(AddOperator * op, VertexId left, VertexId right){assert(false);};
-//
-//        void matmuladd_forward(MatmulAddOperator * op){assert(false);};
-//        void matmuladd_backward(MatmulAddOperator * op){assert(false);};
-//        void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right){assert(false);};
-//        void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right){assert(false);};
-//
-//};
-
 #endif

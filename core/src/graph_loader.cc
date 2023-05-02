@@ -1,11 +1,11 @@
 /*
-Copyright 2021, University of Southern California
+   Copyright 2021, University of Southern California
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,9 +35,9 @@ GraphStructureLoaderFullyReplicated::~GraphStructureLoaderFullyReplicated()
 }
 
 AbstractGraphStructure* GraphStructureLoaderFullyReplicated::load_graph_structure(
-    const std::string meta_data_file,
-    const std::string edge_list_file,
-    const std::string vertex_partitioning_file)
+        const std::string meta_data_file,
+        const std::string edge_list_file,
+        const std::string vertex_partitioning_file)
 {
     GraphStructureFullyReplicatedV2 *abstract_graph_structure = new GraphStructureFullyReplicatedV2;
     abstract_graph_structure->load_from_file(meta_data_file, edge_list_file, vertex_partitioning_file);
@@ -60,10 +60,10 @@ GraphNonStructualDataLoaderFullyReplicated::~GraphNonStructualDataLoaderFullyRep
 }
 
 GraphNonStructualDataFullyReplicated *GraphNonStructualDataLoaderFullyReplicated::load_graph_non_structural_data(
-    const std::string meta_data_file,
-    const std::string vertex_feature_file,
-    const std::string vertex_label_file,
-    const std::string vertex_partitioning_file)
+        const std::string meta_data_file,
+        const std::string vertex_feature_file,
+        const std::string vertex_label_file,
+        const std::string vertex_partitioning_file)
 {
     GraphNonStructualDataFullyReplicated *abstract_graph_non_structure = new GraphNonStructualDataFullyReplicated;
     abstract_graph_non_structure->load_from_file(meta_data_file, vertex_feature_file, vertex_label_file, vertex_partitioning_file);
@@ -103,10 +103,10 @@ GraphNonStructualDataLoaderPartiallyReplicated::GraphNonStructualDataLoaderParti
     this->processor_num = processor_num;
 }
 GraphNonStructualDataPartiallyReplicated *GraphNonStructualDataLoaderPartiallyReplicated::load_graph_non_structural_data(
-    const std::string meta_data_file,
-    const std::string vertex_feature_file,
-    const std::string vertex_label_file,
-    const std::string vertex_partitioning_file)
+        const std::string meta_data_file,
+        const std::string vertex_feature_file,
+        const std::string vertex_label_file,
+        const std::string vertex_partitioning_file)
 {
     GraphNonStructualDataPartiallyReplicated *data = new GraphNonStructualDataPartiallyReplicated;
     data->set_processor(this->processor_id, this->processor_num);

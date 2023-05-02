@@ -1,11 +1,11 @@
 /*
-Copyright 2021, University of Southern California
+   Copyright 2021, University of Southern California
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,148 +29,69 @@ limitations under the License.
 #include <algorithm>
 #include <iterator>
 #include <atomic>
+
 class Dist2DGraphLoader;
 class AbstractGraphStructure
 {
-public:
-    AbstractGraphStructure() {}
-    virtual ~AbstractGraphStructure() {}
-    // accessing graph meta data
-    virtual VertexId get_num_global_vertices() = 0;
-    virtual VertexId get_num_local_vertices() = 0;
-    virtual EdgeId get_num_global_edges() = 0;
-    virtual EdgeId get_num_local_edges() = 0;
-    // accessing graph data
-    virtual bool is_local_vertex(VertexId v) = 0;
-    virtual VertexId get_in_degree(VertexId v) = 0;
-    virtual VertexId get_out_degree(VertexId v) = 0;
-    virtual InEdgeList get_in_edges(VertexId v) = 0;
-    virtual OutEdgeList get_out_edges(VertexId v) = 0;
-    virtual void destroy() = 0;
-    virtual void load_from_file(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file) = 0;
-    void InitMemory(){assert(false);};
-    void InitCsr(){assert(false);};
-      /*  int* get_host_csrRowOffsets_In()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        int* get_host_csrColIn_In()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        DataType* get_host_csrValue_In()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        int* get_host_csrRowOffsets_Out()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        int* get_host_csrColIn_Out()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        DataType* get_host_csrValue_Out()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        int* get_cuda_csrRowOffsets_In()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        int* get_cuda_csrColIn_In()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        DataType* get_cuda_csrValue_In()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        int* get_cuda_csrRowOffsets_Out()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        int* get_cuda_csrColIn_Out()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        DataType* get_cuda_csrValue_Out()
-        {   
-            assert(false);
-            return nullptr;
-        }
-        int get_nnz_in()
-        {   
-            assert(false);
-            return 0;
-        }
-        int get_nnz_out()
-        {   
-            assert(false);
-            return 0;
-        }
-        int get_inMatrixSize()
-        {
-            assert(false);
-            return 0;
-        }
-        int get_outMatrixSize(){
-            assert(false);
-            return 0;
-        }
-        int get_num_master_vertices(){
-            assert(false);
-            return 0;
-        }*/
+    public:
+        AbstractGraphStructure() {}
+        virtual ~AbstractGraphStructure() {}
+        // accessing graph meta data
+        virtual VertexId get_num_global_vertices() = 0;
+        virtual VertexId get_num_local_vertices() = 0;
+        virtual EdgeId get_num_global_edges() = 0;
+        virtual EdgeId get_num_local_edges() = 0;
+        // accessing graph data
+        virtual bool is_local_vertex(VertexId v) = 0;
+        virtual VertexId get_in_degree(VertexId v) = 0;
+        virtual VertexId get_out_degree(VertexId v) = 0;
+        virtual InEdgeList get_in_edges(VertexId v) = 0;
+        virtual OutEdgeList get_out_edges(VertexId v) = 0;
+        virtual void destroy() = 0;
+        virtual void load_from_file(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file) = 0;
+        void InitMemory(){assert(false);};
+        void InitCsr(){assert(false);};
 
 };
+
 class GraphStructureFullyReplicated : public AbstractGraphStructure
 {
-private:
-    VertexId num_global_vertices;
-    EdgeId num_global_edges;
-    DataType *edge_data;
-    DataType *Reversed_edge_data;
-    VertexId *Col_Index;
-    EdgeId *Row_Index;
-    VertexId *Reversed_Row_Index;
-    EdgeId *Reversed_Col_Index;
-    bool alive;
+    private:
+        VertexId num_global_vertices;
+        EdgeId num_global_edges;
+        DataType *edge_data;
+        DataType *Reversed_edge_data;
+        VertexId *Col_Index;
+        EdgeId *Row_Index;
+        VertexId *Reversed_Row_Index;
+        EdgeId *Reversed_Col_Index;
+        bool alive;
 
-public:
-    GraphStructureFullyReplicated() { alive = true; };
-    GraphStructureFullyReplicated(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file);
-    ~GraphStructureFullyReplicated();
-    // accessing graph meta data
-    VertexId get_num_global_vertices();
-    VertexId get_num_local_vertices();
-    EdgeId get_num_global_edges();
-    EdgeId get_num_local_edges();
-    // accessing graph data
-    bool is_local_vertex(VertexId v);
-    VertexId get_in_degree(VertexId v);
-    VertexId get_out_degree(VertexId v);
-    InEdgeList get_in_edges(VertexId v);
-    OutEdgeList get_out_edges(VertexId v);
-    void destroy();
-    void load_from_file(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file);
+    public:
+        GraphStructureFullyReplicated() { alive = true; };
+        GraphStructureFullyReplicated(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file);
+        ~GraphStructureFullyReplicated();
+        // accessing graph meta data
+        VertexId get_num_global_vertices();
+        VertexId get_num_local_vertices();
+        EdgeId get_num_global_edges();
+        EdgeId get_num_local_edges();
+        // accessing graph data
+        bool is_local_vertex(VertexId v);
+        VertexId get_in_degree(VertexId v);
+        VertexId get_out_degree(VertexId v);
+        InEdgeList get_in_edges(VertexId v);
+        OutEdgeList get_out_edges(VertexId v);
+        void destroy();
+        void load_from_file(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file);
 };
+
 struct EdgeInner{
     int src;
     int dst;
-    
+
 };
+
 class GraphStructureFullyReplicatedV2: public AbstractGraphStructure {
     protected:
         bool is_alive_;
@@ -240,139 +161,141 @@ class GraphStructureFullyReplicatedV2: public AbstractGraphStructure {
 
 class AbstractGraphNonStructualData
 {
-public:
-    AbstractGraphNonStructualData(){};
-    virtual ~AbstractGraphNonStructualData() {}
-    // accessing the meta data
-    virtual Dimension get_num_feature_dimensions() = 0;
-    virtual Category get_num_labels() = 0;
-    // accessing the data
-    virtual FeatureVector get_feature(VertexId v) = 0;
-    virtual LabelVector get_label(VertexId v) = 0;
-    virtual void destroy() = 0;
-    virtual void load_from_file(const std::string meta_data_file, const std::string vertex_feature_file, const std::string vertex_label_file, const std::string vertex_partitioning_file) = 0;
+    public:
+        AbstractGraphNonStructualData(){};
+        virtual ~AbstractGraphNonStructualData() {}
+        // accessing the meta data
+        virtual Dimension get_num_feature_dimensions() = 0;
+        virtual Category get_num_labels() = 0;
+        // accessing the data
+        virtual FeatureVector get_feature(VertexId v) = 0;
+        virtual LabelVector get_label(VertexId v) = 0;
+        virtual void destroy() = 0;
+        virtual void load_from_file(const std::string meta_data_file, const std::string vertex_feature_file, const std::string vertex_label_file, const std::string vertex_partitioning_file) = 0;
 };
+
 class GraphNonStructualDataFullyReplicated : public AbstractGraphNonStructualData
 {
-protected:
-    Dimension num_feature_dimensions;
-    Category num_labels;
-    VertexId num_vertices;
-    LabelVector *labels;
-    FeatureVector *features;
-    bool alive;
+    protected:
+        Dimension num_feature_dimensions;
+        Category num_labels;
+        VertexId num_vertices;
+        LabelVector *labels;
+        FeatureVector *features;
+        bool alive;
 
-public:
-    GraphNonStructualDataFullyReplicated() { alive = true; };
-    GraphNonStructualDataFullyReplicated(const std::string meta_data_file, const std::string vertex_feature_file, const std::string vertex_label_file, const std::string vertex_partitioning_file);
-    ~GraphNonStructualDataFullyReplicated();
-    Dimension get_num_feature_dimensions();
-    Category get_num_labels();
-    FeatureVector get_feature(VertexId v);
-    LabelVector get_label(VertexId v);
-    void destroy();
-    void load_from_file(const std::string meta_data_file, const std::string vertex_feature_file, const std::string vertex_label_file, const std::string vertex_partitioning_file);
+    public:
+        GraphNonStructualDataFullyReplicated() { alive = true; };
+        GraphNonStructualDataFullyReplicated(const std::string meta_data_file, const std::string vertex_feature_file, const std::string vertex_label_file, const std::string vertex_partitioning_file);
+        ~GraphNonStructualDataFullyReplicated();
+        Dimension get_num_feature_dimensions();
+        Category get_num_labels();
+        FeatureVector get_feature(VertexId v);
+        LabelVector get_label(VertexId v);
+        void destroy();
+        void load_from_file(const std::string meta_data_file, const std::string vertex_feature_file, const std::string vertex_label_file, const std::string vertex_partitioning_file);
 };
+
 #ifdef PartialGraph
 #include <mpi.h>
 class GraphStructurePartiallyReplicated : public AbstractGraphStructure
 {
-private:
-    VertexId num_global_vertices;
-    EdgeId num_global_edges;
-    DataType *edge_data;
-    DataType *Reversed_edge_data;
-    VertexId *Col_Index;
-    EdgeId *Row_Index;
-    VertexId *Reversed_Row_Index;
-    EdgeId *Reversed_Col_Index;
-    bool alive;
-    ProcessorId processor_id;
-    ProcessorId processor_num;
-    MPI_Status status;
-    MPI_Datatype MPI_Edge_Query;
-    MPI_Datatype MPI_Edge;
-    bool *active_neibours;
-    ProcessorId active_neibours_number;
-    std::atomic_bool thread_active;
-    std::thread server_thread;
-    ProcessorId *belong;
-    std::map<VertexId, VertexId> global2local_mapping;
-    std::map<VertexId, VertexId> local2global_mapping;
-    VertexId num_local_vertices;
-    EdgeId num_local_edges;
-    EdgeId *Out_Egde_Number_Table;
-    EdgeId *In_Egde_Number_Table;
-    void Server_Running();
+    private:
+        VertexId num_global_vertices;
+        EdgeId num_global_edges;
+        DataType *edge_data;
+        DataType *Reversed_edge_data;
+        VertexId *Col_Index;
+        EdgeId *Row_Index;
+        VertexId *Reversed_Row_Index;
+        EdgeId *Reversed_Col_Index;
+        bool alive;
+        ProcessorId processor_id;
+        ProcessorId processor_num;
+        MPI_Status status;
+        MPI_Datatype MPI_Edge_Query;
+        MPI_Datatype MPI_Edge;
+        bool *active_neibours;
+        ProcessorId active_neibours_number;
+        std::atomic_bool thread_active;
+        std::thread server_thread;
+        ProcessorId *belong;
+        std::map<VertexId, VertexId> global2local_mapping;
+        std::map<VertexId, VertexId> local2global_mapping;
+        VertexId num_local_vertices;
+        EdgeId num_local_edges;
+        EdgeId *Out_Egde_Number_Table;
+        EdgeId *In_Egde_Number_Table;
+        void Server_Running();
 
-public:
-    GraphStructurePartiallyReplicated();
-    GraphStructurePartiallyReplicated(ProcessorId processor_id, ProcessorId processor_num);
-    ~GraphStructurePartiallyReplicated();
-    VertexId get_num_global_vertices();
-    VertexId get_num_local_vertices();
-    EdgeId get_num_global_edges();
-    EdgeId get_num_local_edges();
-    bool is_local_vertex(VertexId v);
-    VertexId get_in_degree(VertexId v);
-    VertexId get_out_degree(VertexId v);
-    InEdgeList get_in_edges(VertexId v);
-    OutEdgeList get_out_edges(VertexId v);
-    void destroy();
-    void load_from_file(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file);
-    void Server_Start();
-    void Server_Exit();
-    bool Server_Join();
-    void MPI_DATATYPE_COMMIT();
-    void set_processor(ProcessorId processor_id, ProcessorId processor_num)
-    {
-        this->processor_id = processor_id;
-        this->processor_num = processor_num;
-    };
+    public:
+        GraphStructurePartiallyReplicated();
+        GraphStructurePartiallyReplicated(ProcessorId processor_id, ProcessorId processor_num);
+        ~GraphStructurePartiallyReplicated();
+        VertexId get_num_global_vertices();
+        VertexId get_num_local_vertices();
+        EdgeId get_num_global_edges();
+        EdgeId get_num_local_edges();
+        bool is_local_vertex(VertexId v);
+        VertexId get_in_degree(VertexId v);
+        VertexId get_out_degree(VertexId v);
+        InEdgeList get_in_edges(VertexId v);
+        OutEdgeList get_out_edges(VertexId v);
+        void destroy();
+        void load_from_file(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file);
+        void Server_Start();
+        void Server_Exit();
+        bool Server_Join();
+        void MPI_DATATYPE_COMMIT();
+        void set_processor(ProcessorId processor_id, ProcessorId processor_num)
+        {
+            this->processor_id = processor_id;
+            this->processor_num = processor_num;
+        };
 };
 class GraphNonStructualDataPartiallyReplicated : public AbstractGraphNonStructualData
 {
-private:
-    Dimension num_feature_dimensions;
-    Category num_labels;
-    VertexId num_vertices;
-    VertexId num_local_vertices;
-    EdgeId num_local_edges;
-    LabelVector *labels;
-    FeatureVector *features;
-    bool alive;
-    ProcessorId processor_id;
-    ProcessorId processor_num;
-    std::thread server_thread;
-    bool *active_neibours;
-    int active_neibours_number;
-    std::atomic_bool thread_active;
-    ProcessorId *belong;
-    MPI_Datatype MPI_Vertex_Query;
-    MPI_Status status;
-    std::map<VertexId, VertexId> global2local_mapping;
-    std::map<VertexId, VertexId> local2global_mapping;
-    void Server_Running();
+    private:
+        Dimension num_feature_dimensions;
+        Category num_labels;
+        VertexId num_vertices;
+        VertexId num_local_vertices;
+        EdgeId num_local_edges;
+        LabelVector *labels;
+        FeatureVector *features;
+        bool alive;
+        ProcessorId processor_id;
+        ProcessorId processor_num;
+        std::thread server_thread;
+        bool *active_neibours;
+        int active_neibours_number;
+        std::atomic_bool thread_active;
+        ProcessorId *belong;
+        MPI_Datatype MPI_Vertex_Query;
+        MPI_Status status;
+        std::map<VertexId, VertexId> global2local_mapping;
+        std::map<VertexId, VertexId> local2global_mapping;
+        void Server_Running();
 
-public:
-    GraphNonStructualDataPartiallyReplicated();
-    GraphNonStructualDataPartiallyReplicated(ProcessorId processor_id, ProcessorId processor_num);
-    ~GraphNonStructualDataPartiallyReplicated();
-    Dimension get_num_feature_dimensions();
-    Category get_num_labels();
-    FeatureVector get_feature(VertexId v);
-    LabelVector get_label(VertexId v);
-    void destroy();
-    void load_from_file(const std::string meta_data_file, const std::string vertex_feature_file, const std::string vertex_label_file, const std::string vertex_partitioning_file);
-    void Server_Start();
-    void Server_Exit();
-    bool Server_Join();
-    void MPI_DATATYPE_COMMIT();
-    void set_processor(ProcessorId processor_id, ProcessorId processor_num)
-    {
-        this->processor_id = processor_id;
-        this->processor_num = processor_num;
-    };
+    public:
+        GraphNonStructualDataPartiallyReplicated();
+        GraphNonStructualDataPartiallyReplicated(ProcessorId processor_id, ProcessorId processor_num);
+        ~GraphNonStructualDataPartiallyReplicated();
+        Dimension get_num_feature_dimensions();
+        Category get_num_labels();
+        FeatureVector get_feature(VertexId v);
+        LabelVector get_label(VertexId v);
+        void destroy();
+        void load_from_file(const std::string meta_data_file, const std::string vertex_feature_file, const std::string vertex_label_file, const std::string vertex_partitioning_file);
+        void Server_Start();
+        void Server_Exit();
+        bool Server_Join();
+        void MPI_DATATYPE_COMMIT();
+        void set_processor(ProcessorId processor_id, ProcessorId processor_num)
+        {
+            this->processor_id = processor_id;
+            this->processor_num = processor_num;
+        };
 };
 #endif
 #endif

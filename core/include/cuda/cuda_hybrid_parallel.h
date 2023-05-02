@@ -38,7 +38,7 @@
 #define COMPRESS_DATA (true)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
-class CUDADataDependenciesTracker;
+//class CUDADataDependenciesTracker;
 class CUDAShadowGradientsMasterVertices;
 
 enum CUDAPIPParallelMessageType {
@@ -236,20 +236,20 @@ struct CUDAPIPBackwardTask {
     int chunk_id;
 } __attribute__((packed));
 
-struct CUDAPIPGraphDataActivationUpdateTask {
-    int tensor_idx_begin;
-    int tensor_idx_end;
-    VertexId vid_begin;
-    VertexId vid_end;
-    VertexId num_updated_vertices;
-} __attribute__((packed));
-
-struct CUDAPIPGraphDataGradientUpdateTask {
-    int tensor_idx_begin;
-    int tensor_idx_end;
-    VertexId vid_begin;
-    VertexId vid_end;
-} __attribute__((packed));
+//struct CUDAPIPGraphDataActivationUpdateTask {
+//    int tensor_idx_begin;
+//    int tensor_idx_end;
+//    VertexId vid_begin;
+//    VertexId vid_end;
+//    VertexId num_updated_vertices;
+//} __attribute__((packed));
+//
+//struct CUDAPIPGraphDataGradientUpdateTask {
+//    int tensor_idx_begin;
+//    int tensor_idx_end;
+//    VertexId vid_begin;
+//    VertexId vid_end;
+//} __attribute__((packed));
 
 class CUDAPIPForwardTaskDispatcher: public CUDAAbstractTaskDispatcher<CUDAPIPForwardTask> {
     private:
@@ -352,6 +352,7 @@ class CUDAOperatorsAndTensorsManager {
 
         bool is_operator_list_ordered();
         void build_ordered_tensor_list();
+
     public:
         CUDAOperatorsAndTensorsManager(const std::vector<Operator*>& operators);
         ~CUDAOperatorsAndTensorsManager();
@@ -728,216 +729,217 @@ class CUDAPIPPartitioner {
         static bool is_valid_partition(CUDAPIPPartitioning p, VertexId num_global_vertices, int num_operators);
 };
 
-class CUDADataDependenciesTracker {
-    private:
-        CUDAOperatorsAndTensorsManager * op_and_ten_manager_;
-        CUDAVertexChunksManager * chunk_manager_;
-        CUDAPIPPartitioning partitioning_;
-        AbstractGraphStructure * graph_structure_;
+//class CUDADataDependenciesTracker {
+//    private:
+//        CUDAOperatorsAndTensorsManager * op_and_ten_manager_;
+//        CUDAVertexChunksManager * chunk_manager_;
+//        CUDAPIPPartitioning partitioning_;
+//        AbstractGraphStructure * graph_structure_;
+//
+//        // pushdown link dependencies
+//        std::vector<Tensor*> *** fragment_id_to_forwarding_dependencies_; // std::vector<Tensor*>*[num_fragments][num_nodes]
+//        std::vector<Tensor*> *** fragment_id_to_backwarding_dependencies_; // std::vector<Tensor*>*[num_fragments][num_nodes]
+//        std::set<int> ** fragment_id_to_remote_nodes_forward_;  // std::set<int>*[num_fragments]
+//        std::set<int> ** fragment_id_to_remote_nodes_backward_;  // std::set<int>*[num_fragments]
+//        std::set<Tensor*> ** fragment_id_to_all_backward_dependent_tensors_; // std::set<Tensor*>[num_fragments]
+//        std::set<Tensor*> ** fragment_id_to_all_non_backward_dependent_tensors_; // std::set<Tensor*>[num_fragments]
+//        
+//        // interchanging link dependencies
+//        std::set<int> * dependent_remote_nodes_activation_update_sender_;
+//        std::set<int> * dependent_remote_nodes_activation_update_receiver_;
+//        std::set<int> * dependent_remote_nodes_gradient_update_sender_;
+//        std::set<int> * dependent_remote_nodes_gradient_update_receiver_;
+//        std::vector<Tensor*> ** activation_update_sender_dependencies_; // std::vector<Tensor*>*[num_nodes]
+//        std::vector<Tensor*> ** activation_update_receiver_dependencies_; // std::vector<Tensor*>*[num_nodes]
+//        std::vector<Tensor*> ** gradient_update_sender_dependencies_; // std::vector<Tensor*>*[num_nodes]
+//        std::vector<Tensor*> ** gradient_update_receiver_dependencies_; // std::vector<Tensor*>*[num_nodes]
+//
+//        void build_p_link_dependencies(int fragment_id);
+//        void build_i_link_dependencies();
+//        void build_i_link_activation_sender_dependencies();
+//        void build_i_link_activation_receiver_dependencies();
+//        void build_i_link_gradient_sender_dependencies();
+//        void build_i_link_gradient_receiver_dependencies();
+//
+//    public:
+//        CUDADataDependenciesTracker(
+//                CUDAOperatorsAndTensorsManager * op_and_ten_manager, 
+//                CUDAVertexChunksManager * chunk_manager,
+//                AbstractGraphStructure * graph_structure,
+//                CUDAPIPPartitioning partitioning
+//                );
+//        ~CUDADataDependenciesTracker();
+//
+//        // given a (global) chunk_id, this function all return all the tensors
+//        // that are dependent on remote node(s) for the backwarding computation
+//        const std::set<Tensor*>* get_all_backward_dependent_tensors(int chunk_id) {
+//            assert(chunk_manager_ != NULL);
+//            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
+//            assert(fragment_id_to_all_backward_dependent_tensors_ != NULL);
+//            assert(fragment_id_to_all_backward_dependent_tensors_[fragment_id] != NULL);
+//            return fragment_id_to_all_backward_dependent_tensors_[fragment_id];
+//        }
+//        // given a (global) chunk_id, this function all return all the tensors
+//        // that are NOT dependent on remote node(s) for the backwarding computation
+//        const std::set<Tensor*>* get_all_non_backward_dependent_tensors(int chunk_id) {
+//            assert(chunk_manager_ != NULL);
+//            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
+//            assert(fragment_id_to_all_non_backward_dependent_tensors_ != NULL);
+//            assert(fragment_id_to_all_non_backward_dependent_tensors_[fragment_id] != NULL);
+//            return fragment_id_to_all_non_backward_dependent_tensors_[fragment_id];
+//        }
+//        // given a (global) chunk_id, this function should return all the dependent tensors
+//        // needed to perform the forwarding computation of the given chunk locally
+//        const std::vector<Tensor*>* get_forwarding_dependencies(int chunk_id, int remote_node_id) {
+//            assert(chunk_manager_ != NULL);
+//            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
+//            assert(fragment_id_to_forwarding_dependencies_ != NULL);
+//            assert(fragment_id_to_forwarding_dependencies_[fragment_id] != NULL);
+//            std::vector<Tensor*> * ret = fragment_id_to_forwarding_dependencies_[fragment_id][remote_node_id];
+//            assert(ret != NULL);
+//            return ret;
+//        }
+//        // given a (global) chunk_id, this function should return all the dependent tensors
+//        // needed to perform the backwarding computation of the given chunk locally
+//        const std::vector<Tensor*>* get_backwarding_dependencies(int chunk_id, int remote_node_id) {
+//            assert(chunk_manager_ != NULL);
+//            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
+//            assert(fragment_id_to_backwarding_dependencies_ != NULL);
+//            assert(fragment_id_to_backwarding_dependencies_[fragment_id] != NULL);
+//            std::vector<Tensor*> * ret = fragment_id_to_backwarding_dependencies_[fragment_id][remote_node_id];
+//            assert(ret != NULL);
+//            return ret;
+//        }
+//        // return the remote nodes that the local node depends on to perform a forwarding task
+//        const std::set<int>* get_dependent_remote_nodes_forward(int chunk_id) {
+//            assert(chunk_manager_ != NULL);
+//            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
+//            assert(fragment_id_to_remote_nodes_forward_ != NULL);
+//            std::set<int> * ret = fragment_id_to_remote_nodes_forward_[fragment_id];
+//            assert(ret != NULL);
+//            return ret;
+//        }
+//        // return the remote nodes that the local node depends on to perform a backwarding task
+//        const std::set<int>* get_dependent_remote_nodes_backward(int chunk_id) {
+//            assert(chunk_manager_ != NULL);
+//            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
+//            assert(fragment_id_to_remote_nodes_backward_ != NULL);
+//            std::set<int> * ret = fragment_id_to_remote_nodes_backward_[fragment_id];
+//            assert(ret != NULL);
+//            return ret;
+//        }
+//        // capturing the data dependencies needed for I-links (graph act/grad updates)
+//        const std::set<int>* get_dependent_remote_nodes_activation_update_sender() {
+//            return dependent_remote_nodes_activation_update_sender_;
+//        }
+//        const std::set<int>* get_dependent_remote_nodes_activation_update_receiver() {
+//            return dependent_remote_nodes_activation_update_receiver_;
+//        }
+//        const std::vector<Tensor*>* get_activation_update_sender_dependencies(int remote_node) {
+//            std::vector<Tensor*> * ret = activation_update_sender_dependencies_[remote_node];
+//            assert(ret != NULL);
+//            return ret;
+//        }
+//        const std::vector<Tensor*>* get_activation_update_receiver_dependencies(int remote_node) {
+//            std::vector<Tensor*> * ret = activation_update_receiver_dependencies_[remote_node];
+//            assert(ret != NULL);
+//            return ret;
+//        }
+//        const std::set<int>* get_dependent_remote_nodes_gradients_update_sender() {
+//            return dependent_remote_nodes_gradient_update_sender_;
+//        }
+//        const std::set<int>* get_dependent_remote_nodes_gradients_receiver_sender() {
+//            return dependent_remote_nodes_gradient_update_receiver_;
+//        }
+//        const std::vector<Tensor*>* get_gradients_update_sender_dependencies(int remote_node) {
+//            std::vector<Tensor*> * ret = gradient_update_sender_dependencies_[remote_node];
+//            assert(ret != NULL);
+//            return ret;
+//        }
+//        const std::vector<Tensor*>* get_gradients_update_receiver_dependencies(int remote_node) {
+//            std::vector<Tensor*> * ret = gradient_update_receiver_dependencies_[remote_node];
+//            assert(ret != NULL);
+//            return ret;
+//        }
+//        int get_num_activation_updates_to_recv();
+//        int get_num_gradient_updates_to_recv();
+//};
+//
+//class CUDAShadowGradientsMasterVertices {
+//    private:
+//        CUDAVertexIdTranslationTable * vid_translation_;
+//        CUDAVertexChunksManager * chunk_manager_;
+//        std::map<Tensor*, DataType*> shadow_gradients_;
+//        void alloc_space(Tensor * t);
+//        // void alloc_space(Tensor * t) {
+//        //     // on demand
+//        //     assert(t->type == VERTEX_TENSOR);
+//        //     size_t num_elements_per_vertex = t->dims[1];
+//        //     VertexId num_master_vertices = vid_translation_->get_num_master_vertices();
+//        //     size_t num_elements = (size_t) num_elements_per_vertex * num_master_vertices;
+//        //     if(num_elements == 0){
+//        //         printf("num elements==0:ERROR\n");
+//        //     } 
+//        //     DataType * grad = NULL;
+//        //     AllocateCUDAMemory<DataType>(&grad, num_elements,__FILE__, __LINE__);
+//        //     assert(grad != NULL);
+//        //     //memset(grad, 0, sizeof(DataType) * num_elements);
+//        //     SetCUDAMemory<DataType>(grad, 0, num_elements, __FILE__, __LINE__);
+//        //     shadow_gradients_[t] = grad;
+//        // }
+//
+//    public:
+//        CUDAShadowGradientsMasterVertices(
+//                CUDAVertexIdTranslationTable * vid_translation,
+//                CUDAVertexChunksManager * chunk_manager
+//                ) {
+//            assert(vid_translation != NULL);
+//            assert(chunk_manager != NULL);
+//            vid_translation_ = vid_translation;
+//            chunk_manager_ = chunk_manager;
+//            shadow_gradients_.clear();
+//        }
+//        ~CUDAShadowGradientsMasterVertices() {
+//            for (std::pair<Tensor*, DataType*> p: shadow_gradients_) {
+//#ifdef SHADOW_CPU
+//                delete [] p.second;
+//#endif
+//#ifdef SHADOW_GPU
+//                DeallocateCUDAMemory<DataType>(&p.second, __FILE__, __LINE__);
+//#endif
+//            }
+//        }
+//        DataType * get_shadow_grad(Tensor * tensor, int chunk_id) {
+//            if (shadow_gradients_.find(tensor) == shadow_gradients_.end()) {
+//                alloc_space(tensor);
+//            }
+//            DataType * grad = shadow_gradients_[tensor];
+//            VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
+//            VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
+//            size_t num_elements_per_vertex = tensor->dims[1];
+//            return grad + local_vid_begin * num_elements_per_vertex;
+//        }
+//        void release_shadow_grad(int chunk_id) {
+//            VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
+//            VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
+//            VertexId chunk_size = global_vid_end - global_vid_begin;
+//            VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
+//            for (std::pair<Tensor*, DataType*> p: shadow_gradients_) {
+//                Tensor * tensor = p.first;
+//                DataType * grad = p.second;
+//                size_t num_elements_per_vertex = tensor->dims[1];
+//                size_t num_elements_this_chunk = num_elements_per_vertex * chunk_size;
+//#ifdef SHADOW_CPU
+//                memset(grad + local_vid_begin * num_elements_per_vertex, 
+//                        0, sizeof(DataType) * num_elements_this_chunk);
+//#endif
+//#ifdef SHADOW_GPU
+//                SetCUDAMemory<DataType>(grad + local_vid_begin * num_elements_per_vertex,0, num_elements_this_chunk, __FILE__, __LINE__);
+//#endif
+//            }
+//        }
+//};
 
-        // pushdown link dependencies
-        std::vector<Tensor*> *** fragment_id_to_forwarding_dependencies_; // std::vector<Tensor*>*[num_fragments][num_nodes]
-        std::vector<Tensor*> *** fragment_id_to_backwarding_dependencies_; // std::vector<Tensor*>*[num_fragments][num_nodes]
-        std::set<int> ** fragment_id_to_remote_nodes_forward_;  // std::set<int>*[num_fragments]
-        std::set<int> ** fragment_id_to_remote_nodes_backward_;  // std::set<int>*[num_fragments]
-        std::set<Tensor*> ** fragment_id_to_all_backward_dependent_tensors_; // std::set<Tensor*>[num_fragments]
-        std::set<Tensor*> ** fragment_id_to_all_non_backward_dependent_tensors_; // std::set<Tensor*>[num_fragments]
-        
-        // interchanging link dependencies
-        std::set<int> * dependent_remote_nodes_activation_update_sender_;
-        std::set<int> * dependent_remote_nodes_activation_update_receiver_;
-        std::set<int> * dependent_remote_nodes_gradient_update_sender_;
-        std::set<int> * dependent_remote_nodes_gradient_update_receiver_;
-        std::vector<Tensor*> ** activation_update_sender_dependencies_; // std::vector<Tensor*>*[num_nodes]
-        std::vector<Tensor*> ** activation_update_receiver_dependencies_; // std::vector<Tensor*>*[num_nodes]
-        std::vector<Tensor*> ** gradient_update_sender_dependencies_; // std::vector<Tensor*>*[num_nodes]
-        std::vector<Tensor*> ** gradient_update_receiver_dependencies_; // std::vector<Tensor*>*[num_nodes]
-
-        void build_p_link_dependencies(int fragment_id);
-        void build_i_link_dependencies();
-        void build_i_link_activation_sender_dependencies();
-        void build_i_link_activation_receiver_dependencies();
-        void build_i_link_gradient_sender_dependencies();
-        void build_i_link_gradient_receiver_dependencies();
-
-    public:
-        CUDADataDependenciesTracker(
-                CUDAOperatorsAndTensorsManager * op_and_ten_manager, 
-                CUDAVertexChunksManager * chunk_manager,
-                AbstractGraphStructure * graph_structure,
-                CUDAPIPPartitioning partitioning
-                );
-        ~CUDADataDependenciesTracker();
-
-        // given a (global) chunk_id, this function all return all the tensors
-        // that are dependent on remote node(s) for the backwarding computation
-        const std::set<Tensor*>* get_all_backward_dependent_tensors(int chunk_id) {
-            assert(chunk_manager_ != NULL);
-            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
-            assert(fragment_id_to_all_backward_dependent_tensors_ != NULL);
-            assert(fragment_id_to_all_backward_dependent_tensors_[fragment_id] != NULL);
-            return fragment_id_to_all_backward_dependent_tensors_[fragment_id];
-        }
-        // given a (global) chunk_id, this function all return all the tensors
-        // that are NOT dependent on remote node(s) for the backwarding computation
-        const std::set<Tensor*>* get_all_non_backward_dependent_tensors(int chunk_id) {
-            assert(chunk_manager_ != NULL);
-            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
-            assert(fragment_id_to_all_non_backward_dependent_tensors_ != NULL);
-            assert(fragment_id_to_all_non_backward_dependent_tensors_[fragment_id] != NULL);
-            return fragment_id_to_all_non_backward_dependent_tensors_[fragment_id];
-        }
-        // given a (global) chunk_id, this function should return all the dependent tensors
-        // needed to perform the forwarding computation of the given chunk locally
-        const std::vector<Tensor*>* get_forwarding_dependencies(int chunk_id, int remote_node_id) {
-            assert(chunk_manager_ != NULL);
-            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
-            assert(fragment_id_to_forwarding_dependencies_ != NULL);
-            assert(fragment_id_to_forwarding_dependencies_[fragment_id] != NULL);
-            std::vector<Tensor*> * ret = fragment_id_to_forwarding_dependencies_[fragment_id][remote_node_id];
-            assert(ret != NULL);
-            return ret;
-        }
-        // given a (global) chunk_id, this function should return all the dependent tensors
-        // needed to perform the backwarding computation of the given chunk locally
-        const std::vector<Tensor*>* get_backwarding_dependencies(int chunk_id, int remote_node_id) {
-            assert(chunk_manager_ != NULL);
-            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
-            assert(fragment_id_to_backwarding_dependencies_ != NULL);
-            assert(fragment_id_to_backwarding_dependencies_[fragment_id] != NULL);
-            std::vector<Tensor*> * ret = fragment_id_to_backwarding_dependencies_[fragment_id][remote_node_id];
-            assert(ret != NULL);
-            return ret;
-        }
-        // return the remote nodes that the local node depends on to perform a forwarding task
-        const std::set<int>* get_dependent_remote_nodes_forward(int chunk_id) {
-            assert(chunk_manager_ != NULL);
-            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
-            assert(fragment_id_to_remote_nodes_forward_ != NULL);
-            std::set<int> * ret = fragment_id_to_remote_nodes_forward_[fragment_id];
-            assert(ret != NULL);
-            return ret;
-        }
-        // return the remote nodes that the local node depends on to perform a backwarding task
-        const std::set<int>* get_dependent_remote_nodes_backward(int chunk_id) {
-            assert(chunk_manager_ != NULL);
-            int fragment_id = chunk_manager_->get_chunk_fragment_id(chunk_id);
-            assert(fragment_id_to_remote_nodes_backward_ != NULL);
-            std::set<int> * ret = fragment_id_to_remote_nodes_backward_[fragment_id];
-            assert(ret != NULL);
-            return ret;
-        }
-        // capturing the data dependencies needed for I-links (graph act/grad updates)
-        const std::set<int>* get_dependent_remote_nodes_activation_update_sender() {
-            return dependent_remote_nodes_activation_update_sender_;
-        }
-        const std::set<int>* get_dependent_remote_nodes_activation_update_receiver() {
-            return dependent_remote_nodes_activation_update_receiver_;
-        }
-        const std::vector<Tensor*>* get_activation_update_sender_dependencies(int remote_node) {
-            std::vector<Tensor*> * ret = activation_update_sender_dependencies_[remote_node];
-            assert(ret != NULL);
-            return ret;
-        }
-        const std::vector<Tensor*>* get_activation_update_receiver_dependencies(int remote_node) {
-            std::vector<Tensor*> * ret = activation_update_receiver_dependencies_[remote_node];
-            assert(ret != NULL);
-            return ret;
-        }
-        const std::set<int>* get_dependent_remote_nodes_gradients_update_sender() {
-            return dependent_remote_nodes_gradient_update_sender_;
-        }
-        const std::set<int>* get_dependent_remote_nodes_gradients_receiver_sender() {
-            return dependent_remote_nodes_gradient_update_receiver_;
-        }
-        const std::vector<Tensor*>* get_gradients_update_sender_dependencies(int remote_node) {
-            std::vector<Tensor*> * ret = gradient_update_sender_dependencies_[remote_node];
-            assert(ret != NULL);
-            return ret;
-        }
-        const std::vector<Tensor*>* get_gradients_update_receiver_dependencies(int remote_node) {
-            std::vector<Tensor*> * ret = gradient_update_receiver_dependencies_[remote_node];
-            assert(ret != NULL);
-            return ret;
-        }
-        int get_num_activation_updates_to_recv();
-        int get_num_gradient_updates_to_recv();
-};
-
-class CUDAShadowGradientsMasterVertices {
-    private:
-        CUDAVertexIdTranslationTable * vid_translation_;
-        CUDAVertexChunksManager * chunk_manager_;
-        std::map<Tensor*, DataType*> shadow_gradients_;
-        void alloc_space(Tensor * t);
-        // void alloc_space(Tensor * t) {
-        //     // on demand
-        //     assert(t->type == VERTEX_TENSOR);
-        //     size_t num_elements_per_vertex = t->dims[1];
-        //     VertexId num_master_vertices = vid_translation_->get_num_master_vertices();
-        //     size_t num_elements = (size_t) num_elements_per_vertex * num_master_vertices;
-        //     if(num_elements == 0){
-        //         printf("num elements==0:ERROR\n");
-        //     } 
-        //     DataType * grad = NULL;
-        //     AllocateCUDAMemory<DataType>(&grad, num_elements,__FILE__, __LINE__);
-        //     assert(grad != NULL);
-        //     //memset(grad, 0, sizeof(DataType) * num_elements);
-        //     SetCUDAMemory<DataType>(grad, 0, num_elements, __FILE__, __LINE__);
-        //     shadow_gradients_[t] = grad;
-        // }
-
-    public:
-        CUDAShadowGradientsMasterVertices(
-                CUDAVertexIdTranslationTable * vid_translation,
-                CUDAVertexChunksManager * chunk_manager
-                ) {
-            assert(vid_translation != NULL);
-            assert(chunk_manager != NULL);
-            vid_translation_ = vid_translation;
-            chunk_manager_ = chunk_manager;
-            shadow_gradients_.clear();
-        }
-        ~CUDAShadowGradientsMasterVertices() {
-            for (std::pair<Tensor*, DataType*> p: shadow_gradients_) {
-#ifdef SHADOW_CPU
-                delete [] p.second;
-#endif
-#ifdef SHADOW_GPU
-                DeallocateCUDAMemory<DataType>(&p.second, __FILE__, __LINE__);
-#endif
-            }
-        }
-        DataType * get_shadow_grad(Tensor * tensor, int chunk_id) {
-            if (shadow_gradients_.find(tensor) == shadow_gradients_.end()) {
-                alloc_space(tensor);
-            }
-            DataType * grad = shadow_gradients_[tensor];
-            VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
-            VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
-            size_t num_elements_per_vertex = tensor->dims[1];
-            return grad + local_vid_begin * num_elements_per_vertex;
-        }
-        void release_shadow_grad(int chunk_id) {
-            VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
-            VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
-            VertexId chunk_size = global_vid_end - global_vid_begin;
-            VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
-            for (std::pair<Tensor*, DataType*> p: shadow_gradients_) {
-                Tensor * tensor = p.first;
-                DataType * grad = p.second;
-                size_t num_elements_per_vertex = tensor->dims[1];
-                size_t num_elements_this_chunk = num_elements_per_vertex * chunk_size;
-#ifdef SHADOW_CPU
-                memset(grad + local_vid_begin * num_elements_per_vertex, 
-                        0, sizeof(DataType) * num_elements_this_chunk);
-#endif
-#ifdef SHADOW_GPU
-                SetCUDAMemory<DataType>(grad + local_vid_begin * num_elements_per_vertex,0, num_elements_this_chunk, __FILE__, __LINE__);
-#endif
-            }
-        }
-};
 class BPIPLocalGraph: public AbstractGraphStructure {
     protected:
         VertexId num_master_vertices_;
@@ -1169,343 +1171,343 @@ class CUDABPIPLocalGraph: public BPIPLocalGraph
 
 };
 
-class CUDAWeightStashingManager {
-    private:
-        struct PerOperatorMapping {
-            std::map<int, DataType*> * chunkid2data;
-            std::vector<DataType*> * free_list;
-            DataType * latest_data;
-        };
+//class CUDAWeightStashingManager {
+//    private:
+//        struct PerOperatorMapping {
+//            std::map<int, DataType*> * chunkid2data;
+//            std::vector<DataType*> * free_list;
+//            DataType * latest_data;
+//        };
+//
+//        const std::set<WeightOperator*>& local_weight_ops_;
+//        std::map<WeightOperator*, PerOperatorMapping> op2mapping_;
+//
+//    public:
+//        CUDAWeightStashingManager(
+//                const std::set<WeightOperator*>& local_weight_ops
+//                ): local_weight_ops_(local_weight_ops) {
+//            op2mapping_.clear();
+//            for (WeightOperator * op: local_weight_ops) {
+//                PerOperatorMapping mapping;
+//                mapping.chunkid2data = new std::map<int, DataType*>();
+//                mapping.free_list = new std::vector<DataType*>;
+//                assert(mapping.chunkid2data != NULL);
+//                assert(mapping.free_list != NULL);
+//                assert(mapping.chunkid2data->empty());
+//                assert(mapping.free_list->empty());
+//                TensorResourceGPU * resource = 
+//                    (TensorResourceGPU*) op->get_output_tensor(0)->resource;
+//                size_t num_elements = resource->get_num_elements();
+//                AllocateCUDAMemory<DataType>(&mapping.latest_data, num_elements, __FILE__, __LINE__);
+//                //mapping.latest_data = new DataType [num_elements];
+//                assert(mapping.latest_data != NULL);
+//                op2mapping_[op] = mapping;
+//            }
+//        }
+//        ~CUDAWeightStashingManager() {
+//            for (WeightOperator * op: local_weight_ops_) {
+//                PerOperatorMapping mapping = op2mapping_[op];
+//                assert(mapping.chunkid2data->empty());
+//                for (DataType * buff: *(mapping.free_list)) {
+//                    DeallocateCUDAMemory<DataType>(&buff, __FILE__, __LINE__);
+//                }
+//                delete mapping.chunkid2data;
+//                delete mapping.free_list;
+//                DeallocateCUDAMemory<DataType>(&mapping.latest_data, __FILE__, __LINE__);
+//            }
+//        }
+//
+//        inline void stash_weight_data(WeightOperator * op, int chunk_id) {
+//            Tensor * tensor = op->get_output_tensor(0);
+//            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+//            size_t num_elements = resource->get_num_elements();
+//            DataType * data = resource->get_gpu_data();
+//            assert(data != NULL);
+//            assert(num_elements > 0);
+//
+//            PerOperatorMapping mapping = op2mapping_[op];
+//            assert(mapping.chunkid2data->find(chunk_id) == mapping.chunkid2data->end());
+//            DataType * buff = NULL;
+//            if (mapping.free_list->size() > 0) {
+//                buff = mapping.free_list->back();
+//                mapping.free_list->pop_back();
+//            } else {
+//               // buff = new DataType [num_elements];
+//                AllocateCUDAMemory<DataType>(&buff, num_elements, __FILE__, __LINE__);
+//                assert(buff != NULL);
+//            }
+//            
+//            //memcpy(buff, data, sizeof(DataType) * num_elements);
+//
+//            CopyFromCUDADeviceToCUDADevice<DataType>(buff, data, num_elements, __FILE__,__LINE__);
+//            (*(mapping.chunkid2data))[chunk_id] = buff;
+//        }
+//        inline void restore_stashed_weight_data(WeightOperator * op, int chunk_id) {
+//            Tensor * tensor = op->get_output_tensor(0);
+//            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+//            size_t num_elements = resource->get_num_elements();
+//            DataType * data = resource->get_gpu_data();
+//            assert(data != NULL);
+//            assert(num_elements > 0);
+//
+//            PerOperatorMapping mapping = op2mapping_[op];
+//            auto found = mapping.chunkid2data->find(chunk_id);
+//            assert(found != mapping.chunkid2data->end());
+//            DataType * buff = found->second;
+//           // memcpy(data, buff, sizeof(DataType) * num_elements);
+//           CopyFromCUDADeviceToCUDADevice<DataType>(data, buff, num_elements, __FILE__,__LINE__);
+//            size_t prev = mapping.chunkid2data->size();
+//            mapping.chunkid2data->erase(found);
+//            assert(mapping.chunkid2data->size() + 1 == prev);
+//            mapping.free_list->push_back(buff);
+//        }
+//        inline void update_latest_data(WeightOperator * op) {
+//            Tensor * tensor = op->get_output_tensor(0);
+//            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+//            size_t num_elements = resource->get_num_elements();
+//            DataType * data = resource->get_gpu_data();
+//            assert(data != NULL);
+//            assert(num_elements > 0);
+//
+//            PerOperatorMapping mapping = op2mapping_[op];
+//            // memcpy(
+//            //         mapping.latest_data, data, sizeof(DataType) * num_elements
+//            //       );
+//            CopyFromCUDADeviceToCUDADevice<DataType>(mapping.latest_data, data, num_elements, __FILE__, __LINE__);
+//        }
+//        inline void restore_latest_data(WeightOperator * op) {
+//            Tensor * tensor = op->get_output_tensor(0);
+//            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+//            size_t num_elements = resource->get_num_elements();
+//            DataType * data = resource->get_gpu_data();
+//            assert(data != NULL);
+//            assert(num_elements > 0);
+//
+//            PerOperatorMapping mapping = op2mapping_[op];
+//            // memcpy(
+//            //         data, mapping.latest_data, sizeof(DataType) * num_elements
+//            //       );
+//             CopyFromCUDADeviceToCUDADevice<DataType>(data, mapping.latest_data, num_elements, __FILE__, __LINE__);
+//        }
+//};
 
-        const std::set<WeightOperator*>& local_weight_ops_;
-        std::map<WeightOperator*, PerOperatorMapping> op2mapping_;
-
-    public:
-        CUDAWeightStashingManager(
-                const std::set<WeightOperator*>& local_weight_ops
-                ): local_weight_ops_(local_weight_ops) {
-            op2mapping_.clear();
-            for (WeightOperator * op: local_weight_ops) {
-                PerOperatorMapping mapping;
-                mapping.chunkid2data = new std::map<int, DataType*>();
-                mapping.free_list = new std::vector<DataType*>;
-                assert(mapping.chunkid2data != NULL);
-                assert(mapping.free_list != NULL);
-                assert(mapping.chunkid2data->empty());
-                assert(mapping.free_list->empty());
-                TensorResourceGPU * resource = 
-                    (TensorResourceGPU*) op->get_output_tensor(0)->resource;
-                size_t num_elements = resource->get_num_elements();
-                AllocateCUDAMemory<DataType>(&mapping.latest_data, num_elements, __FILE__, __LINE__);
-                //mapping.latest_data = new DataType [num_elements];
-                assert(mapping.latest_data != NULL);
-                op2mapping_[op] = mapping;
-            }
-        }
-        ~CUDAWeightStashingManager() {
-            for (WeightOperator * op: local_weight_ops_) {
-                PerOperatorMapping mapping = op2mapping_[op];
-                assert(mapping.chunkid2data->empty());
-                for (DataType * buff: *(mapping.free_list)) {
-                    DeallocateCUDAMemory<DataType>(&buff, __FILE__, __LINE__);
-                }
-                delete mapping.chunkid2data;
-                delete mapping.free_list;
-                DeallocateCUDAMemory<DataType>(&mapping.latest_data, __FILE__, __LINE__);
-            }
-        }
-
-        inline void stash_weight_data(WeightOperator * op, int chunk_id) {
-            Tensor * tensor = op->get_output_tensor(0);
-            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-            size_t num_elements = resource->get_num_elements();
-            DataType * data = resource->get_gpu_data();
-            assert(data != NULL);
-            assert(num_elements > 0);
-
-            PerOperatorMapping mapping = op2mapping_[op];
-            assert(mapping.chunkid2data->find(chunk_id) == mapping.chunkid2data->end());
-            DataType * buff = NULL;
-            if (mapping.free_list->size() > 0) {
-                buff = mapping.free_list->back();
-                mapping.free_list->pop_back();
-            } else {
-               // buff = new DataType [num_elements];
-                AllocateCUDAMemory<DataType>(&buff, num_elements, __FILE__, __LINE__);
-                assert(buff != NULL);
-            }
-            
-            //memcpy(buff, data, sizeof(DataType) * num_elements);
-
-            CopyFromCUDADeviceToCUDADevice<DataType>(buff, data, num_elements, __FILE__,__LINE__);
-            (*(mapping.chunkid2data))[chunk_id] = buff;
-        }
-        inline void restore_stashed_weight_data(WeightOperator * op, int chunk_id) {
-            Tensor * tensor = op->get_output_tensor(0);
-            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-            size_t num_elements = resource->get_num_elements();
-            DataType * data = resource->get_gpu_data();
-            assert(data != NULL);
-            assert(num_elements > 0);
-
-            PerOperatorMapping mapping = op2mapping_[op];
-            auto found = mapping.chunkid2data->find(chunk_id);
-            assert(found != mapping.chunkid2data->end());
-            DataType * buff = found->second;
-           // memcpy(data, buff, sizeof(DataType) * num_elements);
-           CopyFromCUDADeviceToCUDADevice<DataType>(data, buff, num_elements, __FILE__,__LINE__);
-            size_t prev = mapping.chunkid2data->size();
-            mapping.chunkid2data->erase(found);
-            assert(mapping.chunkid2data->size() + 1 == prev);
-            mapping.free_list->push_back(buff);
-        }
-        inline void update_latest_data(WeightOperator * op) {
-            Tensor * tensor = op->get_output_tensor(0);
-            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-            size_t num_elements = resource->get_num_elements();
-            DataType * data = resource->get_gpu_data();
-            assert(data != NULL);
-            assert(num_elements > 0);
-
-            PerOperatorMapping mapping = op2mapping_[op];
-            // memcpy(
-            //         mapping.latest_data, data, sizeof(DataType) * num_elements
-            //       );
-            CopyFromCUDADeviceToCUDADevice<DataType>(mapping.latest_data, data, num_elements, __FILE__, __LINE__);
-        }
-        inline void restore_latest_data(WeightOperator * op) {
-            Tensor * tensor = op->get_output_tensor(0);
-            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-            size_t num_elements = resource->get_num_elements();
-            DataType * data = resource->get_gpu_data();
-            assert(data != NULL);
-            assert(num_elements > 0);
-
-            PerOperatorMapping mapping = op2mapping_[op];
-            // memcpy(
-            //         data, mapping.latest_data, sizeof(DataType) * num_elements
-            //       );
-             CopyFromCUDADeviceToCUDADevice<DataType>(data, mapping.latest_data, num_elements, __FILE__, __LINE__);
-        }
-};
-
-struct CUDAPIPGraphActivationUpdateMetaData {
-    int epoch_id;
-    int chunk_id;
-    int tensor_idx;
-} __attribute__((packed));
-
-class CUDAPIPGraphDataActivationUpdateSender {
-    private:
-        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
-        int max_num_tasks_;
-        pthread_barrier_t * barrier_;
-        LockFreeQueue<CUDAPIPForwardTask> * task_queue_;
-        std::thread * thread_;
-
-        double comm_;
-        double graph_dev2host_time_;
-        double graph_memcpy_time_;
-        double graph_net_time_;
-        int num_net_batches_;
-
-        void thread_main();
-        void LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst);
-
-    public:
-        CUDAPIPGraphDataActivationUpdateSender(
-                DistributedPIPHybridParallelExecutionEngineGPU * engine,
-                int max_num_tasks, pthread_barrier_t * barrier
-                ): engine_(engine), max_num_tasks_(max_num_tasks), barrier_(barrier) {
-            task_queue_ = new LockFreeQueue<CUDAPIPForwardTask>(max_num_tasks);
-            assert(task_queue_ != NULL);
-            thread_ = NULL;
-        }
-        ~CUDAPIPGraphDataActivationUpdateSender() {
-            assert(task_queue_ != NULL);
-            delete task_queue_;
-            assert(thread_ == NULL);
-        }
-        
-        inline void insert_new_task(CUDAPIPForwardTask task) {
-            task_queue_->push(task);
-        }
-        inline void start_communication() {
-            assert(thread_ == NULL);
-            thread_ = new std::thread([&]() {
-                        this->thread_main();
-                    }
-                    );
-            assert(thread_ != NULL);
-        }
-        inline void wait_for_termination() {
-            assert(thread_ != NULL);
-            thread_->join();
-            delete thread_;
-            thread_ = NULL;
-        }
-        inline double get_comm() {
-            return comm_;
-        }
-        inline double get_graph_dev2host_time() {
-            return graph_dev2host_time_;
-        }
-        inline double get_graph_memcpy_time() {
-            return graph_memcpy_time_;
-        }
-        inline double get_graph_net_time() {
-            return graph_net_time_;
-        }
-        inline int get_num_net_batches() {
-            return num_net_batches_;
-        }
-        bool * cpu_has_incomming_mirrors;
-        bool * gpu_has_incomming_mirrors;
-        int num_master_vertices;
-        int local_partition_start;
-        
-
-};
-
-class CUDAPIPGraphDataActivationUpdateReceiver {
-    private:
-        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
-        pthread_barrier_t * barrier_;
-        std::thread * thread_;
-
-        void thread_main();
-
-    public:
-        CUDAPIPGraphDataActivationUpdateReceiver(
-                DistributedPIPHybridParallelExecutionEngineGPU * engine, pthread_barrier_t * barrier
-                ): engine_(engine), barrier_(barrier) {
-            thread_ = NULL;
-        }
-        ~CUDAPIPGraphDataActivationUpdateReceiver() {
-            assert(thread_ == NULL);
-        }
-        inline void start_communication() {
-            assert(thread_ == NULL);
-            thread_ = new std::thread([&]() {
-                        this->thread_main();
-                    }
-                    );
-            assert(thread_ != NULL);
-        }
-        inline void wait_for_termination() {
-            assert(thread_ != NULL);
-            thread_->join();
-            delete thread_;
-            thread_ = NULL;
-        }
-};
-struct CUDAPIPGraphGradientUpdateMetaData {
-    int epoch_id;
-    int chunk_id;
-    int tensor_idx;
-} __attribute__((packed));
-
-class CUDAPIPGraphDataGradientUpdateSender {
-    private:
-        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
-        int max_num_tasks_;
-        pthread_barrier_t * barrier_;
-        LockFreeQueue<CUDAPIPBackwardTask> * task_queue_;
-        std::thread * thread_;
-
-        double comm_;
-        double graph_dev2host_time_;
-        double graph_memcpy_time_;
-        double graph_net_time_;
-        int num_net_batches_;
-
-        void thread_main();
-        void LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst);
-
-    public:
-        CUDAPIPGraphDataGradientUpdateSender(
-                DistributedPIPHybridParallelExecutionEngineGPU * engine,
-                int max_num_tasks, pthread_barrier_t * barrier
-                ): engine_(engine), max_num_tasks_(max_num_tasks), barrier_(barrier) {
-            task_queue_ = new LockFreeQueue<CUDAPIPBackwardTask>(max_num_tasks);
-            assert(task_queue_ != NULL);
-            thread_ = NULL;
-        }
-        ~CUDAPIPGraphDataGradientUpdateSender() {
-            assert(task_queue_ != NULL);
-            delete task_queue_;
-            assert(thread_ == NULL);
-        }
-
-        inline void insert_new_task(CUDAPIPBackwardTask task) {
-            task_queue_->push(task);
-        }
-        inline void start_communication() {
-            assert(thread_ == NULL);
-            thread_ = new std::thread([&]() {
-                        this->thread_main();
-                    });
-            assert(thread_ != NULL);
-        }
-        inline void wait_for_termination() {
-            assert(thread_ != NULL);
-            thread_->join();
-            delete thread_;
-            thread_ = NULL;
-        }
-        inline double get_comm() {
-            return comm_;
-        }
-        inline double get_graph_dev2host_time() {
-            return graph_dev2host_time_;
-        }
-        inline double get_graph_memcpy_time() {
-            return graph_memcpy_time_;
-        }
-        inline double get_graph_net_time() {
-            return graph_net_time_;
-        }
-        inline int get_num_net_batches() {
-            return num_net_batches_;
-        }
-        bool * cpu_has_incomming_mirrors;
-        bool * gpu_has_incomming_mirrors;
-        int num_master_vertices;
-        int local_partition_start;
-};
-class CUDAPIPGraphDataGradientUpdateReceiver {
-    private:
-        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
-        pthread_barrier_t * barrier_;
-        std::thread * thread_;
-
-        void thread_main();
-
-    public:
-        CUDAPIPGraphDataGradientUpdateReceiver(
-                DistributedPIPHybridParallelExecutionEngineGPU * engine,
-                pthread_barrier_t * barrier
-                ): engine_(engine), barrier_(barrier) {
-            thread_ = NULL;
-        }
-        ~CUDAPIPGraphDataGradientUpdateReceiver() {
-            assert(thread_ == NULL);
-        }
-        inline void start_communication() {
-            assert(thread_ == NULL);
-            thread_ = new std::thread([&]() {
-                        this->thread_main();
-                    }
-                    );
-            assert(thread_ != NULL);
-        }
-        inline void wait_for_termination() {
-            assert(thread_ != NULL);
-            thread_->join();
-            delete thread_;
-            thread_ = NULL;
-        }
-};
+//struct CUDAPIPGraphActivationUpdateMetaData {
+//    int epoch_id;
+//    int chunk_id;
+//    int tensor_idx;
+//} __attribute__((packed));
+//
+//class CUDAPIPGraphDataActivationUpdateSender {
+//    private:
+//        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
+//        int max_num_tasks_;
+//        pthread_barrier_t * barrier_;
+//        LockFreeQueue<CUDAPIPForwardTask> * task_queue_;
+//        std::thread * thread_;
+//
+//        double comm_;
+//        double graph_dev2host_time_;
+//        double graph_memcpy_time_;
+//        double graph_net_time_;
+//        int num_net_batches_;
+//
+//        void thread_main();
+//        void LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst);
+//
+//    public:
+//        CUDAPIPGraphDataActivationUpdateSender(
+//                DistributedPIPHybridParallelExecutionEngineGPU * engine,
+//                int max_num_tasks, pthread_barrier_t * barrier
+//                ): engine_(engine), max_num_tasks_(max_num_tasks), barrier_(barrier) {
+//            task_queue_ = new LockFreeQueue<CUDAPIPForwardTask>(max_num_tasks);
+//            assert(task_queue_ != NULL);
+//            thread_ = NULL;
+//        }
+//        ~CUDAPIPGraphDataActivationUpdateSender() {
+//            assert(task_queue_ != NULL);
+//            delete task_queue_;
+//            assert(thread_ == NULL);
+//        }
+//        
+//        inline void insert_new_task(CUDAPIPForwardTask task) {
+//            task_queue_->push(task);
+//        }
+//        inline void start_communication() {
+//            assert(thread_ == NULL);
+//            thread_ = new std::thread([&]() {
+//                        this->thread_main();
+//                    }
+//                    );
+//            assert(thread_ != NULL);
+//        }
+//        inline void wait_for_termination() {
+//            assert(thread_ != NULL);
+//            thread_->join();
+//            delete thread_;
+//            thread_ = NULL;
+//        }
+//        inline double get_comm() {
+//            return comm_;
+//        }
+//        inline double get_graph_dev2host_time() {
+//            return graph_dev2host_time_;
+//        }
+//        inline double get_graph_memcpy_time() {
+//            return graph_memcpy_time_;
+//        }
+//        inline double get_graph_net_time() {
+//            return graph_net_time_;
+//        }
+//        inline int get_num_net_batches() {
+//            return num_net_batches_;
+//        }
+//        bool * cpu_has_incomming_mirrors;
+//        bool * gpu_has_incomming_mirrors;
+//        int num_master_vertices;
+//        int local_partition_start;
+//        
+//
+//};
+//
+//class CUDAPIPGraphDataActivationUpdateReceiver {
+//    private:
+//        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
+//        pthread_barrier_t * barrier_;
+//        std::thread * thread_;
+//
+//        void thread_main();
+//
+//    public:
+//        CUDAPIPGraphDataActivationUpdateReceiver(
+//                DistributedPIPHybridParallelExecutionEngineGPU * engine, pthread_barrier_t * barrier
+//                ): engine_(engine), barrier_(barrier) {
+//            thread_ = NULL;
+//        }
+//        ~CUDAPIPGraphDataActivationUpdateReceiver() {
+//            assert(thread_ == NULL);
+//        }
+//        inline void start_communication() {
+//            assert(thread_ == NULL);
+//            thread_ = new std::thread([&]() {
+//                        this->thread_main();
+//                    }
+//                    );
+//            assert(thread_ != NULL);
+//        }
+//        inline void wait_for_termination() {
+//            assert(thread_ != NULL);
+//            thread_->join();
+//            delete thread_;
+//            thread_ = NULL;
+//        }
+//};
+//struct CUDAPIPGraphGradientUpdateMetaData {
+//    int epoch_id;
+//    int chunk_id;
+//    int tensor_idx;
+//} __attribute__((packed));
+//
+//class CUDAPIPGraphDataGradientUpdateSender {
+//    private:
+//        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
+//        int max_num_tasks_;
+//        pthread_barrier_t * barrier_;
+//        LockFreeQueue<CUDAPIPBackwardTask> * task_queue_;
+//        std::thread * thread_;
+//
+//        double comm_;
+//        double graph_dev2host_time_;
+//        double graph_memcpy_time_;
+//        double graph_net_time_;
+//        int num_net_batches_;
+//
+//        void thread_main();
+//        void LauachBufferMirrors(int mirror_vertices_number, int* mirror_vertices_list, int elements_per_vertex, int begin, DataType* src, DataType* dst);
+//
+//    public:
+//        CUDAPIPGraphDataGradientUpdateSender(
+//                DistributedPIPHybridParallelExecutionEngineGPU * engine,
+//                int max_num_tasks, pthread_barrier_t * barrier
+//                ): engine_(engine), max_num_tasks_(max_num_tasks), barrier_(barrier) {
+//            task_queue_ = new LockFreeQueue<CUDAPIPBackwardTask>(max_num_tasks);
+//            assert(task_queue_ != NULL);
+//            thread_ = NULL;
+//        }
+//        ~CUDAPIPGraphDataGradientUpdateSender() {
+//            assert(task_queue_ != NULL);
+//            delete task_queue_;
+//            assert(thread_ == NULL);
+//        }
+//
+//        inline void insert_new_task(CUDAPIPBackwardTask task) {
+//            task_queue_->push(task);
+//        }
+//        inline void start_communication() {
+//            assert(thread_ == NULL);
+//            thread_ = new std::thread([&]() {
+//                        this->thread_main();
+//                    });
+//            assert(thread_ != NULL);
+//        }
+//        inline void wait_for_termination() {
+//            assert(thread_ != NULL);
+//            thread_->join();
+//            delete thread_;
+//            thread_ = NULL;
+//        }
+//        inline double get_comm() {
+//            return comm_;
+//        }
+//        inline double get_graph_dev2host_time() {
+//            return graph_dev2host_time_;
+//        }
+//        inline double get_graph_memcpy_time() {
+//            return graph_memcpy_time_;
+//        }
+//        inline double get_graph_net_time() {
+//            return graph_net_time_;
+//        }
+//        inline int get_num_net_batches() {
+//            return num_net_batches_;
+//        }
+//        bool * cpu_has_incomming_mirrors;
+//        bool * gpu_has_incomming_mirrors;
+//        int num_master_vertices;
+//        int local_partition_start;
+//};
+//class CUDAPIPGraphDataGradientUpdateReceiver {
+//    private:
+//        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
+//        pthread_barrier_t * barrier_;
+//        std::thread * thread_;
+//
+//        void thread_main();
+//
+//    public:
+//        CUDAPIPGraphDataGradientUpdateReceiver(
+//                DistributedPIPHybridParallelExecutionEngineGPU * engine,
+//                pthread_barrier_t * barrier
+//                ): engine_(engine), barrier_(barrier) {
+//            thread_ = NULL;
+//        }
+//        ~CUDAPIPGraphDataGradientUpdateReceiver() {
+//            assert(thread_ == NULL);
+//        }
+//        inline void start_communication() {
+//            assert(thread_ == NULL);
+//            thread_ = new std::thread([&]() {
+//                        this->thread_main();
+//                    }
+//                    );
+//            assert(thread_ != NULL);
+//        }
+//        inline void wait_for_termination() {
+//            assert(thread_ != NULL);
+//            thread_->join();
+//            delete thread_;
+//            thread_ = NULL;
+//        }
+//};
 
 struct CUDAPIPPSHeader {
     int type; // 0: activation pulling request; 1: grad pushing
@@ -1568,74 +1570,74 @@ class CUDAPIPWeightAggregator {
         double get_comm() {return comm_;}
 };
 
-class CUDAPIPParallelParameterServer {
-    private:
-        // here is where the up-to-date weight data and gradients are actually stored
-        std::unordered_map<WeightOperator*, std::pair<DataType*, DataType*>> weight_data_grad_;
-        // mapping a weight operator to its master node
-        std::unordered_map<WeightOperator*, int> master_nodes_;
-        // the lock protecting gradient accumulation
-        std::unordered_map<WeightOperator*, std::mutex*> locks_;
-        // threads who pull the up-to-date weights 
-        std::thread * data_pulling_request_handling_thread_;
-        // threads who push the gradients
-        std::thread * grad_pushing_handling_thread_;
-        // the optimizer
-        AbstractLowerLevelOptimizer * optimizer_;
-        CUDAOperatorsAndTensorsManager * op_ten_manager_;
-        volatile bool is_terminated_;
-
-        DataType * data_buff;
-        DataType * grad_buff;
-        size_t data_len;
-        size_t grad_len;
-
-        double comm;
-        std::unordered_map<WeightOperator*, DataType*> accum_buffer_;
-
-        void data_pulling_request_handling_thread_main();
-        void grad_pushing_handling_thread_main();
-
-        void element_wise_add_gpu(DataType * src_0, DataType * src_1, DataType * dst, size_t num_elements);
-
-    public:
-        CUDAPIPParallelParameterServer(
-                CUDAOperatorsAndTensorsManager * op_ten_manager,
-                AbstractLowerLevelOptimizer * optimizer,
-                DistributedPIPHybridParallelExecutionEngineGPU * engine
-                );
-        ~CUDAPIPParallelParameterServer();
-
-        void pull_weight(WeightOperator * weight_op, DataType * data);
-        void push_grad(WeightOperator * weight_op, DataType * grad);
-        double get_comm() {return comm;}
-
-        void clear_accum_buffer();
-        void commit_grad();
-
-        void print_weights() {
-            for (std::pair<WeightOperator*, std::pair<DataType*, DataType*>> p: weight_data_grad_) {
-                DataType * data = p.second.first;
-                double sum = 0.;
-                WeightOperator * op = p.first;
-                TensorResourceGPU * resource = (TensorResourceGPU*) op->get_output_tensor(0)->resource;
-                size_t num_elements = resource->get_num_elements();
-                for (size_t i = 0; i < num_elements; ++ i) {
-                    sum += data[i];
-                }
-
-                printf("WeightOp %d:", op_ten_manager_->get_operator_index(p.first));
-                for (int i = 0; i < 3; ++ i) {
-                    printf(" %.10f", data[i]);
-                }
-                printf(" ...");
-                for (int i = num_elements - 3; i < num_elements; ++ i) {
-                    printf(" %.10f", data[i]);
-                }
-                printf(", sum: %.10f, num_elements: %lu\n", sum, num_elements);
-            }
-        }
-};
+//class CUDAPIPParallelParameterServer {
+//    private:
+//        // here is where the up-to-date weight data and gradients are actually stored
+//        std::unordered_map<WeightOperator*, std::pair<DataType*, DataType*>> weight_data_grad_;
+//        // mapping a weight operator to its master node
+//        std::unordered_map<WeightOperator*, int> master_nodes_;
+//        // the lock protecting gradient accumulation
+//        std::unordered_map<WeightOperator*, std::mutex*> locks_;
+//        // threads who pull the up-to-date weights 
+//        std::thread * data_pulling_request_handling_thread_;
+//        // threads who push the gradients
+//        std::thread * grad_pushing_handling_thread_;
+//        // the optimizer
+//        AbstractLowerLevelOptimizer * optimizer_;
+//        CUDAOperatorsAndTensorsManager * op_ten_manager_;
+//        volatile bool is_terminated_;
+//
+//        DataType * data_buff;
+//        DataType * grad_buff;
+//        size_t data_len;
+//        size_t grad_len;
+//
+//        double comm;
+//        std::unordered_map<WeightOperator*, DataType*> accum_buffer_;
+//
+//        void data_pulling_request_handling_thread_main();
+//        void grad_pushing_handling_thread_main();
+//
+//        void element_wise_add_gpu(DataType * src_0, DataType * src_1, DataType * dst, size_t num_elements);
+//
+//    public:
+//        CUDAPIPParallelParameterServer(
+//                CUDAOperatorsAndTensorsManager * op_ten_manager,
+//                AbstractLowerLevelOptimizer * optimizer,
+//                DistributedPIPHybridParallelExecutionEngineGPU * engine
+//                );
+//        ~CUDAPIPParallelParameterServer();
+//
+//        void pull_weight(WeightOperator * weight_op, DataType * data);
+//        void push_grad(WeightOperator * weight_op, DataType * grad);
+//        double get_comm() {return comm;}
+//
+//        void clear_accum_buffer();
+//        void commit_grad();
+//
+//        void print_weights() {
+//            for (std::pair<WeightOperator*, std::pair<DataType*, DataType*>> p: weight_data_grad_) {
+//                DataType * data = p.second.first;
+//                double sum = 0.;
+//                WeightOperator * op = p.first;
+//                TensorResourceGPU * resource = (TensorResourceGPU*) op->get_output_tensor(0)->resource;
+//                size_t num_elements = resource->get_num_elements();
+//                for (size_t i = 0; i < num_elements; ++ i) {
+//                    sum += data[i];
+//                }
+//
+//                printf("WeightOp %d:", op_ten_manager_->get_operator_index(p.first));
+//                for (int i = 0; i < 3; ++ i) {
+//                    printf(" %.10f", data[i]);
+//                }
+//                printf(" ...");
+//                for (int i = num_elements - 3; i < num_elements; ++ i) {
+//                    printf(" %.10f", data[i]);
+//                }
+//                printf(", sum: %.10f, num_elements: %lu\n", sum, num_elements);
+//            }
+//        }
+//};
 
 class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecutionEngineGPU {
     private:
@@ -1652,7 +1654,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         CUDAVertexIdTranslationTable * vid_translation_;
         CUDAVertexTensorDataGradManager * vtensor_manager_;
         CUDAVertexChunksManager * chunk_manager_;
-        CUDADataDependenciesTracker * data_dependencies_tracker_;
+        //CUDADataDependenciesTracker * data_dependencies_tracker_;
         CUDAShadowGradientsMasterVertices * shadow_gradients_;
         BPIPLocalGraph * local_graph_;
         //CUDAWeightStashingManager * weight_stashing_manager_;
@@ -1694,10 +1696,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         CUDAPIPForwardTaskCommitter * forward_task_committer_;
         CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher_;
         CUDAPIPBackwardTaskCommitter * backward_task_committer_;
-        CUDAPIPGraphDataActivationUpdateSender * act_update_sender_;
-        CUDAPIPGraphDataActivationUpdateReceiver * act_update_receiver_;
-        CUDAPIPGraphDataGradientUpdateSender * grad_update_sender_;
-        CUDAPIPGraphDataGradientUpdateReceiver * grad_update_receiver_;
+        //CUDAPIPGraphDataActivationUpdateSender * act_update_sender_;
+        //CUDAPIPGraphDataActivationUpdateReceiver * act_update_receiver_;
+        //CUDAPIPGraphDataGradientUpdateSender * grad_update_sender_;
+        //CUDAPIPGraphDataGradientUpdateReceiver * grad_update_receiver_;
         int num_helper_threads_;
         //masks
         int * local_training_mask_;
@@ -1769,9 +1771,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             assert(chunk_manager_ != NULL);
             return chunk_manager_->get_chunk_end(chunk_id);
         }
-        inline CUDADataDependenciesTracker* get_data_dependencies_tracker() {
-            return data_dependencies_tracker_;
-        }
+        //inline CUDADataDependenciesTracker* get_data_dependencies_tracker() {
+        //    return data_dependencies_tracker_;
+        //}
         inline void get_vertex_tensor_data_by_chunk(
                 Tensor * tensor, 
                 int chunk_id,
