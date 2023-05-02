@@ -1,11 +1,11 @@
 /*
-Copyright 2021, University of Southern California
+   Copyright 2021, University of Southern California
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,7 +26,6 @@ limitations under the License.
 class SingleNodeExecutionEngineCPU;
 class SingleNodeExecutionEngineGPU;
 class ParallelismDesigner;
-//class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
 
 class AbstractApplication {
     private:
@@ -54,12 +53,10 @@ class AbstractApplication {
         friend class DistributedModelParallelExecutionEngineCPU;
         friend class DistributedPipelinedLinearModelParallelExecutionEngineCPU;
         friend class DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU;
-        //friend class DistributedPIPHybridParallelExecutionEngineCPU;
-         friend class DistributedPIPHybridParallelExecutionEngineGPU;
+        friend class DistributedPIPHybridParallelExecutionEngineGPU;
         friend class DistributedModelParallelExecutionEngineGPU;
         friend class DistributedPipelinedLinearModelParallelExecutionEngineGPU;
         friend class DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
-        //friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineGPU;
         friend class MixedDistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU;
         friend class ParallelismDesigner;
         friend class TwoLayerModelParallelismDesigner;
@@ -74,11 +71,9 @@ class AbstractApplication {
         Tensor * weight(int height, int width);
         Tensor * fc(Tensor * a, int num_hunits, std::string activation_fun = "None", bool is_transient = false);
         Tensor * matmul(Tensor * a, Tensor * b, bool is_transient = false);
-        //Tensor * matmuladd(Tensor * a, Tensor * b, DataType alpha, DataType beta);
         Tensor * softmax(Tensor * t, bool is_transient = false);
         Tensor * log_softmax(Tensor * t, bool is_transient = false);
         Tensor * aggregation(Tensor * t, AggregationType type, bool is_transient = false);
-        //Tensor * identity(int height, int width);
         Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient = false);
         Tensor * dropout(Tensor * a, double dropout_rate, bool is_transient = false);
         void next_layer();

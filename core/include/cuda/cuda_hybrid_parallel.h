@@ -16,7 +16,6 @@
 #include "nccl.h"
 #include "distributed_sys.h"
 #include "context.h"
-#include "parallel/pipelined_model_parallel.h"
 #include "cuda/cuda_data_compressor.h"
 #include "cuda/cuda_weight_manager.h"
 
@@ -67,6 +66,67 @@ enum WeightInitializationMethod {
 enum FeaturePreprocessingMethod {
     NoFeaturePreprocessing,
     RowNormalizationPreprocessing
+};
+
+template<typename T>
+class LockFreeQueue {
+    private:
+        T * elements_; // T [max_num_appended_elements + 1]
+        int max_num_appended_elements_;
+        volatile int queue_head_, queue_tail_;
+
+    public:
+        LockFreeQueue(int max_num_appended_elements):
+            max_num_appended_elements_(max_num_appended_elements) {
+                queue_head_ = 0;
+                queue_tail_ = 0;
+                elements_ = new T [max_num_appended_elements_ + 1];
+            }
+        ~LockFreeQueue() {
+            delete [] elements_;
+        }
+        void push(T element) {
+            assert(queue_tail_ < max_num_appended_elements_);
+            elements_[queue_tail_] = element;
+            ++ queue_tail_;
+        }
+        // wait until the queue size is smaller than max_queue_size to push
+        // an element
+        void wait_to_push(T element, size_t max_queue_size) {
+            while (true) {
+#ifdef BOOST_ARCH_X86
+                __asm volatile ("pause" ::: "memory");
+#endif
+                if (queue_tail_ - queue_head_ < max_queue_size) {
+                    break;
+                }
+            }
+            assert(queue_tail_ - queue_head_ < max_queue_size);
+            push(element);
+        }
+        // non-blocking
+        void pop(T &poped_element, bool &success) {
+            if (queue_head_ < queue_tail_) {
+                success = true;
+                poped_element = elements_[queue_head_];
+                ++ queue_head_;
+            } else {
+                success = false;
+            }
+        }
+        // blocking pop
+        void pop_blocking(T &poped_element) {
+            bool success = false;
+            while (true) {
+#ifdef BOOST_ARCH_X86
+                __asm volatile ("pause" ::: "memory");
+#endif
+                pop(poped_element, success);
+                if (success) {
+                    break;
+                }
+            }
+        }
 };
 
 template<typename T>

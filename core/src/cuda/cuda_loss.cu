@@ -8,17 +8,18 @@ __global__ void kernelx()
     int x = threadIdx.x;
     x ++ ;
 }
+
 __global__ void CalculateGradientsKernel(
-DataType * std_data,
-DataType * output_data,
-DataType * output_grad,
-double epsilon,
-int num_vertices,
-int outputsize,
-int ThreadNumber,
-int BlockNumber,
-int per_thread_nodes
-){
+        DataType * std_data,
+        DataType * output_data,
+        DataType * output_grad,
+        double epsilon,
+        int num_vertices,
+        int outputsize,
+        int ThreadNumber,
+        int BlockNumber,
+        int per_thread_nodes
+        ){
     int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
     int nid_end = nid_start + per_thread_nodes;
     if(nid_end >= num_vertices)nid_end = num_vertices;
@@ -37,17 +38,18 @@ int per_thread_nodes
 
     }
 }
+
 __global__ void CalculateGradientsV2Kernel(
-DataType * std_data,
-DataType * output_data,
-DataType * output_grad,
-double epsilon,
-int num_vertices,
-int outputsize,
-int ThreadNumber,
-int BlockNumber,
-int per_thread_nodes
-){
+        DataType * std_data,
+        DataType * output_data,
+        DataType * output_grad,
+        double epsilon,
+        int num_vertices,
+        int outputsize,
+        int ThreadNumber,
+        int BlockNumber,
+        int per_thread_nodes
+        ){
     int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
     int nid_end = nid_start + per_thread_nodes;
     if(nid_end >= num_vertices)nid_end = num_vertices;
@@ -71,19 +73,20 @@ int per_thread_nodes
         }
     }
 }
+
 __global__ void CalculateGradientsMaskKernel(
-DataType * std_data,
-DataType * output_data,
-DataType * output_grad,
-int * training_mask,
-double epsilon,
-int num_vertices,
-int num_used_vertices,
-int outputsize,
-int ThreadNumber,
-int BlockNumber,
-int per_thread_nodes
-){
+        DataType * std_data,
+        DataType * output_data,
+        DataType * output_grad,
+        int * training_mask,
+        double epsilon,
+        int num_vertices,
+        int num_used_vertices,
+        int outputsize,
+        int ThreadNumber,
+        int BlockNumber,
+        int per_thread_nodes
+        ){
     int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
     int nid_end = nid_start + per_thread_nodes;
     if(nid_end >= num_vertices)nid_end = num_vertices;
@@ -93,46 +96,21 @@ int per_thread_nodes
             double o = output_data[i * outputsize + j];
             double s = std_data[i * outputsize + j];
             output_grad[i * outputsize + j] = (training_mask[i] == 1)? (- s / double(num_used_vertices) /( o + epsilon)) : 0.0;
-            //if(isnan(output_grad[i * outputsize + j]))output_grad[i * outputsize + j] = 0.0;
         }
-        //if (training_mask[i] == 1) { // 
-        //    double sum = 0;
-        //    for (int j = 0; j < outputsize; ++ j) {
-        //        sum += output_grad[i * outputsize + j];
-        //    }
-        //    printf("grad: %.9f, %.9f, ..., sum: %.9f\n", 
-        //            output_grad[i * outputsize], output_grad[i * outputsize + 1], sum);
-        //}
     }
-    // int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
-    // int nid_end = nid_start + per_thread_nodes;
-    // if(nid_end >= num_vertices)nid_end = num_vertices;
-
-    // for(int i = nid_start; i < nid_end; ++i){
-    //     double los = 0.0f;
-    //     for(int j = 0; j < outputsize; ++j){
-    //         double o = output_data[i * outputsize + j];
-    //         double s = std_data[i * outputsize + j];
-    //         output_grad[i * outputsize + j] = - s / double(num_vertices) /( o + epsilon);
-    //         los -= s * log(o + epsilon);
-    //     }
-    //     for(int j = 0; j < outputsize; ++j){
-    //         output_grad[i * outputsize + j]  = (training_mask[i] == 1)? output_grad[i * outputsize + j] / (los + 0.31) : 0.0;
-    //     }
-
-   // }
 }
+
 __global__ void CalculateLossKernel(
-    DataType * std_data,
-    DataType * output_data,
-    DataType * loss_data,
-    double epsilon,
-    int num_vertices,
-    int outputsize,
-    int ThreadNumber,
-    int BlockNumber,
-    int per_thread_nodes
-){
+        DataType * std_data,
+        DataType * output_data,
+        DataType * loss_data,
+        double epsilon,
+        int num_vertices,
+        int outputsize,
+        int ThreadNumber,
+        int BlockNumber,
+        int per_thread_nodes
+        ){
     int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
     int nid_end = nid_start + per_thread_nodes;
     if(nid_end >= num_vertices)nid_end = num_vertices;
@@ -141,25 +119,25 @@ __global__ void CalculateLossKernel(
         DataType * o = &output_data[i * outputsize];
         DataType * s = &std_data[i * outputsize];
         double delta = 0.;
-        
+
         for(int j = 0; j < outputsize; ++j){
-             delta -= s[j] * log(o[j] + epsilon);
-            //delta -= s[j] * o[j];
+            delta -= s[j] * log(o[j] + epsilon);
         }
         loss_data[i] = log(delta + 0.31) - log(0.31);
     }
 }
+
 __global__ void CalculateLossV2Kernel(
-DataType * std_data,
-DataType * output_data,
-DataType * loss_data,
-double epsilon,
-int num_vertices,
-int outputsize,
-int ThreadNumber,
-int BlockNumber,
-int per_thread_nodes
-){
+        DataType * std_data,
+        DataType * output_data,
+        DataType * loss_data,
+        double epsilon,
+        int num_vertices,
+        int outputsize,
+        int ThreadNumber,
+        int BlockNumber,
+        int per_thread_nodes
+        ){
     int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
     int nid_end = nid_start + per_thread_nodes;
     if(nid_end >= num_vertices)nid_end = num_vertices;
@@ -184,18 +162,19 @@ int per_thread_nodes
         loss_data[i] = delta;
     }
 }
+
 __global__ void CalculateLossMaskKernel(
-    DataType * std_data,
-    DataType * output_data,
-    DataType * loss_data,
-    int * mask,
-    double epsilon,
-    int num_vertices,
-    int outputsize,
-    int ThreadNumber,
-    int BlockNumber,
-    int per_thread_nodes
-){
+        DataType * std_data,
+        DataType * output_data,
+        DataType * loss_data,
+        int * mask,
+        double epsilon,
+        int num_vertices,
+        int outputsize,
+        int ThreadNumber,
+        int BlockNumber,
+        int per_thread_nodes
+        ){
     int nid_start = (blockIdx.x * ThreadNumber + threadIdx.x) * per_thread_nodes;
     int nid_end = nid_start + per_thread_nodes;
     if(nid_end >= num_vertices)nid_end = num_vertices;
@@ -205,16 +184,15 @@ __global__ void CalculateLossMaskKernel(
         DataType * o = &output_data[i * outputsize];
         DataType * s = &std_data[i * outputsize];
         double delta = 0.;
-        
+
         for(int j = 0; j < outputsize; ++j){
-             delta -= s[j] * log(o[j] + epsilon);
+            delta -= s[j] * log(o[j] + epsilon);
         }
         loss_data[i] = delta;
     }
 }
 
-void CrossEntropyLossGPU::LaunchCalculateGradients(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize)
-{
+void CrossEntropyLossGPU::LaunchCalculateGradients(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize) {
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
@@ -232,9 +210,9 @@ double CrossEntropyLossGPU::LaunchGetLoss(DataType * std_data, DataType * output
     const float alpha = 1.0f;
     const float beta = 0.0f; 
     cudnnReduceTensor(
-        cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
-        data_descriptor,loss_data_,&beta,loss_descriptor,loss_
-    );
+            cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
+            data_descriptor,loss_data_,&beta,loss_descriptor,loss_
+            );
     DataType ls = 0.0;
     CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
     return double(ls);
@@ -251,13 +229,10 @@ void CrossEntropyLossGPU::LaunchCalculateGradientsMask(DataType * std_data, Data
 
 void CrossEntropyLossGPU::LaunchCalculateGradientsMaskWithStart(DataType * std_data, DataType * output_data, DataType * output_grad, int num_vertices, int outputsize, int start)
 {
-    //printf("LaunchCalculateGradientsMaskWithStart invoked, ntrain: %d, gntrain: %d\n",
-    //        ntrain, gntrain);
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
     CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad, gpu_training_mask_ + start, epsilon_,num_vertices, gntrain ,outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    //CalculateGradientsMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, output_grad,gpu_training_mask_,epsilon_,num_vertices, ntrain, outputsize, ThreadNumber, BlockNumber, per_thread_nodes); FIXME
     cudaStreamSynchronize(0);
 }
 
@@ -279,14 +254,14 @@ double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * ou
 
     const float alpha = 1.0f;
     const float beta = 0.0f;
-    
+
     cudnnReduceTensor(
-        cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
-        data_descriptor,loss_data_,&beta,loss_descriptor,loss_
-    );
+            cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
+            data_descriptor,loss_data_,&beta,loss_descriptor,loss_
+            );
     DataType ls = 0.0;
     CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
-     if(type == 0)
+    if(type == 0)
     {
         return double(ls) * double(num_vertices) / double(ntrain);
     }else if(type == 1){
@@ -298,6 +273,7 @@ double CrossEntropyLossGPU::LaunchGetLossMask(DataType * std_data, DataType * ou
     }
     return 0.0f;
 }
+
 double CrossEntropyLossGPU::LaunchGetLossMaskWithStart(DataType * std_data, DataType * output_data, int num_vertices, int outputsize, int start, int type){
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
@@ -319,13 +295,13 @@ double CrossEntropyLossGPU::LaunchGetLossMaskWithStart(DataType * std_data, Data
     cudnnCreateTensorDescriptor(&data_descriptor);
     cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
     cudnnReduceTensor(
-        cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
-        data_descriptor,loss_data_ + start,&beta,loss_descriptor,loss_
-    );
+            cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
+            data_descriptor,loss_data_ + start,&beta,loss_descriptor,loss_
+            );
     DataType ls = 0.0;
     CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
-   
-     if(type == 0)
+
+    if(type == 0)
     {
         return double(ls) * double(num_vertices) / double(gntrain);
     }else if(type == 1){
@@ -351,9 +327,9 @@ double CrossEntropyLossGPU::LaunchGetLossWithStart(DataType * std_data, DataType
     cudnnCreateTensorDescriptor(&data_descriptor);
     cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
     cudnnReduceTensor(
-        cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
-        data_descriptor,loss_data_ + start,&beta,loss_descriptor,loss_
-    );
+            cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
+            data_descriptor,loss_data_ + start,&beta,loss_descriptor,loss_
+            );
     DataType ls = 0.0;
     CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
     //ls = (ls * num_vertices) / this->num_vertices_;
@@ -379,19 +355,19 @@ double CrossEntropyLossGPUV2::LaunchGetLoss(DataType * std_data, DataType * outp
     const float alpha = 1.0f;
     const float beta = 0.0f; 
     cudnnReduceTensor(
-        cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
-        data_descriptor,loss_data_,&beta,loss_descriptor,loss_
-    );
+            cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
+            data_descriptor,loss_data_,&beta,loss_descriptor,loss_
+            );
     DataType ls = 0.0;
     CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
     return double(ls);
 }
 
 __global__ void calculate_nll_loss_gradients_kernel(
-    DataType * std_data, DataType * output_data, DataType * output_grad,
-    int * training_mask, int num_elements_per_vertex, int num_elements,
-    VertexId num_training_vertices
-) {
+        DataType * std_data, DataType * output_data, DataType * output_grad,
+        int * training_mask, int num_elements_per_vertex, int num_elements,
+        VertexId num_training_vertices
+        ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_elements) {
         // read the groundtruth
@@ -446,16 +422,16 @@ void NLLLoss::calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, V
     const int block_size = 1024;
     const int num_blocks = (num_elements + block_size - 1) / block_size;
     calculate_nll_loss_gradients_kernel<<<num_blocks, block_size>>>(
-        adjusted_std_data, adjusted_output_data, adjusted_output_grad,
-        gpu_training_mask_ + left, output_size, num_elements, gntrain
-    );
+            adjusted_std_data, adjusted_output_data, adjusted_output_grad,
+            gpu_training_mask_ + left, output_size, num_elements, gntrain
+            );
     cudaStreamSynchronize(0);
 }
 
 __global__ void get_nll_loss_kernel(
-    DataType * std_data, DataType * output_data, DataType * loss_data,
-    int * mask, int num_vertices, int output_size
-) {
+        DataType * std_data, DataType * output_data, DataType * loss_data,
+        int * mask, int num_vertices, int output_size
+        ) {
     int vidx = blockIdx.x * blockDim.x + threadIdx.x;
     if (vidx < num_vertices) {
         // read the mask
@@ -478,26 +454,26 @@ __global__ void get_nll_loss_kernel(
 }
 
 double NLLLoss::launch_get_loss_kernel(
-    DataType * std_data, DataType * output_data, int num_vertices,
-    int output_size, int start, int type
-) {
+        DataType * std_data, DataType * output_data, int num_vertices,
+        int output_size, int start, int type
+        ) {
     const int block_size = 1024;
     const int num_blocks = (num_vertices + block_size - 1) / block_size;
     if (type == 0) { // training
         get_nll_loss_kernel<<<num_blocks, block_size>>>(
-            std_data, output_data, loss_data_, gpu_training_mask_,
-            num_vertices, output_size
-        );
+                std_data, output_data, loss_data_, gpu_training_mask_,
+                num_vertices, output_size
+                );
     }  else if (type == 1) { // valid
         get_nll_loss_kernel<<<num_blocks, block_size>>>(
-            std_data, output_data, loss_data_, gpu_valid_mask_,
-            num_vertices, output_size
-        );
+                std_data, output_data, loss_data_, gpu_valid_mask_,
+                num_vertices, output_size
+                );
     } else if (type == 2) { // test
         get_nll_loss_kernel<<<num_blocks, block_size>>>(
-            std_data, output_data, loss_data_, gpu_test_mask_,
-            num_vertices, output_size
-        );
+                std_data, output_data, loss_data_, gpu_test_mask_,
+                num_vertices, output_size
+                );
     } else {
         assert(false);
     }
@@ -505,13 +481,13 @@ double NLLLoss::launch_get_loss_kernel(
 
     const float alpha = 1.0;
     const float beta = 0.0;
-    
+
     cudnnCreateTensorDescriptor(&data_descriptor);
     cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
     cudnnReduceTensor(
-        cudnn_, MeanDesc, nullptr, 0, d_inter_, sizeof(DataType) * num_vertices, &alpha,
-        data_descriptor, loss_data_ + start, &beta, loss_descriptor, loss_
-    );
+            cudnn_, MeanDesc, nullptr, 0, d_inter_, sizeof(DataType) * num_vertices, &alpha,
+            data_descriptor, loss_data_ + start, &beta, loss_descriptor, loss_
+            );
     DataType ls = 0.0;
     CopyFromCUDADeviceToHost<DataType>(&ls, loss_, 1, __FILE__, __LINE__);
 
@@ -550,7 +526,7 @@ double NLLLoss::get_loss(Tensor * output_tensor, Tensor * std_tensor, VertexId l
     int output_size = output_tensor->dims[1];
 
     return launch_get_loss_kernel(
-        d_std_data + left * output_size, d_output_data + left * output_size,
-        right - left, output_size, left, 0
-    );
+            d_std_data + left * output_size, d_output_data + left * output_size,
+            right - left, output_size, left, 0
+            );
 }

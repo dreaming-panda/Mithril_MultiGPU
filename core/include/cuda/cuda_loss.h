@@ -1,5 +1,6 @@
 #ifndef CUDA_LOSS_H_
 #define CUDA_LOSS_H_
+
 #include<cuda_runtime.h>
 #include<cublas_v2.h>
 #include<cusparse.h>

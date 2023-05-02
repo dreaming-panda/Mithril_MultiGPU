@@ -1,5 +1,6 @@
 #ifndef CUDA_ENGINE_H
 #define CUDA_ENGINE_H
+
 #include "application.h"
 #include "engine.h"
 #include "graph.h"
@@ -11,6 +12,7 @@
 #include "cuda/cuda_graph_loader.h"
 #include "cuda/cuda_loss.h"
 #include "cudnn.h"
+
 class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
     private:
         // returning the loss
@@ -18,6 +20,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         void execute_computation_graph_backward(const std::vector<Operator*> &operators, const std::vector<bool> &operator_mask, Tensor * output_tensor);
         float LaunchCalculate_Accuracy(DataType * cuda_acc_data,DataType * cuda_output_data, DataType * cuda_std_data, int num_vertices, int outputsize);
         float LaunchCalculate_Accuracy_Mask(DataType * cuda_acc_data,DataType * cuda_output_data, DataType * cuda_std_data, int num_vertices, int outputsize, int type);
+
         cudnnHandle_t cudnn_;
         cudnnReduceTensorDescriptor_t MeanDesc;
         cudnnTensorDescriptor_t hit_descriptor;
@@ -30,9 +33,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         bool usingsplit;
         std::string weight_file_;
         bool inference_mode_ = false;
-
         double * per_op_runtime_;
-        
 
     protected:
         void optimize_weights(const std::vector<Operator*> &operators, const std::vector<bool> &operator_mask);
@@ -53,6 +54,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         int ntrain;
         int nvalid;
         int ntest;
+
     public:
         SingleNodeExecutionEngineGPU() {
             lr_scheduler_ = nullptr;
@@ -72,7 +74,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         };
         void setCuda(cudnnHandle_t cudnn, VertexId num_vertices){
             this->cudnn_ = cudnn;
-          //  cudnnCreate(&cudnn_);
+            //  cudnnCreate(&cudnn_);
             cudnnCreateReduceTensorDescriptor(&MeanDesc);
             cudnnSetReduceTensorDescriptor(MeanDesc,CUDNN_REDUCE_TENSOR_AVG,CUDNN_DATA_FLOAT,CUDNN_NOT_PROPAGATE_NAN,CUDNN_REDUCE_TENSOR_NO_INDICES,CUDNN_32BIT_INDICES);
             cudnnCreateTensorDescriptor(&hit_descriptor);
@@ -84,7 +86,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
             AllocateCUDAMemory<DataType>(&cuda_acc, num_vertices, __FILE__, __LINE__);
             vertices_ = num_vertices;
         }
-         void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest){
+        void set_mask(int * training, int * valid, int * test, int * gpu_training, int * gpu_valid, int * gpu_test,int num_vertices, int ntrain, int nvalid, int ntest){
             training_mask_ = training;
             valid_mask_ = valid;
             test_mask_ = test;
@@ -97,7 +99,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
             this->ntest = ntest;
         }
         void destroyCuda(){
-           // cudnnDestroy(cudnn_);
+            // cudnnDestroy(cudnn_);
         }
 };
 #endif

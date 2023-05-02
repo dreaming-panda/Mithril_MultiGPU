@@ -1,11 +1,11 @@
 /*
-Copyright 2021, University of Southern California
+   Copyright 2021, University of Southern California
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -185,43 +185,23 @@ WeightOperator::WeightOperator(int dim_0, int dim_1): Operator(1, OPERATOR_WEIGH
 // MatmulOperator
 
 MatmulOperator::MatmulOperator(Tensor * a, Tensor * b, bool is_transient): 
-        Operator(a, b, 1, OPERATOR_MATMUL, is_transient) {
-    assert(a->type == VERTEX_TENSOR);
-    assert(a->num_dims == 2);
-    assert(a->dims[0] == -1);
-    assert(a->dims[1] > 0);
+    Operator(a, b, 1, OPERATOR_MATMUL, is_transient) {
+        assert(a->type == VERTEX_TENSOR);
+        assert(a->num_dims == 2);
+        assert(a->dims[0] == -1);
+        assert(a->dims[1] > 0);
 
-    assert(b->type == NORMAL_TENSOR);
-    assert(b->num_dims == 2);
-    assert(b->dims[0] > 0);
-    assert(b->dims[1] > 0);
-    assert(a->dims[1] == b->dims[0]);
+        assert(b->type == NORMAL_TENSOR);
+        assert(b->num_dims == 2);
+        assert(b->dims[0] > 0);
+        assert(b->dims[1] > 0);
+        assert(a->dims[1] == b->dims[0]);
 
-    output_tensors_[0].type = VERTEX_TENSOR;
-    output_tensors_[0].num_dims = 2;
-    output_tensors_[0].dims[0] = -1;
-    output_tensors_[0].dims[1] = b->dims[1];
-}
-
-//MatmulAddOperator::MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta): Operator(a, b, 1, OPERATOR_MATMULADD) {
-//    assert(a->type == VERTEX_TENSOR);
-//    assert(a->num_dims == 2);
-//    assert(a->dims[0] == -1);
-//    assert(a->dims[1] > 0);
-//
-//    assert(b->type == NORMAL_TENSOR);
-//    assert(b->num_dims == 2);
-//    assert(b->dims[0] > 0);
-//    assert(b->dims[1] > 0);
-//    assert(a->dims[1] == b->dims[0]);
-//
-//    output_tensors_[0].type = VERTEX_TENSOR;
-//    output_tensors_[0].num_dims = 2;
-//    output_tensors_[0].dims[0] = -1;
-//    output_tensors_[0].dims[1] = b->dims[1];
-//    this->alpha = alpha;
-//    this->beta = beta;
-//}
+        output_tensors_[0].type = VERTEX_TENSOR;
+        output_tensors_[0].num_dims = 2;
+        output_tensors_[0].dims[0] = -1;
+        output_tensors_[0].dims[1] = b->dims[1];
+    }
 
 // SoftmaxOperator
 
@@ -239,64 +219,54 @@ SoftmaxOperator::SoftmaxOperator(Tensor * t, bool log_output, bool is_transient)
     output_tensors_[0].dims[1] = t->dims[1];
 }
 
-//IDentityOperator::IDentityOperator(int dim_0, int dim_1): Operator(1, OPERATOR_IDEN) {
-//    assert(dim_0 > 0);
-//    assert(dim_1 > 0);
-//
-//    output_tensors_[0].type = NORMAL_TENSOR;
-//    output_tensors_[0].num_dims = 2;
-//    output_tensors_[0].dims[0] = dim_0;
-//    output_tensors_[0].dims[1] = dim_1;
-//}
-
 AddOperator::AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient): 
-        Operator(a, b, 1, OPERATOR_ADD, is_transient) {
-    if(a->type == VERTEX_TENSOR){
-        assert(a->type == VERTEX_TENSOR);
-        assert(b->type == VERTEX_TENSOR);
-        assert(a->num_dims == 2);
-        assert(a->dims[0] == -1);
-        assert(a->dims[1] > 0);
-        assert(b->num_dims == 2);
-        assert(b->dims[0] == -1);
-        assert(b->dims[1] > 0);
-        output_tensors_[0].type = VERTEX_TENSOR;
-        output_tensors_[0].num_dims = 2;
-        output_tensors_[0].dims[0] = -1;
-        output_tensors_[0].dims[1] = b->dims[1];
-        this->alpha = alpha;
-        this->beta = beta;
-    } else if(a->type == NORMAL_TENSOR){
-        assert(a->type == NORMAL_TENSOR);
-        assert(b->type == NORMAL_TENSOR);
-        assert(a->num_dims == 2);
-        assert(a->dims[0] > 0);
-        assert(a->dims[1] > 0);
-        assert(b->num_dims == 2);
-        assert(b->dims[0] > 0);
-        assert(b->dims[1] > 0);
-        output_tensors_[0].type = NORMAL_TENSOR;
-        output_tensors_[0].num_dims = 2;
-        output_tensors_[0].dims[0] = b->dims[0];
-        output_tensors_[0].dims[1] = b->dims[1];
-        this->alpha = alpha;
-        this->beta = beta;
+    Operator(a, b, 1, OPERATOR_ADD, is_transient) {
+        if(a->type == VERTEX_TENSOR){
+            assert(a->type == VERTEX_TENSOR);
+            assert(b->type == VERTEX_TENSOR);
+            assert(a->num_dims == 2);
+            assert(a->dims[0] == -1);
+            assert(a->dims[1] > 0);
+            assert(b->num_dims == 2);
+            assert(b->dims[0] == -1);
+            assert(b->dims[1] > 0);
+            output_tensors_[0].type = VERTEX_TENSOR;
+            output_tensors_[0].num_dims = 2;
+            output_tensors_[0].dims[0] = -1;
+            output_tensors_[0].dims[1] = b->dims[1];
+            this->alpha = alpha;
+            this->beta = beta;
+        } else if(a->type == NORMAL_TENSOR){
+            assert(a->type == NORMAL_TENSOR);
+            assert(b->type == NORMAL_TENSOR);
+            assert(a->num_dims == 2);
+            assert(a->dims[0] > 0);
+            assert(a->dims[1] > 0);
+            assert(b->num_dims == 2);
+            assert(b->dims[0] > 0);
+            assert(b->dims[1] > 0);
+            output_tensors_[0].type = NORMAL_TENSOR;
+            output_tensors_[0].num_dims = 2;
+            output_tensors_[0].dims[0] = b->dims[0];
+            output_tensors_[0].dims[1] = b->dims[1];
+            this->alpha = alpha;
+            this->beta = beta;
+        }
     }
-}
 // AggregationOperator
 
 AggregationOperator::AggregationOperator(Tensor * t, AggregationType type, bool is_transient): 
-        Operator(t, 1, OPERATOR_AGGREGATION, is_transient), type_(type) {
-    assert(t->type == VERTEX_TENSOR);
-    assert(t->num_dims == 2);
-    assert(t->dims[0] == -1);
-    assert(t->dims[1] > 0);
+    Operator(t, 1, OPERATOR_AGGREGATION, is_transient), type_(type) {
+        assert(t->type == VERTEX_TENSOR);
+        assert(t->num_dims == 2);
+        assert(t->dims[0] == -1);
+        assert(t->dims[1] > 0);
 
-    output_tensors_[0].type = VERTEX_TENSOR;
-    output_tensors_[0].num_dims = 2;
-    output_tensors_[0].dims[0] = -1;
-    output_tensors_[0].dims[1] = t->dims[1];
-}
+        output_tensors_[0].type = VERTEX_TENSOR;
+        output_tensors_[0].num_dims = 2;
+        output_tensors_[0].dims[0] = -1;
+        output_tensors_[0].dims[1] = t->dims[1];
+    }
 
 AggregationType AggregationOperator::get_aggregation_type() {
     return type_;
@@ -306,16 +276,16 @@ AggregationType AggregationOperator::get_aggregation_type() {
 
 DropoutOperator::DropoutOperator(Tensor * a, double dropout_rate, bool is_transient): 
     Operator(a, 1, OPERATOR_DROPOUT, is_transient), dropout_rate_(dropout_rate) {
-    assert(a->type == VERTEX_TENSOR);
-    assert(a->num_dims == 2);
-    assert(a->dims[0] == -1);
-    assert(a->dims[1] > 0);
+        assert(a->type == VERTEX_TENSOR);
+        assert(a->num_dims == 2);
+        assert(a->dims[0] == -1);
+        assert(a->dims[1] > 0);
 
-    output_tensors_[0].type = VERTEX_TENSOR;
-    output_tensors_[0].num_dims = 2;
-    output_tensors_[0].dims[0] = -1;
-    output_tensors_[0].dims[1] = a->dims[1];
-}
+        output_tensors_[0].type = VERTEX_TENSOR;
+        output_tensors_[0].num_dims = 2;
+        output_tensors_[0].dims[0] = -1;
+        output_tensors_[0].dims[1] = a->dims[1];
+    }
 
 
 

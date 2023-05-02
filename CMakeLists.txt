@@ -61,12 +61,6 @@ file(GLOB CORE_SRCS
 )
 add_library(core SHARED ${CORE_SRCS})
 
-file(GLOB PARA_SRCS
-     core/src/parallel/*.cc
-     core/src/parallel/*.cu
-)
-add_library(parallel STATIC ${PARA_SRCS})
-
 file(GLOB CUDA_SRCS
     core/src/cuda/*.cc
     core/src/cuda/*.cu
@@ -76,10 +70,8 @@ add_library(cudahelp STATIC ${CUDA_SRCS})
 set (dependencies "")
 set (dependencies ${dependencies} core)
 set (dependencies ${dependencies} context)
-set (dependencies ${dependencies} parallel)
 set (dependencies ${dependencies} cudahelp)
 set (dependencies ${dependencies} ${MPI_LIBRARIES})
-#set (dependencies ${dependencies} ${NUMA_LIBRARY})
 set (dependencies ${dependencies} ${Boost_LIBRARIES})
 set (dependencies ${dependencies} ${CUDA_LIBRARIES})
 set (dependencies ${dependencies} ${CUBLAS_LIBRARIES})

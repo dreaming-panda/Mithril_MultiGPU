@@ -1,11 +1,11 @@
 /*
-Copyright 2021, University of Southern California
+   Copyright 2021, University of Southern California
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -91,12 +91,6 @@ Tensor * AbstractApplication::matmul(Tensor * a, Tensor * b, bool is_transient) 
     return matmul->get_output_tensor(0);
 }
 
-//Tensor * AbstractApplication::matmuladd(Tensor * a, Tensor * b, DataType alpha, DataType beta) {
-//    Operator * matmuladd = new MatmulAddOperator(a, b, alpha, beta);
-//    operators_.push_back(matmuladd);
-//    return matmuladd->get_output_tensor(0);
-//}
-
 Tensor * AbstractApplication::fc(Tensor * a, int num_hunits, std::string activation_fun, bool is_transient) {
     Tensor * w = weight(a->dims[1], num_hunits);
     assert(w != NULL);
@@ -132,13 +126,6 @@ Tensor * AbstractApplication::aggregation(Tensor * t, AggregationType type, bool
     operators_.push_back(aggregation);
     return aggregation->get_output_tensor(0);
 }
-
-//Tensor * AbstractApplication::identity(int height, int width) {
-//    assert(height == width);
-//    Operator * identity = new IDentityOperator(height, width);
-//    operators_.push_back(identity);
-//    return identity->get_output_tensor(0);
-//}
 
 Tensor * AbstractApplication::add(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient) {
     Operator * add = new AddOperator(a, b, alpha, beta, is_transient);
