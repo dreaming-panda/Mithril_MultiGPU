@@ -134,14 +134,6 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
             aggforward_time = 0;
             aggbackward_time = 0;
             hidden_units = 0;
-            //  d_input_relu_forward = nullptr;
-            //  d_output_relu_forward = nullptr;
-            //  d_input_relu_forward_grad = nullptr;
-            //  d_output_relu_forward_grad = nullptr;
-            //  d_input_softmax_forward = nullptr;
-            //  d_output_softmax_forward = nullptr;
-            //  d_input_softmax_forward_grad = nullptr;
-            //  d_output_softmax_forward_grad = nullptr;
             cudnnCreateActivationDescriptor(&relu_descriptor_forward);
             cudnnSetActivationDescriptor(relu_descriptor_forward,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,100);
         };
@@ -166,26 +158,10 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
             aggforward_time = 0;
             aggbackward_time = 0;
             hidden_units = 0;
-            //   d_input_relu_forward = nullptr;
-            //   d_output_relu_forward = nullptr;
-            //   d_input_relu_forward_grad = nullptr;
-            //   d_output_relu_forward_grad = nullptr;
-            //   d_input_softmax_forward = nullptr;
-            //   d_output_softmax_forward = nullptr;
-            //   d_input_softmax_forward_grad = nullptr;
-            //   d_output_softmax_forward_grad = nullptr;
             cudnnCreateActivationDescriptor(&relu_descriptor_forward);
             cudnnSetActivationDescriptor(relu_descriptor_forward,CUDNN_ACTIVATION_RELU,CUDNN_NOT_PROPAGATE_NAN,100);
         };
         ~OperatorExecutorGPUV2() {
-            //    DeallocateCUDAMemory<DataType>(&d_input_relu_forward,__FILE__,__LINE__);
-            //    DeallocateCUDAMemory<DataType>(&d_output_relu_forward,__FILE__,__LINE__);
-            //    DeallocateCUDAMemory<DataType>(&d_input_relu_forward_grad,__FILE__,__LINE__);
-            //    DeallocateCUDAMemory<DataType>(&d_output_relu_forward_grad,__FILE__,__LINE__);
-            //    DeallocateCUDAMemory<DataType>(&d_input_softmax_forward,__FILE__,__LINE__);
-            //    DeallocateCUDAMemory<DataType>(&d_output_softmax_forward,__FILE__,__LINE__);
-            //    DeallocateCUDAMemory<DataType>(&d_input_softmax_forward_grad,__FILE__,__LINE__);
-            //    DeallocateCUDAMemory<DataType>(&d_output_softmax_forward_grad,__FILE__,__LINE__);
             if(has_Spcsr_ == true)cusparseDestroySpMat(SpCsr_);
             if(has_dbuffer_ == true)cudaFree(dbuffer_);
             for(int i = 0; i < lginfo_forward.size(); ++i){
@@ -210,16 +186,6 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
         void set_graph(CUDAFullyStructualGraph * graph) {graph_ = graph;}
         void set_activation_size(int ac_s , int n_class){
             activation_size_ = ac_s;
-            //   printf("acs = %d\n",ac_s);
-            //  printf("ncls = %d\n",n_class);
-            //   AllocateCUDAMemory<DataType>(&d_input_relu_forward, ac_s * graph_->get_num_global_vertices(),__FILE__,__LINE__);
-            //   AllocateCUDAMemory<DataType>(&d_output_relu_forward, ac_s * graph_->get_num_global_vertices(),__FILE__,__LINE__);
-            //   AllocateCUDAMemory<DataType>(&d_input_relu_forward_grad, ac_s * graph_->get_num_global_vertices(),__FILE__,__LINE__);
-            //   AllocateCUDAMemory<DataType>(&d_output_relu_forward_grad, ac_s * graph_->get_num_global_vertices(),__FILE__,__LINE__);
-            //   AllocateCUDAMemory<DataType>(&d_input_softmax_forward, n_class * graph_->get_num_global_vertices(),__FILE__,__LINE__);
-            //   AllocateCUDAMemory<DataType>(&d_output_softmax_forward, n_class * graph_->get_num_global_vertices(),__FILE__,__LINE__);
-            //   AllocateCUDAMemory<DataType>(&d_input_softmax_forward_grad, n_class * graph_->get_num_global_vertices(),__FILE__,__LINE__);
-            //   AllocateCUDAMemory<DataType>(&d_output_softmax_forward_grad, n_class * graph_->get_num_global_vertices(),__FILE__,__LINE__);
             cudnnCreateTensorDescriptor(&data_descriptor_relu_forward);
             cudnnSetTensor4dDescriptor(data_descriptor_relu_forward, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, ac_s * graph_->get_num_global_vertices());
             cudnnCreateActivationDescriptor(&relu_descriptor_forward);
@@ -274,6 +240,7 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
             CopyFromHostToCUDADevice<DataType>(cuda_id, host_id, num_elements, __FILE__, __LINE__);
             id_init = true;
         }
+
         void relu_forward(ReluOperator * op);
         void matmul_forward(MatmulOperator * op);
         void softmax_forward(SoftmaxOperator * op);
@@ -298,10 +265,10 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
         void add_forward(AddOperator * op, VertexId left, VertexId right);
         void add_backward(AddOperator * op, VertexId left, VertexId right);
 
-        void matmuladd_forward(MatmulAddOperator * op);
-        void matmuladd_backward(MatmulAddOperator * op);
-        void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right);
-        void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right);
+        //void matmuladd_forward(MatmulAddOperator * op);
+        //void matmuladd_backward(MatmulAddOperator * op);
+        //void matmuladd_forward(MatmulAddOperator * op, VertexId left, VertexId right);
+        //void matmuladd_backward(MatmulAddOperator * op, VertexId left, VertexId right);
 
         void dropout_forward(DropoutOperator * op);
         void dropout_backward(DropoutOperator * op);

@@ -54,7 +54,7 @@ class AbstractApplication {
         friend class DistributedModelParallelExecutionEngineCPU;
         friend class DistributedPipelinedLinearModelParallelExecutionEngineCPU;
         friend class DistributedPipelinedLinearModelParallelWithGraphChunkingExecutionEngineCPU;
-        friend class DistributedPIPHybridParallelExecutionEngineCPU;
+        //friend class DistributedPIPHybridParallelExecutionEngineCPU;
          friend class DistributedPIPHybridParallelExecutionEngineGPU;
         friend class DistributedModelParallelExecutionEngineGPU;
         friend class DistributedPipelinedLinearModelParallelExecutionEngineGPU;

@@ -60,11 +60,13 @@ file(GLOB CORE_SRCS
     core/src/*.cc
 )
 add_library(core SHARED ${CORE_SRCS})
+
 file(GLOB PARA_SRCS
      core/src/parallel/*.cc
      core/src/parallel/*.cu
 )
 add_library(parallel STATIC ${PARA_SRCS})
+
 file(GLOB CUDA_SRCS
     core/src/cuda/*.cc
     core/src/cuda/*.cu

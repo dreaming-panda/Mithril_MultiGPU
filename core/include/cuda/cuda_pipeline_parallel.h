@@ -6,6 +6,7 @@
 #include "cuda_runtime.h"
 #include "cuda/cuda_executor.h"
 #include "nccl.h"
+
 class DistributedPipelinedLinearModelParallelExecutionEngineGPU: public DistributedModelParallelExecutionEngineGPU {
     private:
 

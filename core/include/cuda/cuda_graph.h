@@ -13,7 +13,7 @@ struct LocalGraphBasic{
     DataType * cuda_local_values;
     int * cuda_local_cols;
 };
-class CUDAFullyStructualGraph:public GraphStructureFullyReplicatedV2
+class CUDAFullyStructualGraph: public GraphStructureFullyReplicatedV2
 {
     public:
         CUDAFullyStructualGraph():GraphStructureFullyReplicatedV2(),use_gpu_(false),host_csr_store_(false)

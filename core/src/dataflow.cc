@@ -203,25 +203,25 @@ MatmulOperator::MatmulOperator(Tensor * a, Tensor * b, bool is_transient):
     output_tensors_[0].dims[1] = b->dims[1];
 }
 
-MatmulAddOperator::MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta): Operator(a, b, 1, OPERATOR_MATMULADD) {
-    assert(a->type == VERTEX_TENSOR);
-    assert(a->num_dims == 2);
-    assert(a->dims[0] == -1);
-    assert(a->dims[1] > 0);
-
-    assert(b->type == NORMAL_TENSOR);
-    assert(b->num_dims == 2);
-    assert(b->dims[0] > 0);
-    assert(b->dims[1] > 0);
-    assert(a->dims[1] == b->dims[0]);
-
-    output_tensors_[0].type = VERTEX_TENSOR;
-    output_tensors_[0].num_dims = 2;
-    output_tensors_[0].dims[0] = -1;
-    output_tensors_[0].dims[1] = b->dims[1];
-    this->alpha = alpha;
-    this->beta = beta;
-}
+//MatmulAddOperator::MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta): Operator(a, b, 1, OPERATOR_MATMULADD) {
+//    assert(a->type == VERTEX_TENSOR);
+//    assert(a->num_dims == 2);
+//    assert(a->dims[0] == -1);
+//    assert(a->dims[1] > 0);
+//
+//    assert(b->type == NORMAL_TENSOR);
+//    assert(b->num_dims == 2);
+//    assert(b->dims[0] > 0);
+//    assert(b->dims[1] > 0);
+//    assert(a->dims[1] == b->dims[0]);
+//
+//    output_tensors_[0].type = VERTEX_TENSOR;
+//    output_tensors_[0].num_dims = 2;
+//    output_tensors_[0].dims[0] = -1;
+//    output_tensors_[0].dims[1] = b->dims[1];
+//    this->alpha = alpha;
+//    this->beta = beta;
+//}
 
 // SoftmaxOperator
 
@@ -239,15 +239,15 @@ SoftmaxOperator::SoftmaxOperator(Tensor * t, bool log_output, bool is_transient)
     output_tensors_[0].dims[1] = t->dims[1];
 }
 
-IDentityOperator::IDentityOperator(int dim_0, int dim_1): Operator(1, OPERATOR_IDEN) {
-    assert(dim_0 > 0);
-    assert(dim_1 > 0);
-
-    output_tensors_[0].type = NORMAL_TENSOR;
-    output_tensors_[0].num_dims = 2;
-    output_tensors_[0].dims[0] = dim_0;
-    output_tensors_[0].dims[1] = dim_1;
-}
+//IDentityOperator::IDentityOperator(int dim_0, int dim_1): Operator(1, OPERATOR_IDEN) {
+//    assert(dim_0 > 0);
+//    assert(dim_1 > 0);
+//
+//    output_tensors_[0].type = NORMAL_TENSOR;
+//    output_tensors_[0].num_dims = 2;
+//    output_tensors_[0].dims[0] = dim_0;
+//    output_tensors_[0].dims[1] = dim_1;
+//}
 
 AddOperator::AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient): 
         Operator(a, b, 1, OPERATOR_ADD, is_transient) {

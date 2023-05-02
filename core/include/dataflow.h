@@ -120,13 +120,13 @@ class MatmulOperator: public Operator {
         ~MatmulOperator() {}
 };
 
-class MatmulAddOperator: public Operator{
-    public:
-        MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta);
-        ~MatmulAddOperator() {}
-        DataType alpha;
-        DataType beta;
-};
+//class MatmulAddOperator: public Operator{
+//    public:
+//        MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta);
+//        ~MatmulAddOperator() {}
+//        DataType alpha;
+//        DataType beta;
+//};
 
 class SoftmaxOperator: public Operator {
     private:
@@ -145,12 +145,12 @@ class AddOperator: public Operator {
         DataType beta;
 };
 
-class IDentityOperator: public Operator {
-    public:
-        
-        IDentityOperator(int dim_0, int dim_1);
-        ~IDentityOperator() {}
-};
+//class IDentityOperator: public Operator {
+//    public:
+//        
+//        IDentityOperator(int dim_0, int dim_1);
+//        ~IDentityOperator() {}
+//};
 
 class DropoutOperator: public Operator {
     public:

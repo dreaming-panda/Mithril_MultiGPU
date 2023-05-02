@@ -3795,9 +3795,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
             case OPERATOR_MATMUL:
                 executor_->matmul_forward((MatmulOperator*) op, local_vid_begin, local_vid_end);
                 break;
-            case OPERATOR_MATMULADD:
-                executor_->matmuladd_forward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
-                break;
+            //case OPERATOR_MATMULADD:
+            //    executor_->matmuladd_forward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
+            //    break;
             case OPERATOR_SOFTMAX:
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
@@ -4007,9 +4007,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
             case OPERATOR_MATMUL:
                 executor_->matmul_forward((MatmulOperator*) op, local_vid_begin, local_vid_end);
                 break;
-            case OPERATOR_MATMULADD:
-                executor_->matmuladd_forward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
-                break;
+            //case OPERATOR_MATMULADD:
+            //    executor_->matmuladd_forward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
+            //    break;
             case OPERATOR_SOFTMAX:
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
@@ -4048,9 +4048,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
             case OPERATOR_MATMUL:
                 executor_->matmul_backward((MatmulOperator*) op, local_vid_begin, local_vid_end);
                 break;
-            case OPERATOR_MATMULADD:
-                executor_->matmuladd_backward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
-                break;
+            //case OPERATOR_MATMULADD:
+            //    executor_->matmuladd_backward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
+            //    break;
             case OPERATOR_SOFTMAX:
                 executor_->softmax_backward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
@@ -4846,8 +4846,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     hybrid_prepare_std_tensor();
 
     accum_loss_ = 0.;
-    OperatorExecutorCPU * executor = (OperatorExecutorCPU*) executor_;
-    executor->set_graph(local_graph_);
+    OperatorExecutorGPUV2 * executor = (OperatorExecutorGPUV2*) executor_;
+    //executor->set_graph(local_graph_);
     executor->set_csr(lgraph->get_cuda_csrColIn_In(),lgraph->get_cuda_csrValue_In(),lgraph->get_cuda_csrRowOffsets_In(),lgraph->get_nnz_in(),
     lgraph->get_cuda_csrColIn_Out(),lgraph->get_cuda_csrValue_Out(),lgraph->get_cuda_csrRowOffsets_Out(),lgraph->get_nnz_out(),
     lgraph->get_num_master_vertices(),lgraph->get_inMatrixSize(),lgraph->get_outMatrixSize());
