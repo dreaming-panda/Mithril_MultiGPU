@@ -15,14 +15,12 @@
 #include "graph_loader.h"
 #include "context.h"
 #include "executor.h"
-//#include "parallel/model_parallel.h"
 #include "cuda/cuda_executor.h"
 #include "cuda/cuda_graph_loader.h"
 #include "cuda/cuda_graph.h"
 #include "cublas_v2.h"
 #include "cuda/cuda_loss.h"
 #include"cuda/cuda_executor.h"
-#//include "cuda/cuda_pipeline_parallel.h"
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_optimizer.h"
 #include "cuda/cuda_single_cpu_engine.h"
@@ -166,7 +164,7 @@ int main(int argc, char ** argv) {
     printf("GCN hyper-parameter alpha: %.6f\n", alpha);
     printf("GCN hyper-parameter lambda: %.6f\n", lambda);
 
-    srand(random_seed);
+    RandomNumberManager::init_random_number_manager(random_seed);
 
     volatile bool terminated = false;
     Context::init_context();
@@ -292,9 +290,7 @@ int main(int argc, char ** argv) {
     delete optimizer;
     delete executor;
     delete loss;
-    // DeallocateCUDAMemory<int>(&gpu_training_mask_, __FILE__, __LINE__);
-    // DeallocateCUDAMemory<int>(&gpu_valid_mask_, __FILE__, __LINE__);
-    // DeallocateCUDAMemory<int>(&gpu_test_mask_, __FILE__, __LINE__);
+
     // destroy the graph dataset
     graph_structure_loader.destroy_graph_structure(graph_structure);
     graph_non_structural_data_loader.destroy_graph_non_structural_data(graph_non_structural_data);

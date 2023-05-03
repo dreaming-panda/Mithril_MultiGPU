@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-//#define USE_RDMA 
+#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (1)
@@ -1659,6 +1659,75 @@ CUDAPIPPartitioning ModelPartitioner::get_model_parallel_partition(
         layer_begin = j;
     }
     return partition;
+}
+
+BPIPLocalGraph::BPIPLocalGraph(AbstractGraphStructure * global_graph, CUDAVertexIdTranslationTable * vid_translation) {
+    num_master_vertices_ = vid_translation->get_num_master_vertices();
+    num_incoming_mirror_vertices_ = vid_translation->get_num_incoming_mirror_vertices();
+    num_outgoing_mirror_vertices_ = vid_translation->get_num_outgoing_mirror_vertices();
+    num_in_edges_ = 0;
+    num_out_edges_ = 0;
+
+    VertexId partition_begin = vid_translation->get_partition_begin();
+    VertexId partition_end = vid_translation->get_partition_end();
+    for (VertexId vid = partition_begin; vid < partition_end; ++ vid) {
+        EdgeId in_degree = global_graph->get_in_degree(vid);
+        EdgeId out_degree = global_graph->get_out_degree(vid);
+        num_in_edges_ += in_degree;
+        num_out_edges_ += out_degree;
+    }
+
+    // allocate the memory
+    index_to_incoming_edges_ = new EdgeId [num_master_vertices_ + 1];
+    incoming_edges_ = new InEdge [num_in_edges_];
+    index_to_outgoing_edges_ = new EdgeId [num_master_vertices_ + 1];
+    outgoing_edges_ = new OutEdge [num_out_edges_];
+    assert(index_to_incoming_edges_ != NULL);
+    assert(incoming_edges_ != NULL);
+    assert(index_to_outgoing_edges_ != NULL);
+    assert(outgoing_edges_ != NULL);
+
+    index_to_incoming_edges_[0] = index_to_outgoing_edges_[0] = 0;
+    for (VertexId vid = partition_begin; vid < partition_end; ++ vid) {
+        EdgeId in_degree = global_graph->get_in_degree(vid);
+        EdgeId out_degree = global_graph->get_out_degree(vid);
+        VertexId local_vid = vid_translation->get_local_vid_master_vertex(vid);
+        index_to_incoming_edges_[local_vid + 1] = index_to_incoming_edges_[local_vid] + in_degree;
+        index_to_outgoing_edges_[local_vid + 1] = index_to_outgoing_edges_[local_vid] + out_degree;
+    }
+
+    // construct the CSR structures
+    for (VertexId vid = partition_begin; vid < partition_end; ++ vid) {
+        InEdgeList in_edges = global_graph->get_in_edges(vid);
+        OutEdgeList out_edges = global_graph->get_out_edges(vid);
+        VertexId local_vid = vid_translation->get_local_vid_master_vertex(vid);
+        // process the in edges
+        EdgeId offset = index_to_incoming_edges_[local_vid];
+        for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
+            InEdge e = in_edges.ptx[e_i];
+            InEdge local_e;
+            if (e.src >= partition_begin && e.src < partition_end) {
+                local_e.src = vid_translation->get_local_vid_master_vertex(e.src);
+            } else {
+                local_e.src = vid_translation->get_local_vid_incoming_mirror(e.src);
+            }
+            local_e.norm_factor = e.norm_factor;
+            incoming_edges_[offset + e_i] = local_e;
+        }
+        // process the out edges
+        offset = index_to_outgoing_edges_[local_vid];
+        for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
+            OutEdge e = out_edges.ptx[e_i];
+            OutEdge local_e;
+            if (e.dst >= partition_begin && e.dst < partition_end) {
+                local_e.dst = vid_translation->get_local_vid_master_vertex(e.dst);
+            } else {
+                local_e.dst = vid_translation->get_local_vid_outgoing_mirror(e.dst);
+            }
+            local_e.norm_factor = e.norm_factor;
+            outgoing_edges_[offset + e_i] = local_e;
+        }
+    }
 }
 
 BPIPLocalGraph::~BPIPLocalGraph(){

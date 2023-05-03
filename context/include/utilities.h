@@ -85,4 +85,43 @@ inline void get_machine_id(char * buff) {
     assert(strlen(buff) == MACHINE_ID_LEN);
 }
 
+class RandomNumberManager {
+    private:
+        static RandomNumberManager * instance;
+        int seed_;
+        std::mutex mtx;
+
+        RandomNumberManager(int seed) {
+            seed_ = seed;
+            srand(seed);
+        }
+        ~RandomNumberManager() {}
+
+        static RandomNumberManager * get_instance(int seed = 1234) {
+            if (instance == NULL) {
+                instance = new RandomNumberManager(seed);
+            }
+            assert(instance);
+            return instance;
+        }
+
+    public:
+        static inline void init_random_number_manager(int seed) {
+            RandomNumberManager * mgr = get_instance(seed);
+            assert(mgr);
+        }
+        static inline int get_random_number() {
+            // for thread safety
+            // avoid heavily calling this function with multiple threads concurrently
+            RandomNumberManager * mgr = get_instance();
+            mgr->mtx.lock();
+            int rand_num = rand();
+            mgr->mtx.unlock();
+            return rand_num;
+        }
+};
+
 #endif
+
+
+
