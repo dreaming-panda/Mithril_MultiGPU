@@ -12,14 +12,10 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-//#define USE_RDMA 
+#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (1)
-
-//#define NUM_CHUNKS (16)
-//#define SCALE_DOWN_FACTOR (0.01)
-//#define SCALE_UP_FACTOR (1.)
 
 //#define SHOW_SCHEDULE_DETAILS
 
@@ -29,7 +25,7 @@ CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
     CUDAAbstractTaskDispatcher<CUDAPIPForwardTask>(max_num_tasks, barrier) {
         num_ready_remote_nodes_ = new std::map<int, int>();
         assert(num_ready_remote_nodes_ != NULL);
-}
+    }
 
 CUDAPIPForwardTaskDispatcher::~CUDAPIPForwardTaskDispatcher() {
     delete num_ready_remote_nodes_;
@@ -84,7 +80,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             std::sort(degree_sum_each_chunk.begin(), degree_sum_each_chunk.end(), 
                     [](const std::pair<int, EdgeId> &a,
                         const std::pair<int, EdgeId> &b) {
-                        return a.second > b.second;
+                    return a.second > b.second;
                     }
                     );
             for (size_t i = 1; i < degree_sum_each_chunk.size(); ++ i) {
@@ -115,7 +111,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             std::sort(degree_sum_each_chunk.begin(), degree_sum_each_chunk.end(), 
                     [](const std::pair<int, EdgeId> &a,
                         const std::pair<int, EdgeId> &b) {
-                        return a.second < b.second;
+                    return a.second < b.second;
                     }
                     );
             for (size_t i = 1; i < degree_sum_each_chunk.size(); ++ i) {
@@ -227,33 +223,29 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                 } else {
                     engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
                             [&](uint8_t * buff, size_t buff_size) {
-                                size_t compressed_data_size = 0;
+                            size_t compressed_data_size = 0;
 #ifdef USE_RDMA
-                                MPI_Recv(
-                                        &compressed_data_size, 1, 
-                                        DistributedSys::get_mpi_data_type<size_t>(),
-                                        remote_node, ForwardActivationPassing,
-                                        MPI_COMM_WORLD, &status
-                                        );
+                            MPI_Recv(
+                                    &compressed_data_size, 1, 
+                                    DistributedSys::get_mpi_data_type<size_t>(),
+                                    remote_node, ForwardActivationPassing,
+                                    MPI_COMM_WORLD, &status
+                                    );
 #else
-                                MPI_Status status;
-                                MPI_Recv(
-                                        buff, 1, MPI_CHAR,
-                                        remote_node, ForwardActivationPassing,
-                                        MPI_COMM_WORLD, &status
-                                        );
-                                int count = 0;
-                                MPI_Get_count(&status, MPI_CHAR, &count);
-                                compressed_data_size = count;
+                            MPI_Status status;
+                            MPI_Recv(
+                                    buff, 1, MPI_CHAR,
+                                    remote_node, ForwardActivationPassing,
+                                    MPI_COMM_WORLD, &status
+                                    );
+                            int count = 0;
+                            MPI_Get_count(&status, MPI_CHAR, &count);
+                            compressed_data_size = count;
 #endif
-                                comm += compressed_data_size;
-                                return compressed_data_size;
+                            comm += compressed_data_size;
+                            return compressed_data_size;
                             }, true
-                            );
-                    //engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
-                    //size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu(remote_node, ForwardActivationPassing);
-                    //size_t data_size = engine_->data_decompressors_[task.chunk_id]->recv_compressed_data_directly_to_gpu_rma(remote_node, ForwardActivationPassing);
-                    //comm += data_size;
+                    );
                 }
                 if (engine_->global_shared_tensor_ != NULL) {
                     // need to receive the globally shared tensor
@@ -264,11 +256,11 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                     size_t num_elements = (right - left) * num_elements_per_vertex;
                     MPI_Status status;
                     MPI_Recv(
-                        data, num_elements, 
-                        DistributedSys::get_mpi_data_type<DataType>(),
-                        remote_node, ForwardActivationPassing,
-                        MPI_COMM_WORLD, &status
-                    );
+                            data, num_elements, 
+                            DistributedSys::get_mpi_data_type<DataType>(),
+                            remote_node, ForwardActivationPassing,
+                            MPI_COMM_WORLD, &status
+                            );
                     comm += sizeof(DataType) * num_elements;
                 }
                 comm_time += get_time();
@@ -299,7 +291,7 @@ CUDAPIPBackwardTaskDispatcher::CUDAPIPBackwardTaskDispatcher(
         input_task_queue_ = new LockFreeQueue<CUDAPIPBackwardTask>(max_num_tasks);
         assert(input_task_queue_ != NULL);
         cudnnCreate(&cudnn_);
-}
+    }
 
 CUDAPIPBackwardTaskDispatcher::~CUDAPIPBackwardTaskDispatcher() {
     delete num_ready_remote_nodes_;
@@ -327,8 +319,6 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
     int num_local_chunks = local_chunk_ids.size();
 
     CUDAPIPBackwardTask task;
-    //CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
-    //assert(data_dependencies_tracker != NULL);
     double comm = 0;
     double comm_time = 0;
 
@@ -396,15 +386,15 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                 assert(COMPRESS_DATA);
                 engine_->grad_decompressors_[task.chunk_id]->receive_compressed_data(
                         [&](uint8_t * buff, size_t buff_size) {
-                            size_t compressed_data_size = 0;
-                            MPI_Recv(
-                                    &compressed_data_size, 1, 
-                                    DistributedSys::get_mpi_data_type<size_t>(),
-                                    remote_node, BackwardGradientPassing,
-                                    MPI_COMM_WORLD, &status
-                                    );
-                            comm += compressed_data_size;
-                            return compressed_data_size;
+                        size_t compressed_data_size = 0;
+                        MPI_Recv(
+                                &compressed_data_size, 1, 
+                                DistributedSys::get_mpi_data_type<size_t>(),
+                                remote_node, BackwardGradientPassing,
+                                MPI_COMM_WORLD, &status
+                                );
+                        comm += compressed_data_size;
+                        return compressed_data_size;
                         }, true // buff in CPU
                         );
                 // receive h0
@@ -416,11 +406,11 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                     DataType * grad = engine_->global_shared_tensor_grad_ + left * num_elements_per_vertex;
                     MPI_Status status;
                     MPI_Recv(
-                        grad, num_elements, 
-                        DistributedSys::get_mpi_data_type<DataType>(),
-                        remote_node, BackwardGradientPassing,
-                        MPI_COMM_WORLD, &status
-                    );
+                            grad, num_elements, 
+                            DistributedSys::get_mpi_data_type<DataType>(),
+                            remote_node, BackwardGradientPassing,
+                            MPI_COMM_WORLD, &status
+                            );
                     comm += sizeof(DataType) * num_elements;
                 }
                 comm_time += get_time();
@@ -441,7 +431,7 @@ CUDAPIPForwardTaskCommitter::CUDAPIPForwardTaskCommitter(
         pthread_barrier_t * barrier
         ): 
     CUDAAbstractTaskCommitter<CUDAPIPForwardTask>(max_num_tasks, barrier) {
-}
+    }
 
 CUDAPIPForwardTaskCommitter::~CUDAPIPForwardTaskCommitter() {
 }
@@ -498,10 +488,6 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                         remote_node, ForwardActivationPassing,
                         MPI_COMM_WORLD
                         );
-                //double t_0 = get_time();
-                //if (node_id == 0)
-                //    printf("%.3f ms, node %d, starting sending out the data of chunk %d\n", 
-                //            (t_0 - start_time) * 1000., node_id, num_sent_chunks);
 
                 DataType * data = NULL;
                 size_t num_elements_this_chunk = 0;
@@ -568,21 +554,15 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
                         DataType * data = engine_->global_shared_tensor_data_ + left * num_elements_per_vertex;
                         int num_elements = num_elements_per_vertex * (right - left);
                         MPI_Send(
-                            data, num_elements,
-                            DistributedSys::get_mpi_data_type<DataType>(),
-                            remote_node, ForwardActivationPassing,
-                            MPI_COMM_WORLD
-                        );
+                                data, num_elements,
+                                DistributedSys::get_mpi_data_type<DataType>(),
+                                remote_node, ForwardActivationPassing,
+                                MPI_COMM_WORLD
+                                );
                     }
 
-                    //engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu(remote_node, ForwardActivationPassing);
-                    //size_t data_size = engine_->data_compressors_[task.chunk_id]->send_compressed_data_directly_from_gpu_rma(remote_node, ForwardActivationPassing, engine_->act_comm_wins_[task.chunk_id]);
                     double t_1 = get_time();
                     size_t data_size = compressed_data_size;
-                    //if (node_id == 0)
-                    //    printf("%.3f ms, node %d, done sending out the data of chunk %d (%lu bytes), throughput: %.3f GBps, network throughput: %.3f GBps\n", 
-                    //            (t_1 - start_time) * 1000., node_id, num_sent_chunks, data_size, 1. * data_size / (t_1 - t_0) / 1024. / 1024. / 1024.,
-                    //            data_size / (t_1 - t_2) / 1024. / 1024. / 1024.);
                 }
             }
         }
@@ -598,7 +578,7 @@ CUDAPIPBackwardTaskCommitter::CUDAPIPBackwardTaskCommitter(
         pthread_barrier_t * barrier
         ): 
     CUDAAbstractTaskCommitter<CUDAPIPBackwardTask>(max_num_tasks, barrier) {
-}
+    }
 
 CUDAPIPBackwardTaskCommitter::~CUDAPIPBackwardTaskCommitter() {
 }
@@ -612,8 +592,6 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
     int num_local_chunks = local_chunk_ids.size();
 
     CUDAPIPBackwardTask task;
-    //CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
-    //assert(data_dependencies_tracker != NULL);
 
     if (engine_->is_topmost_node()) {
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
@@ -705,11 +683,11 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                     size_t num_elements = (right - left) * num_elements_per_vertex;
                     DataType * grad = engine_->global_shared_tensor_grad_ + left * num_elements_per_vertex;
                     MPI_Send(
-                        grad, num_elements, 
-                        DistributedSys::get_mpi_data_type<DataType>(),
-                        remote_node, BackwardGradientPassing,
-                        MPI_COMM_WORLD
-                    );
+                            grad, num_elements, 
+                            DistributedSys::get_mpi_data_type<DataType>(),
+                            remote_node, BackwardGradientPassing,
+                            MPI_COMM_WORLD
+                            );
                 }
             }
         }
@@ -717,9 +695,6 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
         if(len > 0){
             delete [] grad_buff;
         }
-
-        //delete [] compressed_data_hdr;
-        //delete [] compressed_data_payload;
     }
 }
 
@@ -785,11 +760,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     backward_task_dispatcher_->start_task_dispatching();
     backward_task_committer_->start_task_committing();
 
-    //engine_->act_update_sender_->start_communication();
-    //engine_->act_update_receiver_->start_communication();
-    //engine_->grad_update_sender_->start_communication(); 
-    //engine_->grad_update_receiver_->start_communication();
-
     const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
     int num_local_chunks = local_chunk_ids.size();
     bool is_bottommost_node = engine_->is_bottommost_node();
@@ -802,31 +772,31 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     std::thread move_act_gpu2cpu_thread(
             [&]() {
-                CUDAPIPForwardTask task;
-                for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-                    for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
-                        act_gpu2cpu_queue->pop_blocking(task);
-                        if (node_id < num_nodes - 1) {
-                            engine_->data_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
-                        }
-                        forward_task_committer_queue_->push(task);
-                    }
-                }
+            CUDAPIPForwardTask task;
+            for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+            for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
+            act_gpu2cpu_queue->pop_blocking(task);
+            if (node_id < num_nodes - 1) {
+            engine_->data_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
+            }
+            forward_task_committer_queue_->push(task);
+            }
+            }
             }
             );
     std::thread move_grad_gpu2cpu_thread(
             [&]() {
-                    CUDAPIPBackwardTask task;
-                    for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-                        for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
-                            grad_gpu2cpu_queue->pop_blocking(task);
-                            if (node_id > 0) {
-                                engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
-                            }
-                            backward_task_committer_queue_->push(task);
-                        }
-                    }
-                }
+            CUDAPIPBackwardTask task;
+            for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+            for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
+            grad_gpu2cpu_queue->pop_blocking(task);
+            if (node_id > 0) {
+            engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
+            }
+            backward_task_committer_queue_->push(task);
+            }
+            }
+            }
             );
 
     // task scheduling 
@@ -845,12 +815,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     double orignal_lr = engine_->optimizer_->get_learning_rate();
     printf("The learning rate specified by the user: %.9f\n", orignal_lr);
-    //printf("In the first %d epoch, the learning rate will be set to a low value (%.9f) for stability.\n",
-    //        NUM_STARTUP_EPOCH, (double) LOW_LEARNING_RATE);
 
     Profiler::start_profiling();
 
-    //engine_->parameter_server_->print_weights();
     double t = - get_time();
     engine_->compression_time_ = 0;
     engine_->decompression_time_ = 0;
@@ -921,8 +888,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
         }
 
-        //engine_->parameter_server_->clear_accum_buffer();
-        //engine_->weight_aggregator_->clear_gradients();
         // pull the latest weights
         for (WeightOperator * op: engine_->local_weight_ops_) {
             assert(op != NULL);
@@ -976,13 +941,13 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         DataType * gpu_data = NULL;
                         size_t num_elements_gpu = 0;
                         engine_->get_vertex_tensor_data_by_chunk(
-                            engine_->global_shared_tensor_, task.chunk_id, 
-                            gpu_data, num_elements_gpu
-                        );
+                                engine_->global_shared_tensor_, task.chunk_id, 
+                                gpu_data, num_elements_gpu
+                                );
                         assert(gpu_data);
                         assert(num_elements_gpu == num_elements);
                         checkCUDA(cudaMemcpyAsync(gpu_data, cpu_data, sizeof(DataType) * num_elements,
-                            cudaMemcpyHostToDevice));
+                                    cudaMemcpyHostToDevice));
                     }
                 }
 
@@ -1028,13 +993,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
         }
         if (is_bottommost_node) {
-            //for (int i = 0; i < backward_tasks.size(); ++ i) {
             for (int i = (int) backward_tasks.size() - 1; i >= 0; -- i) {
                 CUDAPIPBackwardTask task = backward_tasks[i];
                 backward_task_dispatcher_->insert_new_task(task);
             }
         }
-        //printf("Node %d, slowest / fastest chunk time: %.3f\n", node_id, slowest_chunk / fastest_chunk);
 
         while (num_scheduled_backward_tasks < num_local_chunks) { 
 #ifdef BOOST_ARCH_X86
@@ -1058,17 +1021,17 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                             DataType * grad_gpu = NULL;
                             size_t num_elements_gpu = 0;
                             engine_->get_vertex_tensor_grad_by_chunk(
-                                engine_->global_shared_tensor_, task.chunk_id,
-                                grad_gpu, num_elements_gpu
-                            );
+                                    engine_->global_shared_tensor_, task.chunk_id,
+                                    grad_gpu, num_elements_gpu
+                                    );
                             assert(grad_gpu);
                             assert(num_elements_cpu == num_elements_gpu);
                             checkCUDA(
-                                cudaMemcpyAsync(
-                                    grad_gpu, grad_cpu, sizeof(DataType) * num_elements_cpu, 
-                                    cudaMemcpyHostToDevice
-                                )
-                            );
+                                    cudaMemcpyAsync(
+                                        grad_gpu, grad_cpu, sizeof(DataType) * num_elements_cpu, 
+                                        cudaMemcpyHostToDevice
+                                        )
+                                    );
                         }
                     }
                     assert(task.epoch_id == epoch_id);
@@ -1085,18 +1048,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     if (node_id < num_nodes - 1) {
                         engine_->grad_decompressors_[task.chunk_id]->release_gpu_buffers();
                     }
-
-                    //VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(task.chunk_id);
-                    //VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(task.chunk_id);
-                    //for (Operator * op: aggr_ops) { 
-                    //    Tensor * tensor = op->get_output_tensor(0);
-                    //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-                    //    size_t num_elements_per_vertex = tensor->dims[1];
-                    //    size_t num_elements = (chunk_end - chunk_begin) * num_elements_per_vertex;
-                    //    DataType * grad = resource->get_gpu_grad();
-                    //    engine_->scale_down(grad + num_elements_per_vertex * chunk_begin, 
-                    //            num_elements, engine_->scaledown_);
-                    //}
 
 #ifdef SHOW_SCHEDULE_DETAILS
                     if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
@@ -1122,12 +1073,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             size_t num_elements = num_vertices * num_elements_per_vertex;
             DataType * data = resource->get_gpu_data();
             DataType * grad = resource->get_gpu_grad();
-            //if (i > 0) { // scale it down if not the first layer
-            //    engine_->scale_down(data, num_elements, 0.1);
-            //}
-            //engine_->scale_down(data, num_elements, 0.5); 
-            //engine_->scale_down(grad, num_elements, engine_->scaledown_);
-            //checkCUDA(cudaMemset(data, 0, sizeof(DataType) * num_elements));
             checkCUDA(cudaMemset(grad, 0, sizeof(DataType) * num_elements));
         }
 
@@ -1139,13 +1084,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     );
         }
 
-
-        //engine_->add_white_noise(); // 
-        
-        //double end_time = get_time();
-        //printf("It takes node %d %.3f s to finish the computation.\n",
-        //        node_id, end_time - start_time);
-
         Profiler::submit_main_thread_event(GPUSyncStartEvent);
         MPI_Barrier(MPI_COMM_WORLD);
         Profiler::submit_main_thread_event(GPUSynCompleteEvent);
@@ -1153,11 +1091,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         int num_startup_epoches = engine_->num_startup_epoches_;
         Profiler::submit_main_thread_event(GradSyncStartEvent);
-        //if ((epoch_id + 1) % 2 == 0) { // FIXME
-        //engine_->parameter_server_->commit_grad();
         engine_->weight_aggregator_->commit_grad();
         engine_->weight_aggregator_->clear_gradients();
-        //}
         Profiler::submit_main_thread_event(GradSyncCompleteEvent);
 
         double train_acc;
@@ -1167,7 +1102,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {  
             if (node_id == 0) {
-                //printf("\n********* Epoch %d: *********\n", epoch_id);
                 printf("    Epoch %d:", epoch_id);
             }
             //engine_->accum_loss_ /= 10;
@@ -1179,8 +1113,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
             fflush(stdout);
         }
-        //printf("    Acc calculation takes %.3f ms\n", (get_time() - end_time) * 1000.);
-        //engine_->parameter_server_->print_weights();
     }
     t += get_time();
     all_epoches_time += get_time();
@@ -1214,34 +1146,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     backward_task_dispatcher_->wait_for_termination();
     backward_task_committer_->wait_for_termination();
 
-    //engine_->act_update_sender_->wait_for_termination();
-    //engine_->act_update_receiver_->wait_for_termination();
-    //engine_->grad_update_sender_->wait_for_termination(); 
-    //engine_->grad_update_receiver_->wait_for_termination();
-
     move_act_gpu2cpu_thread.join();
     move_grad_gpu2cpu_thread.join();
-    //move_act_cpu2gpu_thread.join();
 
-    //// some communication-related metrics
-    //double graph_comm_act = 0;
-    //double graph_comm_grad = 0;
-    //double avg_graph_comm_act;
-    //double avg_graph_comm_grad;
-    //double avg_graph_comm;
-    //MPI_Allreduce(
-    //        &graph_comm_act, &avg_graph_comm_act, 1,
-    //        DistributedSys::get_mpi_data_type<double>(),
-    //        MPI_SUM, MPI_COMM_WORLD
-    //        );
-    //MPI_Allreduce(
-    //        &graph_comm_grad, &avg_graph_comm_grad, 1,
-    //        DistributedSys::get_mpi_data_type<double>(),
-    //        MPI_SUM, MPI_COMM_WORLD
-    //        );
-    //avg_graph_comm_act /= double(num_epoch);
-    //avg_graph_comm_grad /= double(num_epoch);
-    //avg_graph_comm = avg_graph_comm_act + avg_graph_comm_grad;
     double layer_comm = forward_task_dispatcher_->get_comm() 
         + backward_task_dispatcher_->get_comm();
     double avg_layer_comm;
@@ -1252,7 +1159,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             );
     avg_layer_comm /= double(num_epoch);
 
-    //double ps_comm = engine_->parameter_server_->get_comm();
     double ps_comm = engine_->weight_aggregator_->get_comm();
     double avg_ps_comm;
     MPI_Allreduce(
@@ -1262,64 +1168,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             );
     avg_ps_comm /= double(num_epoch);
 
-    //double graph_dev2host_time = engine_->act_update_sender_->get_graph_dev2host_time()
-    //    + engine_->grad_update_sender_->get_graph_dev2host_time();
-    //double graph_memcpy_time = engine_->act_update_sender_->get_graph_memcpy_time()
-    //    + engine_->grad_update_sender_->get_graph_memcpy_time();
-    //double graph_net_time_act = engine_->act_update_sender_->get_graph_net_time();
-    //double graph_net_time_grad = engine_->grad_update_sender_->get_graph_net_time();
-    //MPI_Allreduce(
-    //        MPI_IN_PLACE, &graph_dev2host_time, 1,
-    //        DistributedSys::get_mpi_data_type<double>(),
-    //        MPI_SUM, MPI_COMM_WORLD
-    //        );
-    //MPI_Allreduce(
-    //        MPI_IN_PLACE, &graph_memcpy_time, 1,
-    //        DistributedSys::get_mpi_data_type<double>(),
-    //        MPI_SUM, MPI_COMM_WORLD
-    //        );
-    //MPI_Allreduce(
-    //        MPI_IN_PLACE, &graph_net_time_act, 1,
-    //        DistributedSys::get_mpi_data_type<double>(),
-    //        MPI_SUM, MPI_COMM_WORLD
-    //        );
-    //MPI_Allreduce(
-    //        MPI_IN_PLACE, &graph_net_time_grad, 1,
-    //        DistributedSys::get_mpi_data_type<double>(),
-    //        MPI_SUM, MPI_COMM_WORLD
-    //        );
-    //graph_dev2host_time /= double(num_epoch);
-    //graph_memcpy_time /= double(num_epoch);
-    //graph_net_time_act /= double(num_epoch);
-    //graph_net_time_grad /= double(num_epoch);
-    //int num_net_batches = engine_->act_update_sender_->get_num_net_batches()
-    //    + engine_->grad_update_sender_->get_num_net_batches();
-    //MPI_Allreduce(
-    //        MPI_IN_PLACE, &num_net_batches, 1,
-    //        DistributedSys::get_mpi_data_type<int>(),
-    //        MPI_SUM, MPI_COMM_WORLD
-    //        );
-    //num_net_batches /= num_epoch;
-
     if (! node_id) {
-        //printf("\tGraph-level communication (cluster-wide, per epoch): %.3f GB\n",
-        //        avg_graph_comm / 1024. / 1024. / 1024.);
         printf("\tLayer-level communication (cluster-wide, per epoch): %.3f GB\n",
                 avg_layer_comm / 1024. / 1024. / 1024.);
-        //printf("\tGraph+Layer-level communication (cluster-wide, per epoch): %.3f GB\n",
-        //        (avg_graph_comm + avg_layer_comm) / 1024. / 1024. / 1024.);
-        //printf("\tParameter-server communication (cluster-wide, per epoch): %.3f GB\n",
-        //        avg_ps_comm / 1024. / 1024. / 1024.);
-        //printf("\tGraph-level dev2host communication time: %.3f s, throughput: %.6f GBps\n",
-        //        graph_dev2host_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_dev2host_time);
-        //printf("\tGraph-level memcpy communication time: %.3f s, throughput: %.6f GBps\n",
-        //        graph_memcpy_time, avg_graph_comm / 1024. / 1024. / 1024. / graph_memcpy_time);
-        //printf("\tGraph-level net Activation communication time: %.3f s, throughput: %.6f GBps\n",
-        //        graph_net_time_act, avg_graph_comm_act / 1024. / 1024. / 1024. / graph_net_time_act);
-        //printf("\tGraph-level net Gradient communication time: %.3f s, throughput: %.6f GBps\n",
-        //        graph_net_time_grad, avg_graph_comm_grad / 1024. / 1024. / 1024. / graph_net_time_grad);
-        //printf("\tGraph-level network batch size: %.3f Bytes\n",
-        //        avg_graph_comm / num_net_batches);
         printf("Highest valid_acc: %.4f\n", highest_valid_acc);
         printf("Target test_acc: %.4f\n", target_test_acc);
         printf("Epoch to reach the target acc: %d\n", epoch_to_reach_target_acc);
@@ -1489,13 +1340,11 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             assert(output_tensor != NULL);
             if (output_tensor->type == VERTEX_TENSOR) {
                 // only responsible for vertex tensor data management
-                //if (local_tensors_.find(output_tensor) == local_tensors_.end()) {
                 LocalVertexTensor local_tensor;
                 local_tensor.tensor = output_tensor;
                 local_tensor.type = 0;
                 local_tensor.is_mirror_tensor = false;
                 local_tensors_[output_tensor] = local_tensor;
-                //}
             }
         }
     }
@@ -1542,17 +1391,13 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             size_t num_elements = lvt.num_elements_per_vertex * (
                     num_master_vertices + num_incoming_mirror_vertices
                     );
-            //lvt.data = new DataType [num_elements];
             AllocateCUDAMemory<DataType>(&lvt.data, num_elements, __FILE__, __LINE__);
             assert(lvt.data != NULL);
-            //memset(lvt.data, 0, sizeof(DataType) * num_elements);
             SetCUDAMemory<DataType>(lvt.data, 0, num_elements, __FILE__, __LINE__);
         } else {
             // mirror data isn't needed
             size_t num_elements = lvt.num_elements_per_vertex * 
                 num_master_vertices;
-            //printf("TEST, %d %d\n", lvt.tensor->op->get_is_transient(), lvt.is_mirror_tensor);
-
             // determine whether we can only allocate a chunk of memory (a partial tensor)
             // i.e., recomputable 
             // conditions:
@@ -1564,15 +1409,12 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
                     lvt.tensor != output_tensor) {
                 // only allocate the memory sufficient to store a chunk (rather than for all vertices)
                 num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
-                //printf("Found transient tensor\n");
                 // also mark the tensor 
                 lvt.tensor->is_data_transient = true;
             }
 
-            //lvt.data = new DataType [num_elements];
             AllocateCUDAMemory<DataType>(&lvt.data, num_elements, __FILE__, __LINE__);
             assert(lvt.data != NULL);
-            //memset(lvt.data, 0, sizeof(DataType) * num_elements);
             SetCUDAMemory<DataType>(lvt.data, 0, num_elements, __FILE__, __LINE__);
         }
 
@@ -1599,12 +1441,8 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
                 lvt.tensor->is_grad_transient = true;
             }
 
-            // lvt.grad = new DataType [num_elements];
-            // assert(lvt.grad != NULL);
-            // memset(lvt.grad, 0, sizeof(DataType) * num_elements);
             AllocateCUDAMemory<DataType>(&lvt.grad, num_elements, __FILE__, __LINE__);
             assert(lvt.grad != NULL);
-            //memset(lvt.grad, 0, sizeof(DataType) * num_elements);
             SetCUDAMemory<DataType>(lvt.grad, 0, num_elements, __FILE__, __LINE__);
         }
         p->second = lvt;
@@ -1616,8 +1454,6 @@ CUDAVertexTensorDataGradManager::~CUDAVertexTensorDataGradManager() {
     for (auto p = local_tensors_.begin(); p != local_tensors_.end(); p ++) {
         assert(p->second.data != NULL);
         assert(p->second.grad != NULL);
-        //delete [] p->second.data;
-        //delete [] p->second.grad;
         DeallocateCUDAMemory<DataType>(&p->second.data, __FILE__, __LINE__);
         DeallocateCUDAMemory<DataType>(&p->second.grad, __FILE__, __LINE__);
         p->second.data = NULL;
@@ -1672,7 +1508,6 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
         if (left + 1 < num_nodes * 2) {
             VertexId boundary_begin = boundaries[left];
             VertexId boundary_end = boundaries[left + 1];
-            //printf("* %u %u\n", boundary_begin, boundary_end);
             assert(boundary_end > boundary_begin);
             VertexId num_v = boundary_end - boundary_begin;
             chunked_vertices += num_v;
@@ -1684,7 +1519,6 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
         }
         ++ left;
     }
-    //printf("%u %u\n", chunked_vertices, num_global_vertices_);
     assert(chunked_vertices == num_global_vertices_);
 
     if (! node_id) {
@@ -1760,7 +1594,7 @@ bool CUDAPIPPartitioner::is_valid_partition(CUDAPIPPartitioning p, VertexId num_
         std::sort(
                 boundaries.begin(), boundaries.end(), 
                 [](const std::pair<VertexId, VertexId>& a, const std::pair<VertexId, VertexId>& b) {
-                    return a.first < b.first;
+                return a.first < b.first;
                 }
                 );
         VertexId sum = 0;
@@ -1779,771 +1613,6 @@ bool CUDAPIPPartitioner::is_valid_partition(CUDAPIPPartitioning p, VertexId num_
     return true;
 }
 
-//void CUDADataDependenciesTracker::build_p_link_dependencies(int fragment_id) {
-//    std::vector<Tensor*> ** forwarding_dependencies = fragment_id_to_forwarding_dependencies_[fragment_id];
-//    std::vector<Tensor*> ** backwarding_dependencies = fragment_id_to_backwarding_dependencies_[fragment_id];
-//    std::set<int> * remote_nodes_forward = fragment_id_to_remote_nodes_forward_[fragment_id];
-//    std::set<int> * remote_nodes_backward = fragment_id_to_remote_nodes_backward_[fragment_id];
-//    std::set<Tensor*> * all_backward_dependent_tensors = fragment_id_to_all_backward_dependent_tensors_[fragment_id];
-//    std::set<Tensor*> * all_non_backward_dependent_tensors = fragment_id_to_all_non_backward_dependent_tensors_[fragment_id];
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int local_op_begin = partitioning_.partition_op_begin[node_id];
-//    int local_op_end = partitioning_.partition_op_end[node_id];
-//    int local_vid_begin = partitioning_.partition_vid_begin[node_id];
-//    int local_vid_end = partitioning_.partition_vid_end[node_id];
-//    std::pair<VertexId, VertexId> fragment = chunk_manager_->get_fragment(fragment_id);
-//    bool is_relevant_fragment = fragment.first >= local_vid_begin && fragment.second <= local_vid_end;
-//    if (! is_relevant_fragment) {
-//        return ;
-//    }
-//    
-//    // discover the nodes that the local node depends on while forwarding activation
-//    std::set<Tensor*> remote_tensors;
-//    remote_tensors.clear();
-//    for (int op_idx = local_op_begin; op_idx < local_op_end; ++ op_idx) {
-//        Operator * op = op_and_ten_manager_->get_operator(op_idx);
-//        assert(op != NULL);
-//        int num_input_tensors = op->get_num_input_tensors();
-//        for (int i = 0; i < num_input_tensors; ++ i) {
-//            // finding the input tensors that belong to other nodes
-//            Tensor * input_tensor = op->get_input_tensor(i);
-//            assert(input_tensor != NULL);
-//            Operator * dependent_op = input_tensor->op;
-//            assert(dependent_op != NULL);
-//            int dependent_op_idx = op_and_ten_manager_->get_operator_index(dependent_op);
-//            int dependent_op_node = -1;
-//            for (int j = 0; j < num_nodes; ++ j) {
-//                if (fragment.first >= partitioning_.partition_vid_begin[j] &&
-//                        fragment.second <= partitioning_.partition_vid_end[j] && 
-//                        dependent_op_idx >= partitioning_.partition_op_begin[j] && 
-//                        dependent_op_idx < partitioning_.partition_op_end[j]) {
-//                    assert(dependent_op_node == -1);
-//                    dependent_op_node = j;
-//                }
-//            }
-//            assert(dependent_op_node != -1);
-//            if (dependent_op_node != node_id && dependent_op->get_type() != OPERATOR_WEIGHT) { // cross-node dependencies
-//                // weight tensors are independently handled by parameter servers
-//                if (input_tensor->type != VERTEX_TENSOR) {
-//                    fprintf(stderr, "Invalid partitioning! A boundary tensor must be a vertex tensor.\n");
-//                    exit(-1);
-//                }
-//                if (remote_nodes_forward->find(dependent_op_node) == remote_nodes_forward->end()) {
-//                    remote_nodes_forward->insert(dependent_op_node);
-//                }
-//                if (remote_tensors.find(input_tensor) == remote_tensors.end()) {
-//                    remote_tensors.insert(input_tensor);
-//                }
-//            }
-//        }
-//    }
-//    // for each dependent node, discover the dependent tensors (must be in the global tensor order)
-//    for (int remote_node: *remote_nodes_forward) {
-//        assert(forwarding_dependencies[remote_node] == NULL);
-//        forwarding_dependencies[remote_node] = new std::vector<Tensor*>();
-//        assert(forwarding_dependencies[remote_node] != NULL);
-//        int remote_op_begin = partitioning_.partition_op_begin[remote_node];
-//        int remote_op_end = partitioning_.partition_op_end[remote_node];
-//        for (int remote_op_idx = remote_op_begin; remote_op_idx < remote_op_end; ++ remote_op_idx) {
-//            Operator * remote_op = op_and_ten_manager_->get_operator(remote_op_idx);
-//            assert(remote_op != NULL);
-//            int num_output_tensors = remote_op->get_num_output_tensors();
-//            for (int i = 0; i < num_output_tensors; ++ i) {
-//                Tensor * remote_tensor = remote_op->get_output_tensor(i);
-//                assert(remote_tensor != NULL);
-//                if (remote_tensors.find(remote_tensor) != remote_tensors.end()) {
-//                    forwarding_dependencies[remote_node]->push_back(remote_tensor);
-//                }
-//            }
-//        }
-//        // verify that the dependent tensors are in the global tensor ordering
-//        int num_remote_tensors = (int) forwarding_dependencies[remote_node]->size();
-//        for (int i = 1; i < num_remote_tensors; ++ i) {
-//            assert(op_and_ten_manager_->get_tensor_index(forwarding_dependencies[remote_node]->at(i - 1)) < 
-//                    op_and_ten_manager_->get_tensor_index(forwarding_dependencies[remote_node]->at(i)));
-//        }
-//    }
-//    printf("(Forwarding) Node %d (fragment %d) depends on nodes:",
-//            node_id, fragment_id);
-//    for (int remote_node: *remote_nodes_forward) {
-//        printf(" %d (Tensor:", remote_node);
-//        for (Tensor * tensor: *(forwarding_dependencies[remote_node])) {
-//            printf(" %d", op_and_ten_manager_->get_tensor_index(tensor));
-//        }
-//        printf(")");
-//    }
-//    printf("\n");
-//
-//    // discover the nodes that the local node depends on while backwarding gradients
-//    for (int remote_node = 0; remote_node < num_nodes; ++ remote_node) {
-//        if (remote_node == node_id) continue;
-//        // determine whether the remote node owns this fragment
-//        VertexId remote_vid_begin = partitioning_.partition_vid_begin[remote_node];
-//        VertexId remote_vid_end = partitioning_.partition_vid_end[remote_node];
-//        if (! (fragment.first >= remote_vid_begin && fragment.second <= remote_vid_end)) {
-//            continue;
-//        }
-//        remote_tensors.clear();
-//        // discover which dependent tensors are owned by the local node
-//        int remote_op_begin = partitioning_.partition_op_begin[remote_node];
-//        int remote_op_end = partitioning_.partition_op_end[remote_node];
-//        for (int remote_op_idx = remote_op_begin; remote_op_idx < remote_op_end; ++ remote_op_idx) {
-//            Operator * remote_op = op_and_ten_manager_->get_operator(remote_op_idx);
-//            assert(remote_op != NULL);
-//            int num_input_tensors = remote_op->get_num_input_tensors();
-//            for (int i = 0; i < num_input_tensors; ++ i) {
-//                Tensor * input_tensor = remote_op->get_input_tensor(i);
-//                assert(input_tensor != NULL);
-//                Operator * dependent_op = input_tensor->op;
-//                assert(dependent_op != NULL);
-//                int dependent_op_idx = op_and_ten_manager_->get_operator_index(dependent_op);
-//                if (dependent_op_idx >= local_op_begin && dependent_op_idx < local_op_end && 
-//                        dependent_op->get_type() != OPERATOR_WEIGHT) {
-//                    if (input_tensor->type != VERTEX_TENSOR) {
-//                        fprintf(stderr, "Invalid partitioning! A boundary tensor must be a vertex tensor.\n");
-//                        exit(-1);
-//                    }
-//                    if (backwarding_dependencies[remote_node] == NULL) {
-//                        backwarding_dependencies[remote_node] = new std::vector<Tensor*>();
-//                        assert(backwarding_dependencies[remote_node] != NULL);
-//                        remote_nodes_backward->insert(remote_node);
-//                    }
-//                    if (remote_tensors.find(input_tensor) == remote_tensors.end()) {
-//                        remote_tensors.insert(input_tensor);
-//                    }
-//                }
-//            }
-//        }
-//        for (int op_idx = local_op_begin; op_idx < local_op_end; ++ op_idx) {
-//            Operator * op = op_and_ten_manager_->get_operator(op_idx);
-//            assert(op != NULL);
-//            int num_output_tensors = op->get_num_output_tensors();
-//            for (int i = 0; i < num_output_tensors; ++ i) {
-//                Tensor * tensor = op->get_output_tensor(i);
-//                assert(tensor != NULL);
-//                if (remote_tensors.find(tensor) != remote_tensors.end()) {
-//                    backwarding_dependencies[remote_node]->push_back(tensor);
-//                }
-//            }
-//        }
-//    }
-//    printf("(Backwarding) Node %d (fragment %d) depends on nodes:",
-//            node_id, fragment_id);
-//    for (int remote_node: *remote_nodes_backward) {
-//        printf(" %d (Tensor:", remote_node);
-//        for (Tensor * tensor: *(backwarding_dependencies[remote_node])) {
-//            printf(" %d", op_and_ten_manager_->get_tensor_index(tensor));
-//        }
-//        printf(")");
-//    }
-//    printf("\n");
-//    // build up fragment_id_to_all_backward_dependent_tensors_ && fragment_id_to_all_non_backward_dependent_tensors_
-//    for (int remote_node: *remote_nodes_backward) {
-//        for (Tensor * tensor: *backwarding_dependencies[remote_node]) {
-//            if (all_backward_dependent_tensors->find(tensor) == all_backward_dependent_tensors->end()) {
-//                all_backward_dependent_tensors->insert(tensor);
-//            }
-//        }
-//    }
-//    for (int op_idx = local_op_begin; op_idx < local_op_end; ++ op_idx) {
-//        Operator * op = op_and_ten_manager_->get_operator(op_idx);
-//        assert(op != NULL);
-//        int num_input_tensors = op->get_num_input_tensors();
-//        for (int i = 0; i < num_input_tensors; ++ i) {
-//            Tensor * tensor = op->get_input_tensor(i);
-//            if (all_backward_dependent_tensors->find(tensor) ==
-//                    all_backward_dependent_tensors->end()) {
-//                // insert it if applicable
-//                if (all_non_backward_dependent_tensors->find(tensor) ==
-//                        all_non_backward_dependent_tensors->end()) {
-//                    all_non_backward_dependent_tensors->insert(tensor);
-//                }
-//            }
-//        }
-//        if (op->get_type() != OPERATOR_WEIGHT) {
-//            int num_output_tensors = op->get_num_output_tensors();
-//            for (int i = 0; i < num_output_tensors; ++ i) {
-//                Tensor * tensor = op->get_output_tensor(i);
-//                if (all_backward_dependent_tensors->find(tensor) ==
-//                        all_backward_dependent_tensors->end()) {
-//                    // insert it if applicable
-//                    if (all_non_backward_dependent_tensors->find(tensor) ==
-//                            all_non_backward_dependent_tensors->end()) {
-//                        all_non_backward_dependent_tensors->insert(tensor);
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-//
-//void CUDADataDependenciesTracker::build_i_link_dependencies() {
-//    build_i_link_activation_sender_dependencies();
-//    build_i_link_activation_receiver_dependencies();
-//    build_i_link_gradient_sender_dependencies();
-//    build_i_link_gradient_receiver_dependencies();
-//}
-//
-//void CUDADataDependenciesTracker::build_i_link_activation_sender_dependencies() {
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    VertexId local_vid_begin = partitioning_.partition_vid_begin[node_id];
-//    VertexId local_vid_end = partitioning_.partition_vid_end[node_id];
-//
-//    //printf("Node %d, building I-link activation sender-side dependencies...\n",
-//    //        node_id);
-//
-//    dependent_remote_nodes_activation_update_sender_ = new std::set<int>();
-//    activation_update_sender_dependencies_ = new std::vector<Tensor*>* [num_nodes];
-//    assert(dependent_remote_nodes_activation_update_sender_ != NULL);
-//    assert(activation_update_sender_dependencies_ != NULL);
-//
-//    for (int i = 0; i < num_nodes; ++ i) {
-//        if (i == node_id) continue;
-//        std::vector<Tensor*> * dependencies = new std::vector<Tensor*>();
-//        assert(dependencies != NULL);
-//
-//        VertexId remote_vid_begin = partitioning_.partition_vid_begin[i];
-//        VertexId remote_vid_end = partitioning_.partition_vid_end[i];
-//
-//        bool has_mirror_vertex = false;
-//        for (VertexId local_vid = local_vid_begin; local_vid < local_vid_end && ! has_mirror_vertex; 
-//                ++ local_vid) {
-//            OutEdgeList out_edges = graph_structure_->get_out_edges(local_vid);
-//            for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
-//                OutEdge e = out_edges.ptx[e_i];
-//                VertexId dst = e.dst;
-//                if (dst >= remote_vid_begin && dst < remote_vid_end) {
-//                    has_mirror_vertex = true;
-//                    break;
-//                }
-//            }
-//        }
-//
-//        if (has_mirror_vertex) {
-//            int local_op_begin = partitioning_.partition_op_begin[node_id];
-//            int local_op_end = partitioning_.partition_op_end[node_id];
-//            for (int op_idx = local_op_begin; op_idx < local_op_end; ++ op_idx) {
-//                Operator * op = op_and_ten_manager_->get_operator(op_idx);
-//                assert(op != NULL);
-//                int num_output_tensors = op->get_num_output_tensors();
-//                for (int j = 0; j < num_output_tensors; ++ j) {
-//                    Tensor * tensor = op->get_output_tensor(j);
-//                    assert(tensor != NULL);
-//                    if (tensor->type != VERTEX_TENSOR) continue;
-//
-//                    bool is_dependent = false;
-//                    int remote_op_begin = partitioning_.partition_op_begin[i];
-//                    int remote_op_end = partitioning_.partition_op_end[i];
-//                    for (int remote_op_idx = remote_op_begin; remote_op_idx < remote_op_end &&
-//                            ! is_dependent; ++ remote_op_idx) {
-//                        Operator * remote_op = op_and_ten_manager_->get_operator(remote_op_idx);
-//                        assert(remote_op != NULL);
-//                        if (remote_op->get_type() != OPERATOR_AGGREGATION) continue;
-//                        int num_input_tensors = remote_op->get_num_input_tensors();
-//                        assert(num_input_tensors == 1);
-//                        for (int k = 0; k < num_input_tensors; ++ k) {
-//                            Tensor * input_tensor = remote_op->get_input_tensor(k);
-//                            assert(input_tensor != NULL);
-//                            if (tensor == input_tensor) {
-//                                is_dependent = true;
-//                                break;
-//                            }
-//                        }
-//                    }
-//
-//                    if (is_dependent) {
-//                        dependencies->push_back(tensor);
-//                    }
-//                }
-//            }
-//        }
-//
-//        if (dependencies->empty()) {
-//            delete dependencies;
-//            activation_update_sender_dependencies_[i] = NULL;
-//        } else {
-//            activation_update_sender_dependencies_[i] = dependencies;
-//            dependent_remote_nodes_activation_update_sender_->insert(i);
-//        }
-//    }
-//
-//    printf("(I-link dependencies): node %d should send activation to nodes:",
-//            node_id);
-//    for (int remote_node: *dependent_remote_nodes_activation_update_sender_) {
-//        printf(" %d (tensor:", remote_node);
-//        for (Tensor * tensor: *activation_update_sender_dependencies_[remote_node]) {
-//            printf(" %d", op_and_ten_manager_->get_tensor_index(tensor));
-//        }
-//        printf(")");
-//    }
-//    printf("\n");
-//}
-//
-//void CUDADataDependenciesTracker::build_i_link_activation_receiver_dependencies() {
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    VertexId local_vid_begin = partitioning_.partition_vid_begin[node_id];
-//    VertexId local_vid_end = partitioning_.partition_vid_end[node_id];
-//
-//    dependent_remote_nodes_activation_update_receiver_ = new std::set<int>();
-//    activation_update_receiver_dependencies_ = new std::vector<Tensor*>* [num_nodes];
-//    assert(dependent_remote_nodes_activation_update_receiver_ != NULL);
-//    assert(activation_update_receiver_dependencies_ != NULL);
-//
-//    for (int remote_node = 0; remote_node < num_nodes; ++ remote_node) {
-//        if (remote_node == node_id) {
-//            continue;
-//        }
-//
-//        std::vector<Tensor*> * dependencies = new std::vector<Tensor*>();
-//        assert(dependencies != NULL);
-//        VertexId remote_vid_begin = partitioning_.partition_vid_begin[remote_node];
-//        VertexId remote_vid_end = partitioning_.partition_vid_end[remote_node];
-//
-//        bool has_mirror_vertex = false;
-//        for (VertexId local_vid = local_vid_begin; local_vid < local_vid_end && ! has_mirror_vertex; 
-//                ++ local_vid) {
-//            InEdgeList in_edges = graph_structure_->get_in_edges(local_vid);
-//            for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
-//                InEdge e = in_edges.ptx[e_i];
-//                VertexId src = e.src;
-//                if (src >= remote_vid_begin && src < remote_vid_end) {
-//                    has_mirror_vertex = true;
-//                    break;
-//                }
-//            }
-//        }
-//
-//        if (has_mirror_vertex) {
-//            int local_op_begin = partitioning_.partition_op_begin[node_id];
-//            int local_op_end = partitioning_.partition_op_end[node_id];
-//            int remote_op_begin = partitioning_.partition_op_begin[remote_node];
-//            int remote_op_end = partitioning_.partition_op_end[remote_node];
-//            for (int remote_op_idx = remote_op_begin; remote_op_idx < remote_op_end; ++ remote_op_idx) {
-//                Operator * remote_op = op_and_ten_manager_->get_operator(remote_op_idx);
-//                assert(remote_op != NULL);
-//                int num_output_tensors = remote_op->get_num_output_tensors();
-//                for (int i = 0; i < num_output_tensors; ++ i) {
-//                    Tensor * tensor = remote_op->get_output_tensor(i);
-//                    assert(tensor != NULL);
-//                    if (tensor->type != VERTEX_TENSOR) continue;
-//
-//                    bool is_dependent = false;
-//                    for (int local_op_idx = local_op_begin; local_op_idx < local_op_end
-//                            && !is_dependent; ++ local_op_idx) {
-//                        Operator * local_op = op_and_ten_manager_->get_operator(local_op_idx);
-//                        assert(local_op != NULL);
-//                        if (local_op->get_type() != OPERATOR_AGGREGATION) continue;
-//                        int num_input_tensors = local_op->get_num_input_tensors();
-//                        assert(num_input_tensors == 1);
-//                        Tensor * input_tensor = local_op->get_input_tensor(0);
-//                        assert(input_tensor != NULL);
-//                        if (tensor == input_tensor) {
-//                            is_dependent = true;
-//                            break;
-//                        }
-//                    }
-//
-//                    if (is_dependent) {
-//                        dependencies->push_back(tensor);
-//                    }
-//                }
-//            }
-//        }
-//
-//        if (dependencies->empty()) {
-//            delete dependencies;
-//            activation_update_receiver_dependencies_[remote_node] = NULL;
-//        } else {
-//            activation_update_receiver_dependencies_[remote_node] = dependencies;
-//            dependent_remote_nodes_activation_update_receiver_->insert(remote_node);
-//        }
-//    }
-//
-//    printf("(I-link dependencies): node %d should receive activation from nodes:",
-//            node_id);
-//    for (int remote_node: *dependent_remote_nodes_activation_update_receiver_) {
-//        printf(" %d (tensor:", remote_node);
-//        for (Tensor * tensor: *activation_update_receiver_dependencies_[remote_node]) {
-//            printf(" %d", op_and_ten_manager_->get_tensor_index(tensor));
-//        }
-//        printf(")");
-//    }
-//    printf("\n");
-//
-//}
-//
-//void CUDADataDependenciesTracker::build_i_link_gradient_sender_dependencies() {
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    VertexId local_vid_begin = partitioning_.partition_vid_begin[node_id];
-//    VertexId local_vid_end = partitioning_.partition_vid_end[node_id];
-//
-//    dependent_remote_nodes_gradient_update_sender_ = new std::set<int>();
-//    gradient_update_sender_dependencies_ = new std::vector<Tensor*> * [num_nodes];
-//    assert(dependent_remote_nodes_gradient_update_sender_ != NULL);
-//    assert(gradient_update_sender_dependencies_ != NULL);
-//
-//    for (int remote_node = 0; remote_node < num_nodes; ++ remote_node) {
-//        if (remote_node == node_id) continue;
-//        std::vector<Tensor*> * dependencies = new std::vector<Tensor*>();
-//        assert(dependencies != NULL);
-//
-//        VertexId remote_vid_begin = partitioning_.partition_vid_begin[remote_node];
-//        VertexId remote_vid_end = partitioning_.partition_vid_end[remote_node];
-//
-//        bool has_mirror_vertex = false;
-//        for (VertexId local_vid = local_vid_begin; local_vid < local_vid_end &&
-//                ! has_mirror_vertex; ++ local_vid) {
-//            InEdgeList in_edges = graph_structure_->get_in_edges(local_vid);
-//            for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
-//                InEdge e = in_edges.ptx[e_i];
-//                VertexId src = e.src;
-//                if (src >= remote_vid_begin && src < remote_vid_end) {
-//                    has_mirror_vertex = true;
-//                    break;
-//                }
-//            }
-//        }
-//
-//        if (has_mirror_vertex) {
-//            int local_op_begin = partitioning_.partition_op_begin[node_id];
-//            int local_op_end = partitioning_.partition_op_end[node_id];
-//            int remote_op_begin = partitioning_.partition_op_begin[remote_node];
-//            int remote_op_end = partitioning_.partition_op_end[remote_node];
-//
-//            for (int op_idx = local_op_begin; op_idx < local_op_end; ++ op_idx) {
-//                Operator * op = op_and_ten_manager_->get_operator(op_idx);
-//                assert(op != NULL);
-//                if (op->get_type() == OPERATOR_AGGREGATION && 
-//                        op_idx >= remote_op_begin && op_idx < remote_op_end) {
-//                    assert(op->get_num_output_tensors() == 1);
-//                    Tensor * tensor = op->get_output_tensor(0);
-//                    assert(tensor != NULL);
-//                    dependencies->push_back(tensor);
-//                }
-//            }
-//        }
-//
-//        if (dependencies->empty()) {
-//            delete dependencies;
-//            gradient_update_sender_dependencies_[remote_node] = NULL;
-//        } else {
-//            gradient_update_sender_dependencies_[remote_node] = dependencies;
-//            dependent_remote_nodes_gradient_update_sender_->insert(remote_node);
-//        }
-//    }
-//
-//    printf("(I-link dependencies): node %d should send gradient to nodes:",
-//            node_id);
-//    for (int remote_node: *dependent_remote_nodes_gradient_update_sender_) {
-//        printf(" %d (tensor:", remote_node);
-//        for (Tensor * tensor: *gradient_update_sender_dependencies_[remote_node]) {
-//            printf(" %d", op_and_ten_manager_->get_tensor_index(tensor));
-//        }
-//        printf(")");
-//    }
-//    printf("\n");
-//}
-//
-//void CUDADataDependenciesTracker::build_i_link_gradient_receiver_dependencies() {
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    VertexId local_vid_begin = partitioning_.partition_vid_begin[node_id];
-//    VertexId local_vid_end = partitioning_.partition_vid_end[node_id];
-//
-//    dependent_remote_nodes_gradient_update_receiver_ = new std::set<int>();
-//    gradient_update_receiver_dependencies_ = new std::vector<Tensor*>* [num_nodes];
-//    assert(dependent_remote_nodes_gradient_update_receiver_ != NULL);
-//    assert(gradient_update_receiver_dependencies_ != NULL);
-//
-//    for (int remote_node = 0; remote_node < num_nodes; ++ remote_node) {
-//        if (remote_node == node_id) continue;
-//
-//        std::vector<Tensor*> * dependencies = new std::vector<Tensor*>();
-//        assert(dependencies != NULL);
-//        VertexId remote_vid_begin = partitioning_.partition_vid_begin[remote_node];
-//        VertexId remote_vid_end = partitioning_.partition_vid_end[remote_node];
-//
-//        bool has_mirror_vertex = false;
-//        for (VertexId local_vid = local_vid_begin; local_vid < local_vid_end && 
-//                ! has_mirror_vertex; ++ local_vid) {
-//            OutEdgeList out_edges = graph_structure_->get_out_edges(local_vid);
-//            for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
-//                OutEdge e = out_edges.ptx[e_i];
-//                VertexId dst = e.dst;
-//                if (dst >= remote_vid_begin && dst < remote_vid_end) {
-//                    has_mirror_vertex = true;
-//                    break;
-//                }
-//            }
-//        }
-//
-//        if (has_mirror_vertex) {
-//            int local_op_begin = partitioning_.partition_op_begin[node_id];
-//            int local_op_end = partitioning_.partition_op_end[node_id];
-//            int remote_op_begin = partitioning_.partition_op_begin[remote_node];
-//            int remote_op_end = partitioning_.partition_op_end[remote_node];
-//
-//            for (int op_idx = local_op_begin; op_idx < local_op_end; ++ op_idx) {
-//                Operator * op = op_and_ten_manager_->get_operator(op_idx);
-//                assert(op != NULL);
-//                if (op->get_type() == OPERATOR_AGGREGATION && op_idx >= remote_op_begin 
-//                        && op_idx < remote_op_end) {
-//                    assert(op->get_num_output_tensors() == 1);
-//                    Tensor * tensor = op->get_output_tensor(0);
-//                    assert(tensor != NULL);
-//                    dependencies->push_back(tensor);
-//                }
-//            }
-//        }
-//
-//        if (dependencies->empty()) {
-//            delete dependencies;
-//            gradient_update_receiver_dependencies_[remote_node] = NULL;
-//        } else {
-//            gradient_update_receiver_dependencies_[remote_node] = dependencies;
-//            dependent_remote_nodes_gradient_update_receiver_->insert(remote_node);
-//        }
-//    }
-//
-//    printf("(I-link dependencies): node %d should receive gradient from nodes:",
-//            node_id);
-//    for (int remote_node: *dependent_remote_nodes_gradient_update_receiver_) {
-//        printf(" %d (tensor:", remote_node);
-//        for (Tensor * tensor: *gradient_update_receiver_dependencies_[remote_node]) {
-//            printf(" %d", op_and_ten_manager_->get_tensor_index(tensor));
-//        }
-//        printf(")");
-//    }
-//    printf("\n");
-//}
-//
-//CUDADataDependenciesTracker::CUDADataDependenciesTracker(
-//        CUDAOperatorsAndTensorsManager * op_and_ten_manager, 
-//        CUDAVertexChunksManager * chunk_manager,
-//        AbstractGraphStructure * graph_structure,
-//        CUDAPIPPartitioning partitioning
-//        ): op_and_ten_manager_(op_and_ten_manager), chunk_manager_(chunk_manager), graph_structure_(graph_structure), partitioning_(partitioning) {
-//    assert(op_and_ten_manager != NULL);
-//    assert(chunk_manager != NULL);
-//    VertexId num_global_vertices = chunk_manager->get_num_global_vertices();
-//    int num_operators = op_and_ten_manager->get_num_operators();
-//    assert(CUDAPIPPartitioner::is_valid_partition(partitioning, num_global_vertices, num_operators)); // make sure that the partitioning is valid
-//
-//    // for each fragment, discover the forwarding and backwarding data dependencies
-//    int num_fragments = chunk_manager_->get_num_fragments();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    fragment_id_to_forwarding_dependencies_ = new std::vector<Tensor*> ** [num_fragments];
-//    fragment_id_to_backwarding_dependencies_ = new std::vector<Tensor*> ** [num_fragments];
-//    fragment_id_to_remote_nodes_forward_ = new std::set<int>* [num_fragments];
-//    fragment_id_to_remote_nodes_backward_ = new std::set<int>* [num_fragments];
-//    fragment_id_to_all_backward_dependent_tensors_ = new std::set<Tensor*>* [num_fragments];
-//    fragment_id_to_all_non_backward_dependent_tensors_ = new std::set<Tensor*>* [num_fragments];
-//    assert(fragment_id_to_forwarding_dependencies_ != NULL);
-//    assert(fragment_id_to_backwarding_dependencies_ != NULL);
-//    assert(fragment_id_to_remote_nodes_forward_ != NULL);
-//    assert(fragment_id_to_remote_nodes_backward_ != NULL);
-//    assert(fragment_id_to_all_backward_dependent_tensors_ != NULL);
-//    assert(fragment_id_to_all_non_backward_dependent_tensors_ != NULL);
-//    for (int i = 0; i < num_fragments; ++ i) {
-//        fragment_id_to_forwarding_dependencies_[i] = new std::vector<Tensor*> * [num_nodes];
-//        fragment_id_to_backwarding_dependencies_[i] = new std::vector<Tensor*> * [num_nodes];
-//        fragment_id_to_remote_nodes_forward_[i] = new std::set<int>();
-//        fragment_id_to_remote_nodes_backward_[i] = new std::set<int>();
-//        fragment_id_to_all_backward_dependent_tensors_[i] = new std::set<Tensor*>();
-//        fragment_id_to_all_non_backward_dependent_tensors_[i] = new std::set<Tensor*>();
-//        assert(fragment_id_to_forwarding_dependencies_[i] != NULL);
-//        assert(fragment_id_to_backwarding_dependencies_[i] != NULL);
-//        assert(fragment_id_to_remote_nodes_forward_[i] != NULL);
-//        assert(fragment_id_to_remote_nodes_backward_[i] != NULL);
-//        assert(fragment_id_to_all_backward_dependent_tensors_[i] != NULL);
-//        assert(fragment_id_to_all_non_backward_dependent_tensors_[i] != NULL);
-//        for (int j = 0; j < num_nodes; ++ j) {
-//            fragment_id_to_forwarding_dependencies_[i][j] = NULL;
-//            fragment_id_to_backwarding_dependencies_[i][j] = NULL;
-//        }
-//        build_p_link_dependencies(i);
-//    }
-//    build_i_link_dependencies();
-//}
-//
-//CUDADataDependenciesTracker::~CUDADataDependenciesTracker() {
-//    int num_fragments = chunk_manager_->get_num_fragments();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    for (int i = 0; i < num_fragments; ++ i) {
-//        for (int j = 0; j < num_nodes; ++ j) {
-//            if (fragment_id_to_forwarding_dependencies_[i][j] != NULL) {
-//                delete fragment_id_to_forwarding_dependencies_[i][j];
-//            }
-//            if (fragment_id_to_backwarding_dependencies_[i][j] != NULL) {
-//                delete fragment_id_to_backwarding_dependencies_[i][j];
-//            }
-//        }
-//        delete [] fragment_id_to_forwarding_dependencies_[i];
-//        delete [] fragment_id_to_backwarding_dependencies_[i];
-//        delete fragment_id_to_remote_nodes_forward_[i];
-//        delete fragment_id_to_remote_nodes_backward_[i];
-//        delete fragment_id_to_all_backward_dependent_tensors_[i];
-//        delete fragment_id_to_all_non_backward_dependent_tensors_[i];
-//    }
-//    delete [] fragment_id_to_forwarding_dependencies_;
-//    delete [] fragment_id_to_backwarding_dependencies_;
-//    delete [] fragment_id_to_remote_nodes_forward_;
-//    delete [] fragment_id_to_remote_nodes_backward_;
-//    delete [] fragment_id_to_all_backward_dependent_tensors_;
-//    delete [] fragment_id_to_all_non_backward_dependent_tensors_;
-//    // release the I-link dependencies data structures
-//    for (int remote_node: *dependent_remote_nodes_activation_update_sender_) {
-//        assert(activation_update_sender_dependencies_[remote_node] != NULL);
-//        delete activation_update_sender_dependencies_[remote_node];
-//    }
-//    for (int remote_node: *dependent_remote_nodes_activation_update_receiver_) {
-//        assert(activation_update_receiver_dependencies_[remote_node] != NULL);
-//        delete activation_update_receiver_dependencies_[remote_node];
-//    }
-//    for (int remote_node: *dependent_remote_nodes_gradient_update_sender_) {
-//        assert(gradient_update_sender_dependencies_[remote_node] != NULL);
-//        delete gradient_update_sender_dependencies_[remote_node];
-//    }
-//    for (int remote_node: *dependent_remote_nodes_gradient_update_receiver_) {
-//        assert(gradient_update_receiver_dependencies_[remote_node] != NULL);
-//        delete gradient_update_receiver_dependencies_[remote_node];
-//    }
-//    delete dependent_remote_nodes_activation_update_sender_;
-//    delete dependent_remote_nodes_activation_update_receiver_;
-//    delete dependent_remote_nodes_gradient_update_sender_;
-//    delete dependent_remote_nodes_gradient_update_receiver_;
-//    delete activation_update_sender_dependencies_;
-//    delete activation_update_receiver_dependencies_;
-//    delete gradient_update_sender_dependencies_;
-//    delete gradient_update_receiver_dependencies_;
-//}
-//
-//int CUDADataDependenciesTracker::get_num_activation_updates_to_recv() {
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_chunks = chunk_manager_->get_num_global_chunks();
-//
-//    // hash table
-//    std::unordered_map<int, int> incoming_chunks;
-//    incoming_chunks.clear();
-//
-//    VertexId vid_begin = partitioning_.partition_vid_begin[node_id];
-//    VertexId vid_end = partitioning_.partition_vid_end[node_id];
-//    for (VertexId vid = vid_begin; vid < vid_end; ++ vid) {
-//        InEdgeList in_edges = graph_structure_->get_in_edges(vid);
-//        for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
-//            InEdge e = in_edges.ptx[e_i];
-//            VertexId src = e.src;
-//            if (src >= vid_begin && src < vid_end) {
-//                continue;
-//            }
-//            int chunk_id = chunk_manager_->get_chunk_id(src);
-//            if (incoming_chunks.find(chunk_id) == incoming_chunks.end()) {
-//                incoming_chunks[chunk_id] = 0;
-//            }
-//        }
-//    }
-//
-//    int num_updates = 0;
-//    for (int remote_node: *dependent_remote_nodes_activation_update_receiver_) {
-//        VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
-//        VertexId vid_end = partitioning_.partition_vid_end[remote_node];
-//        int chunk_id = chunk_manager_->get_chunk_id(vid_begin);
-//        for (; chunk_id < num_chunks; ++ chunk_id) {
-//            VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
-//            VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
-//            assert(chunk_end > chunk_begin);
-//            if (chunk_begin >= partitioning_.partition_vid_begin[remote_node] &&
-//                    chunk_end <= partitioning_.partition_vid_end[remote_node]) {
-//                if (incoming_chunks.find(chunk_id) != incoming_chunks.end()) {
-//                    ++ num_updates;
-//                }
-//            } else {
-//                break;
-//            }
-//        }
-//    }
-//    return num_updates;
-//}
-//
-//int CUDADataDependenciesTracker::get_num_gradient_updates_to_recv() {
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_chunks = chunk_manager_->get_num_global_chunks();
-//
-//    // hash table
-//    std::unordered_map<int, int> outgoing_chunks;
-//    outgoing_chunks.clear();
-//
-//    VertexId vid_begin = partitioning_.partition_vid_begin[node_id];
-//    VertexId vid_end = partitioning_.partition_vid_end[node_id];
-//    for (VertexId vid = vid_begin; vid < vid_end; ++ vid) {
-//        OutEdgeList out_edges = graph_structure_->get_out_edges(vid);
-//        for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
-//            OutEdge e = out_edges.ptx[e_i];
-//            VertexId dst = e.dst;
-//            if (dst >= vid_begin && dst < vid_end) continue;
-//            int chunk_id = chunk_manager_->get_chunk_id(dst);
-//            if (outgoing_chunks.find(chunk_id) == outgoing_chunks.end()) {
-//                outgoing_chunks[chunk_id] = 0;
-//            }
-//        }
-//    }
-//
-//    int num_updates = 0;
-//    for (int remote_node: *dependent_remote_nodes_gradient_update_receiver_) {
-//        VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
-//        VertexId vid_end = partitioning_.partition_vid_end[remote_node];
-//        int chunk_id = chunk_manager_->get_chunk_id(vid_begin);
-//        for (; chunk_id < num_chunks; ++ chunk_id) {
-//            VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
-//            VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
-//            assert(chunk_end > chunk_begin);
-//            if (chunk_begin >= partitioning_.partition_vid_begin[remote_node] &&
-//                    chunk_end <= partitioning_.partition_vid_end[remote_node]) {
-//                if (outgoing_chunks.find(chunk_id) != outgoing_chunks.end()) {
-//                    ++ num_updates;
-//                }
-//            } else {
-//                break;
-//            }
-//        }
-//    }
-//    return num_updates;
-//}
-//void CUDAShadowGradientsMasterVertices::alloc_space(Tensor * t) {
-//            // on demand
-//            assert(t->type == VERTEX_TENSOR);
-//            size_t num_elements_per_vertex = t->dims[1];
-//            VertexId num_master_vertices = vid_translation_->get_num_master_vertices();
-//            size_t num_elements = (size_t) num_elements_per_vertex * num_master_vertices;
-//            int node_id = DistributedSys::get_instance()->get_node_id();
-//            // if(num_elements == 0){
-//            //     printf("num elements==0:ERROR\n");
-//            // } 
-//            // printf("num elements==:ERROR  %lu, %d\n",num_elements, node_id);
-//            DataType * grad = nullptr;
-//#ifdef SHADOW_CPU
-//            grad = new DataType[num_elements];
-//            assert(grad != nullptr);
-//            memset(grad, 0, sizeof(DataType) * num_elements);
-//#endif
-//#ifdef SHADOW_GPU
-//             AllocateCUDAMemory<DataType>(&grad, num_elements,__FILE__, __LINE__);
-//             SetCUDAMemory<DataType>(grad, 0, num_elements, __FILE__, __LINE__);
-//             assert(grad != nullptr);
-//#endif
-//            shadow_gradients_[t] = grad;
-//          //  DataType * d = nullptr;
-//          //  AllocateCUDAMemory<DataType>(&d, num_elements, __FILE__, __LINE__);
-//          //  assert(d != nullptr);
-//         //   printf("Node %d successful alloc space for cuda device\n", node_id);
-//            
-//        }
 
 BPIPLocalGraph::BPIPLocalGraph(AbstractGraphStructure * global_graph, CUDAVertexIdTranslationTable * vid_translation) {
     num_master_vertices_ = vid_translation->get_num_master_vertices();
@@ -2618,524 +1687,6 @@ BPIPLocalGraph::~BPIPLocalGraph(){
     destroy();
 }
 
-//void CUDAPIPGraphDataActivationUpdateSender::thread_main() {
-//    return; // FIXME
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    cudaSetDevice(node_id % 4);
-//    int num_epoch = engine_->get_num_epoch();
-//    const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
-//    int num_local_chunks = local_chunk_ids.size();
-//    CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
-//    assert(data_dependencies_tracker != NULL);
-//    std::vector<std::vector<int>> cuda_mirrors_flag;
-//    std::vector<std::vector<int*>> cuda_mirrors;
-//    std::vector<std::vector<std::vector<int>>> mirrors;
-//    cuda_mirrors_flag.resize(engine_->get_num_chunks());
-//    cuda_mirrors.resize(engine_->get_num_chunks());
-//    mirrors.resize(engine_->get_num_chunks());
-//    for(int i = 0; i < cuda_mirrors_flag.size(); ++i){
-//        cuda_mirrors_flag[i].resize(num_nodes, -1);
-//        cuda_mirrors[i].resize(num_nodes, nullptr);
-//        mirrors[i].resize(num_nodes);
-//    }
-//    size_t comm_buff_size = 4 * 1024 * 1024; // 16 MB
-//    DataType * comm_buff = new DataType [comm_buff_size];
-//    DataType * cuda_comm_buff = nullptr;
-//    int cuda_buff_size = 0;
-//    assert(comm_buff != NULL);
-//    CUDAPIPForwardTask task;
-//
-//    double graph_act_comm = 0;
-//    double graph_dev2host_time = 0;
-//    double graph_memcpy_time = 0;
-//    double graph_net_time = 0;
-//    int num_net_batches = 0;
-//    // std::vector<int> mirror_vertices_list;
-//    
-//    for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-//        pthread_barrier_wait(barrier_);
-//        pthread_barrier_wait(barrier_);
-//        continue; // FIXME
-//
-//        for (int num_sent_chunks = 0; num_sent_chunks < num_local_chunks; ++ num_sent_chunks) {
-//            task_queue_->pop_blocking(task);
-//            assert(task.epoch_id == epoch_id);
-//            int chunk_id = task.chunk_id;
-//            VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
-//            VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
-//            // find out all remote nodes that need updates
-//            const std::set<int>* remote_nodes = 
-//                engine_->data_dependencies_tracker_->get_dependent_remote_nodes_activation_update_sender();
-//            for (int remote_node: *remote_nodes) {
-//                assert(remote_node != node_id);
-//                VertexId num_mirror_vertices = 0;
-//                if(cuda_mirrors_flag[chunk_id][remote_node]  == -1){
-//                for (VertexId vid = chunk_begin; vid < chunk_end; ++ vid) {
-//                    if(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]){
-//                        mirrors[chunk_id][remote_node].push_back(vid);
-//                    }
-//                    
-//                    //num_mirror_vertices += int(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]);
-//                }
-//                    cuda_mirrors_flag[chunk_id][remote_node]  == 0;
-//                }
-//                num_mirror_vertices = mirrors[chunk_id][remote_node].size();
-//                if (num_mirror_vertices == 0) {
-//                    continue;
-//                }
-//                if(cuda_mirrors_flag[chunk_id][remote_node]  < 1){
-//                InitCUDAMemoryFromHostMemory<int>(&cuda_mirrors[chunk_id][remote_node], mirrors[chunk_id][remote_node].data(), mirrors[chunk_id][remote_node].size(), __FILE__, __LINE__);
-//                cuda_mirrors_flag[chunk_id][remote_node]  = 1;
-//                }
-//                //printf("(I-link) Node %d is going to send the activation data of chunk %d to node %d.\n",
-//                //        node_id, chunk_id, remote_node);
-//                MPI_Send(
-//                        &task, sizeof(CUDAPIPForwardTask), MPI_CHAR,
-//                        remote_node, ActivationInterchanging,
-//                        MPI_COMM_WORLD
-//                        );
-//                graph_act_comm += sizeof(CUDAPIPForwardTask);
-//
-//                const std::vector<Tensor*> * tensors = 
-//                    engine_->data_dependencies_tracker_->get_activation_update_sender_dependencies(remote_node);
-//                for (Tensor * tensor: *tensors) {
-//                    assert(tensor->type == VERTEX_TENSOR);
-//                    DataType * data = NULL;
-//                    size_t num_elements = 0;
-//                    engine_->vtensor_manager_->get_master_vertices_data(
-//                            tensor, chunk_begin, chunk_end,
-//                            data, num_elements
-//                            );
-//                    assert(data != NULL);
-//                    assert(num_elements != 0);
-//                    assert(num_elements % (chunk_end - chunk_begin) == 0);
-//                    size_t num_elements_per_vertex = num_elements / (chunk_end - chunk_begin);
-//                    size_t num_sent_elements = 0;
-//                    size_t num_elements_should_be_sent = num_elements_per_vertex * num_mirror_vertices;
-//                    if(num_elements_should_be_sent > cuda_buff_size){
-//                        if(cuda_buff_size == 0){
-//                            AllocateCUDAMemory<DataType>(&cuda_comm_buff, num_elements_should_be_sent, __FILE__, __LINE__);
-//                            cuda_buff_size = num_elements_should_be_sent;
-//                        }
-//                        else {
-//                            DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
-//                            AllocateCUDAMemory<DataType>(&cuda_comm_buff, num_elements_should_be_sent, __FILE__, __LINE__);
-//                            cuda_buff_size = num_elements_should_be_sent;
-//                        }
-//                    }
-//                    assert(cuda_buff_size >= num_elements_should_be_sent);
-//                    assert(cuda_comm_buff != nullptr);
-//                    //printf("(I-link) Node %d sending out %d elements (%d vertices) of tensor %d...\n",
-//                    //        node_id, (int) num_elements_should_be_sent, num_mirror_vertices,
-//                    //        engine_->op_ten_manager_->get_tensor_index(tensor));
-//                    
-//                    assert(num_elements_per_vertex <= comm_buff_size);
-//                    graph_memcpy_time -= get_time();
-//                    LauachBufferMirrors(num_mirror_vertices, cuda_mirrors[chunk_id][remote_node], num_elements_per_vertex, chunk_begin, data, cuda_comm_buff);
-//                    graph_memcpy_time += get_time();
-//                    while (num_sent_elements < num_elements_should_be_sent) {
-//                        size_t num_elements_to_send = 0;
-//                        num_elements_to_send = std::min(num_elements_should_be_sent - num_sent_elements, comm_buff_size);
-//                        assert(num_elements_to_send > 0);
-//
-//                        graph_dev2host_time -= get_time();
-//                        CopyFromCUDADeviceToHost<DataType>(comm_buff, cuda_comm_buff + num_sent_elements, num_elements_to_send, __FILE__, __LINE__);
-//                        graph_dev2host_time += get_time();
-//
-//                        graph_net_time -= get_time();
-//                        MPI_Send(
-//                                &num_elements_to_send, 1, 
-//                                DistributedSys::get_mpi_data_type<size_t>(),
-//                                remote_node, ActivationInterchanging,
-//                                MPI_COMM_WORLD
-//                                );
-//                        graph_act_comm += sizeof(size_t);
-//                        MPI_Send(
-//                                comm_buff, num_elements_to_send,
-//                                DistributedSys::get_mpi_data_type<DataType>(),
-//                                remote_node, ActivationInterchanging,
-//                                MPI_COMM_WORLD
-//                                );
-//                        graph_act_comm += sizeof(DataType) * num_elements_to_send;
-//                        num_sent_elements += num_elements_to_send;
-//                        graph_net_time += get_time();
-//                        num_net_batches += 1;
-//                    }
-//        
-//                    assert(num_sent_elements == num_elements_should_be_sent);
-//                }
-//                
-//            }
-//        }
-//        //printf("[NODE:%d]: %.6f\n", node_id, graph_net_time);
-//    }
-//
-//    comm_ = graph_act_comm;
-//    graph_dev2host_time_ = graph_dev2host_time;
-//    graph_memcpy_time_ = graph_memcpy_time;
-//    graph_net_time_ = graph_net_time;
-//    num_net_batches_ = num_net_batches;
-//
-//    delete [] comm_buff;
-//}
-//
-//void CUDAPIPGraphDataActivationUpdateReceiver::thread_main() {
-//    return ; // FIXME
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    cudaSetDevice(node_id % 4);
-//    int num_epoch = engine_->get_num_epoch();
-//    const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
-//    int num_local_chunks = local_chunk_ids.size();
-//    CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
-//    assert(data_dependencies_tracker != NULL);
-//    int num_activation_updates_to_recv = 
-//        engine_->data_dependencies_tracker_->get_num_activation_updates_to_recv();
-//
-//    size_t comm_buff_size = 4 * 1024 * 1024; // 16 MB
-//    DataType * comm_buff = new DataType [comm_buff_size];
-//    assert(comm_buff != NULL);
-//    CUDAPIPForwardTask task;
-//
-//    for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-//        pthread_barrier_wait(barrier_);
-//        pthread_barrier_wait(barrier_);
-//        continue; // FIXME
-//
-//        for (int num_received_updates = 0; num_received_updates < num_activation_updates_to_recv; 
-//                ++ num_received_updates) {
-//            MPI_Status status;
-//            MPI_Recv(
-//                    &task, sizeof(CUDAPIPForwardTask), MPI_CHAR,
-//                    MPI_ANY_SOURCE, ActivationInterchanging,
-//                    MPI_COMM_WORLD, &status
-//                    );
-//            int remote_node = status.MPI_SOURCE;
-//            if (task.epoch_id != epoch_id) {
-//                fprintf(stderr, "Received a task of epoch %d, with current epoch %d.\n",
-//                        task.epoch_id, epoch_id);
-//            }
-//            assert(task.epoch_id == epoch_id);
-//            int chunk_id = task.chunk_id;
-//            VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
-//            VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
-//            //printf("(I-link) Node %d is going to receive activation update of chunk %d from node %d\n",
-//            //        node_id, chunk_id, remote_node);
-//            const std::vector<Tensor*> * tensors = 
-//                engine_->data_dependencies_tracker_->get_activation_update_receiver_dependencies(remote_node);
-//            for (Tensor * tensor: *tensors) {
-//                DataType * data = NULL;
-//                size_t num_elements = 0;
-//                //printf("node %d from node %d, chunk begin: %u, chunk end: %u, local partition: [%u, %u), tensor %d\n", 
-//                //        node_id, remote_node, chunk_begin, chunk_end, 
-//                //        engine_->get_partition_begin(), engine_->get_partition_end(),
-//                //        engine_->op_ten_manager_->get_tensor_index(tensor)
-//                //        );
-//                engine_->vtensor_manager_->get_incoming_mirror_vertices_data(
-//                        tensor, chunk_begin, chunk_end, data, num_elements
-//                        );
-//             //   assert(data != NULL);
-//              //  assert(num_elements > 0);
-//                //printf("(I-link) Node %d receiving %d elements of tensor %d...\n",
-//                //        node_id, (int) num_elements, 
-//                //        engine_->op_ten_manager_->get_tensor_index(tensor));
-//                size_t num_received_elements = 0;
-//                while (num_received_elements < num_elements) {
-//                    size_t num_elements_to_receive = 0;
-//                    MPI_Recv(
-//                            &num_elements_to_receive, 1,
-//                            DistributedSys::get_mpi_data_type<size_t>(),
-//                            remote_node, ActivationInterchanging,
-//                            MPI_COMM_WORLD, &status
-//                            );
-//                    if(num_elements_to_receive > comm_buff_size){
-//                        delete [] comm_buff;
-//                        comm_buff = new DataType[num_elements_to_receive];
-//                        comm_buff_size = num_elements_to_receive;
-//                    }
-//                    assert(num_elements_to_receive <= comm_buff_size);
-//                    MPI_Recv(
-//                            comm_buff, num_elements_to_receive,
-//                            DistributedSys::get_mpi_data_type<DataType>(),
-//                            remote_node, ActivationInterchanging,
-//                            MPI_COMM_WORLD, &status
-//                            );
-//                    CopyFromHostToCUDADevice<DataType>(data + num_received_elements,comm_buff,num_elements_to_receive,__FILE__, __LINE__);
-//                    // memcpy(
-//                    //         data + num_received_elements,
-//                    //         comm_buff, sizeof(DataType) * num_elements_to_receive
-//                    //       );
-//                    num_received_elements += num_elements_to_receive;
-//                }
-//                assert(num_received_elements == num_elements);
-//            }
-//        }
-//    }
-//
-//    delete [] comm_buff;
-//}
-//
-//void CUDAPIPGraphDataGradientUpdateSender::thread_main() {
-//    return ; // FIXME
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    cudaSetDevice(node_id % 4);
-//    int num_epoch = engine_->get_num_epoch();
-//    const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
-//    int num_local_chunks = local_chunk_ids.size();
-//    CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
-//    assert(data_dependencies_tracker != NULL);
-//    std::vector<std::vector<int>> cuda_mirrors_flag;
-//    std::vector<std::vector<int*>> cuda_mirrors;
-//    std::vector<std::vector<std::vector<int>>> mirrors;
-//    cuda_mirrors_flag.resize(engine_->get_num_chunks());
-//    cuda_mirrors.resize(engine_->get_num_chunks());
-//    mirrors.resize(engine_->get_num_chunks());
-//    for(int i = 0; i < cuda_mirrors_flag.size(); ++i){
-//        cuda_mirrors_flag[i].resize(num_nodes, -1);
-//        cuda_mirrors[i].resize(num_nodes, nullptr);
-//        mirrors[i].resize(num_nodes);
-//    }
-//
-//    size_t comm_buff_size = 4 * 1024 * 1024; // 16 MB
-//    DataType * comm_buff = new DataType [comm_buff_size];
-//    DataType * cuda_comm_buff = nullptr;
-//    int cuda_buff_size = 0;
-//    assert(comm_buff != NULL);
-//    CUDAPIPBackwardTask task;
-//
-//    double graph_grad_comm = 0;
-//    double graph_dev2host_time = 0;
-//    double graph_memcpy_time = 0;
-//    double graph_net_time = 0;
-//    int num_net_batches = 0;
-//
-//    for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-//        pthread_barrier_wait(barrier_);
-//        pthread_barrier_wait(barrier_);
-//        continue; // FIXME
-//
-//        for (int num_sent_chunks = 0; num_sent_chunks < num_local_chunks; ++ num_sent_chunks) {
-//            task_queue_->pop_blocking(task);
-//            assert(task.epoch_id == epoch_id);
-//            int chunk_id = task.chunk_id;
-//            VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
-//            VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
-//            // find out all remote nodes that need updates
-//            const std::set<int> * remote_nodes = 
-//                engine_->data_dependencies_tracker_->get_dependent_remote_nodes_gradients_update_sender();
-//            for (int remote_node: *remote_nodes) {
-//                assert(remote_node != node_id);
-//                VertexId num_mirror_vertices = 0;
-//                // for (VertexId vid = chunk_begin; vid < chunk_end; ++ vid) {
-//                //     num_mirror_vertices += engine_->has_outgoing_mirror(vid, remote_node);
-//                // }
-//                if(cuda_mirrors_flag[chunk_id][remote_node]  == -1){
-//                for (VertexId vid = chunk_begin; vid < chunk_end; ++ vid) {
-//                    if(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]){
-//                        mirrors[chunk_id][remote_node].push_back(vid);
-//                    }
-//                    
-//                    //num_mirror_vertices += int(cpu_has_incomming_mirrors[num_master_vertices * remote_node + vid - local_partition_start]);
-//                }
-//                    cuda_mirrors_flag[chunk_id][remote_node]  == 0;
-//                }
-//                num_mirror_vertices = mirrors[chunk_id][remote_node].size();
-//                if (num_mirror_vertices == 0) continue;
-//                //printf("(I-link) Node %d is going to send the gradient data of chunk %d to node %d.\n",
-//                //        node_id, chunk_id, remote_node);
-//                 if(cuda_mirrors_flag[chunk_id][remote_node]  < 1){
-//                InitCUDAMemoryFromHostMemory<int>(&cuda_mirrors[chunk_id][remote_node], mirrors[chunk_id][remote_node].data(), mirrors[chunk_id][remote_node].size(), __FILE__, __LINE__);
-//                cuda_mirrors_flag[chunk_id][remote_node]  = 1;
-//                }
-//                MPI_Send(
-//                        &task, sizeof(CUDAPIPBackwardTask), MPI_CHAR,
-//                        remote_node, GradientInterchanging,
-//                        MPI_COMM_WORLD
-//                        );
-//                graph_grad_comm += sizeof(CUDAPIPBackwardTask);
-//                const std::vector<Tensor*> * tensors =
-//                    engine_->data_dependencies_tracker_->get_gradients_update_sender_dependencies(
-//                            remote_node
-//                            );
-//                for (Tensor * tensor: *tensors) {
-//                    assert(tensor->type == VERTEX_TENSOR);
-//                    DataType * grad = NULL;
-//                    size_t num_elements = 0;
-//                    engine_->vtensor_manager_->get_master_vertices_grad(
-//                            tensor, chunk_begin, chunk_end,
-//                            grad, num_elements
-//                            );
-//                    assert(grad != NULL);
-//                    assert(num_elements != 0);
-//                    assert(num_elements % (chunk_end - chunk_begin) == 0);
-//                    size_t num_elements_per_vertex = 
-//                        num_elements / (chunk_end - chunk_begin);
-//                    size_t num_sent_elements = 0;
-//                    size_t num_elements_should_be_sent = num_elements_per_vertex * num_mirror_vertices;
-//                    if(num_elements_should_be_sent > cuda_buff_size){
-//                        if(cuda_buff_size == 0){
-//                            AllocateCUDAMemory<DataType>(&cuda_comm_buff, num_elements_should_be_sent, __FILE__, __LINE__);
-//                            cuda_buff_size = num_elements_should_be_sent;
-//                        }
-//                        else {
-//                            DeallocateCUDAMemory<DataType>(&cuda_comm_buff, __FILE__, __LINE__);
-//                            AllocateCUDAMemory<DataType>(&cuda_comm_buff, num_elements_should_be_sent, __FILE__, __LINE__);
-//                            cuda_buff_size = num_elements_should_be_sent;
-//                        }
-//                    }
-//                    assert(cuda_buff_size >= num_elements_should_be_sent);
-//                    assert(cuda_comm_buff != nullptr);
-//                    //printf("(I-link) Node %d sending out %d elements (%d vertices) of tensor %d...\n",
-//                    //        node_id, (int) num_elements_should_be_sent, num_mirror_vertices,
-//                    //        engine_->op_ten_manager_->get_tensor_index(tensor));
-//                    //VertexId vid = chunk_begin;
-//                    assert(num_elements_per_vertex <= comm_buff_size);
-//                    graph_memcpy_time -= get_time();
-//                    LauachBufferMirrors(num_mirror_vertices, cuda_mirrors[chunk_id][remote_node], num_elements_per_vertex, chunk_begin, grad, cuda_comm_buff);
-//                    graph_memcpy_time += get_time();
-//                    while (num_sent_elements < num_elements_should_be_sent) {
-//                        
-//                        size_t num_elements_to_send = 0;
-//                        num_elements_to_send = std::min(num_elements_should_be_sent - num_sent_elements, comm_buff_size);
-//
-//                        assert(num_elements_to_send > 0);
-//
-//                        graph_dev2host_time -= get_time();
-//                        CopyFromCUDADeviceToHost<DataType>(comm_buff, cuda_comm_buff + num_sent_elements, num_elements_to_send, __FILE__, __LINE__);
-//                        graph_dev2host_time += get_time();
-//                        graph_net_time -= get_time();
-//                        MPI_Send(
-//                                &num_elements_to_send, 1,
-//                                DistributedSys::get_mpi_data_type<size_t>(),
-//                                remote_node, GradientInterchanging,
-//                                MPI_COMM_WORLD
-//                                );
-//                        graph_grad_comm += sizeof(size_t);
-//                        MPI_Send(
-//                                comm_buff, num_elements_to_send,
-//                                DistributedSys::get_mpi_data_type<DataType>(),
-//                                remote_node, GradientInterchanging,
-//                                MPI_COMM_WORLD
-//                                );
-//                        graph_net_time += get_time();
-//                        num_sent_elements += num_elements_to_send;
-//                        graph_grad_comm += num_elements_to_send * sizeof(DataType);
-//                        num_net_batches += 1;
-//                    }
-//                    assert(num_sent_elements == num_elements_should_be_sent);
-//                }
-//            }
-//        }
-//        //printf("[NODE:%d]: %.6fs\n", node_id, graph_net_time);
-//    }
-//
-//    comm_ = graph_grad_comm;
-//    graph_dev2host_time_ = graph_dev2host_time;
-//    graph_memcpy_time_ = graph_memcpy_time;
-//    graph_net_time_ = graph_net_time;
-//    num_net_batches_ = num_net_batches;
-//    //double avg;
-//    //MPI_Allreduce(&graph_grad_comm, &avg, 1, DistributedSys::get_mpi_data_type<double>(),
-//    //        MPI_SUM, MPI_COMM_WORLD);
-//    //avg /= double(num_nodes);
-//    //if (! node_id) {
-//    //    printf("\tAmount of grpah-level gradient communication (per node): %.3f MB\n",
-//    //            avg / 1024. / 1024.);
-//    //}
-//
-//    delete [] comm_buff;
-//}
-//
-//void CUDAPIPGraphDataGradientUpdateReceiver::thread_main() {
-//    return ; // FIXME
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    cudaSetDevice(node_id % 4);
-//    int num_epoch = engine_->get_num_epoch();
-//    const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
-//    int num_local_chunks = local_chunk_ids.size();
-//    CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
-//    assert(data_dependencies_tracker != NULL);
-//    int num_updates_to_recv = 
-//        engine_->data_dependencies_tracker_->get_num_gradient_updates_to_recv();
-//
-//    size_t comm_buff_size = 4 * 1024 * 1024; // 16 MB
-//    DataType * comm_buff = new DataType [comm_buff_size];
-//    assert(comm_buff != NULL);
-//    CUDAPIPBackwardTask task;
-//
-//    for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-//        pthread_barrier_wait(barrier_);
-//        pthread_barrier_wait(barrier_);
-//        continue; // FIXME
-//
-//        for (int num_received_updates = 0; 
-//                num_received_updates < num_updates_to_recv; ++ num_received_updates) {
-//            MPI_Status status;
-//            MPI_Recv(
-//                    &task, sizeof(CUDAPIPBackwardTask), MPI_CHAR,
-//                    MPI_ANY_SOURCE, GradientInterchanging,
-//                    MPI_COMM_WORLD, &status
-//                    );
-//            int remote_node = status.MPI_SOURCE;
-//            assert(task.epoch_id == epoch_id);
-//            int chunk_id = task.chunk_id;
-//            VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
-//            VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
-//            //printf("(I-link) Node %d is going to receive gradient update of chunk %d from node %d\n",
-//            //        node_id, chunk_id, remote_node);
-//            const std::vector<Tensor*> * tensors = 
-//                engine_->data_dependencies_tracker_->get_gradients_update_receiver_dependencies(remote_node);
-//            for (Tensor * tensor: *tensors) {
-//                DataType * grad = NULL;
-//                size_t num_elements = 0;
-//                //printf("Tensor: %d\n", engine_->op_ten_manager_->get_tensor_index(tensor));
-//                engine_->vtensor_manager_->get_outgoing_mirror_vertices_grad(
-//                        tensor, chunk_begin, chunk_end, grad, num_elements
-//                        );
-//              //  assert(grad != NULL);
-//               // assert(num_elements > 0);
-//                //printf("(I-link) Node %d receiving %d elements of tensor %d...\n",
-//                //        node_id, (int) num_elements, 
-//                //        engine_->op_ten_manager_->get_tensor_index(tensor));
-//                size_t num_received_elements = 0;
-//                while (num_received_elements < num_elements) {
-//                    size_t num_elements_to_receive = 0;
-//                    MPI_Recv(
-//                            &num_elements_to_receive, 1,
-//                            DistributedSys::get_mpi_data_type<size_t>(),
-//                            remote_node, GradientInterchanging,
-//                            MPI_COMM_WORLD, &status
-//                            );
-//                    if(num_elements_to_receive > comm_buff_size){
-//                        delete [] comm_buff;
-//                        comm_buff = new DataType[num_elements_to_receive];
-//                        comm_buff_size = num_elements_to_receive;
-//                    }
-//                    assert(num_elements_to_receive <= comm_buff_size);
-//                    MPI_Recv(
-//                            comm_buff, num_elements_to_receive,
-//                            DistributedSys::get_mpi_data_type<DataType>(),
-//                            remote_node, GradientInterchanging,
-//                            MPI_COMM_WORLD, &status
-//                            );
-//                    CopyFromHostToCUDADevice<DataType>(grad + num_received_elements, comm_buff, num_elements_to_receive,__FILE__,__LINE__);
-//                    // memcpy(
-//                    //         grad + num_received_elements,
-//                    //         comm_buff, sizeof(DataType) * num_elements_to_receive
-//                    //       );
-//                    num_received_elements += num_elements_to_receive;
-//                }
-//                assert(num_received_elements == num_elements);
-//            }
-//        }
-//    }
-//
-//    delete [] comm_buff;
-//}
-
 // determine whether all gpus agree on the same value
 template<typename T>
 static void check_consistency(T value) {
@@ -3168,11 +1719,11 @@ static void check_consistency_gpu_array(T * value, size_t num_elements) {
 
 // CUDAPIPWeightAggregator
 CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
-                CUDAOperatorsAndTensorsManager * op_ten_manager,
-                AbstractLowerLevelOptimizer * optimizer,
-                DistributedPIPHybridParallelExecutionEngineGPU * engine,
-                WeightDumper * weight_dumper
-                ): op_ten_manager_(op_ten_manager), optimizer_(optimizer), weight_dumper_(weight_dumper) {
+        CUDAOperatorsAndTensorsManager * op_ten_manager,
+        AbstractLowerLevelOptimizer * optimizer,
+        DistributedPIPHybridParallelExecutionEngineGPU * engine,
+        WeightDumper * weight_dumper
+        ): op_ten_manager_(op_ten_manager), optimizer_(optimizer), weight_dumper_(weight_dumper) {
     int num_operators = op_ten_manager->get_num_operators();
     int num_weight_operators = 0;
     // init op2idx_ && weight_ops_
@@ -3331,385 +1882,6 @@ void CUDAPIPWeightAggregator::check_weights_consistency() {
     }
 }
 
-//// CUDAPIPParallelParameterServer
-//
-//void CUDAPIPParallelParameterServer::data_pulling_request_handling_thread_main() {
-//    CUDAPIPPSHeader header;
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    cudaSetDevice(node_id % 4);
-//    DataType * p_buffer = nullptr;
-//    size_t len = 0;
-//    while (true) {
-//        // probing incoming messages
-//        MPI_Status status;
-//        MPI_Request mpi_request;
-//
-//        MPI_Irecv(
-//                &header, sizeof(CUDAPIPPSHeader), MPI_CHAR,
-//                MPI_ANY_SOURCE, WeightPullingRequest, MPI_COMM_WORLD,
-//                &mpi_request
-//                );
-//        int irecv_flag = 0;
-//        while (! is_terminated_ && ! irecv_flag) {
-//            MPI_Test(&mpi_request, &irecv_flag, &status);
-//        }
-//        if (is_terminated_) {
-//            break;
-//        }
-//        assert(irecv_flag);
-//        assert(header.type == 0);
-//
-//        // handling the request
-//        int remote_node = status.MPI_SOURCE;
-//        WeightOperator * weight_op = (WeightOperator*) op_ten_manager_->get_operator(header.weight_op_idx);
-//        assert(weight_op != NULL);
-//        Tensor * tensor = weight_op->get_output_tensor(0);
-//        assert(tensor);
-//        size_t num_elements = 1;
-//        for (int i = 0; i < tensor->num_dims; ++ i) {
-//            num_elements *= tensor->dims[i];
-//        }
-//        std::pair<DataType*, DataType*> p = weight_data_grad_[weight_op];
-//        if (len == 0){
-//            p_buffer = new DataType[num_elements];
-//            len = num_elements;
-//        } else if(len < num_elements){
-//            delete [] p_buffer;
-//            p_buffer = new DataType[num_elements];
-//            len = num_elements;
-//        }
-//        assert(p_buffer != nullptr);
-//        CopyFromCUDADeviceToHost<DataType>(p_buffer, p.first, num_elements, __FILE__, __LINE__);
-//        locks_[weight_op]->lock();
-//        MPI_Send(
-//                p_buffer, num_elements, DistributedSys::get_mpi_data_type<DataType>(),
-//                remote_node, WeightPullingResponse, MPI_COMM_WORLD
-//                );
-//        locks_[weight_op]->unlock();
-//        
-//    }
-//    if (len > 0){
-//        delete [] p_buffer;
-//    }
-//}
-//
-//void CUDAPIPParallelParameterServer::grad_pushing_handling_thread_main() {
-//    CUDAPIPPSHeader header;
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    cudaSetDevice(node_id % 4);
-//    DataType * p_buffer = nullptr;
-//    size_t len = 0;
-//    while (true) {
-//        // probing incoming messages
-//        MPI_Status status;
-//        MPI_Request mpi_request;
-//
-//        MPI_Irecv(
-//                &header, sizeof(CUDAPIPPSHeader), MPI_CHAR,
-//                MPI_ANY_SOURCE, GradPushing, MPI_COMM_WORLD,
-//                &mpi_request
-//                );
-//        int irecv_flag = 0;
-//        while (! is_terminated_ && ! irecv_flag) {
-//            MPI_Test(&mpi_request, &irecv_flag, &status);
-//        }
-//        if (is_terminated_) {
-//            break;
-//        }
-//        assert(irecv_flag);
-//        assert(header.type == 1);
-//
-//        // handling the request
-//        int remote_node = status.MPI_SOURCE;
-//        WeightOperator * weight_op = (WeightOperator*) op_ten_manager_->get_operator(header.weight_op_idx);
-//        assert(weight_op != NULL);
-//        Tensor * tensor = weight_op->get_output_tensor(0);
-//        assert(tensor);
-//        size_t num_elements = 1;
-//        for (int i = 0; i < tensor->num_dims; ++ i) {
-//            num_elements *= tensor->dims[i];
-//        }
-//        std::pair<DataType*, DataType*> p = weight_data_grad_[weight_op];
-//        if (len == 0){
-//            p_buffer = new DataType[num_elements];
-//            len = num_elements;
-//        } else if(len < num_elements){
-//            delete [] p_buffer;
-//            p_buffer = new DataType[num_elements];
-//            len = num_elements;
-//        }
-//        assert(p_buffer != nullptr);
-//        MPI_Recv(
-//                p_buffer, num_elements, DistributedSys::get_mpi_data_type<DataType>(),
-//                remote_node, GradPushing, MPI_COMM_WORLD, &status
-//                );
-//        CopyFromHostToCUDADevice<DataType>(p.second, p_buffer, num_elements, __FILE__, __LINE__);
-//       
-//        locks_[weight_op]->lock();
-//        optimizer_->optimize_weights(
-//                weight_op, p.second, p.first, num_elements
-//                );
-//        cudaStreamSynchronize(0);
-//        locks_[weight_op]->unlock();
-//    }
-//     if (len > 0){
-//    delete [] p_buffer;
-//    }
-//}
-//
-//CUDAPIPParallelParameterServer::CUDAPIPParallelParameterServer(
-//        CUDAOperatorsAndTensorsManager * op_ten_manager,
-//        AbstractLowerLevelOptimizer * optimizer,
-//        DistributedPIPHybridParallelExecutionEngineGPU * engine
-//        ): op_ten_manager_(op_ten_manager), optimizer_(optimizer) {
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    // allocate the space for weight ops
-//    weight_data_grad_.clear();
-//    master_nodes_.clear();
-//    int num_operators = op_ten_manager_->get_num_operators();
-//    int weight_op_idx = 0;
-//    for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
-//        Operator * op = op_ten_manager->get_operator(op_idx);
-//        assert(op != NULL);
-//        if (op->get_type() != OPERATOR_WEIGHT) continue;
-//        // hash-based assignment
-//        int master_node = weight_op_idx % num_nodes;
-//        master_nodes_[(WeightOperator*) op] = master_node;
-//        if (master_node == node_id) {
-//            // the weight op belongs to the local node
-//            Tensor * tensor = op->get_output_tensor(0);
-//            assert(op->get_num_output_tensors() == 1);
-//            assert(tensor != NULL);
-//            size_t num_elements = 1;
-//            for (int i = 0; i < tensor->num_dims; ++ i) {
-//                num_elements *= tensor->dims[i];
-//            }
-//            DataType * data = NULL;
-//            DataType * grad = NULL;
-//            AllocateCUDAMemory<DataType>(&data, num_elements, __FILE__, __LINE__);
-//            AllocateCUDAMemory<DataType>(&grad, num_elements, __FILE__, __LINE__);
-//            assert(data != NULL);
-//            assert(grad != NULL);
-//            weight_data_grad_[(WeightOperator*) op] = std::make_pair(data, grad);
-//            std::mutex * m = new std::mutex();
-//            locks_[(WeightOperator*) op] = m;
-//            // weight initialization
-//            engine->hybrid_init_weight_tensor_data(data, num_elements, tensor->dims[0]);
-//            {
-//                // FIXME
-//                DataType * buffer = NULL;
-//                AllocateCUDAMemory<DataType>(&buffer, num_elements, __FILE__, __LINE__);
-//                assert(buffer != NULL);
-//                accum_buffer_[(WeightOperator*) op] = buffer;
-//            }
-//        }
-//        weight_op_idx ++;
-//    }
-//    // start the server threads
-//    is_terminated_ = false;
-//    data_buff = nullptr;
-//    grad_buff = nullptr;
-//    data_len = 0;
-//    grad_len = 0;
-//    data_pulling_request_handling_thread_ = new std::thread([&]() {
-//                this->data_pulling_request_handling_thread_main();
-//            });
-//    grad_pushing_handling_thread_ = new std::thread([&]() {
-//                this->grad_pushing_handling_thread_main();
-//            });
-//    assert(data_pulling_request_handling_thread_ != NULL);
-//    assert(grad_pushing_handling_thread_ != NULL);
-//
-//    comm = 0;
-//}
-//
-//CUDAPIPParallelParameterServer::~CUDAPIPParallelParameterServer() {
-//    // stop the server threads
-//    is_terminated_ = true;
-//    data_pulling_request_handling_thread_->join();
-//    grad_pushing_handling_thread_->join();
-//    delete data_pulling_request_handling_thread_;
-//    delete grad_pushing_handling_thread_;
-//    // release the resource
-//    for (std::pair<WeightOperator*, std::pair<DataType*, DataType*>> p: weight_data_grad_) {
-//        DataType * data = p.second.first;
-//        DataType * grad = p.second.second;
-//        assert(data != NULL);
-//        assert(grad != NULL);
-//       DeallocateCUDAMemory<DataType>(&data, __FILE__, __LINE__);
-//       DeallocateCUDAMemory<DataType>(&grad, __FILE__, __LINE__);
-//    }
-//    for (std::pair<WeightOperator*, std::mutex*> p: locks_) {
-//        assert(p.second != NULL);
-//        delete p.second;
-//    }
-//    if(data_len > 0)delete [] data_buff;
-//    if(grad_len >0)delete [] grad_buff;
-//}
-//
-//void CUDAPIPParallelParameterServer::pull_weight(WeightOperator * weight_op, DataType * data) {
-//    int master_node = master_nodes_[weight_op];
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    Tensor * tensor = weight_op->get_output_tensor(0);
-//    size_t num_elements = 1;
-//    for (int i = 0; i < tensor->num_dims; ++ i) {
-//        num_elements *= tensor->dims[i];
-//    }
-//    if (master_node == node_id) {
-//        locks_[weight_op]->lock();
-//        // memcpy(
-//        //         data, weight_data_grad_[weight_op].first, 
-//        //         sizeof(DataType) * num_elements
-//        //       );
-//        CopyFromCUDADeviceToCUDADevice<DataType>(data, weight_data_grad_[weight_op].first, num_elements, __FILE__, __LINE__);
-//        //SynchronizeCUDADevice(__FILE__, __LINE__);
-//        cudaStreamSynchronize(0);
-//        locks_[weight_op]->unlock();
-//    } else {
-//        CUDAPIPPSHeader header;
-//        header.type = 0;
-//        header.weight_op_idx = op_ten_manager_->get_operator_index(weight_op);
-//        MPI_Send(
-//                &header, sizeof(CUDAPIPPSHeader), MPI_CHAR,
-//                master_node, WeightPullingRequest, MPI_COMM_WORLD
-//                );
-//        comm += sizeof(CUDAPIPPSHeader);
-//        MPI_Status status;
-//        if(data_len == 0){
-//            data_buff = new DataType[num_elements];
-//            data_len = num_elements;
-//        }else if(data_len < num_elements){
-//            delete [] data_buff;
-//            data_buff = new DataType[num_elements];
-//            data_len = num_elements;
-//        }
-//        assert(data_buff != nullptr);
-//        MPI_Recv(
-//                data_buff, num_elements, DistributedSys::get_mpi_data_type<DataType>(),
-//                master_node, WeightPullingResponse, MPI_COMM_WORLD, 
-//                &status
-//                );
-//        comm += num_elements * sizeof(DataType);
-//        CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
-//        
-//    }
-//}
-//
-//void CUDAPIPParallelParameterServer::push_grad(WeightOperator * weight_op, DataType * grad) {
-//    int master_node = master_nodes_[weight_op];
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    Tensor * tensor = weight_op->get_output_tensor(0);
-//    size_t num_elements = 1;
-//    for (int i = 0; i < tensor->num_dims; ++ i) {
-//        num_elements *= tensor->dims[i];
-//    }
-//    //{
-//    //    DataType grads[num_elements];
-//    //    cudaMemcpy(grads, grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
-//    //    double sum = 0;
-//    //    for (int i = 0; i < num_elements; ++ i) {
-//    //        sum += grads[i];
-//    //    }
-//    //    printf("Push grad to PS, sum: %.9f\n", sum);
-//    //}
-//    if (master_node == node_id) {
-//        //// apply the gradient locally FIXME
-//        //// lock the weight op first
-//        //locks_[weight_op]->lock();
-//        //optimizer_->optimize_weights(
-//        //        weight_op, grad, weight_data_grad_[weight_op].first,
-//        //        num_elements
-//        //        );
-//        //cudaStreamSynchronize(0);
-//        //locks_[weight_op]->unlock();
-//
-//        // FIXME
-//        DataType acc_grad[num_elements];
-//        cudaMemcpy(
-//                acc_grad, accum_buffer_[weight_op], sizeof(DataType) * num_elements,
-//                cudaMemcpyDeviceToHost
-//                );
-//        DataType grad_cpu[num_elements];
-//        cudaMemcpy(
-//                grad_cpu, grad, sizeof(DataType) * num_elements,
-//                cudaMemcpyDeviceToHost
-//                );
-//        for (size_t i = 0; i < num_elements; ++ i) {
-//            acc_grad[i] += grad_cpu[i];
-//        }
-//        cudaMemcpy(
-//                accum_buffer_[weight_op], acc_grad, sizeof(DataType) * num_elements,
-//                cudaMemcpyHostToDevice
-//                );
-//    } else {
-//        assert(false); // FIXME
-//        CUDAPIPPSHeader header;
-//        header.type = 1;
-//        header.weight_op_idx = op_ten_manager_->get_operator_index(weight_op);
-//        MPI_Send(
-//                &header, sizeof(CUDAPIPPSHeader), MPI_CHAR,
-//                master_node, GradPushing, MPI_COMM_WORLD
-//                );
-//        comm += sizeof(CUDAPIPPSHeader);
-//        if(grad_len == 0){
-//            grad_buff = new DataType[num_elements];
-//            grad_len = num_elements;
-//        }else if(grad_len < num_elements){
-//            delete [] grad_buff;
-//            grad_buff = new DataType[num_elements];
-//            grad_len = num_elements;
-//        }
-//        assert(grad_buff != nullptr);
-//        CopyFromCUDADeviceToHost<DataType>(grad_buff, grad, num_elements, __FILE__, __LINE__);
-//        MPI_Send(
-//                grad_buff, num_elements, DistributedSys::get_mpi_data_type<DataType>(),
-//                master_node, GradPushing, MPI_COMM_WORLD
-//                );
-//        comm += num_elements * sizeof(DataType);
-//        
-//    }
-//}
-//
-//void CUDAPIPParallelParameterServer::clear_accum_buffer() {
-//    // FIXME
-//    for (std::pair<WeightOperator*, DataType*> p: accum_buffer_) {
-//        WeightOperator * op = p.first;
-//        Tensor * tensor = op->get_output_tensor(0);
-//        assert(op->get_num_output_tensors() == 1);
-//        assert(tensor != NULL);
-//        size_t num_elements = 1;
-//        for (int i = 0; i < tensor->num_dims; ++ i) {
-//            num_elements *= tensor->dims[i];
-//        }
-//        cudaMemset(p.second, 0, sizeof(DataType) * num_elements);
-//    }
-//}
-//
-//void CUDAPIPParallelParameterServer::commit_grad() {
-//    // FIXME
-//    for (std::pair<WeightOperator*, DataType*> p: accum_buffer_) {
-//        WeightOperator * op = p.first;
-//        DataType * acc_buffer = p.second;
-//        Tensor * tensor = op->get_output_tensor(0);
-//        assert(op->get_num_output_tensors() == 1);
-//        assert(tensor != NULL);
-//        size_t num_elements = 1;
-//        for (int i = 0; i < tensor->num_dims; ++ i) {
-//            num_elements *= tensor->dims[i];
-//        }
-//        locks_[op]->lock();
-//        optimizer_->optimize_weights(
-//                op, acc_buffer, weight_data_grad_[op].first,
-//                num_elements
-//                );
-//        cudaStreamSynchronize(0);
-//        locks_[op]->unlock();
-//    }
-//}
-
 DistributedPIPHybridParallelExecutionEngineGPU::DistributedPIPHybridParallelExecutionEngineGPU() {
     cpu_has_incomming_mirrors = nullptr;
     gpu_has_incomming_mirrors = nullptr;
@@ -3746,18 +1918,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
         decompression_size_ += sizeof(DataType) * num_elements_this_chunk;
     }
 
-    //EdgeId num_edges = 0;
-    //for (VertexId v_i = global_vid_begin; v_i < global_vid_end; ++ v_i) {
-    //    num_edges += graph_structure_->get_in_degree(v_i);
-    //}
-    //double chunk_time = - get_time();
-
     compute_time_ -= get_time();
     for (int op_idx = op_idx_begin; op_idx < op_idx_end; op_idx ++) {
         Operator * op = op_ten_manager_->get_operator(op_idx);
         assert(op != NULL);
-        //printf("Node %d executor operator %d %s of chunk %d\n",
-        //        node_id, op_idx, get_op_type_str(op->get_type()).c_str(), chunk_id);
         switch (op->get_type()) {
             case OPERATOR_INPUT:
                 // do nothing
@@ -3774,9 +1938,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
             case OPERATOR_MATMUL:
                 executor_->matmul_forward((MatmulOperator*) op, local_vid_begin, local_vid_end);
                 break;
-            //case OPERATOR_MATMULADD:
-            //    executor_->matmuladd_forward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
-            //    break;
             case OPERATOR_SOFTMAX:
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
@@ -3791,18 +1952,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 exit(-1);
         }
     }
-    //// calculate the loss if applicable 
-    //if (is_bottommost_node_) {
-    //    //printf("Node %d is going to calculate the loss of local vid [%u, %u)\n",
-    //    //        node_id, local_vid_begin, local_vid_end);
-    //    //double loss = loss_->get_loss( 
-    //    //        output_tensor_, std_tensor_, local_vid_begin, local_vid_end
-    //    //        );
-    //    //loss_->calculate_gradients(
-    //    //        output_tensor_, std_tensor_, local_vid_begin, local_vid_end
-    //    //        );
-    //    //accum_loss_ += loss;
-    //}
     compute_time_ += get_time();
 
     if (pipeline_output_tensor_ != NULL && COMPRESS_DATA) {
@@ -3818,7 +1967,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
         data_compressors_[chunk_id]->compress_data(data, true);
         compression_time_ += get_time();
         compression_size_ += sizeof(DataType) * num_elements_this_chunk;
-        //printf("Compression size: %.3f MB\n", sizeof(DataType) * num_elements_this_chunk / 1024. / 1024.);
     }
 
     if (node_id == 0 && global_shared_tensor_) {
@@ -3829,19 +1977,17 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
         DataType * gpu_data = NULL;
         size_t num_elements = 0;
         get_vertex_tensor_data_by_chunk(
-            global_shared_tensor_, task.chunk_id,
-            gpu_data, num_elements
-        );
+                global_shared_tensor_, task.chunk_id,
+                gpu_data, num_elements
+                );
         assert(gpu_data);
         assert(num_elements == (right - left) * num_elements_per_vertex);
         checkCUDA(
-            cudaMemcpy(cpu_data, gpu_data, sizeof(DataType) * num_elements,
-                cudaMemcpyDeviceToHost)
-        );
+                cudaMemcpy(cpu_data, gpu_data, sizeof(DataType) * num_elements,
+                    cudaMemcpyDeviceToHost)
+                );
     }
 
-    //chunk_time += get_time();
-    //fprintf(stderr, "Vertices: %u, Edges: %lu, ForwardRuntime: %.3f (ms)\n", global_vid_end - global_vid_begin, num_edges, chunk_time * 1000.);
     Profiler::submit_main_thread_event(ForwardTaskCompleteEvent);
 }
 
@@ -3856,26 +2002,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     VertexId local_vid_end = vid_translation_->get_local_vid_master_vertex(global_vid_end);
     int op_idx_begin = partitioning_.partition_op_begin[node_id];
     int op_idx_end = partitioning_.partition_op_end[node_id];
-    //// copy the stashed weight data back 
-    //for (WeightOperator * op: local_weight_ops_) {
-    //    weight_stashing_manager_->update_latest_data(op);
-    //    weight_stashing_manager_->restore_stashed_weight_data(op, chunk_id);
-    //}
 
     if (is_bottommost_node_) {
         loss_->calculate_gradients(
                 output_tensor_, std_tensor_, local_vid_begin, local_vid_end
                 );
     }
-
-    // copy the shadow gradients of tensor dependent on other nodes 
-    // and zero out the gradients of other tensors
-    //const std::set<Tensor*> * all_backward_dependent_tensors = 
-    //    data_dependencies_tracker_->get_all_backward_dependent_tensors(chunk_id);
-    //const std::set<Tensor*> * all_non_backward_dependent_tensors = 
-    //    data_dependencies_tracker_->get_all_non_backward_dependent_tensors(chunk_id);
-    //assert(all_backward_dependent_tensors != NULL);
-    //assert(all_non_backward_dependent_tensors != NULL);
 
     assert(COMPRESS_DATA);
     // decompress the gradients if necessary
@@ -3907,25 +2039,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         DataType * grad = NULL;
         size_t num_elements = 0;
         assert(tensor->type == VERTEX_TENSOR);
-        //if (tensor->type == VERTEX_TENSOR) {
-            get_vertex_tensor_grad_by_chunk(
-                    tensor, chunk_id, grad, num_elements
-                    );
-            assert(grad != NULL);
-            assert(num_elements > 0);
-        //} else {
-        //    assert(tensor->op->get_type() == OPERATOR_WEIGHT);
-        //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-        //    assert(resource != NULL);
-        //    grad = resource->get_gpu_grad();
-        //    num_elements = resource->get_num_elements();
-        //    if (grad == NULL) {
-        //        printf("node %d, OP %d\n", node_id, op_ten_manager_->get_operator_index(tensor->op));
-        //    }
-        //    assert(grad != NULL);
-        //    assert(num_elements > 0);
-        //}
-        //memset(grad, 0, sizeof(DataType) * num_elements);
+        get_vertex_tensor_grad_by_chunk(
+                tensor, chunk_id, grad, num_elements
+                );
+        assert(grad != NULL);
+        assert(num_elements > 0);
         SetCUDAMemory<DataType>(grad, 0, num_elements, __FILE__, __LINE__);
     }
     // clear the gradients of weight tensors
@@ -3980,9 +2098,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
             case OPERATOR_MATMUL:
                 executor_->matmul_forward((MatmulOperator*) op, local_vid_begin, local_vid_end);
                 break;
-            //case OPERATOR_MATMULADD:
-            //    executor_->matmuladd_forward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
-            //    break;
             case OPERATOR_SOFTMAX:
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
@@ -4021,9 +2136,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
             case OPERATOR_MATMUL:
                 executor_->matmul_backward((MatmulOperator*) op, local_vid_begin, local_vid_end);
                 break;
-            //case OPERATOR_MATMULADD:
-            //    executor_->matmuladd_backward((MatmulAddOperator*) op, local_vid_begin, local_vid_end);
-            //    break;
             case OPERATOR_SOFTMAX:
                 executor_->softmax_backward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
@@ -4048,17 +2160,17 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         DataType * gpu_grad = NULL;
         size_t num_elements = 0;
         get_vertex_tensor_grad_by_chunk(
-            global_shared_tensor_, task.chunk_id,
-            gpu_grad, num_elements
-        );
+                global_shared_tensor_, task.chunk_id,
+                gpu_grad, num_elements
+                );
         assert(gpu_grad);
         assert(num_elements == (right - left) * num_elements_per_vertex);
         checkCUDA(
-            cudaMemcpy(
-                cpu_grad, gpu_grad, sizeof(DataType) * num_elements,
-                cudaMemcpyDeviceToHost
-            )
-        );
+                cudaMemcpy(
+                    cpu_grad, gpu_grad, sizeof(DataType) * num_elements,
+                    cudaMemcpyDeviceToHost
+                    )
+                );
     }
 
     // apply the gradients by pushing them to the parameter server
@@ -4067,33 +2179,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         Tensor * tensor = op->get_output_tensor(0);
         assert(tensor != NULL);
         TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-        //parameter_server_->push_grad(op, resource->get_gpu_grad());
         weight_aggregator_->push_grad(op, resource->get_gpu_grad());
     }
-    //// apply the gradients locally to verify the correctness first
-    //AbstractLowerLevelOptimizer * lower_level_optimizer = 
-    //    optimizer_->get_lower_level_optimizer();
-    //for (WeightOperator * op: local_weight_ops_) {
-    //    assert(op != NULL);
-    //    weight_stashing_manager_->restore_latest_data(op);
-    //    // apply the gradients
-    //    TensorResourceCPU * resource = (TensorResourceCPU*) op->get_output_tensor(0)->resource;
-    //    assert(resource != NULL);
-    //    DataType * data = resource->get_data();
-    //    DataType * grad = resource->get_grad();
-    //    size_t num_elements = resource->get_num_elements();
-    //    //double s = 0.;
-    //    //for (size_t i = 0; i < num_elements; ++ i) {
-    //    //    s += grad[i];
-    //    //}
-    //    //printf("Operator %d, grad sum %.3f\n", op_ten_manager_->get_operator_index(op), s);
-    //    assert(data != NULL);
-    //    assert(grad != NULL);
-    //    assert(num_elements > 0);
-    //    lower_level_optimizer->optimize_weights(
-    //            op, grad, data, num_elements
-    //            );
-    //}
 
     // compress the gradients if necessary
     if (pipeline_input_tensor_ != NULL && COMPRESS_DATA) {
@@ -4116,7 +2203,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         // compress the gradients
         zero_out_unnecessary_grad(grad, data, num_elements_this_chunk);
         grad_compressors_[chunk_id]->compress_data(grad, true);
-        //grad_compressors_[chunk_id]->move_compressed_data_to_cpu();
         compression_time_ += get_time();
         compression_size_ += sizeof(DataType) * num_elements_this_chunk;
     }
@@ -4308,8 +2394,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
             vtensor_manager_->get_incoming_mirror_vertices_data(
                     input_tensor, vid_begin, vid_end, data, num_elements
                     );
-            //assert(data != NULL);
-          //  assert(num_elements != 0);
 
             int num_features = graph_non_structural_data_->get_num_feature_dimensions();
             assert(input_tensor->dims[0] == -1);
@@ -4329,7 +2413,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
                 assert(feature_vec.vec_len == num_features);
                 assert(feature_vec.data != NULL);
                 //memcpy(data + offset, feature_vec.data, sizeof(DataType) * num_features);
-                 CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
+                CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
                 offset += num_features;
             }
         }
@@ -4367,8 +2451,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_std_tensor()
             LabelVector label_vec = graph_non_structural_data_->get_label(v_i);
             assert(label_vec.vec_len == num_labels);
             assert(label_vec.data != NULL);
-            //memcpy(data + offset, label_vec.data, sizeof(DataType) * num_labels);
-             CopyFromHostToCUDADevice<DataType>(data + offset, label_vec.data, num_labels, __FILE__, __LINE__);
+            CopyFromHostToCUDADevice<DataType>(data + offset, label_vec.data, num_labels, __FILE__, __LINE__);
             offset += num_labels;
         }
     }
@@ -4424,9 +2507,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::release_resources() {
         tensor->resource->unmap();
     }
     if(is_bottommost_node_){
-    std_tensor_->resource->unmap();
-    delete std_tensor_->resource;
-    delete std_tensor_;
+        std_tensor_->resource->unmap();
+        delete std_tensor_->resource;
+        delete std_tensor_;
     }
     int num_tensors = op_ten_manager_->get_num_tensors();
     for (int i = 0; i < num_tensors; ++ i) {
@@ -4456,28 +2539,17 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
         valid_accuracy = calculate_accuracy_mask(output_tensor_, std_tensor_, 1);
         test_accuracy = calculate_accuracy_mask(output_tensor_, std_tensor_, 2);
         Profiler::submit_main_thread_event(AccuracyCalculationTaskCompleteEvent);
-       
+
     }
 
     Profiler::submit_main_thread_event(GPUSyncStartEvent);
-    //printf("Node %d local accuracy: %.3f\n", DistributedSys::get_instance()->get_node_id(), accuracy);
-    // accuracy *= double(vid_translation_->get_num_master_vertices());
     MPI_Allreduce(&train_accuracy, &accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&valid_accuracy, &valid_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&test_accuracy, &test_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    // accuracy_ /= double(graph_structure_->get_num_global_vertices());
-
-    // calculate the loss
-    // accum_loss_ *= (double(vid_translation_->get_num_master_vertices()) / 
-    //     double(graph_structure_->get_num_global_vertices()));
     MPI_Allreduce(MPI_IN_PLACE, &accum_loss_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
     if (DistributedSys::get_instance()->is_master_node()) {
-        //printf("++++++++++ Train Accuracy: %.5f\n", accuracy_);
-        //printf("++++++++++ Valid Accuracy: %.5f\n", valid_accuracy_);
-        //printf("++++++++++ Test Accuracy: %.5f\n", test_accuracy_);
-        //printf("++++++++++ Loss: %.5f\n", accum_loss_);
         printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", 
                 accum_loss_, accuracy_, valid_accuracy_, test_accuracy_);
     }
@@ -4485,8 +2557,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     valid_acc = valid_accuracy_;
     test_acc = test_accuracy_;
     loss = accum_loss_;
-    //printf("Node %d, local accuracy: %.3f\n",
-    //        DistributedSys::get_instance()->get_node_id(), accuracy / double(vid_translation_->get_num_master_vertices()));
     accum_loss_ = 0;
 }
 
@@ -4531,8 +2601,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     partitioning.partition_op_begin = new int [num_nodes];
     partitioning.partition_op_end = new int [num_nodes];
 
-    //load_partitioning("./partition.txt", partitioning);
-    //partitioning_ = partitioning;
     partitioning = partitioning_;
 
     assert(num_nodes == partitioning.num_partitions);
@@ -4601,20 +2669,12 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id],
             max_chunk_size, application->get_output_tensor()
             );
-   
+
     chunk_manager_ = new CUDAVertexChunksManager(
             graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
-            //graph_structure_->get_num_global_vertices()
-             //(graph_structure_->get_num_global_vertices() + user_specified_num_chunks_ - 1) / user_specified_num_chunks_ 
-             max_chunk_size
-            //graph_structure_->get_num_global_vertices() / 4
+            max_chunk_size
             );
-    //data_dependencies_tracker_ = new CUDADataDependenciesTracker(
-    //        op_ten_manager_, chunk_manager_, graph_structure_, partitioning
-    //        );
-    //shadow_gradients_ = new CUDAShadowGradientsMasterVertices(vid_translation_, chunk_manager_);
-    //local_graph_ = new PIPLocalGraph(graph_structure_, vid_translation_);
-    
+
     CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_, scaledown_);
     lgraph->InitMemory();
     lgraph->InitCsr();
@@ -4628,29 +2688,25 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     WeightDumper * weight_dumper = new WeightDumper(
             num_epoch / EVAL_FREQUENCY + 1, weight_file_, weight_ops
             );
-    
+
     local_graph_ = lgraph;
-    //parameter_server_ = new CUDAPIPParallelParameterServer(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this);
     weight_aggregator_ = new CUDAPIPWeightAggregator(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this, weight_dumper);
-    
+
     assert(op_ten_manager_ != NULL);
     assert(vid_translation_ != NULL);
     assert(vtensor_manager_ != NULL);
     assert(chunk_manager_ != NULL);
-    //assert(data_dependencies_tracker_ != NULL);
-    //assert(shadow_gradients_ != NULL);
     assert(local_graph_ != NULL);
-    //assert(parameter_server_ != NULL);
     assert(weight_aggregator_ != NULL);
 
-    
+
     printf("*** Node %d, setting up some other necessary information...\n", node_id);
     // construct local chunk IDs
     chunk_manager_->get_local_chunk_ids(local_chunk_ids_);
 
     // some necessary initialization
     generate_backward_operator_mask(operators);
-    
+
     // set up some meta information
     is_topmost_node_ = (partitioning.partition_op_begin[node_id] == 0);
     is_bottommost_node_ = (partitioning.partition_op_end[node_id] == num_operators);
@@ -4709,9 +2765,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         assert(act_comm_wins_ && grad_comm_wins_);
         for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
             // create the MPI windows for activation passing
-            //if (! node_id) {
-            //    printf("Setting up the MPI window for chunk %d\n", chunk_id);
-            //}
             if (pipeline_input_tensor_) {
                 uint8_t * buff = NULL;
                 size_t buff_size = 0;
@@ -4786,23 +2839,14 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     forward_task_dispatcher_ = new CUDAPIPForwardTaskDispatcher(total_num_forwarding_tasks, &barrier_);
     forward_task_committer_ = new CUDAPIPForwardTaskCommitter(total_num_forwarding_tasks, &barrier_);
-    
+
     backward_task_dispatcher_ = new CUDAPIPBackwardTaskDispatcher(total_num_backwarding_tasks, &barrier_);
     backward_task_committer_ = new CUDAPIPBackwardTaskCommitter(total_num_backwarding_tasks, &barrier_);
-
-    //act_update_sender_ = new CUDAPIPGraphDataActivationUpdateSender(this, total_num_forwarding_tasks, &barrier_);
-    //act_update_receiver_ = new CUDAPIPGraphDataActivationUpdateReceiver(this, &barrier_);
-    //grad_update_sender_ = new CUDAPIPGraphDataGradientUpdateSender(this, total_num_backwarding_tasks, &barrier_); 
-    //grad_update_receiver_ = new CUDAPIPGraphDataGradientUpdateReceiver(this, &barrier_);
 
     assert(forward_task_dispatcher_ != NULL);
     assert(forward_task_committer_ != NULL);
     assert(backward_task_dispatcher_ != NULL);
     assert(backward_task_committer_ != NULL);
-    //assert(act_update_sender_ != NULL);
-    //assert(act_update_receiver_ != NULL);
-    //assert(grad_update_sender_ != NULL);
-    //assert(grad_update_receiver_ != NULL); 
 
     forward_task_dispatcher_->set_engine(this);
     forward_task_committer_->set_engine(this);
@@ -4810,11 +2854,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     backward_task_committer_->set_engine(this);
 
     // some necessary initialization
-    
+
     generate_backward_operator_mask(operators);
     set_up_tensor_resourses();
     init_weights();
-    
+
     hybrid_prepare_input_tensor();
     hybrid_prepare_std_tensor();
 
@@ -4822,8 +2866,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     OperatorExecutorGPUV2 * executor = (OperatorExecutorGPUV2*) executor_;
     //executor->set_graph(local_graph_);
     executor->set_csr(lgraph->get_cuda_csrColIn_In(),lgraph->get_cuda_csrValue_In(),lgraph->get_cuda_csrRowOffsets_In(),lgraph->get_nnz_in(),
-    lgraph->get_cuda_csrColIn_Out(),lgraph->get_cuda_csrValue_Out(),lgraph->get_cuda_csrRowOffsets_Out(),lgraph->get_nnz_out(),
-    lgraph->get_num_master_vertices(),lgraph->get_inMatrixSize(),lgraph->get_outMatrixSize());
+            lgraph->get_cuda_csrColIn_Out(),lgraph->get_cuda_csrValue_Out(),lgraph->get_cuda_csrRowOffsets_Out(),lgraph->get_nnz_out(),
+            lgraph->get_num_master_vertices(),lgraph->get_inMatrixSize(),lgraph->get_outMatrixSize());
     executor->set_cpu_csr(lgraph->get_host_csrRowOffsets_In(), lgraph->get_host_csrRowOffsets_Out());
     local_ntrain = 0;
     local_nvalid = 0;
@@ -4842,7 +2886,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         if (local_valid_mask_[i] == 1)local_nvalid++;
         if (local_test_mask_[i] == 1)local_ntest++;
     }
-    
+
     AllocateCUDAMemory<int>(&local_gpu_training_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
     AllocateCUDAMemory<int>(&local_gpu_valid_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
     AllocateCUDAMemory<int>(&local_gpu_test_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
@@ -4860,15 +2904,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             cpu_has_incomming_mirrors[lgraph->get_num_master_vertices() * n_i + v_i] = this->has_incoming_mirror(vid_translation_->get_global_vid_master_vertex(v_i), n_i);
         }
     }
-    //act_update_sender_->cpu_has_incomming_mirrors = cpu_has_incomming_mirrors;
-    //act_update_sender_->num_master_vertices = lgraph->get_num_master_vertices();
-    //act_update_sender_->local_partition_start = vid_translation_->get_global_vid_master_vertex(0);
-
-    //grad_update_sender_->cpu_has_incomming_mirrors = cpu_has_incomming_mirrors;
-    //grad_update_sender_->num_master_vertices = lgraph->get_num_master_vertices();
-    //grad_update_sender_->local_partition_start = vid_translation_->get_global_vid_master_vertex(0);
-    //weight_stashing_manager_ = new CUDAWeightStashingManager(local_weight_ops_);
-    //assert(weight_stashing_manager_ != NULL);
 
     // start task scheduling
     scheduler_ = new CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(
@@ -4879,30 +2914,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     scheduler_->schedule_task();
     delete scheduler_;
 
-    //delete weight_stashing_manager_;
-
-    //int num_tensors = op_ten_manager_->get_num_tensors();
-    //for (int i = 0; i < num_tensors; ++ i) {
-    //    Tensor * tensor = op_ten_manager_->get_tensor(i);
-    //    if (vtensor_manager_->is_local_tensor(tensor)) {
-    //        printf("Node %d, tensor %d belonging to op %d: ",
-    //                node_id, i, op_ten_manager_->get_operator_index(tensor->op));
-    //        DataType * data;
-    //        size_t num_elements = 0;
-    //        vtensor_manager_->get_master_vertices_data(
-    //                tensor, partitioning_.partition_vid_begin[node_id],
-    //                partitioning_.partition_vid_begin[node_id] + 1, 
-    //                data, num_elements
-    //                );
-    //        for (size_t j = 0; j < num_elements; ++ j) {
-    //            printf("%.3f ", data[j]);
-    //        }
-    //        printf("\n");
-    //    }
-    //}
-
     release_resources();
-    
+
     delete compression_buff;
     delete decompression_data_buff;
     delete decompression_index_buff;
@@ -4949,20 +2962,13 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     delete forward_task_committer_;
     delete backward_task_dispatcher_;
     delete backward_task_committer_;
-    //delete act_update_sender_;
-    //delete act_update_receiver_;
-    //delete grad_update_sender_; 
-    //delete grad_update_receiver_;
     assert(pthread_barrier_destroy(&barrier_) == 0);
 
     delete op_ten_manager_;
     delete vid_translation_;
     delete vtensor_manager_;
     delete chunk_manager_;
-    //delete data_dependencies_tracker_;
-    //delete shadow_gradients_;
     delete local_graph_;
-    //delete parameter_server_;
     delete weight_aggregator_;
 
     weight_dumper->commit_to_file();
@@ -4977,7 +2983,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     DeallocateCUDAMemory<int>(&local_gpu_training_mask_, __FILE__, __LINE__);
     DeallocateCUDAMemory<int>(&local_gpu_valid_mask_, __FILE__, __LINE__);
     DeallocateCUDAMemory<int>(&local_gpu_test_mask_, __FILE__, __LINE__);
-    //printf("*** Node %d, done model training\n", node_id);
 
     return accuracy_;
 }
@@ -5000,20 +3005,11 @@ void CUDABPIPLocalGraph::InitCsr()
     //process in-matrix
     host_csrRowOffsets_In_[0] = 0;
     int node_id = DistributedSys::get_instance()->get_node_id();
-    //ofstream o1("row.txt",std::ios::app);
-   for(int i = 0; i <= num_master_vertices_; ++i)
+    for(int i = 0; i <= num_master_vertices_; ++i)
     {
         host_csrRowOffsets_In_[i] = index_to_incoming_edges_[i] + i; 
-       // if(node_id == 0)o1 << host_csrRowOffsets_In_[i] << endl;
     }
     int nnz_in_count = 0;
-  //  int edge_count = 0;
-   // for(int i = 0; i < num_master_vertices_; ++i){
-     //   edge_count += get_in_degree(i);
-    //}
-   // assert(edge_count == num_in_edges_);
-  //  assert(false);
-   // ofstream out("recordx.txt",std::ios::app);
     for(int i = 0; i < num_master_vertices_; ++i)
     {
         InEdgeList inlist = get_in_edges(i);
@@ -5023,56 +3019,39 @@ void CUDABPIPLocalGraph::InitCsr()
         int g_indegree = global_graph_->get_in_degree(g_i);
         assert(g_indegree == indgree);
         assert(indgree == inlist.num_in_edges);
-     //   if(node_id == 0)out<<i<<" ("<<g_i<<") :      ";
         for(int j = 0; j < inlist.num_in_edges; ++j)
-            {
-                InEdge e = inlist.ptx[j];
-                VertexId src = e.src;
-                DataType norm_factor = e.norm_factor;
-                int g_src = -1;
-                if(src < num_master_vertices_)g_src = vid_translation_->get_global_vid_master_vertex(src);
-                else if(src >= num_master_vertices_)g_src = vid_translation_->get_global_vid_incoming_mirror(src);
-                assert(g_src >= 0);
-                DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_src)) * sqrt(1 + g_indegree));
-                assert(fabs(std - norm_factor) <=  1e-3);
-                if((addself == false) && (src > i)){
-                    host_csrColIn_In_[nnz_in_count] = i;
-                    host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
-                    nnz_in_count++;
-                    addself = true;
-               //     if(node_id == 0)out<<i<<" ("<<InToGlobal(i)<<") ";
-                }
-                bool same_chunk = src / vertices_per_chunk == i / vertices_per_chunk;
-                host_csrColIn_In_[nnz_in_count] = src;
-                host_csrValue_In_[nnz_in_count] = norm_factor;
-                //host_csrValue_In_[nnz_in_count] = norm_factor * (same_chunk ? 1.: 2. - 0.5); 
-                nnz_in_count++;
-            //    if(node_id == 0)out<<src<<" ("<<InToGlobal(src)<<") ";
-            }
-            if(addself == false){
+        {
+            InEdge e = inlist.ptx[j];
+            VertexId src = e.src;
+            DataType norm_factor = e.norm_factor;
+            int g_src = -1;
+            if(src < num_master_vertices_)g_src = vid_translation_->get_global_vid_master_vertex(src);
+            else if(src >= num_master_vertices_)g_src = vid_translation_->get_global_vid_incoming_mirror(src);
+            assert(g_src >= 0);
+            DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_src)) * sqrt(1 + g_indegree));
+            assert(fabs(std - norm_factor) <=  1e-3);
+            if((addself == false) && (src > i)){
                 host_csrColIn_In_[nnz_in_count] = i;
                 host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
                 nnz_in_count++;
                 addself = true;
-            //    if(node_id == 0)out<<i<<" ("<<InToGlobal(i)<<") ";
             }
-         //   if(node_id == 0)out<<endl;
+            bool same_chunk = src / vertices_per_chunk == i / vertices_per_chunk;
+            host_csrColIn_In_[nnz_in_count] = src;
+            host_csrValue_In_[nnz_in_count] = norm_factor;
+            nnz_in_count++;
+        }
+        if(addself == false){
+            host_csrColIn_In_[nnz_in_count] = i;
+            host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
+            nnz_in_count++;
+            addself = true;
+        }
     }
     assert(nnz_in_count == nnz_in_);
-   // ofstream o2("col.txt",std::ios::app);
-   // for(int i = 0; i<nnz_in_; ++i)
- //   {
- //       if(node_id == 0)o2<<host_csrColIn_In_[i]<<endl;
-  //  }
-    //process out-matrix
-  //  ofstream out("recordy.txt",ios::app);
-   // ofstream o1("rowy.txt",ios::app);
-    //ofstream o2("coly.txt",ios::app);
     host_csrColIn_Out_[0] = 0;
-    for(int i = 0; i <= num_master_vertices_; ++i)
-    {
+    for(int i = 0; i <= num_master_vertices_; ++i) {
         host_csrRowOffsets_Out_[i] = index_to_outgoing_edges_[i] + i;
-      //  if(node_id == 0)o1<<host_csrRowOffsets_Out_[i]<<endl;
     }
     int nnz_out_count = 0;
     for(int i = 0; i < num_master_vertices_; ++i)
@@ -5085,7 +3064,6 @@ void CUDABPIPLocalGraph::InitCsr()
         int g_outdgree = global_graph_->get_out_degree(g_i);
         assert(g_outdgree == outdgree);
         assert(outlist.num_out_edges == outdgree);
-      //  if(node_id == 0)out<<i<<"("<<OutToGlobal(i)<<")    :    ";
         for(int j = 0; j < outlist.num_out_edges; ++j)
         {
             OutEdge e = outlist.ptx[j];
@@ -5102,14 +3080,11 @@ void CUDABPIPLocalGraph::InitCsr()
                 host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
                 nnz_out_count++;
                 addself = true;
-           //     if(node_id == 0)out<<i<<"("<<OutToGlobal(i)<<")  ";
             }
             bool same_chunk = dst / vertices_per_chunk == i / vertices_per_chunk;
             host_csrColIn_Out_[nnz_out_count] = dst;
-            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 2.);  // FIXME: for unbaised gradient estimation
-            //host_csrValue_Out_[nnz_out_count] = norm_factor;
+            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 2.);  // for unbaised gradient estimation
             nnz_out_count++;
-          //  if(node_id == 0)out<<dst<<"("<<OutToGlobal(dst)<<")  ";
         }
         if(addself == false)
         {
@@ -5117,16 +3092,9 @@ void CUDABPIPLocalGraph::InitCsr()
             host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
             nnz_out_count++;
             addself = true;
-          //  if(node_id == 0)out<<i<<"("<<OutToGlobal(i)<<")  ";
         }
-      //  if(node_id == 0)out<<endl;
     }
-   // for(int i = 0; i<nnz_out_; ++i)
-     //{
-       //if(node_id == 0)o2<<host_csrColIn_Out_[i]<<endl;
-     //}
     assert(nnz_out_ == nnz_out_count);
-   // TestCsr();
     CopyFromHostToCUDADevice<int>(cuda_csrRowOffsets_In_, host_csrRowOffsets_In_, num_master_vertices_ + 1, __FILE__, __LINE__);
     CopyFromHostToCUDADevice<int>(cuda_csrColIn_In_, host_csrColIn_In_, nnz_in_, __FILE__, __LINE__);
     CopyFromHostToCUDADevice<DataType>(cuda_csrValue_In_, host_csrValue_In_, nnz_in_, __FILE__, __LINE__);
@@ -5135,12 +3103,11 @@ void CUDABPIPLocalGraph::InitCsr()
     CopyFromHostToCUDADevice<int>(cuda_csrColIn_Out_, host_csrColIn_Out_, nnz_out_, __FILE__, __LINE__);
     CopyFromHostToCUDADevice<DataType>(cuda_csrValue_Out_, host_csrValue_Out_, nnz_out_, __FILE__, __LINE__);
     printf("csr in-out ready !");
-    //assert(false);
 }
+
 void CUDABPIPLocalGraph::TestCsr()
 {   
     int node_id = DistributedSys::get_instance()->get_node_id();
-    //ofstream ioi("bug.txt",ios::app);
     //test in-matrix
     for(int i = 0; i < nnz_in_; ++i)
     {
@@ -5156,7 +3123,6 @@ void CUDABPIPLocalGraph::TestCsr()
         DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_row)) * sqrt(1 + global_graph_->get_in_degree(g_col)));
         assert(fabs(std - host_csrValue_In_[i]) < 1e-3);
     }
-    //std::cout<<"successful !"<<std::endl;
     //test out-matrix
     for(int i = 0; i < nnz_out_; ++i)
     {
@@ -5170,13 +3136,7 @@ void CUDABPIPLocalGraph::TestCsr()
         else if(col >= num_master_vertices_)g_col = vid_translation_->get_global_vid_outgoing_mirror(col);
         g_row = vid_translation_->get_global_vid_master_vertex(row);
         DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_row)) * sqrt(1 + global_graph_->get_in_degree(g_col)));
-      //  if(node_id == 0){
-        //    ioi << i<<":  "<<g_row << " "<<g_col <<" "<<global_graph_->get_in_degree(g_row)<<" "<<global_graph_->get_in_degree(g_col)<<endl;
-          //  ioi << host_csrValue_Out_[i] <<" "<<col<<" "<<row<<endl;
-        //}
-        //assert(fabs(std - host_csrValue_Out_[i]) < 1e-3);
     }
-    //std::cout<<"successful !"<<std::endl;
 }
 
 
