@@ -1613,74 +1613,52 @@ bool CUDAPIPPartitioner::is_valid_partition(CUDAPIPPartitioning p, VertexId num_
     return true;
 }
 
-
-BPIPLocalGraph::BPIPLocalGraph(AbstractGraphStructure * global_graph, CUDAVertexIdTranslationTable * vid_translation) {
-    num_master_vertices_ = vid_translation->get_num_master_vertices();
-    num_incoming_mirror_vertices_ = vid_translation->get_num_incoming_mirror_vertices();
-    num_outgoing_mirror_vertices_ = vid_translation->get_num_outgoing_mirror_vertices();
-    num_in_edges_ = 0;
-    num_out_edges_ = 0;
-
-    VertexId partition_begin = vid_translation->get_partition_begin();
-    VertexId partition_end = vid_translation->get_partition_end();
-    for (VertexId vid = partition_begin; vid < partition_end; ++ vid) {
-        EdgeId in_degree = global_graph->get_in_degree(vid);
-        EdgeId out_degree = global_graph->get_out_degree(vid);
-        num_in_edges_ += in_degree;
-        num_out_edges_ += out_degree;
+CUDAPIPPartitioning ModelPartitioner::get_model_parallel_partition(
+        AbstractApplication * application,
+        int num_gpus, int num_layers,
+        const std::vector<double>& cost_each_layer,
+        VertexId num_vertices
+        ) {
+    const std::vector<Operator*>& operators = application->get_operators();
+    int num_operators = (int) operators.size();
+    const std::vector<std::pair<int, int>> &operators_each_layer = application->get_operator_range_each_layer();
+    assert(num_layers == operators_each_layer.size());
+    // partition the layers
+    double remained_cost = 0.;
+    for (int i = 0; i < num_layers; ++ i) {
+        remained_cost += cost_each_layer[i];
     }
-
-    // allocate the memory 
-    index_to_incoming_edges_ = new EdgeId [num_master_vertices_ + 1];
-    incoming_edges_ = new InEdge [num_in_edges_];
-    index_to_outgoing_edges_ = new EdgeId [num_master_vertices_ + 1];
-    outgoing_edges_ = new OutEdge [num_out_edges_];
-    assert(index_to_incoming_edges_ != NULL);
-    assert(incoming_edges_ != NULL);
-    assert(index_to_outgoing_edges_ != NULL);
-    assert(outgoing_edges_ != NULL);
-
-    index_to_incoming_edges_[0] = index_to_outgoing_edges_[0] = 0;
-    for (VertexId vid = partition_begin; vid < partition_end; ++ vid) {
-        EdgeId in_degree = global_graph->get_in_degree(vid);
-        EdgeId out_degree = global_graph->get_out_degree(vid);
-        VertexId local_vid = vid_translation->get_local_vid_master_vertex(vid);
-        index_to_incoming_edges_[local_vid + 1] = index_to_incoming_edges_[local_vid] + in_degree;
-        index_to_outgoing_edges_[local_vid + 1] = index_to_outgoing_edges_[local_vid] + out_degree;
-    }
-
-    // construct the CSR structures
-    for (VertexId vid = partition_begin; vid < partition_end; ++ vid) {
-        InEdgeList in_edges = global_graph->get_in_edges(vid);
-        OutEdgeList out_edges = global_graph->get_out_edges(vid);
-        VertexId local_vid = vid_translation->get_local_vid_master_vertex(vid);
-        // process the in edges
-        EdgeId offset = index_to_incoming_edges_[local_vid];
-        for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
-            InEdge e = in_edges.ptx[e_i];
-            InEdge local_e;
-            if (e.src >= partition_begin && e.src < partition_end) {
-                local_e.src = vid_translation->get_local_vid_master_vertex(e.src);
-            } else {
-                local_e.src = vid_translation->get_local_vid_incoming_mirror(e.src);
+    CUDAPIPPartitioning partition;
+    partition.num_partitions = num_gpus;
+    partition.partition_vid_begin = new VertexId [num_gpus];
+    partition.partition_vid_end = new VertexId [num_gpus];
+    partition.partition_op_begin = new int [num_gpus];
+    partition.partition_op_end = new int [num_gpus];
+    assert(partition.partition_vid_begin && partition.partition_vid_end);
+    assert(partition.partition_op_begin && partition.partition_op_end);
+    int layer_begin = 0;
+    for (int i = 0; i < num_gpus; ++ i) {
+        double mean_cost = remained_cost / (num_gpus - i);
+        double cost = 0;
+        int j = layer_begin;
+        while (j < num_layers) {
+            cost += cost_each_layer[j];
+            ++ j;
+            if (cost >= mean_cost) {
+                break;
             }
-            local_e.norm_factor = e.norm_factor;
-            incoming_edges_[offset + e_i] = local_e;
         }
-        // process the out edges
-        offset = index_to_outgoing_edges_[local_vid];
-        for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
-            OutEdge e = out_edges.ptx[e_i];
-            OutEdge local_e;
-            if (e.dst >= partition_begin && e.dst < partition_end) {
-                local_e.dst = vid_translation->get_local_vid_master_vertex(e.dst);
-            } else {
-                local_e.dst = vid_translation->get_local_vid_outgoing_mirror(e.dst);
-            }
-            local_e.norm_factor = e.norm_factor;
-            outgoing_edges_[offset + e_i] = local_e;
-        }
+        remained_cost -= cost;
+        printf("GPU %d, layer [%d, %d)\n", i, layer_begin, j);
+        partition.partition_vid_begin[i] = 0;
+        partition.partition_vid_end[i] = num_vertices;
+        std::pair<int, int> beginning_layer = operators_each_layer[layer_begin];
+        partition.partition_op_begin[i] = beginning_layer.first;
+        std::pair<int, int> ending_layer = operators_each_layer[j - 1];
+        partition.partition_op_end[i] = ending_layer.second;
+        layer_begin = j;
     }
+    return partition;
 }
 
 BPIPLocalGraph::~BPIPLocalGraph(){

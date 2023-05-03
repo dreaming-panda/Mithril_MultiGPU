@@ -98,55 +98,6 @@ class GCNII: public AbstractApplication {
         }
 };
 
-CUDAPIPPartitioning get_model_parallel_partition( 
-        AbstractApplication * application,
-        int num_gpus, 
-        int num_layers,
-        const std::vector<double>& cost_each_layer,
-        VertexId num_vertices
-        ) {
-    const std::vector<Operator*>& operators = application->get_operators();
-    int num_operators = (int) operators.size();
-    const std::vector<std::pair<int, int>> &operators_each_layer = application->get_operator_range_each_layer();
-    assert(num_layers == operators_each_layer.size());
-    // partition the layers
-    double remained_cost = 0.;
-    for (int i = 0; i < num_layers; ++ i) {
-        remained_cost += cost_each_layer[i];
-    }
-    CUDAPIPPartitioning partition;
-    partition.num_partitions = num_gpus;
-    partition.partition_vid_begin = new VertexId [num_gpus];
-    partition.partition_vid_end = new VertexId [num_gpus];
-    partition.partition_op_begin = new int [num_gpus];
-    partition.partition_op_end = new int [num_gpus];
-    assert(partition.partition_vid_begin && partition.partition_vid_end);
-    assert(partition.partition_op_begin && partition.partition_op_end);
-    int layer_begin = 0;
-    for (int i = 0; i < num_gpus; ++ i) {
-        double mean_cost = remained_cost / (num_gpus - i);
-        double cost = 0;
-        int j = layer_begin;
-        while (j < num_layers) {
-            cost += cost_each_layer[j];
-            ++ j;
-            if (cost >= mean_cost) {
-                break;
-            }
-        }
-        remained_cost -= cost;
-        printf("GPU %d, layer [%d, %d)\n", i, layer_begin, j);
-        partition.partition_vid_begin[i] = 0;
-        partition.partition_vid_end[i] = num_vertices;
-        std::pair<int, int> beginning_layer = operators_each_layer[layer_begin];
-        partition.partition_op_begin[i] = beginning_layer.first;
-        std::pair<int, int> ending_layer = operators_each_layer[j - 1];
-        partition.partition_op_end[i] = ending_layer.second;
-        layer_begin = j;
-    }
-    return partition;
-}
-
 int main(int argc, char ** argv) {
     // parse input arguments
     namespace po = boost::program_options;
@@ -316,7 +267,7 @@ int main(int argc, char ** argv) {
             // assume that the cost of each layer is the same
             cost_each_layer.push_back(1.);
         }
-        CUDAPIPPartitioning partition = get_model_parallel_partition(
+        CUDAPIPPartitioning partition = ModelPartitioner::get_model_parallel_partition(
                 gcn, num_gpus, num_layers + 2, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);

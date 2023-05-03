@@ -38,7 +38,6 @@
 #define COMPRESS_DATA (true)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
-//class CUDADataDependenciesTracker;
 class CUDAShadowGradientsMasterVertices;
 
 enum CUDAPIPParallelMessageType {
@@ -711,6 +710,16 @@ struct CUDAPIPPartitioning {
 };
 
 void load_partitioning(const std::string &path, CUDAPIPPartitioning &p);
+
+class ModelPartitioner {
+    public:
+        static CUDAPIPPartitioning get_model_parallel_partition(
+                AbstractApplication * application,
+                int num_gpus, int num_layers,
+                const std::vector<double>& cost_each_layer,
+                VertexId num_vertices
+                );
+};
 
 class CUDAPIPPartitioner {
     public:

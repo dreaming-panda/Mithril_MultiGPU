@@ -14,14 +14,12 @@
 #include "graph_loader.h"
 #include "context.h"
 #include "executor.h"
-//#include "parallel/model_parallel.h"
 #include "cuda/cuda_executor.h"
 #include "cuda/cuda_graph_loader.h"
 #include "cuda/cuda_graph.h"
 #include "cublas_v2.h"
 #include "cuda/cuda_loss.h"
 #include"cuda/cuda_executor.h"
-#//include "cuda/cuda_pipeline_parallel.h"
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_optimizer.h"
 #include "cuda/cuda_single_cpu_engine.h"
@@ -42,19 +40,13 @@ class GCN: public AbstractApplication {
     public:
         GCN(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate): 
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate) {
-            assert(num_layers >= 1);
-            assert(num_hidden_units >= 1);
-            assert(num_classes >= 1);
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), 
+            num_classes_(num_classes), dropout_rate_(dropout_rate) {
+                assert(num_layers >= 1);
+                assert(num_hidden_units >= 1);
+                assert(num_classes >= 1);
         }
         ~GCN() {}
-
-        // the purpose is to reduce the memory consumption
-        // 1) not store the activation of some tensors => recomputation when backwarding
-        //      a) lightweight to recompute (avoid recomputing feed-forward or aggregation)
-        //      b) the tensor is not the input of an aggregation op (i.e., need to store the embeddings of all vertices)
-        // 2) not allocate space enough to store all gradients of some tensor => as gradients can be used and discarded
-        //      a) the tensor is not the output of an aggregation op
 
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
@@ -64,98 +56,26 @@ class GCN: public AbstractApplication {
                     output_size = num_classes_;
                 }
 
-                //t = fc(t, output_size); 
-                //t = aggregation(t, NORM_SUM);    
-
                 if (i == 0) {
-                    // do the dimention reduction first
-                    // otherwise, the aggregation operator has to deal with 
-                    // feature vectors longer than 1000
                     t = fc(t, output_size); 
                     t = aggregation(t, NORM_SUM);    
                 } else {
-                    // the ordering is important
-                    // the output of the aggregation operation is approximate
-                    // should not be directly followed by a non-linear 
-                    // activation operator
                     t = aggregation(t, NORM_SUM);    
                     t = fc(t, output_size); 
                 }
 
-                // NOTE: the user indication (is_transient) is just a hint
-                // the system right still store the whole tensor for some performance reason
                 if (i == num_layers_ - 1) { 
                     t = softmax(t); 
                 } else {
                     t = relu(t, true); // enable recomputation for relu
                     t = dropout(t, dropout_rate_, true);  // enable recomputation for dropout
                 }
+                next_layer();
             }
             return t;
         }
 };
 
-CUDAPIPPartitioning get_model_parallel_partition(
-        AbstractApplication * application,
-        int num_gpus, 
-        int num_layers,
-        const std::vector<double>& cost_each_layer,
-        VertexId num_vertices
-        ) {
-    const std::vector<Operator*>& operators = application->get_operators();
-    int num_operators = (int) operators.size();
-    std::vector<std::pair<int, int>> operators_each_layer;
-    operators_each_layer.clear();
-    int op_begin = 0;
-    for (int i = 0; i < num_operators; ++ i) {
-        Operator * op = operators[i];
-        assert(op);
-        if (op->get_type() == OPERATOR_DROPOUT ||
-                op->get_type() == OPERATOR_SOFTMAX) {
-            operators_each_layer.push_back(
-                    std::make_pair(op_begin, i + 1)
-                    );
-            op_begin = i + 1;
-        }
-    }
-    assert(num_layers == operators_each_layer.size());
-    // partition the layers
-    double remained_cost = 0.;
-    for (int i = 0; i < num_layers; ++ i) {
-        remained_cost += cost_each_layer[i];
-    }
-    CUDAPIPPartitioning partition;
-    partition.num_partitions = num_gpus;
-    partition.partition_vid_begin = new VertexId [num_gpus];
-    partition.partition_vid_end = new VertexId [num_gpus];
-    partition.partition_op_begin = new int [num_gpus];
-    partition.partition_op_end = new int [num_gpus];
-    assert(partition.partition_vid_begin && partition.partition_vid_end);
-    assert(partition.partition_op_begin && partition.partition_op_end);
-    int layer_begin = 0;
-    for (int i = 0; i < num_gpus; ++ i) {
-        double mean_cost = remained_cost / (num_gpus - i);
-        double cost = 0;
-        int j = layer_begin;
-        while (j < num_layers) {
-            cost += cost_each_layer[j];
-            ++ j;
-            if (cost >= mean_cost) {
-                break;
-            }
-        }
-        remained_cost -= cost;
-        printf("GPU %d, layer [%d, %d)\n", i, layer_begin, j);
-        partition.partition_vid_begin[i] = 0;
-        partition.partition_vid_end[i] = num_vertices;
-        std::pair<int, int> beginning_layer = operators_each_layer[layer_begin];
-        partition.partition_op_begin[i] = beginning_layer.first;
-        std::pair<int, int> ending_layer = operators_each_layer[j - 1];
-        partition.partition_op_end[i] = ending_layer.second;
-        layer_begin = j;
-    }
-    return partition;
-}
 
 int main(int argc, char ** argv) {
     // parse input arguments
@@ -326,7 +246,7 @@ int main(int argc, char ** argv) {
             // assume that the cost of each layer is the same
             cost_each_layer.push_back(1.);
         }
-        CUDAPIPPartitioning partition = get_model_parallel_partition(
+        CUDAPIPPartitioning partition = ModelPartitioner::get_model_parallel_partition(
                 gcn, num_gpus, num_layers, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
