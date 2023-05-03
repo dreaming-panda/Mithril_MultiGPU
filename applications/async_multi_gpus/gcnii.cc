@@ -40,6 +40,7 @@ using namespace std;
 // 4) [x] the scale-and-add op
 // 5) [x] enable rematerialization for GCNII
 // 6) [x] the h0 broadcasting
+// 7) [ ] simplify the configuration
 
 class GCNII: public AbstractApplication {
     private:
