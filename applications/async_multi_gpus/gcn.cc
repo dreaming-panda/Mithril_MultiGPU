@@ -139,6 +139,9 @@ int main(int argc, char ** argv) {
     printf("The random seed: %d\n", random_seed);
     printf("The scaling down factor of out-of-chunk gradients: %f\n", scaledown);
 
+    // initialize the random number engine
+    RandomNumberManager::init_random_number_manager(random_seed);
+
     volatile bool terminated = false;
     Context::init_context();
     int node_id = DistributedSys::get_instance()->get_node_id();
@@ -215,10 +218,6 @@ int main(int argc, char ** argv) {
     // CopyFromHostToCUDADevice<int>(gpu_test_mask_, test, graph_structure->get_num_global_vertices(), __FILE__, __LINE__);
     printf("train nodes %d, valid nodes %d, test nodes %d\n", ntrain, nvalid, ntest);
 
-    // set the random seed
-    execution_engine->set_random_seed(random_seed);
-    executor->set_random_seed(random_seed);
-    
     //loss->set_mask(training, valid, test, gpu_training_mask_, gpu_valid_mask_, gpu_test_mask_, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
     execution_engine->set_mask(training, valid, test, nullptr, nullptr, nullptr, graph_structure->get_num_global_vertices(), ntrain, nvalid, ntest);
     execution_engine->setCuda(cudnn, graph_structure->get_num_global_vertices());

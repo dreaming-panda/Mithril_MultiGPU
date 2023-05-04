@@ -4,5 +4,5 @@ function (add_application application_name)
 	set_target_properties(OSDI2023_MULTI_NODES_${application_name} PROPERTIES OUTPUT_NAME ${application_name})
 endfunction()
 
-add_application(gcn)
+#add_application(gcn)
 add_application(gcnii)

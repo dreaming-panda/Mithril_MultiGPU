@@ -16,6 +16,7 @@
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (1)
+#define NUM_GPUS_PER_NODE (4)
 
 //#define SHOW_SCHEDULE_DETAILS
 
@@ -35,102 +36,27 @@ CUDAPIPForwardTaskDispatcher::~CUDAPIPForwardTaskDispatcher() {
 void CUDAPIPForwardTaskDispatcher::thread_main() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-    cudaSetDevice(node_id % 4);
+    cudaSetDevice(node_id % NUM_GPUS_PER_NODE);
     int num_epoch = engine_->get_num_epoch();
     const std::vector<int>& local_chunk_ids_tmp = engine_->get_local_chunk_ids();
     std::vector<int> local_chunk_ids;
-    for (int i: local_chunk_ids_tmp) 
+    for (int i: local_chunk_ids_tmp) {
         local_chunk_ids.push_back(i);
+    }
 
     int num_local_chunks = local_chunk_ids.size();
     CUDAPIPForwardTask task;
-    //CUDADataDependenciesTracker * data_dependencies_tracker = engine_->get_data_dependencies_tracker();
-    //assert(data_dependencies_tracker != NULL);
     DataType * data_buff = nullptr;
 
     // the compressed data structure
     uint64_t * compressed_data_hdr = nullptr;
     DataType * compressed_data_payload = nullptr;
 
-    size_t len = 0;
     double comm = 0;
     double comm_time = 0;
     if (engine_->is_topmost_node()) {
-        auto rand_gen = std::default_random_engine(engine_->random_seed_);
-
-        // a simple dispatching strategy of the topmost nodes not considering load balancing is used here
-        dispatch_algorithm_ = RandomDispatch;
-        if (dispatch_algorithm_ == RandomDispatch) {
-            printf("RANDOMLY DISPATCH THE CHUNKS...\n");
-            std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
-        } else if (dispatch_algorithm_ == HighDegreeFirstDispatch) {
-            printf("DISPATCH THE HIGH-DEGREE CHUNKS FIRST...\n");
-            std::vector<std::pair<int, EdgeId>> degree_sum_each_chunk;
-            for (int chunk_id: local_chunk_ids) {
-                EdgeId degree_sum = 0;
-                VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
-                VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
-                for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
-                    degree_sum += engine_->graph_structure_->get_in_degree(v_i);
-                }
-                degree_sum_each_chunk.push_back(std::make_pair(
-                            chunk_id, degree_sum
-                            ));
-            }
-            std::sort(degree_sum_each_chunk.begin(), degree_sum_each_chunk.end(), 
-                    [](const std::pair<int, EdgeId> &a,
-                        const std::pair<int, EdgeId> &b) {
-                    return a.second > b.second;
-                    }
-                    );
-            for (size_t i = 1; i < degree_sum_each_chunk.size(); ++ i) {
-                assert(degree_sum_each_chunk[i - 1].second >= degree_sum_each_chunk[i].second);
-            }
-            local_chunk_ids.clear();
-            for (size_t i = 0; i < degree_sum_each_chunk.size(); ++ i) {
-                local_chunk_ids.push_back(degree_sum_each_chunk[i].first);
-                if (i < 10) {
-                    printf("DegreeSum of chunk %lu is %lu\n", i, 
-                            degree_sum_each_chunk[i].second);
-                }
-            }
-        } else if (dispatch_algorithm_ == LowDegreeFirstDispatch) {
-            printf("DISPATCH THE LOW-DEGREE CHUNKS FIRST...\n");
-            std::vector<std::pair<int, EdgeId>> degree_sum_each_chunk;
-            for (int chunk_id: local_chunk_ids) {
-                EdgeId degree_sum = 0;
-                VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
-                VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
-                for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
-                    degree_sum += engine_->graph_structure_->get_in_degree(v_i);
-                }
-                degree_sum_each_chunk.push_back(std::make_pair(
-                            chunk_id, degree_sum
-                            ));
-            }
-            std::sort(degree_sum_each_chunk.begin(), degree_sum_each_chunk.end(), 
-                    [](const std::pair<int, EdgeId> &a,
-                        const std::pair<int, EdgeId> &b) {
-                    return a.second < b.second;
-                    }
-                    );
-            for (size_t i = 1; i < degree_sum_each_chunk.size(); ++ i) {
-                assert(degree_sum_each_chunk[i - 1].second <= degree_sum_each_chunk[i].second);
-            }
-            local_chunk_ids.clear();
-            for (size_t i = 0; i < degree_sum_each_chunk.size(); ++ i) {
-                local_chunk_ids.push_back(degree_sum_each_chunk[i].first);
-                if (i < 10) {
-                    printf("DegreeSum of chunk %lu is %lu\n", i, 
-                            degree_sum_each_chunk[i].second);
-                }
-            }
-        } else {
-            assert(dispatch_algorithm_ == DefaultOrderDispatch);
-            // do nothing
-            // keep the default ordering
-        }
-
+        auto rand_gen = std::default_random_engine(RandomNumberManager::get_random_seed());
+        std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
         // doesn't need to receive activation from dependent nodes
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             // synchronization between all threads 
@@ -139,33 +65,21 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             pthread_barrier_wait(barrier_);
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
-            if (true) { 
-                std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
-                ////std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
-                //if (epoch_id % REVERSE_PERIOD == 0) {
-                //    //std::reverse(local_chunk_ids.begin(), local_chunk_ids.end()); 
-                //    std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
-                //}
-                for (int chunk_id: local_chunk_ids) {
-                    task.epoch_id = epoch_id;
-                    task.chunk_id = chunk_id;
-                    double time_elapsed = (get_time() - start_time) * 1000;    
+            // shuffle the chunks each epoch
+            std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
+            for (int chunk_id: local_chunk_ids) {
+                task.epoch_id = epoch_id;
+                task.chunk_id = chunk_id;
+                double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_DISPATCH_DETAILS
-                    printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
-                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
+                printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
+                        time_elapsed, node_id, task.epoch_id, task.chunk_id);
 #endif
-                    task_queue_->push(task);
-                }
-            } else {
-                for (size_t i = local_chunk_ids.size(); i > 0; -- i) {
-                    task.epoch_id = epoch_id;
-                    task.chunk_id = local_chunk_ids[i - 1];
-                    task_queue_->push(task);
-                }
+                task_queue_->push(task);
             }
         }
     } else {
-        // FIXME: only works for pipeline parallel
+        // only works for pipeline parallel
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
             pthread_barrier_wait(barrier_);
@@ -183,7 +97,6 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                 comm += sizeof(CUDAPIPForwardTask);
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherCompleteWaitForNewTask);
 
-                // receiving the activation data
                 Profiler::submit_forward_task_dispatcher_event(ForwardDispatcherStartReceiveData);
                 assert(engine_->pipeline_input_tensor_);
                 int remote_node = status.MPI_SOURCE;
@@ -198,55 +111,34 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                 assert(num_elements_this_chunk);
 
                 comm_time -= get_time();
-                if (! COMPRESS_DATA) {
-                    if (len == 0) {
-                        data_buff = new DataType [num_elements_this_chunk];
-                        len = num_elements_this_chunk;
-                        assert(data_buff);
-                    } else if (len < num_elements_this_chunk) {
-                        len = num_elements_this_chunk;
-                        delete [] data_buff;
-                        data_buff = new DataType [num_elements_this_chunk];
-                        assert(data_buff);
-                    }
-                    MPI_Recv(
-                            data_buff, num_elements_this_chunk,
-                            DistributedSys::get_mpi_data_type<DataType>(),
-                            remote_node, ForwardActivationPassing,
-                            MPI_COMM_WORLD, &status
-                            );
-                    CopyFromHostToCUDADevice<DataType>(
-                            data, data_buff, num_elements_this_chunk, 
-                            __FILE__, __LINE__
-                            );
-                    comm += num_elements_this_chunk * sizeof(DataType);
-                } else {
-                    engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
-                            [&](uint8_t * buff, size_t buff_size) {
-                            size_t compressed_data_size = 0;
+                assert(COMPRESS_DATA);
+                // receiving the activation data
+                engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
+                        [&](uint8_t * buff, size_t buff_size) {
+                        size_t compressed_data_size = 0;
 #ifdef USE_RDMA
-                            MPI_Recv(
-                                    &compressed_data_size, 1, 
-                                    DistributedSys::get_mpi_data_type<size_t>(),
-                                    remote_node, ForwardActivationPassing,
-                                    MPI_COMM_WORLD, &status
-                                    );
+                        MPI_Recv(
+                                &compressed_data_size, 1, 
+                                DistributedSys::get_mpi_data_type<size_t>(),
+                                remote_node, ForwardActivationPassing,
+                                MPI_COMM_WORLD, &status
+                                );
 #else
-                            MPI_Status status;
-                            MPI_Recv(
-                                    buff, 1, MPI_CHAR,
-                                    remote_node, ForwardActivationPassing,
-                                    MPI_COMM_WORLD, &status
-                                    );
-                            int count = 0;
-                            MPI_Get_count(&status, MPI_CHAR, &count);
-                            compressed_data_size = count;
+                        MPI_Status status;
+                        MPI_Recv(
+                                buff, 1, MPI_CHAR,
+                                remote_node, ForwardActivationPassing,
+                                MPI_COMM_WORLD, &status
+                                );
+                        int count = 0;
+                        MPI_Get_count(&status, MPI_CHAR, &count);
+                        compressed_data_size = count;
 #endif
-                            comm += compressed_data_size;
-                            return compressed_data_size;
-                            }, true
-                    );
-                }
+                        comm += compressed_data_size;
+                        return compressed_data_size;
+                        }, true
+                );
+                // receive the shared tensor data if applicable
                 if (engine_->global_shared_tensor_ != NULL) {
                     // need to receive the globally shared tensor
                     size_t num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
@@ -275,11 +167,6 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     comm_ = comm;
     printf("Node %d, Layer-level comm throughput (act): %.3f GBps\n",
             node_id, comm * 1. / comm_time / 1024. / 1024. / 1024.);
-    if(len > 0) {
-        delete [] data_buff;
-        delete [] compressed_data_hdr;
-        delete [] compressed_data_payload;
-    }
 }
 
 CUDAPIPBackwardTaskDispatcher::CUDAPIPBackwardTaskDispatcher(
@@ -1089,7 +976,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
 
-        int num_startup_epoches = engine_->num_startup_epoches_;
         Profiler::submit_main_thread_event(GradSyncStartEvent);
         engine_->weight_aggregator_->commit_grad();
         engine_->weight_aggregator_->clear_gradients();
@@ -2416,9 +2302,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
                     if (sum != 0) {
                         for (int i = 0; i < num_features; ++ i) {
                             feature_vec.data[i] /= sum;
-                            if (isinf(feature_vec.data[i]) || isnan(feature_vec.data[i])) {
-                                feature_vec.data[i] = 0.;
-                            }
+                            bool bad_value = isinf(feature_vec.data[i]) || isnan(feature_vec.data[i]);
+                            feature_vec.data[i] = bad_value ? 0.0: feature_vec.data[i];
                         }
                     }
                 } else {
@@ -2627,9 +2512,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     fprintf(stderr, "WARNING: the current version only applies to linear GNN models!\n");
 
-    num_epoch += 10 * num_startup_epoches_;
-    num_epoch -= num_startup_epoches_;
-
     application_ = application;
     num_epoch_ = num_epoch;
     const std::vector<Operator*> operators = application->get_operators();
@@ -2722,7 +2604,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             max_chunk_size
             );
 
-    CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_, scaledown_);
+    CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_);
     lgraph->InitMemory();
     lgraph->InitCsr();
 

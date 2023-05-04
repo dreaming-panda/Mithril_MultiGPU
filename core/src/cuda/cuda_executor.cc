@@ -2,10 +2,8 @@
 #define TIMETAG
 
 OperatorExecutorGPUV2::OperatorExecutorGPUV2(){
+    init_cuda_handle();
     graph_ = nullptr;
-    cublas_handle_ = nullptr;
-    cudnn_handle_ = nullptr;
-    cusparse_handle_ = nullptr;
     dbuffer_ = nullptr;
     tp_weight = nullptr;
     tp_grad = nullptr;
@@ -26,9 +24,7 @@ OperatorExecutorGPUV2::OperatorExecutorGPUV2(){
 };
 
 OperatorExecutorGPUV2::OperatorExecutorGPUV2(CUDAFullyStructualGraph * graph): graph_(graph){
-    cublas_handle_ = nullptr;
-    cudnn_handle_ = nullptr;
-    cusparse_handle_ = nullptr;
+    init_cuda_handle();
     dbuffer_ = nullptr;
     host_id = nullptr;
     cuda_id = nullptr;
@@ -51,8 +47,9 @@ OperatorExecutorGPUV2::OperatorExecutorGPUV2(CUDAFullyStructualGraph * graph): g
 };
 
 OperatorExecutorGPUV2::~OperatorExecutorGPUV2() {
-    if(has_Spcsr_ == true)cusparseDestroySpMat(SpCsr_);
-    if(has_dbuffer_ == true)cudaFree(dbuffer_);
+    destroy_cuda_handle();
+    if(has_Spcsr_ == true) cusparseDestroySpMat(SpCsr_);
+    if(has_dbuffer_ == true) cudaFree(dbuffer_);
     for(int i = 0; i < lginfo_forward.size(); ++i){
         DeallocateCUDAMemory<int>(&lginfo_forward[i].lg.cuda_local_rowoffsets,__FILE__, __LINE__);
         cusparseDestroySpMat(lginfo_forward[i].spcsr);
@@ -86,16 +83,6 @@ void OperatorExecutorGPUV2::set_activation_size(int ac_s , int n_class){
 void OperatorExecutorGPUV2::relu_forward(ReluOperator * op) {   
     VertexId num_vertices = graph_->get_num_global_vertices();
     relu_forward(op, (VertexId) 0, num_vertices);
-}
-
-void OperatorExecutorGPUV2::set_cuda_handle(cublasHandle_t* cublas_handle, cudnnHandle_t* cudnn_handle, cusparseHandle_t* cusparse_handle)
-{
-    assert(cublas_handle != nullptr);
-    assert(cudnn_handle != nullptr);
-    assert(cusparse_handle != nullptr);
-    cublas_handle_ = cublas_handle;
-    cudnn_handle_ = cudnn_handle;
-    cusparse_handle_ = cusparse_handle;
 }
 
 void OperatorExecutorGPUV2::build_inner_csr_(){
@@ -1197,6 +1184,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
     assert(chunk2state);
     if (chunk2state->find(chunk_id) == chunk2state->end()) {
         assert(! is_in_recomputation_mode_);
+        assert(cudnn_handle_);
         // allocate a new dropout state
         size_t states_size = 0;
         checkCUDNN(cudnnDropoutGetStatesSize(*cudnn_handle_, &states_size));
@@ -1213,7 +1201,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
                     dropout_descriptor, *cudnn_handle_,
                     op->dropout_rate_,
                     states, states_size,
-                    rand() 
+                    RandomNumberManager::get_random_number()
                     ));
         // set up the tensor descriptor
         cudnnTensorDescriptor_t tensor_descriptor;
@@ -1373,7 +1361,25 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
 #endif
 }
 
+void OperatorExecutorGPUV2::init_cuda_handle() {
+    cublasCreate(&cublas_);
+    cudnnCreate(&cudnn_);
+    cusparseCreate(&cusparse_);
 
+    cublas_handle_ = &cublas_;
+    cudnn_handle_ = &cudnn_;
+    cusparse_handle_ = &cusparse_;
+
+    assert(cublas_handle_);
+    assert(cudnn_handle_);
+    assert(cusparse_handle_);
+}
+
+void OperatorExecutorGPUV2::destroy_cuda_handle() {
+    cublasDestroy(cublas_);
+    cudnnDestroy(cudnn_);
+    cusparseDestroy(cusparse_);
+}
 
 
 

@@ -189,9 +189,8 @@ void SingleNodeExecutionEngineGPU::init_weight_tensor_data(
     int M = num_elements / N; // out_features
     assert(M > 0);
     double range = 1. / sqrt(M);
-    //srand(23);
     for (size_t i = 0; i < num_elements; ++ i) {
-        double r = double(rand()) / double(RAND_MAX);
+        double r = RandomNumberManager::get_random_double();
         assert(r >= 0. && r <= 1.);
         data[i] = (r - 0.5) * 2 * range;
     }

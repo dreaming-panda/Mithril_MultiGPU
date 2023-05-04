@@ -34,7 +34,6 @@
 #define SHADOW_GPU
 
 #define LOW_LEARNING_RATE (0)
-#define NUM_STARTUP_EPOCH (10)
 #define COMPRESS_DATA (true)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
@@ -135,7 +134,7 @@ class CUDAAbstractTaskDispatcher {
         DistributedPIPHybridParallelExecutionEngineGPU * engine_;
         std::thread * dispatcher_thread_;
         pthread_barrier_t * barrier_; // used to synchronize the communication and computation threads across epoches
-        DispatchAlgorithm dispatch_algorithm_ = DefaultOrderDispatch;
+        //DispatchAlgorithm dispatch_algorithm_ = DefaultOrderDispatch;
 
         virtual void thread_main() = 0;
 
@@ -828,9 +827,8 @@ class CUDABPIPLocalGraph: public BPIPLocalGraph
         int * cuda_csrRowOffsets_Out_;
         DataType * cuda_csrValue_Out_;
         int num_chunks_;
-        double scaledown_;
     public:
-        CUDABPIPLocalGraph(AbstractGraphStructure * global_graph, CUDAVertexIdTranslationTable * vid_translation, int num_chunks, double scaledown):
+        CUDABPIPLocalGraph(AbstractGraphStructure * global_graph, CUDAVertexIdTranslationTable * vid_translation, int num_chunks):
         BPIPLocalGraph(global_graph,vid_translation){
             host_csrColIn_In_ = nullptr;
             host_csrRowOffsets_In_ = nullptr;
@@ -850,7 +848,6 @@ class CUDABPIPLocalGraph: public BPIPLocalGraph
             vid_translation_ = vid_translation;
             memoryalive = false;
             num_chunks_ = num_chunks;
-            scaledown_ = scaledown;
         }
         ~CUDABPIPLocalGraph(){
             if(memoryalive)
@@ -1056,8 +1053,6 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         double accuracy_;
         double accum_loss_;
 
-        int num_startup_epoches_ = 0;
-        bool random_dispatch_ = false;
         int user_specified_num_chunks_ = 128;
 
         double compression_time_;
@@ -1097,12 +1092,6 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         MPI_Win * grad_comm_wins_;
 
         std::string weight_file_;
-
-        // random seed
-        int random_seed_ = 23;
-
-        // scaledown factor
-        double scaledown_ = 1.;
 
         // glboally shared tensor (i.e., h0 for GCNII)
         Tensor * global_shared_tensor_;
@@ -1145,9 +1134,6 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             assert(chunk_manager_ != NULL);
             return chunk_manager_->get_chunk_end(chunk_id);
         }
-        //inline CUDADataDependenciesTracker* get_data_dependencies_tracker() {
-        //    return data_dependencies_tracker_;
-        //}
         inline void get_vertex_tensor_data_by_chunk(
                 Tensor * tensor, 
                 int chunk_id,
@@ -1260,18 +1246,16 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             if (weight_init_method_ == XavierInitialization) {
                 // Xavier initialization
                 double range = sqrt(5./(N + M));
-                srand(random_seed_);
                 for (size_t i = 0; i < num_elements; ++ i) {
-                    double r = double(rand()) / double(RAND_MAX);
+                    double r = RandomNumberManager::get_random_double();
                     assert(r >= 0. && r <= 1.);
                     data_buff[i] = (r - 0.5) * 2 * range;
                 }
             } else if (weight_init_method_ == PytorchInitialization) {
                 // the default initialization method of Pytorch 
                 double range = 1. / sqrt(double(M));
-                //srand(random_seed_);
                 for (size_t i = 0; i < num_elements; ++ i) {
-                    double r = double(rand()) / double(RAND_MAX);
+                    double r = RandomNumberManager::get_random_double();
                     assert(r >= 0. && r <= 1.);
                     data_buff[i] = (r - 0.5) * 2 * range;
                 }
@@ -1306,23 +1290,11 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void set_partition(CUDAPIPPartitioning partition) {
             partitioning_ = partition;
         }
-        void set_num_startup_epoches(int num_startup_epoches) {
-            num_startup_epoches_ = num_startup_epoches;
-        }
-        void enable_random_dispatch() {
-            random_dispatch_ = true;
-        }
         void set_num_chunks(int num_chunks) {
             user_specified_num_chunks_ = num_chunks;
         }
         void set_weight_file(std::string weight_file) {
             weight_file_ = weight_file;
-        }
-        void set_random_seed(int random_seed) {
-            random_seed_ = random_seed;
-        }
-        void set_scaledown(double scaledown) {
-            scaledown_ = scaledown;
         }
         void set_weight_initialization_method(WeightInitializationMethod weight_init_method) {
             weight_init_method_ = weight_init_method;

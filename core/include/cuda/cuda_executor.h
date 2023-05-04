@@ -54,9 +54,15 @@ struct LocalGraphInfo{
 class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
     private: 
         CUDAFullyStructualGraph * graph_;
-        cublasHandle_t* cublas_handle_;
-        cudnnHandle_t* cudnn_handle_;
-        cusparseHandle_t* cusparse_handle_;
+
+        // cuda handles
+        cublasHandle_t cublas_;
+        cudnnHandle_t cudnn_;
+        cusparseHandle_t cusparse_;
+        cublasHandle_t * cublas_handle_;
+        cudnnHandle_t * cudnn_handle_;
+        cusparseHandle_t * cusparse_handle_;
+
         int activation_size_;
 
         cudnnTensorDescriptor_t data_descriptor_relu_forward;
@@ -82,7 +88,7 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
             VertexId right;
         };
         std::map<DropoutOperator*, std::map<int, DropoutOpState>*> dropout_op_states; // mapping from (op, chunk_id) to the state
-                                                                                      // a temporary buffer for dropout gradients
+        // a temporary buffer for dropout gradients
         DataType * dropout_tmp_buff_ = NULL;
         size_t dropout_tmp_buff_size_ = 0;
 
@@ -109,10 +115,9 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
         bool id_init;
         int hidden_units;
 
-        // random seed
-        int random_seed_ = 1234;
-
         void cuda_vector_add(DataType * src_0, DataType * src_1, DataType * dst, int num_elements);
+        void init_cuda_handle();
+        void destroy_cuda_handle();
 
     public:
         // constructors and some helper functions
@@ -121,13 +126,14 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
         ~OperatorExecutorGPUV2();
         void set_graph(CUDAFullyStructualGraph * graph) {graph_ = graph;}
         void set_activation_size(int ac_s , int n_class);
-        void set_cuda_handle(cublasHandle_t* cublas_handle, cudnnHandle_t* cudnn_handle, cusparseHandle_t* cusparse_handle);
+        //void set_cuda_handle(cublasHandle_t* cublas_handle, cudnnHandle_t* cudnn_handle, cusparseHandle_t* cusparse_handle);
         void build_inner_csr_();
         void init_identity(int hidden_units);
-        void set_random_seed(int random_seed) {random_seed_ = random_seed;}
+        //void set_random_seed(int random_seed) {random_seed_ = random_seed;}
         void Print();
         unsigned int get_localgraph_In(VertexId left, VertexId right);
         unsigned int get_localgraph_Out(VertexId left, VertexId right);
+        inline cudnnHandle_t get_cudnn_handle() {return cudnn_;}
 
         // the implementation of each operator
         void relu_forward(ReluOperator * op);
