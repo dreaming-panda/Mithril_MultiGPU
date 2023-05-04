@@ -19,8 +19,6 @@ OperatorExecutorGPUV2::OperatorExecutorGPUV2(){
     aggforward_time = 0;
     aggbackward_time = 0;
     hidden_units = 0;
-    cudnnCreateActivationDescriptor(&relu_descriptor_forward);
-    cudnnSetActivationDescriptor(relu_descriptor_forward,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,100);
 };
 
 OperatorExecutorGPUV2::OperatorExecutorGPUV2(CUDAFullyStructualGraph * graph): graph_(graph){
@@ -42,8 +40,6 @@ OperatorExecutorGPUV2::OperatorExecutorGPUV2(CUDAFullyStructualGraph * graph): g
     aggforward_time = 0;
     aggbackward_time = 0;
     hidden_units = 0;
-    cudnnCreateActivationDescriptor(&relu_descriptor_forward);
-    cudnnSetActivationDescriptor(relu_descriptor_forward,CUDNN_ACTIVATION_RELU,CUDNN_NOT_PROPAGATE_NAN,100);
 };
 
 OperatorExecutorGPUV2::~OperatorExecutorGPUV2() {
@@ -69,16 +65,6 @@ OperatorExecutorGPUV2::~OperatorExecutorGPUV2() {
         DeallocateCUDAMemory<DataType>(&tp_grad, __FILE__, __LINE__);
     }
 };
-
-void OperatorExecutorGPUV2::set_activation_size(int ac_s , int n_class){
-    activation_size_ = ac_s;
-    cudnnCreateTensorDescriptor(&data_descriptor_relu_forward);
-    cudnnSetTensor4dDescriptor(data_descriptor_relu_forward, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, ac_s * graph_->get_num_global_vertices());
-    cudnnCreateActivationDescriptor(&relu_descriptor_forward);
-    cudnnSetActivationDescriptor(relu_descriptor_forward,CUDNN_ACTIVATION_RELU,CUDNN_NOT_PROPAGATE_NAN, 100);
-    cudnnCreateTensorDescriptor(&data_descriptor_softmax_forward);
-    cudnnSetTensor4dDescriptor(data_descriptor_softmax_forward, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, graph_->get_num_global_vertices(), 1, 1, n_class);
-}
 
 void OperatorExecutorGPUV2::relu_forward(ReluOperator * op) {   
     VertexId num_vertices = graph_->get_num_global_vertices();

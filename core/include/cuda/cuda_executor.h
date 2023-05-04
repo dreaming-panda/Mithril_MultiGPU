@@ -63,12 +63,6 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
         cudnnHandle_t * cudnn_handle_;
         cusparseHandle_t * cusparse_handle_;
 
-        int activation_size_;
-
-        cudnnTensorDescriptor_t data_descriptor_relu_forward;
-        cudnnTensorDescriptor_t data_descriptor_softmax_forward;
-        cudnnActivationDescriptor_t relu_descriptor_forward;
-
         // used for single-node GPU training
         std::map<DropoutOperator*, cudnnDropoutDescriptor_t> dropout_op_descriptor;
         std::map<DropoutOperator*, cudnnTensorDescriptor_t> dropout_op_tensor_descriptor;
@@ -125,11 +119,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
         OperatorExecutorGPUV2(CUDAFullyStructualGraph * graph);
         ~OperatorExecutorGPUV2();
         void set_graph(CUDAFullyStructualGraph * graph) {graph_ = graph;}
-        void set_activation_size(int ac_s , int n_class);
-        //void set_cuda_handle(cublasHandle_t* cublas_handle, cudnnHandle_t* cudnn_handle, cusparseHandle_t* cusparse_handle);
         void build_inner_csr_();
         void init_identity(int hidden_units);
-        //void set_random_seed(int random_seed) {random_seed_ = random_seed;}
         void Print();
         unsigned int get_localgraph_In(VertexId left, VertexId right);
         unsigned int get_localgraph_Out(VertexId left, VertexId right);
