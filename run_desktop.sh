@@ -16,7 +16,7 @@ decay=1e-5
 chunks=8
 dropout=0.5
 seed=42
-model=gcnii
+model=gcn
 
 mpirun -n 2 -N 2 ./applications/async_multi_gpus/$model --graph /home/amadeus/ssd512/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed 
 
