@@ -6,3 +6,4 @@ endfunction()
 
 add_application(gcn)
 add_application(gcnii)
+add_application(graphsage)
