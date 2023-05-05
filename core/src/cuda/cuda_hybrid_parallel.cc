@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-//#define USE_RDMA 
+#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (1)
@@ -2286,7 +2286,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
             assert(num_elements / num_features == vid_end - vid_begin);
 
             size_t offset = 0;
-            printf("Doing row-based feature normalization.\n");
             for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
                 FeatureVector feature_vec = graph_non_structural_data_->get_feature(v_i);
                 assert(feature_vec.vec_len == num_features);

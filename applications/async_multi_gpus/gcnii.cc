@@ -29,6 +29,12 @@
 #include "distributed_sys.h"
 #include "partitioner.h"
 
+// TODO
+// [ ] allowed inference directly on this code base
+// [ ] allowed compression or not configuration
+// [ ] allowed initialization method conf
+// [ ] allowed feature preprocessing conf
+
 class GCNII: public AbstractApplication {
     private:
         int num_layers_;

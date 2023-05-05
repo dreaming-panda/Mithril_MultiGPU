@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 00:15:00 
+#SBATCH -t 00:30:00 
 #SBATCH --nodes 1
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
@@ -26,13 +26,12 @@ lr=1e-3
 graph=ogbn_arxiv
 epoch=5000
 decay=1e-5
-chunks=16
+chunks=1
 dropout=0.5
 seed=1
-scaledown=0.1
-model=gcn
+model=graphsage
 
-mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/$model --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file $PROJECT/saved_weights_pipe --dropout $dropout --seed $seed --scaledown $scaledown 
+mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/$model --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file $PROJECT/saved_weights_pipe --dropout $dropout --seed $seed 
 
 #$HOME/baseline/Mithril_MultiGPU/build/applications/single_gpu/gcn_inference --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --weight_file $PROJECT/saved_weights_pipe
 
