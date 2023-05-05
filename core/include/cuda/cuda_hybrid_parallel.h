@@ -134,7 +134,6 @@ class CUDAAbstractTaskDispatcher {
         DistributedPIPHybridParallelExecutionEngineGPU * engine_;
         std::thread * dispatcher_thread_;
         pthread_barrier_t * barrier_; // used to synchronize the communication and computation threads across epoches
-        //DispatchAlgorithm dispatch_algorithm_ = DefaultOrderDispatch;
 
         virtual void thread_main() = 0;
 
@@ -408,8 +407,6 @@ class CUDAVertexIdTranslationTable {
         // the utility functions
         // fast ID translation for master vertex
         inline VertexId get_local_vid_master_vertex(VertexId global_vid) {
-            //printf("Node %d, access vid %u\n",
-            //        DistributedSys::get_instance()->get_node_id(), global_vid);
             assert(global_vid >= local_partition_begin_ &&
                     global_vid <= local_partition_end_);
             return global_vid - local_partition_begin_;
@@ -586,13 +583,11 @@ class CUDAVertexTensorDataGradManager {
                 VertexId vid_begin, VertexId vid_end,
                 DataType* &grad, size_t &num_elements
                 ) {
-            //printf("vid_begin: %u, vid_end: %u\n", vid_begin, vid_end);
             assert(tensor->type == VERTEX_TENSOR);
             LocalVertexTensor local_tensor = local_tensors_[tensor];
             assert((local_tensor.type & OutputFromAggregation) != 0);
             VertexId local_vid_begin = vid_translation_->get_local_vid_outgoing_mirror(vid_begin);
             VertexId local_vid_end = vid_translation_->get_local_vid_outgoing_mirror(vid_end);
-            //printf("local vid: %u %u\n", local_vid_begin, local_vid_end);
             grad = local_tensor.grad + local_vid_begin * local_tensor.num_elements_per_vertex;
             num_elements = local_tensor.num_elements_per_vertex * (
                     local_vid_end - local_vid_begin
@@ -885,7 +880,7 @@ class CUDABPIPLocalGraph: public BPIPLocalGraph
             AllocateCUDAMemory<DataType>(&cuda_csrValue_Out_, nnz_out_, __FILE__, __LINE__);
             memoryalive = true;
         }
-        void InitCsr();
+        void InitCsr(AggregationType aggregation_type);
         int* get_host_csrRowOffsets_In()
         {   
             return host_csrRowOffsets_In_;
@@ -1031,11 +1026,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         CUDAVertexIdTranslationTable * vid_translation_;
         CUDAVertexTensorDataGradManager * vtensor_manager_;
         CUDAVertexChunksManager * chunk_manager_;
-        //CUDADataDependenciesTracker * data_dependencies_tracker_;
         CUDAShadowGradientsMasterVertices * shadow_gradients_;
         BPIPLocalGraph * local_graph_;
-        //CUDAWeightStashingManager * weight_stashing_manager_;
-        //CUDAPIPParallelParameterServer * parameter_server_;
         CUDAPIPWeightAggregator * weight_aggregator_;
 
         Tensor * pipeline_input_tensor_;
@@ -1101,6 +1093,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         WeightInitializationMethod weight_init_method_ = XavierInitialization;
 
         FeaturePreprocessingMethod feature_preprocess_method_ = NoFeaturePreprocessing;
+
+        AggregationType aggregation_type_ = NORM_SUM;
 
         inline int get_num_epoch() {
             return num_epoch_;
@@ -1282,6 +1276,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         friend class CUDAPIPGraphDataGradientUpdateReceiver;
         friend class CUDAPIPParallelParameterServer;
         friend class CUDAPIPWeightAggregator;
+
     public:
         DistributedPIPHybridParallelExecutionEngineGPU();
         ~DistributedPIPHybridParallelExecutionEngineGPU();
@@ -1301,6 +1296,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         void set_feature_preprocessing_method(FeaturePreprocessingMethod feature_preprocess_method) {
             feature_preprocess_method_ = feature_preprocess_method;
+        }
+        inline void set_aggregation_type(AggregationType aggregation_type) {
+            aggregation_type_ = aggregation_type;
         }
 };
 

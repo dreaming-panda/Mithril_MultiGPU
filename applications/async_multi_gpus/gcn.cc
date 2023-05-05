@@ -193,6 +193,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_loss(loss);
     execution_engine->set_weight_file(weight_file);
     execution_engine->set_num_chunks(num_chunks);
+    execution_engine->set_aggregation_type(NORM_SUM);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {

@@ -56,17 +56,17 @@ class GraphSage: public AbstractApplication {
                     output_size = num_classes_;
                 }
                 // process the embeddings
-                Tensor * t_0 = fc(t, output_size);
+                Tensor * t_0 = fc(t, output_size, "None", true);
                 // the aggregated results
                 if (i == 0) {
-                    t = fc(t, output_size);
-                    t = aggregation(t, MEAN);
+                    t = fc(t, output_size, "None", true);
+                    t = aggregation(t, MEAN, true);
                 } else {
-                    t = aggregation(t, MEAN);
-                    t = fc(t, output_size);
+                    t = aggregation(t, MEAN, true);
+                    t = fc(t, output_size, "None", true);
                 }
                 // added the transformed aggregated results with the transformed embeddings
-                t = add(t_0, t, 1., 1.);
+                t = add(t_0, t, 1., 1., enable_recomputation_);
                 if (i == num_layers_ - 1) {
                     t = log_softmax(t, enable_recomputation_);
                 } else {
@@ -195,6 +195,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_loss(loss);
     execution_engine->set_weight_file(weight_file);
     execution_engine->set_num_chunks(num_chunks);
+    execution_engine->set_aggregation_type(MEAN);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {
@@ -202,12 +203,12 @@ int main(int argc, char ** argv) {
         exit(-1);
     } else if (partition_strategy == "model") {
         std::vector<double> cost_each_layer;
-        for (int i = 0; i < num_layers + 2; ++ i) {
+        for (int i = 0; i < num_layers; ++ i) {
             // assumed that the cost of each layer is the same
             cost_each_layer.push_back(1.);
         }
         CUDAPIPPartitioning partition = ModelPartitioner::get_model_parallel_partition(
-                sage, num_gpus, num_layers + 2, cost_each_layer, num_vertices
+                sage, num_gpus, num_layers, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
     } else {

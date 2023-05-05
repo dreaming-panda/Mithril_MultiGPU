@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-#define USE_RDMA 
+//#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (1)
@@ -2606,7 +2606,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_);
     lgraph->InitMemory();
-    lgraph->InitCsr();
+    lgraph->InitCsr(aggregation_type_);
 
     std::vector<WeightOperator*> weight_ops;
     for (Operator * op: operators) {
@@ -2916,8 +2916,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     return accuracy_;
 }
 
-
-void CUDABPIPLocalGraph::InitCsr()
+void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
 {
     VertexId vertices_per_chunk = (num_master_vertices_ + num_chunks_ - 1) / num_chunks_;
     printf("Number of vertices per chunk: %u\n", vertices_per_chunk);
@@ -2948,10 +2947,14 @@ void CUDABPIPLocalGraph::InitCsr()
         int g_indegree = global_graph_->get_in_degree(g_i);
         assert(g_indegree == indgree);
         assert(indgree == inlist.num_in_edges);
+        int prev_nnz_in_count = nnz_in_count;
         for(int j = 0; j < inlist.num_in_edges; ++j)
         {
             InEdge e = inlist.ptx[j];
             VertexId src = e.src;
+            if (src == g_i) {
+                printf("self loop detected: %d\n", g_i);
+            }
             DataType norm_factor = e.norm_factor;
             int g_src = -1;
             if(src < num_master_vertices_)g_src = vid_translation_->get_global_vid_master_vertex(src);
@@ -2959,9 +2962,23 @@ void CUDABPIPLocalGraph::InitCsr()
             assert(g_src >= 0);
             DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_src)) * sqrt(1 + g_indegree));
             assert(fabs(std - norm_factor) <=  1e-3);
+            if (aggregation_type == NORM_SUM) {
+                // do nothing
+            } else if (aggregation_type == MEAN) {
+                norm_factor = 1. / indgree;
+            } else {
+                fprintf(stderr, "Not supported aggregation type.\n");
+                assert(false);
+            }
             if((addself == false) && (src > i)){
                 host_csrColIn_In_[nnz_in_count] = i;
-                host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
+                if (aggregation_type == NORM_SUM) {
+                    host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
+                } else if (aggregation_type == MEAN) {
+                    host_csrValue_In_[nnz_in_count] = 0;
+                } else {
+                    assert(false);
+                }
                 nnz_in_count++;
                 addself = true;
             }
@@ -2970,12 +2987,27 @@ void CUDABPIPLocalGraph::InitCsr()
             host_csrValue_In_[nnz_in_count] = norm_factor;
             nnz_in_count++;
         }
-        if(addself == false){
+        if(addself == false) {
             host_csrColIn_In_[nnz_in_count] = i;
-            host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
+            //host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
+            if (aggregation_type == NORM_SUM) {
+                host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
+            } else if (aggregation_type == MEAN) {
+                host_csrValue_In_[nnz_in_count] = 0;
+            } else {
+                assert(false);
+            }
             nnz_in_count++;
             addself = true;
         }
+        //if (aggregation_type == NORM_SUM) {
+        //    assert(nnz_in_count - prev_nnz_in_count == (indgree + 1));
+        //} else if (aggregation_type == MEAN) {
+        //    assert(nnz_in_count - prev_nnz_in_count == indgree);
+        //} else {
+        //    fprintf(stderr, "Not supported aggregation type.\n");
+        //    assert(false);
+        //}
     }
     assert(nnz_in_count == nnz_in_);
     host_csrColIn_Out_[0] = 0;
@@ -2993,6 +3025,7 @@ void CUDABPIPLocalGraph::InitCsr()
         int g_outdgree = global_graph_->get_out_degree(g_i);
         assert(g_outdgree == outdgree);
         assert(outlist.num_out_edges == outdgree);
+        int prev_nnz_out_count = nnz_out_count;
         for(int j = 0; j < outlist.num_out_edges; ++j)
         {
             OutEdge e = outlist.ptx[j];
@@ -3004,9 +3037,22 @@ void CUDABPIPLocalGraph::InitCsr()
             DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_dst)) * sqrt(1 + indgree));
             assert(fabs(std - norm_factor) <=  1e-3);
             assert(g_dst >= 0);
+            if (aggregation_type == NORM_SUM) {
+                // do nothing
+            } else if (aggregation_type == MEAN) {
+                norm_factor = 1. / global_graph_->get_in_degree(g_dst);
+            } else {
+                assert(false);
+            }
             if(addself == false && dst > i){
                 host_csrColIn_Out_[nnz_out_count] = i;
-                host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
+                if (aggregation_type == NORM_SUM) {
+                    host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
+                } else if (aggregation_type == MEAN) {
+                    host_csrValue_Out_[nnz_out_count] = 0;
+                } else {
+                    assert(false);
+                }
                 nnz_out_count++;
                 addself = true;
             }
@@ -3018,10 +3064,24 @@ void CUDABPIPLocalGraph::InitCsr()
         if(addself == false)
         {
             host_csrColIn_Out_[nnz_out_count] = i;
-            host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
+            //host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
+            if (aggregation_type == NORM_SUM) {
+                host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
+            } else if (aggregation_type == MEAN) {
+                host_csrValue_Out_[nnz_out_count] = 0;
+            } else {
+                assert(false);
+            }
             nnz_out_count++;
             addself = true;
         }
+        //if (aggregation_type == NORM_SUM) {
+        //    assert(nnz_out_count - prev_nnz_out_count == outdgree + 1);
+        //} else if (aggregation_type == MEAN) {
+        //    assert(nnz_out_count - prev_nnz_out_count == outdgree);
+        //} else {
+        //    assert(false);
+        //}
     }
     assert(nnz_out_ == nnz_out_count);
     CopyFromHostToCUDADevice<int>(cuda_csrRowOffsets_In_, host_csrRowOffsets_In_, num_master_vertices_ + 1, __FILE__, __LINE__);
