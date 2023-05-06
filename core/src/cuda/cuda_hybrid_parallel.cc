@@ -15,7 +15,7 @@
 #define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
-#define EVAL_FREQUENCY (1)
+#define EVAL_FREQUENCY (10)
 #define NUM_GPUS_PER_NODE (4)
 
 //#define SHOW_SCHEDULE_DETAILS
@@ -659,30 +659,30 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     std::thread move_act_gpu2cpu_thread(
             [&]() {
-            CUDAPIPForwardTask task;
-            for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-            for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
-            act_gpu2cpu_queue->pop_blocking(task);
-            if (node_id < num_nodes - 1) {
-            engine_->data_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
-            }
-            forward_task_committer_queue_->push(task);
-            }
-            }
+                CUDAPIPForwardTask task;
+                for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+                    for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
+                        act_gpu2cpu_queue->pop_blocking(task);
+                        if (node_id < num_nodes - 1) {
+                            engine_->data_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
+                        }
+                        forward_task_committer_queue_->push(task);
+                    }
+                }
             }
             );
     std::thread move_grad_gpu2cpu_thread(
             [&]() {
-            CUDAPIPBackwardTask task;
-            for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
-            for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
-            grad_gpu2cpu_queue->pop_blocking(task);
-            if (node_id > 0) {
-            engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
-            }
-            backward_task_committer_queue_->push(task);
-            }
-            }
+                CUDAPIPBackwardTask task;
+                for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+                    for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
+                        grad_gpu2cpu_queue->pop_blocking(task);
+                        if (node_id > 0) {
+                            engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
+                        }
+                        backward_task_committer_queue_->push(task);
+                    }
+                }
             }
             );
 
@@ -865,9 +865,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         back_task.epoch_id = task.epoch_id;
                         back_task.chunk_id = task.chunk_id;
                         backward_tasks.push_back(back_task);
-                        //backward_task_dispatcher_->insert_new_task(back_task);
                     }
-                    //engine_->act_update_sender_->insert_new_task(task);
                     ++ num_scheduled_forward_tasks;
                     t += get_time();
                     slowest_chunk = std::max(slowest_chunk, t);
@@ -945,7 +943,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 #endif
 
                     grad_gpu2cpu_queue->push(task);
-                    //engine_->grad_update_sender_->insert_new_task(task); 
                     ++ num_scheduled_backward_tasks;
                 }
             }
@@ -2810,9 +2807,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         local_training_mask_[i] = training_mask_[vid_translation_->get_global_vid_master_vertex(i)];
         local_valid_mask_[i] = valid_mask_[vid_translation_->get_global_vid_master_vertex(i)];
         local_test_mask_[i] = test_mask_[vid_translation_->get_global_vid_master_vertex(i)];
-        if (local_training_mask_[i] == 1)local_ntrain++;
-        if (local_valid_mask_[i] == 1)local_nvalid++;
-        if (local_test_mask_[i] == 1)local_ntest++;
+        if (local_training_mask_[i] == 1) local_ntrain++;
+        if (local_valid_mask_[i] == 1) local_nvalid++;
+        if (local_test_mask_[i] == 1) local_ntest++;
     }
 
     AllocateCUDAMemory<int>(&local_gpu_training_mask_, lgraph->get_num_master_vertices(), __FILE__, __LINE__);
@@ -2988,7 +2985,6 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
         }
         if(addself == false) {
             host_csrColIn_In_[nnz_in_count] = i;
-            //host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
             if (aggregation_type == NORM_SUM) {
                 host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
             } else if (aggregation_type == MEAN) {
@@ -2999,14 +2995,6 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
             nnz_in_count++;
             addself = true;
         }
-        //if (aggregation_type == NORM_SUM) {
-        //    assert(nnz_in_count - prev_nnz_in_count == (indgree + 1));
-        //} else if (aggregation_type == MEAN) {
-        //    assert(nnz_in_count - prev_nnz_in_count == indgree);
-        //} else {
-        //    fprintf(stderr, "Not supported aggregation type.\n");
-        //    assert(false);
-        //}
     }
     assert(nnz_in_count == nnz_in_);
     host_csrColIn_Out_[0] = 0;
@@ -3063,7 +3051,6 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
         if(addself == false)
         {
             host_csrColIn_Out_[nnz_out_count] = i;
-            //host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
             if (aggregation_type == NORM_SUM) {
                 host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
             } else if (aggregation_type == MEAN) {
@@ -3074,13 +3061,6 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
             nnz_out_count++;
             addself = true;
         }
-        //if (aggregation_type == NORM_SUM) {
-        //    assert(nnz_out_count - prev_nnz_out_count == outdgree + 1);
-        //} else if (aggregation_type == MEAN) {
-        //    assert(nnz_out_count - prev_nnz_out_count == outdgree);
-        //} else {
-        //    assert(false);
-        //}
     }
     assert(nnz_out_ == nnz_out_count);
     CopyFromHostToCUDADevice<int>(cuda_csrRowOffsets_In_, host_csrRowOffsets_In_, num_master_vertices_ + 1, __FILE__, __LINE__);

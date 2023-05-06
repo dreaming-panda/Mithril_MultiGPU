@@ -51,7 +51,7 @@ struct LocalGraphInfo{
     bool alloc;
 };
 
-class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
+class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
     private: 
         CUDAFullyStructualGraph * graph_;
 
@@ -156,4 +156,8 @@ class OperatorExecutorGPUV2:public AbstractOperatorExecutor {
         void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
         void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
 };
+
 #endif
+
+
+

@@ -150,6 +150,7 @@ class AbstractOperatorExecutor {
         GPUCsr csr_;
         CPUCsr cpu_csr_;
         bool is_in_recomputation_mode_ = false;
+        bool is_in_inference_mode_ = false;
 
     public:
         AbstractOperatorExecutor() {
@@ -245,6 +246,12 @@ class AbstractOperatorExecutor {
         }
         void disable_recomputation_mode() {
             is_in_recomputation_mode_ = false;
+        }
+        void enable_inference_mode() {
+            is_in_inference_mode_ = true;
+        }
+        void disable_inference_mode() {
+            is_in_inference_mode_ = false;
         }
 };
 

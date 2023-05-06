@@ -1243,16 +1243,27 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
     assert(dropout_op_state.right == right);
 
     // use the state to perform forwarding
-    checkCUDNN(cudnnDropoutForward(
-                *cudnn_handle_,
-                dropout_descriptor,
-                tensor_descriptor,
-                (const void*) d_input_data,
-                tensor_descriptor,
-                (void*) d_output_data,
-                (void*) reserved_space,
-                reserved_space_size
-                ));
+    if (is_in_inference_mode_) {
+        // no need to invoke cudnn kernel if in the inference mode
+        checkCUDA(
+                cudaMemcpyAsync(
+                    d_output_data, d_input_data, 
+                    sizeof(DataType) * (end_idx - start_idx),
+                    cudaMemcpyDeviceToDevice
+                    )
+                );
+    } else {
+        checkCUDNN(cudnnDropoutForward(
+                    *cudnn_handle_,
+                    dropout_descriptor,
+                    tensor_descriptor,
+                    (const void*) d_input_data,
+                    tensor_descriptor,
+                    (void*) d_output_data,
+                    (void*) reserved_space,
+                    reserved_space_size
+                    ));
+    }
 
 #ifdef TIMETAG
     cudaStreamSynchronize(0);
@@ -1329,16 +1340,26 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
     }
 
     // calculate the gradients to a tmp buff
-    checkCUDNN(cudnnDropoutBackward(
-                *cudnn_handle_,
-                dropout_descriptor,
-                tensor_descriptor,
-                (const void*) d_output_grad,
-                tensor_descriptor,
-                (void*) dropout_tmp_buff_,
-                (void*) reserved_space,
-                reserved_space_size
-                ));
+    if (is_in_inference_mode_) {
+        checkCUDA(
+                cudaMemcpyAsync(
+                    dropout_tmp_buff_, d_output_grad,
+                    sizeof(DataType) * (end_idx - start_idx),
+                    cudaMemcpyDeviceToDevice
+                    )
+                );
+    } else {
+        checkCUDNN(cudnnDropoutBackward(
+                    *cudnn_handle_,
+                    dropout_descriptor,
+                    tensor_descriptor,
+                    (const void*) d_output_grad,
+                    tensor_descriptor,
+                    (void*) dropout_tmp_buff_,
+                    (void*) reserved_space,
+                    reserved_space_size
+                    ));
+    }
     // accumulate the gradients to the input gradient buffer
     cuda_vector_add(dropout_tmp_buff_, d_input_grad, d_input_grad, end_idx - start_idx);
 
