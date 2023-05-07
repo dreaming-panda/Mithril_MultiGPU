@@ -15,7 +15,7 @@
 #define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
-#define EVAL_FREQUENCY (10)
+#define EVAL_FREQUENCY (1)
 #define NUM_GPUS_PER_NODE (4)
 
 //#define SHOW_SCHEDULE_DETAILS
@@ -773,6 +773,19 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 checkCUDA(cudaMemcpy(data, h_data, sizeof(DataType) * num_elements,
                             cudaMemcpyDeviceToDevice));
             }
+        }
+
+        // FIXME
+        if (epoch_id == 900) {
+            for (int i = 0; i < aggr_ops.size(); ++ i) {
+                Operator * op = aggr_ops[i];
+                Tensor * tensor = op->get_input_tensor(0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                DataType * data = resource->get_gpu_data();
+                size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+                checkCUDA(cudaMemset(data, 0, sizeof(DataType) * num_elements));
+            }
+            optimizer_->SetLearningRate(0);
         }
 
         // pull the latest weights
@@ -2624,7 +2637,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     assert(local_graph_ != NULL);
     assert(weight_aggregator_ != NULL);
 
-
     printf("*** Node %d, setting up some other necessary information...\n", node_id);
     // construct local chunk IDs
     chunk_manager_->get_local_chunk_ids(local_chunk_ids_);
@@ -2755,7 +2767,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     // create the helper threads 
     printf("*** Node %d, starting the helper threads...\n", node_id);
-    //int num_helper_threads_ = 8;  FIXME
     int num_helper_threads_ = 4; 
     assert(pthread_barrier_init(&barrier_, NULL, num_helper_threads_ + 1) == 0);
     int num_local_chunks = local_chunk_ids_.size();
