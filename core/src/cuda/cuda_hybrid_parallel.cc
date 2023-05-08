@@ -956,6 +956,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             in_training_mode = false;
         }
 
+        if (in_training_mode) {
+            engine_->executor_->disable_inference_mode();
+        } else {
+            engine_->executor_->enable_infernece_mode();
+        }
+
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
         wait_for_other_gpus_time -= get_time();
         MPI_Barrier(MPI_COMM_WORLD);
