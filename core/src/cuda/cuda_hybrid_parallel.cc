@@ -12,13 +12,209 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-#define USE_RDMA 
+//#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
-#define EVAL_FREQUENCY (1)
+#define EVAL_FREQUENCY (10)
 #define NUM_GPUS_PER_NODE (4)
+#define NUM_INFERNECE_RUNS (3)
 
 //#define SHOW_SCHEDULE_DETAILS
+
+void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
+{
+    VertexId vertices_per_chunk = (num_master_vertices_ + num_chunks_ - 1) / num_chunks_;
+    printf("Number of vertices per chunk: %u\n", vertices_per_chunk);
+
+    assert(host_csrColIn_In_ != nullptr);
+    assert(host_csrColIn_Out_ != nullptr);
+    assert(host_csrRowOffsets_In_ != nullptr);
+    assert(host_csrRowOffsets_Out_ != nullptr);
+    assert(host_csrValue_In_ != nullptr);
+    assert(host_csrValue_Out_ != nullptr);
+    assert(nnz_in_ > 0);
+    assert(nnz_out_ > 0);
+    assert(memoryalive == true);
+    //process in-matrix
+    host_csrRowOffsets_In_[0] = 0;
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    for(int i = 0; i <= num_master_vertices_; ++i)
+    {
+        host_csrRowOffsets_In_[i] = index_to_incoming_edges_[i] + i; 
+    }
+    int nnz_in_count = 0;
+    for(int i = 0; i < num_master_vertices_; ++i)
+    {
+        InEdgeList inlist = get_in_edges(i);
+        bool addself = false;
+        int indgree = get_in_degree(i);
+        int g_i = vid_translation_->get_global_vid_master_vertex(i);
+        int g_indegree = global_graph_->get_in_degree(g_i);
+        assert(g_indegree == indgree);
+        assert(indgree == inlist.num_in_edges);
+        int prev_nnz_in_count = nnz_in_count;
+        for(int j = 0; j < inlist.num_in_edges; ++j)
+        {
+            InEdge e = inlist.ptx[j];
+            VertexId src = e.src;
+            if (src == g_i) {
+                printf("self loop detected: %d\n", g_i);
+            }
+            DataType norm_factor = e.norm_factor;
+            int g_src = -1;
+            if(src < num_master_vertices_)g_src = vid_translation_->get_global_vid_master_vertex(src);
+            else if(src >= num_master_vertices_)g_src = vid_translation_->get_global_vid_incoming_mirror(src);
+            assert(g_src >= 0);
+            DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_src)) * sqrt(1 + g_indegree));
+            assert(fabs(std - norm_factor) <=  1e-3);
+            if (aggregation_type == NORM_SUM) {
+                // do nothing
+            } else if (aggregation_type == MEAN) {
+                norm_factor = 1. / indgree;
+            } else {
+                fprintf(stderr, "Not supported aggregation type.\n");
+                assert(false);
+            }
+            if((addself == false) && (src > i)){
+                host_csrColIn_In_[nnz_in_count] = i;
+                if (aggregation_type == NORM_SUM) {
+                    host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
+                } else if (aggregation_type == MEAN) {
+                    host_csrValue_In_[nnz_in_count] = 0;
+                } else {
+                    assert(false);
+                }
+                nnz_in_count++;
+                addself = true;
+            }
+            bool same_chunk = src / vertices_per_chunk == i / vertices_per_chunk;
+            host_csrColIn_In_[nnz_in_count] = src;
+            host_csrValue_In_[nnz_in_count] = norm_factor;
+            nnz_in_count++;
+        }
+        if(addself == false) {
+            host_csrColIn_In_[nnz_in_count] = i;
+            if (aggregation_type == NORM_SUM) {
+                host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
+            } else if (aggregation_type == MEAN) {
+                host_csrValue_In_[nnz_in_count] = 0;
+            } else {
+                assert(false);
+            }
+            nnz_in_count++;
+            addself = true;
+        }
+    }
+    assert(nnz_in_count == nnz_in_);
+    host_csrColIn_Out_[0] = 0;
+    for(int i = 0; i <= num_master_vertices_; ++i) {
+        host_csrRowOffsets_Out_[i] = index_to_outgoing_edges_[i] + i;
+    }
+    int nnz_out_count = 0;
+    for(int i = 0; i < num_master_vertices_; ++i)
+    {
+        OutEdgeList outlist = get_out_edges(i);
+        bool addself = false;
+        int indgree = get_in_degree(i);
+        int outdgree = get_out_degree(i);
+        int g_i = vid_translation_->get_global_vid_master_vertex(i);
+        int g_outdgree = global_graph_->get_out_degree(g_i);
+        assert(g_outdgree == outdgree);
+        assert(outlist.num_out_edges == outdgree);
+        int prev_nnz_out_count = nnz_out_count;
+        for(int j = 0; j < outlist.num_out_edges; ++j)
+        {
+            OutEdge e = outlist.ptx[j];
+            VertexId dst = e.dst;
+            DataType norm_factor = e.norm_factor;
+            int g_dst = -1;
+            if(dst < num_master_vertices_)g_dst = vid_translation_->get_global_vid_master_vertex(dst);
+            else if(dst >= num_master_vertices_)g_dst = vid_translation_->get_global_vid_outgoing_mirror(dst);
+            DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_dst)) * sqrt(1 + indgree));
+            assert(fabs(std - norm_factor) <=  1e-3);
+            assert(g_dst >= 0);
+            if (aggregation_type == NORM_SUM) {
+                // do nothing
+            } else if (aggregation_type == MEAN) {
+                norm_factor = 1. / global_graph_->get_in_degree(g_dst);
+            } else {
+                assert(false);
+            }
+            if(addself == false && dst > i){
+                host_csrColIn_Out_[nnz_out_count] = i;
+                if (aggregation_type == NORM_SUM) {
+                    host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
+                } else if (aggregation_type == MEAN) {
+                    host_csrValue_Out_[nnz_out_count] = 0;
+                } else {
+                    assert(false);
+                }
+                nnz_out_count++;
+                addself = true;
+            }
+            bool same_chunk = dst / vertices_per_chunk == i / vertices_per_chunk;
+            host_csrColIn_Out_[nnz_out_count] = dst;
+            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 2.);  // for unbaised gradient estimation
+            nnz_out_count++;
+        }
+        if(addself == false)
+        {
+            host_csrColIn_Out_[nnz_out_count] = i;
+            if (aggregation_type == NORM_SUM) {
+                host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
+            } else if (aggregation_type == MEAN) {
+                host_csrValue_Out_[nnz_out_count] = 0;
+            } else {
+                assert(false);
+            }
+            nnz_out_count++;
+            addself = true;
+        }
+    }
+    assert(nnz_out_ == nnz_out_count);
+    CopyFromHostToCUDADevice<int>(cuda_csrRowOffsets_In_, host_csrRowOffsets_In_, num_master_vertices_ + 1, __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(cuda_csrColIn_In_, host_csrColIn_In_, nnz_in_, __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<DataType>(cuda_csrValue_In_, host_csrValue_In_, nnz_in_, __FILE__, __LINE__);
+
+    CopyFromHostToCUDADevice<int>(cuda_csrRowOffsets_Out_, host_csrRowOffsets_Out_, num_master_vertices_ + 1, __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<int>(cuda_csrColIn_Out_, host_csrColIn_Out_, nnz_out_, __FILE__, __LINE__);
+    CopyFromHostToCUDADevice<DataType>(cuda_csrValue_Out_, host_csrValue_Out_, nnz_out_, __FILE__, __LINE__);
+    printf("csr in-out ready !");
+}
+
+void CUDABPIPLocalGraph::TestCsr()
+{   
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    //test in-matrix
+    for(int i = 0; i < nnz_in_; ++i)
+    {
+        int col = host_csrColIn_In_[i];
+        int row = 0;
+        while(host_csrRowOffsets_In_[row] <= i)row++;
+        row -- ;
+        int g_col = -1;
+        int g_row = -1;
+        if(col < num_master_vertices_)g_col = vid_translation_->get_global_vid_master_vertex(col);
+        else if(col >= num_master_vertices_)g_col = vid_translation_->get_global_vid_incoming_mirror(col);
+        g_row = vid_translation_->get_global_vid_master_vertex(row);
+        DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_row)) * sqrt(1 + global_graph_->get_in_degree(g_col)));
+        assert(fabs(std - host_csrValue_In_[i]) < 1e-3);
+    }
+    //test out-matrix
+    for(int i = 0; i < nnz_out_; ++i)
+    {
+        int col = host_csrColIn_Out_[i];
+        int row = 0;
+        while(host_csrRowOffsets_Out_[row] <= i)row++;
+        row -- ;
+        int g_col = -1;
+        int g_row = -1;
+        if(col < num_master_vertices_)g_col = vid_translation_->get_global_vid_master_vertex(col);
+        else if(col >= num_master_vertices_)g_col = vid_translation_->get_global_vid_outgoing_mirror(col);
+        g_row = vid_translation_->get_global_vid_master_vertex(row);
+        DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_row)) * sqrt(1 + global_graph_->get_in_degree(g_col)));
+    }
+}
 
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
@@ -230,7 +426,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
             }
         }
     } else {
-        // FIXME: only works for pipeline parallel
+        // only works for pipeline parallel
         size_t len = 0;
         DataType * data_buff = NULL;
 
@@ -357,7 +553,7 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
         DataType * compressed_data_payload = nullptr;
         size_t len = 0;
 
-        // FIXME: only works for pipeline parallel
+        // only works for pipeline parallel
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             pthread_barrier_wait(barrier_);
             pthread_barrier_wait(barrier_);
@@ -734,12 +930,32 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
     }
 
+    // backup the activation at the beginning
+    for (int i = 0; i < aggr_ops.size(); ++ i) {
+        Operator * op = aggr_ops[i];
+        DataType * h_data = historical_data[i];
+        Tensor * tensor = op->get_input_tensor(0);
+        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        DataType * data = resource->get_gpu_data();
+        size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+        checkCUDA(cudaMemcpy(h_data, data, sizeof(DataType) * num_elements,
+                    cudaMemcpyDeviceToDevice));
+    }
+
     engine_->weight_aggregator_->clear_gradients();
 
-    for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+    int epoch_id = 0;
+    int remained_inference_runs = 0;
+    while (epoch_id < num_epoch || remained_inference_runs > 0) {
         if (epoch_id == warmup_epoches) {
             all_epoches_time = - get_time();
         }
+
+        bool in_training_mode = true;
+        if (remained_inference_runs > 0) {
+            in_training_mode = false;
+        }
+
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
         wait_for_other_gpus_time -= get_time();
         MPI_Barrier(MPI_COMM_WORLD);
@@ -751,18 +967,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         Profiler::submit_main_thread_event(CrossEpochSyncCompleteEvent);
 
-        if (epoch_id % REVERSE_PERIOD == 0) {
-            for (int i = 0; i < aggr_ops.size(); ++ i) {
-                Operator * op = aggr_ops[i];
-                DataType * h_data = historical_data[i];
-                Tensor * tensor = op->get_input_tensor(0);
-                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-                DataType * data = resource->get_gpu_data();
-                size_t num_elements = (size_t) num_vertices * tensor->dims[1];
-                checkCUDA(cudaMemcpy(h_data, data, sizeof(DataType) * num_elements,
-                            cudaMemcpyDeviceToDevice));
-            }
-        } else {
+        if (in_training_mode && epoch_id % REVERSE_PERIOD != 0) {
+            // restore the activation
             for (int i = 0; i < aggr_ops.size(); ++ i) {
                 Operator * op = aggr_ops[i];
                 DataType * h_data = historical_data[i];
@@ -773,19 +979,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 checkCUDA(cudaMemcpy(data, h_data, sizeof(DataType) * num_elements,
                             cudaMemcpyDeviceToDevice));
             }
-        }
-
-        // FIXME
-        if (epoch_id == 900) {
-            for (int i = 0; i < aggr_ops.size(); ++ i) {
-                Operator * op = aggr_ops[i];
-                Tensor * tensor = op->get_input_tensor(0);
-                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-                DataType * data = resource->get_gpu_data();
-                size_t num_elements = (size_t) num_vertices * tensor->dims[1];
-                checkCUDA(cudaMemset(data, 0, sizeof(DataType) * num_elements));
-            }
-            optimizer_->SetLearningRate(0);
         }
 
         // pull the latest weights
@@ -1000,7 +1193,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             if (node_id == 0) {
                 printf("    Epoch %d:", epoch_id);
             }
-            //engine_->accum_loss_ /= 10;
             engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
             if (valid_acc > highest_valid_acc) {
                 highest_valid_acc = valid_acc;
@@ -1008,6 +1200,34 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 epoch_to_reach_target_acc = epoch_id + 1;
             }
             fflush(stdout);
+        }
+
+        if (in_training_mode) {
+            assert(remained_inference_runs == 0);
+            ++ epoch_id;
+            if (epoch_id % engine_->evaluation_frequency_ == 0) {
+                remained_inference_runs = NUM_INFERNECE_RUNS;
+            }
+        } else {
+            assert(remained_inference_runs > 0);
+            -- remained_inference_runs;
+            if (remained_inference_runs == 0) {
+                // TODO: print out the accuracy and maintain the model with the highest validation acc
+            }
+        }
+
+        if (in_training_mode && (epoch_id + 1) % REVERSE_PERIOD == 0) {
+            // backup the activation
+            for (int i = 0; i < aggr_ops.size(); ++ i) {
+                Operator * op = aggr_ops[i];
+                DataType * h_data = historical_data[i];
+                Tensor * tensor = op->get_input_tensor(0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                DataType * data = resource->get_gpu_data();
+                size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+                checkCUDA(cudaMemcpy(h_data, data, sizeof(DataType) * num_elements,
+                            cudaMemcpyDeviceToDevice));
+            }
         }
     }
     t += get_time();
@@ -2923,199 +3143,36 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     return accuracy_;
 }
 
-void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
-{
-    VertexId vertices_per_chunk = (num_master_vertices_ + num_chunks_ - 1) / num_chunks_;
-    printf("Number of vertices per chunk: %u\n", vertices_per_chunk);
+void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N){
+    //printf("hybrid init called\n");
+    DataType * data_buff = new DataType[num_elements];
+    assert(N > 0);
+    int M  = num_elements / N; // out_features
+    assert(M > 0);
 
-    assert(host_csrColIn_In_ != nullptr);
-    assert(host_csrColIn_Out_ != nullptr);
-    assert(host_csrRowOffsets_In_ != nullptr);
-    assert(host_csrRowOffsets_Out_ != nullptr);
-    assert(host_csrValue_In_ != nullptr);
-    assert(host_csrValue_Out_ != nullptr);
-    assert(nnz_in_ > 0);
-    assert(nnz_out_ > 0);
-    assert(memoryalive == true);
-    //process in-matrix
-    host_csrRowOffsets_In_[0] = 0;
-    int node_id = DistributedSys::get_instance()->get_node_id();
-    for(int i = 0; i <= num_master_vertices_; ++i)
-    {
-        host_csrRowOffsets_In_[i] = index_to_incoming_edges_[i] + i; 
-    }
-    int nnz_in_count = 0;
-    for(int i = 0; i < num_master_vertices_; ++i)
-    {
-        InEdgeList inlist = get_in_edges(i);
-        bool addself = false;
-        int indgree = get_in_degree(i);
-        int g_i = vid_translation_->get_global_vid_master_vertex(i);
-        int g_indegree = global_graph_->get_in_degree(g_i);
-        assert(g_indegree == indgree);
-        assert(indgree == inlist.num_in_edges);
-        int prev_nnz_in_count = nnz_in_count;
-        for(int j = 0; j < inlist.num_in_edges; ++j)
-        {
-            InEdge e = inlist.ptx[j];
-            VertexId src = e.src;
-            if (src == g_i) {
-                printf("self loop detected: %d\n", g_i);
-            }
-            DataType norm_factor = e.norm_factor;
-            int g_src = -1;
-            if(src < num_master_vertices_)g_src = vid_translation_->get_global_vid_master_vertex(src);
-            else if(src >= num_master_vertices_)g_src = vid_translation_->get_global_vid_incoming_mirror(src);
-            assert(g_src >= 0);
-            DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_src)) * sqrt(1 + g_indegree));
-            assert(fabs(std - norm_factor) <=  1e-3);
-            if (aggregation_type == NORM_SUM) {
-                // do nothing
-            } else if (aggregation_type == MEAN) {
-                norm_factor = 1. / indgree;
-            } else {
-                fprintf(stderr, "Not supported aggregation type.\n");
-                assert(false);
-            }
-            if((addself == false) && (src > i)){
-                host_csrColIn_In_[nnz_in_count] = i;
-                if (aggregation_type == NORM_SUM) {
-                    host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
-                } else if (aggregation_type == MEAN) {
-                    host_csrValue_In_[nnz_in_count] = 0;
-                } else {
-                    assert(false);
-                }
-                nnz_in_count++;
-                addself = true;
-            }
-            bool same_chunk = src / vertices_per_chunk == i / vertices_per_chunk;
-            host_csrColIn_In_[nnz_in_count] = src;
-            host_csrValue_In_[nnz_in_count] = norm_factor;
-            nnz_in_count++;
+    if (weight_init_method_ == XavierInitialization) {
+        // Xavier initialization
+        double range = sqrt(5./(N + M));
+        for (size_t i = 0; i < num_elements; ++ i) {
+            double r = RandomNumberManager::get_random_double();
+            assert(r >= 0. && r <= 1.);
+            data_buff[i] = (r - 0.5) * 2 * range;
         }
-        if(addself == false) {
-            host_csrColIn_In_[nnz_in_count] = i;
-            if (aggregation_type == NORM_SUM) {
-                host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
-            } else if (aggregation_type == MEAN) {
-                host_csrValue_In_[nnz_in_count] = 0;
-            } else {
-                assert(false);
-            }
-            nnz_in_count++;
-            addself = true;
+    } else if (weight_init_method_ == PytorchInitialization) {
+        // the default initialization method of Pytorch 
+        double range = 1. / sqrt(double(M));
+        for (size_t i = 0; i < num_elements; ++ i) {
+            double r = RandomNumberManager::get_random_double();
+            assert(r >= 0. && r <= 1.);
+            data_buff[i] = (r - 0.5) * 2 * range;
         }
+    } else {
+        fprintf(stderr, "Undefined initialization method!\n");
+        assert(false);
     }
-    assert(nnz_in_count == nnz_in_);
-    host_csrColIn_Out_[0] = 0;
-    for(int i = 0; i <= num_master_vertices_; ++i) {
-        host_csrRowOffsets_Out_[i] = index_to_outgoing_edges_[i] + i;
-    }
-    int nnz_out_count = 0;
-    for(int i = 0; i < num_master_vertices_; ++i)
-    {
-        OutEdgeList outlist = get_out_edges(i);
-        bool addself = false;
-        int indgree = get_in_degree(i);
-        int outdgree = get_out_degree(i);
-        int g_i = vid_translation_->get_global_vid_master_vertex(i);
-        int g_outdgree = global_graph_->get_out_degree(g_i);
-        assert(g_outdgree == outdgree);
-        assert(outlist.num_out_edges == outdgree);
-        int prev_nnz_out_count = nnz_out_count;
-        for(int j = 0; j < outlist.num_out_edges; ++j)
-        {
-            OutEdge e = outlist.ptx[j];
-            VertexId dst = e.dst;
-            DataType norm_factor = e.norm_factor;
-            int g_dst = -1;
-            if(dst < num_master_vertices_)g_dst = vid_translation_->get_global_vid_master_vertex(dst);
-            else if(dst >= num_master_vertices_)g_dst = vid_translation_->get_global_vid_outgoing_mirror(dst);
-            DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_dst)) * sqrt(1 + indgree));
-            assert(fabs(std - norm_factor) <=  1e-3);
-            assert(g_dst >= 0);
-            if (aggregation_type == NORM_SUM) {
-                // do nothing
-            } else if (aggregation_type == MEAN) {
-                norm_factor = 1. / global_graph_->get_in_degree(g_dst);
-            } else {
-                assert(false);
-            }
-            if(addself == false && dst > i){
-                host_csrColIn_Out_[nnz_out_count] = i;
-                if (aggregation_type == NORM_SUM) {
-                    host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
-                } else if (aggregation_type == MEAN) {
-                    host_csrValue_Out_[nnz_out_count] = 0;
-                } else {
-                    assert(false);
-                }
-                nnz_out_count++;
-                addself = true;
-            }
-            bool same_chunk = dst / vertices_per_chunk == i / vertices_per_chunk;
-            host_csrColIn_Out_[nnz_out_count] = dst;
-            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 2.);  // for unbaised gradient estimation
-            nnz_out_count++;
-        }
-        if(addself == false)
-        {
-            host_csrColIn_Out_[nnz_out_count] = i;
-            if (aggregation_type == NORM_SUM) {
-                host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
-            } else if (aggregation_type == MEAN) {
-                host_csrValue_Out_[nnz_out_count] = 0;
-            } else {
-                assert(false);
-            }
-            nnz_out_count++;
-            addself = true;
-        }
-    }
-    assert(nnz_out_ == nnz_out_count);
-    CopyFromHostToCUDADevice<int>(cuda_csrRowOffsets_In_, host_csrRowOffsets_In_, num_master_vertices_ + 1, __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<int>(cuda_csrColIn_In_, host_csrColIn_In_, nnz_in_, __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<DataType>(cuda_csrValue_In_, host_csrValue_In_, nnz_in_, __FILE__, __LINE__);
 
-    CopyFromHostToCUDADevice<int>(cuda_csrRowOffsets_Out_, host_csrRowOffsets_Out_, num_master_vertices_ + 1, __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<int>(cuda_csrColIn_Out_, host_csrColIn_Out_, nnz_out_, __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<DataType>(cuda_csrValue_Out_, host_csrValue_Out_, nnz_out_, __FILE__, __LINE__);
-    printf("csr in-out ready !");
-}
-
-void CUDABPIPLocalGraph::TestCsr()
-{   
-    int node_id = DistributedSys::get_instance()->get_node_id();
-    //test in-matrix
-    for(int i = 0; i < nnz_in_; ++i)
-    {
-        int col = host_csrColIn_In_[i];
-        int row = 0;
-        while(host_csrRowOffsets_In_[row] <= i)row++;
-        row -- ;
-        int g_col = -1;
-        int g_row = -1;
-        if(col < num_master_vertices_)g_col = vid_translation_->get_global_vid_master_vertex(col);
-        else if(col >= num_master_vertices_)g_col = vid_translation_->get_global_vid_incoming_mirror(col);
-        g_row = vid_translation_->get_global_vid_master_vertex(row);
-        DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_row)) * sqrt(1 + global_graph_->get_in_degree(g_col)));
-        assert(fabs(std - host_csrValue_In_[i]) < 1e-3);
-    }
-    //test out-matrix
-    for(int i = 0; i < nnz_out_; ++i)
-    {
-        int col = host_csrColIn_Out_[i];
-        int row = 0;
-        while(host_csrRowOffsets_Out_[row] <= i)row++;
-        row -- ;
-        int g_col = -1;
-        int g_row = -1;
-        if(col < num_master_vertices_)g_col = vid_translation_->get_global_vid_master_vertex(col);
-        else if(col >= num_master_vertices_)g_col = vid_translation_->get_global_vid_outgoing_mirror(col);
-        g_row = vid_translation_->get_global_vid_master_vertex(row);
-        DataType std = 1.0/(sqrt(1 + global_graph_->get_in_degree(g_row)) * sqrt(1 + global_graph_->get_in_degree(g_col)));
-    }
+    CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
+    delete [] data_buff;
 }
 
 

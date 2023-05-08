@@ -1096,6 +1096,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         AggregationType aggregation_type_ = NORM_SUM;
 
+        int evaluation_frequency_ = -1; // the model weights are evaluated every evaluation_frequency_ epoches, -1: means no evaluation
+
         inline int get_num_epoch() {
             return num_epoch_;
         }
@@ -1220,6 +1222,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void perform_backward_task(CUDAPIPBackwardTask task);
         void add_white_noise();
         void scale_down(DataType * data, size_t N, double factor);
+        void run_approx_inference_epoch(); // fast but approximate inference to select the best model weights
+        void run_exact_inference_epoch(); // slow but accurate inference to evaluate the final model weights
 
         // some initialization functions
         void generate_backward_operator_mask(const std::vector<Operator*>& operators);
@@ -1230,37 +1234,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void release_resources();
 
         void calculate_accuracy_and_loss(double &train_acc, double &valid_acc, double &test_acc, double &loss);
-        inline void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N){
-            //printf("hybrid init called\n");
-            DataType * data_buff = new DataType[num_elements];
-            assert(N > 0);
-            int M  = num_elements / N; // out_features
-            assert(M > 0);
-
-            if (weight_init_method_ == XavierInitialization) {
-                // Xavier initialization
-                double range = sqrt(5./(N + M));
-                for (size_t i = 0; i < num_elements; ++ i) {
-                    double r = RandomNumberManager::get_random_double();
-                    assert(r >= 0. && r <= 1.);
-                    data_buff[i] = (r - 0.5) * 2 * range;
-                }
-            } else if (weight_init_method_ == PytorchInitialization) {
-                // the default initialization method of Pytorch 
-                double range = 1. / sqrt(double(M));
-                for (size_t i = 0; i < num_elements; ++ i) {
-                    double r = RandomNumberManager::get_random_double();
-                    assert(r >= 0. && r <= 1.);
-                    data_buff[i] = (r - 0.5) * 2 * range;
-                }
-            } else {
-                fprintf(stderr, "Undefined initialization method!\n");
-                assert(false);
-            }
-
-            CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
-            delete [] data_buff;
-        }
+        void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N);
         void zero_out_unnecessary_grad(DataType* grad, DataType* data, size_t num_elements_this_chunk);
 
         friend class CUDAPIPForwardTaskDispatcher;
@@ -1282,6 +1256,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         ~DistributedPIPHybridParallelExecutionEngineGPU();
 
         double execute_application(AbstractApplication * application, int num_epoch); // returned: the training accucacy of the last epoch
+        
+        // some setting-up helper functions
         void set_partition(CUDAPIPPartitioning partition) {
             partitioning_ = partition;
         }
@@ -1300,6 +1276,12 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         inline void set_aggregation_type(AggregationType aggregation_type) {
             aggregation_type_ = aggregation_type;
         }
+        inline void set_evaluation_frequency(int evaluation_frequency) {
+            evaluation_frequency_ = evaluation_frequency;
+        }
 };
 
 #endif
+
+
+

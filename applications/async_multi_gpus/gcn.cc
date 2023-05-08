@@ -93,7 +93,8 @@ int main(int argc, char ** argv) {
         ("chunks", po::value<int>()->default_value(32), "The number of chunks.")
         ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.")
         ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The file storing the checkpointed weights.")
-        ("seed", po::value<int>()->default_value(1234), "The random seed.");
+        ("seed", po::value<int>()->default_value(1234), "The random seed.")
+        ("eval_freq", po::value<int>()->default_value(-1), "The evaluation frequency (for how many epoches the model is evaluated, -1: no evaluation, better for throughput measurement)");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -120,6 +121,7 @@ int main(int argc, char ** argv) {
     double dropout = vm["dropout"].as<double>();
     std::string weight_file = vm["weight_file"].as<std::string>();
     int random_seed = vm["seed"].as<int>();
+    int evaluation_frequency = vm["eval_freq"].as<int>();
 
     Context::init_context();
     int node_id = DistributedSys::get_instance()->get_node_id();
@@ -194,6 +196,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_weight_file(weight_file);
     execution_engine->set_num_chunks(num_chunks);
     execution_engine->set_aggregation_type(NORM_SUM);
+    execution_engine->set_evaluation_frequency(evaluation_frequency);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {
