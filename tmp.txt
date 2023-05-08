@@ -1,5 +1,5 @@
 g013.anvil.rcac.purdue.edu
-Mon May  8 13:27:42 2023       
+Mon May  8 13:26:39 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -8,7 +8,7 @@ Mon May  8 13:27:42 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
-| N/A   30C    P0    55W / 400W |      0MiB / 40960MiB |      0%      Default |
+| N/A   29C    P0    55W / 400W |      0MiB / 40960MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -31,28 +31,32 @@ Currently Loaded Modules:
 Consolidate compiler generated dependencies of target cudahelp
 [ 11%] Built target context
 [ 36%] Built target core
+[ 38%] Building CXX object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o
+[ 41%] Linking CXX static library libcudahelp.a
 [ 77%] Built target cudahelp
-[ 83%] Built target estimate_comm_volume
+[ 80%] Linking CXX executable estimate_comm_volume
+[ 86%] Linking CXX executable gcn
+[ 86%] Linking CXX executable gcnii
+[ 88%] Linking CXX executable graphsage
+[ 91%] Built target estimate_comm_volume
 [ 94%] Built target OSDI2023_MULTI_NODES_gcn
-[100%] Built target OSDI2023_MULTI_NODES_graphsage
+[ 97%] Built target OSDI2023_MULTI_NODES_graphsage
 [100%] Built target OSDI2023_MULTI_NODES_gcnii
 Initialized node 1 on machine g014.anvil.rcac.purdue.edu
 Initialized node 0 on machine g013.anvil.rcac.purdue.edu
 Building the CSR structure...
 Building the CSR structure...
-        It takes 0.039 seconds.
+        It takes 0.076 seconds.
 Building the CSC structure...
-        It takes 0.039 seconds.
+        It takes 0.079 seconds.
 Building the CSC structure...
-        It takes 0.039 seconds.
-        It takes 0.038 seconds.
+        It takes 0.037 seconds.
+        It takes 0.041 seconds.
 Building the Feature Vector...
 Building the Feature Vector...
-        It takes 0.055 seconds.
+        It takes 0.056 seconds.
 Building the Label Vector...
-        It takes 0.063 seconds.
-Building the Label Vector...
-        It takes 0.021 seconds.
+        It takes 0.052 seconds.
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_arxiv
 The number of GCNII layers: 8
 The number of hidden units: 256
@@ -66,7 +70,9 @@ Number of classes: 40
 Number of feature dimensions: 128
 Number of vertices: 169343
 Number of GPUs: 2
-        It takes 0.022 seconds.
+        It takes 0.124 seconds.
+Building the Label Vector...
+        It takes 0.026 seconds.
 train nodes 90941, valid nodes 29799, test nodes 48603
 WARNING: the current version only applies to linear GNN models!
 GPU 0, layer [0, 4)
@@ -142,23 +148,23 @@ csr in-out ready !*** Node 0, setting up some other necessary information...
 csr in-out ready !*** Node 1, setting up some other necessary information...
 *** Node 0, starting the helper threads...
 *** Node 1, starting the helper threads...
-+++++++++ Node 0 initializing the weights for op[0, 21)...
-+++++++++ Node 0, mapping weight op 1
 +++++++++ Node 1 initializing the weights for op[21, 40)...
 +++++++++ Node 1, mapping weight op 22
 using the Pytorch initialization method.
-using the Pytorch initialization method.
-+++++++++ Node 0, mapping weight op 7
++++++++++ Node 0 initializing the weights for op[0, 21)...
++++++++++ Node 0, mapping weight op 1
 using the Pytorch initialization method.
 +++++++++ Node 1, mapping weight op 27
++++++++++ Node 0, mapping weight op 7
+using the Pytorch initialization method.
+using the Pytorch initialization method.
 +++++++++ Node 0, mapping weight op 12
-using the Pytorch initialization method.
-using the Pytorch initialization method.
 +++++++++ Node 1, mapping weight op 32
+using the Pytorch initialization method.
+using the Pytorch initialization method.
 +++++++++ Node 0, mapping weight op 17
-using the Pytorch initialization method.
-using the Pytorch initialization method.
 +++++++++ Node 1, mapping weight op 37
+using the Pytorch initialization method.
 using the Pytorch initialization method.
 *** Node 0, starting task scheduling...
 
@@ -167,43 +173,43 @@ using the Pytorch initialization method.
 The learning rate specified by the user: 0.001000000
 *** Node 1, starting task scheduling...
 The learning rate specified by the user: 0.001000000
-	Epoch 9:	Loss 3.38894
-	Epoch 19:	Loss 3.26733
-	Epoch 29:	Loss 2.98148
-	Epoch 39:	Loss 2.88918
-	Epoch 49:	Loss 2.82014
-	Epoch 59:	Loss 2.69374
-	Epoch 69:	Loss 2.53443
-	Epoch 79:	Loss 2.39254
-	Epoch 89:	Loss 2.22762
-	Epoch 99:	Loss 2.15581
+	Epoch 10:	Loss 3.41303	TrainAcc 0.0570	ValidAcc 0.0413	TestAcc 0.0299
+	Epoch 20:	Loss 3.14747	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
+	Epoch 30:	Loss 2.97649	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
+	Epoch 40:	Loss 2.87110	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
+	Epoch 50:	Loss 2.82293	TrainAcc 0.2336	ValidAcc 0.1212	TestAcc 0.0912
+	Epoch 60:	Loss 2.71845	TrainAcc 0.2435	ValidAcc 0.1176	TestAcc 0.0907
+	Epoch 70:	Loss 2.54646	TrainAcc 0.3386	ValidAcc 0.3325	TestAcc 0.2987
+	Epoch 80:	Loss 2.35001	TrainAcc 0.3444	ValidAcc 0.3439	TestAcc 0.3063
+	Epoch 90:	Loss 2.21601	TrainAcc 0.4245	ValidAcc 0.4397	TestAcc 0.4098
 Node 0, Layer-level comm throughput (act): -nan GBps
-Node 1, Layer-level comm throughput (act): 9.390 GBps
+Node 1, Layer-level comm throughput (act): 9.481 GBps
 Node 1, Layer-level comm throughput (grad): -nan GBps
-Node 0, Layer-level comm throughput (grad): 9.480 GBps
+Node 0, Layer-level comm throughput (grad): 9.637 GBps
+	Epoch 100:	Loss 2.10430	TrainAcc 0.4691	ValidAcc 0.4924	TestAcc 0.4683
 Node 0, GPU memory consumption: 5.417 GB
-Node 0, compression time: 0.116s, compression size: 16.150GB, throughput: 139.815GBps
-Node 0, decompression time: 0.218s, compression size: 16.150GB, throughput: 74.225GBps
-Node 0, pure compute time: 6.507 s, total compute time: 6.840 s
-Node 0, wait_for_task_time: 0.537 s, wait_for_other_gpus_time: 0.001 s
-------------------------node id 0,  per-epoch time: 0.078118 s---------------
+Node 0, compression time: 0.153s, compression size: 20.995GB, throughput: 137.233GBps
+Node 0, decompression time: 0.325s, compression size: 20.995GB, throughput: 64.508GBps
+Node 0, pure compute time: 8.372 s, total compute time: 8.851 s
+Node 0, wait_for_task_time: 0.721 s, wait_for_other_gpus_time: 0.000 s
+------------------------node id 0,  per-epoch time: 0.103474 s---------------
 Node 1, GPU memory consumption: 5.195 GB
-Node 1, compression time: 0.153s, compression size: 16.150GB, throughput: 105.819GBps
-Node 1, decompression time: 0.221s, compression size: 16.150GB, throughput: 73.227GBps
-Node 1, pure compute time: 5.419 s, total compute time: 5.792 s
-Node 1, wait_for_task_time: 0.379 s, wait_for_other_gpus_time: 0.001 s
-------------------------node id 1,  per-epoch time: 0.078119 s---------------
+Node 1, compression time: 0.198s, compression size: 20.995GB, throughput: 106.095GBps
+Node 1, decompression time: 0.329s, compression size: 20.995GB, throughput: 63.761GBps
+Node 1, pure compute time: 6.990 s, total compute time: 7.517 s
+Node 1, wait_for_task_time: 0.433 s, wait_for_other_gpus_time: 0.001 s
+------------------------node id 1,  per-epoch time: 0.103474 s---------------
 ************ Profiling Results ************
-	Bubble: 0.441435 (s) (5.48 percentage)
-	Compute: 6.872076 (s) (85.34 percentage)
-	GradSync: 0.159166 (s) (1.98 percentage)
-	GraphComm: 0.002761 (s) (0.03 percentage)
-	Imbalance: 0.505661 (s) (6.28 percentage)
-	LayerComm: 0.071348 (s) (0.89 percentage)
-	Layer-level communication (cluster-wide, per epoch): 0.083 GB
-Highest valid_acc: 0.0000
-Target test_acc: 0.0000
-Epoch to reach the target acc: 0
+	Bubble: 0.545201 (s) (5.22 percentage)
+	Compute: 8.950576 (s) (85.68 percentage)
+	GradSync: 0.155579 (s) (1.49 percentage)
+	GraphComm: 0.002899 (s) (0.03 percentage)
+	Imbalance: 0.688195 (s) (6.59 percentage)
+	LayerComm: 0.104024 (s) (1.00 percentage)
+	Layer-level communication (cluster-wide, per epoch): 0.130 GB
+Highest valid_acc: 0.4924
+Target test_acc: 0.4683
+Epoch to reach the target acc: 100
 [MPI Rank 1] Success 
 [MPI Rank 0] Success 
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_arxiv
@@ -215,7 +221,7 @@ Initialized node g013.anvil.rcac.purdue.edu
 Building the CSR structure...
         It takes 0.038 seconds.
 Building the CSC structure...
-        It takes 0.039 seconds.
+        It takes 0.038 seconds.
 Building the Feature Vector...
         It takes 0.053 seconds.
 Building the Label Vector...
@@ -273,13 +279,13 @@ train nodes 90941, valid nodes 29799, test nodes 48603
     Number of vertices: 169343
 *** Done preparing the STD tensor.
 Version 0	Loss 3.2628	TrainAcc 0.0570	ValidAcc 0.0413	TestAcc 0.0299
-Version 1	Loss 3.0901	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-Version 2	Loss 2.9587	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-Version 3	Loss 3.0332	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-Version 4	Loss 2.9140	TrainAcc 0.2362	ValidAcc 0.1200	TestAcc 0.0909
-Version 5	Loss 2.6516	TrainAcc 0.3115	ValidAcc 0.3050	TestAcc 0.2713
-Version 6	Loss 2.4807	TrainAcc 0.3363	ValidAcc 0.3301	TestAcc 0.2956
-Version 7	Loss 2.2881	TrainAcc 0.3782	ValidAcc 0.3839	TestAcc 0.3481
-Version 8	Loss 2.2750	TrainAcc 0.3916	ValidAcc 0.4092	TestAcc 0.3811
-Version 9	Loss 2.0844	TrainAcc 0.4382	ValidAcc 0.4285	TestAcc 0.3994
-Version 9 achieved the highest validation accuracy 0.4285 (test accuracy: 0.3994)
+Version 1	Loss 3.0900	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
+Version 2	Loss 2.9610	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
+Version 3	Loss 3.0218	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
+Version 4	Loss 2.9226	TrainAcc 0.2325	ValidAcc 0.1188	TestAcc 0.0884
+Version 5	Loss 2.6892	TrainAcc 0.2486	ValidAcc 0.1323	TestAcc 0.1022
+Version 6	Loss 2.4707	TrainAcc 0.3386	ValidAcc 0.3326	TestAcc 0.2986
+Version 7	Loss 2.4387	TrainAcc 0.3433	ValidAcc 0.3429	TestAcc 0.3055
+Version 8	Loss 2.1372	TrainAcc 0.4259	ValidAcc 0.4430	TestAcc 0.4130
+Version 9	Loss 2.0060	TrainAcc 0.4695	ValidAcc 0.4928	TestAcc 0.4682
+Version 9 achieved the highest validation accuracy 0.4928 (test accuracy: 0.4682)

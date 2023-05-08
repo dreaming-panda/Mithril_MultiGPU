@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-//#define USE_RDMA 
+#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (10)
@@ -258,6 +258,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
         auto rand_gen_infernece = std::default_random_engine(random_seed);
         std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
         // doesn't need to receive activation from dependent nodes
+        int training_epoch_id = 0;
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
             int in_training_mode = true;
             if (engine_->evaluation_frequency_ != -1) {
@@ -276,7 +277,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             if (in_training_mode) {
                 std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
                 for (int chunk_id: local_chunk_ids) {
-                    task.epoch_id = epoch_id;
+                    task.epoch_id = training_epoch_id;
                     task.chunk_id = chunk_id;
                     double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_DISPATCH_DETAILS
@@ -285,10 +286,11 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
 #endif
                     task_queue_->push(task);
                 }
+                training_epoch_id ++;
             } else {
                 std::shuffle(std::begin(local_chunk_ids_infernece), std::end(local_chunk_ids_infernece), rand_gen_infernece);
                 for (int chunk_id: local_chunk_ids_infernece) {
-                    task.epoch_id = epoch_id;
+                    task.epoch_id = training_epoch_id;
                     task.chunk_id = chunk_id;
                     double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_DISPATCH_DETAILS
@@ -441,7 +443,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
             int num_dispatched_chunks = 0;
             for (; num_dispatched_chunks < num_local_chunks; ++ num_dispatched_chunks) {
                 input_task_queue_->pop_blocking(task);
-                assert(task.epoch_id == epoch_id);
+                //assert(task.epoch_id == epoch_id);
                 double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_DISPATCH_DETAILS
                 printf("%.3f ms: Node %d, dispatched a backward task (epoch_id = %d, chunk_id = %d)\n",
@@ -883,7 +885,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     std::thread move_act_gpu2cpu_thread(
             [&]() {
                 CUDAPIPForwardTask task;
-                for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+                for (int epoch_id = 0; epoch_id < num_epoch + engine_->total_num_inference_runs_; ++ epoch_id) {
                     for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
                         act_gpu2cpu_queue->pop_blocking(task);
                         if (node_id < num_nodes - 1) {
@@ -897,7 +899,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     std::thread move_grad_gpu2cpu_thread(
             [&]() {
                 CUDAPIPBackwardTask task;
-                for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+                for (int epoch_id = 0; epoch_id < num_epoch + engine_->total_num_inference_runs_; ++ epoch_id) {
                     for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
                         grad_gpu2cpu_queue->pop_blocking(task);
                         if (node_id > 0) {
@@ -973,6 +975,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     int epoch_id = 0;
     int remained_inference_runs = 0;
+    double train_loss = 0;
     while (epoch_id < num_epoch || remained_inference_runs > 0) {
         if (epoch_id == warmup_epoches) {
             all_epoches_time = - get_time();
@@ -986,7 +989,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         if (in_training_mode) {
             engine_->executor_->disable_inference_mode();
         } else {
-            engine_->executor_->enable_infernece_mode();
+            engine_->executor_->enable_inference_mode();
         }
 
         Profiler::submit_main_thread_event(CrossEpochSyncStartEvent);
@@ -1218,28 +1221,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         engine_->weight_aggregator_->clear_gradients();
         Profiler::submit_main_thread_event(GradSyncCompleteEvent);
 
-        //double train_acc;
-        //double valid_acc;
-        //double test_acc;
-        //double loss;
-
-        //if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {  
-        //    if (node_id == 0) {
-        //        printf("    Epoch %d:", epoch_id);
-        //    }
-        //    engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
-        //    if (valid_acc > highest_valid_acc) {
-        //        highest_valid_acc = valid_acc;
-        //        target_test_acc = test_acc;
-        //        epoch_to_reach_target_acc = epoch_id + 1;
-        //    }
-        //    fflush(stdout);
-        //}
-
         if (in_training_mode) {
             assert(remained_inference_runs == 0);
             ++ epoch_id;
-            if (epoch_id % engine_->evaluation_frequency_ == 0) {
+            if (engine_->evaluation_frequency_ != -1 &&
+                    epoch_id % engine_->evaluation_frequency_ == 0) {
                 remained_inference_runs = NUM_INFERNECE_RUNS;
             }
         } else {
@@ -1260,17 +1246,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         } else {
             // the evaluation is enabled
             assert(engine_->evaluation_frequency_ > 0);
-            if (! in_training_mode && remained_inference_runs == 0) {
+            if (in_training_mode) {
+                double train_acc, valid_acc, test_acc;
+                engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, train_loss);
+            } else if (remained_inference_runs == 0) {
                 double train_acc, valid_acc, test_acc, loss;
                 engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
-                if (valid_accuracy > highest_valid_acc) {
+                if (valid_acc > highest_valid_acc) {
                     highest_valid_acc = valid_acc;
                     target_test_acc = test_acc;
-                    epoch_to_reach_target_acc = epoch_id + 1;
+                    epoch_to_reach_target_acc = epoch_id;
                 }
                 if (node_id == 0) {
                     printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n",
-                            epoch_id, loss, train_acc, valid_acc, test_acc);
+                            epoch_id, train_loss, train_acc, valid_acc, test_acc);
                     fflush(stdout);
                 }
             }
