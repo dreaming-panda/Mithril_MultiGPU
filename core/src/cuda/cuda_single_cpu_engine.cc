@@ -22,8 +22,6 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_forward(const std::
             case OPERATOR_WEIGHT:
                 // do nothing
                 break;
-            case OPERATOR_IDEN:
-                break;
             case OPERATOR_RELU:
                 executor_->relu_forward((ReluOperator*) op);
                 break;
@@ -86,8 +84,6 @@ void SingleNodeExecutionEngineGPU::execute_computation_graph_backward(
                 break;
             case OPERATOR_WEIGHT:
                 // do nothing
-                break;
-            case OPERATOR_IDEN:
                 break;
             case OPERATOR_RELU:
                 executor_->relu_backward((ReluOperator*) op);
@@ -378,10 +374,10 @@ double SingleNodeExecutionEngineGPU::execute_application(AbstractApplication * a
             assert(op->get_num_output_tensors() == 1);
             init_weight_tensor(op->get_output_tensor(0));
         }
-        if (op->get_type() == OPERATOR_IDEN) {
-            assert(op->get_num_output_tensors() == 1);
-            init_identity_tensor(op->get_output_tensor(0));
-        }
+        //if (op->get_type() == OPERATOR_IDEN) {
+        //    assert(op->get_num_output_tensors() == 1);
+        //    init_identity_tensor(op->get_output_tensor(0));
+        //}
     }
     printf("*** Done preparing the weight tensor.\n");
 

@@ -35,10 +35,6 @@ std::string get_op_type_str(OperatorType type) {
         return "OPERATOR_AGGREGATION";
     } else if (type == OPERATOR_ADD){
         return "OPERATOR_ADD";
-    } else if (type == OPERATOR_IDEN){
-        return "OPERATOR_IDEN";
-    } else if (type == OPERATOR_MATMULADD) {
-        return "OPERATOR_MATMULADD";
     } else if (type == OPERATOR_DROPOUT) {
         return "OPERATOR_DROPOUT";
     } else {

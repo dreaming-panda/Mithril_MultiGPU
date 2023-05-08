@@ -3233,7 +3233,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
 
     // run the slow inference on node 0
     if (node_id == 0) {
-        auto get_num_elements(Tensor * tensor) {
+        auto get_num_elements = [&](Tensor * tensor) {
             assert(tensor);
             TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
             return resource->get_num_elements();

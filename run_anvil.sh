@@ -20,11 +20,11 @@ make -j
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
-num_layers=4
+num_layers=8
 hunits=256
 lr=1e-3
 graph=ogbn_arxiv
-epoch=100
+epoch=1000
 decay=1e-5
 chunks=16
 dropout=0.0
