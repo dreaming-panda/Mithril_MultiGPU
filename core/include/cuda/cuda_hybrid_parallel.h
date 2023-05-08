@@ -1097,6 +1097,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         AggregationType aggregation_type_ = NORM_SUM;
 
         int evaluation_frequency_ = -1; // the model weights are evaluated every evaluation_frequency_ epoches, -1: means no evaluation
+        int total_num_inference_runs_;
 
         inline int get_num_epoch() {
             return num_epoch_;
@@ -1222,8 +1223,6 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void perform_backward_task(CUDAPIPBackwardTask task);
         void add_white_noise();
         void scale_down(DataType * data, size_t N, double factor);
-        void run_approx_inference_epoch(); // fast but approximate inference to select the best model weights
-        void run_exact_inference_epoch(); // slow but accurate inference to evaluate the final model weights
 
         // some initialization functions
         void generate_backward_operator_mask(const std::vector<Operator*>& operators);

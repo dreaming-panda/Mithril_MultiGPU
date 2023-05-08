@@ -233,11 +233,13 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % NUM_GPUS_PER_NODE);
-    int num_epoch = engine_->get_num_epoch();
+    int num_epoch = engine_->get_num_epoch() + engine_->total_num_inference_runs_;
     const std::vector<int>& local_chunk_ids_tmp = engine_->get_local_chunk_ids();
     std::vector<int> local_chunk_ids;
+    std::vector<int> local_chunk_ids_infernece;
     for (int i: local_chunk_ids_tmp) {
         local_chunk_ids.push_back(i);
+        local_chunk_ids_infernece.push_back(i);
     }
 
     int num_local_chunks = local_chunk_ids.size();
@@ -251,10 +253,19 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     double comm = 0;
     double comm_time = 0;
     if (engine_->is_topmost_node()) {
-        auto rand_gen = std::default_random_engine(RandomNumberManager::get_random_seed());
+        int random_seed = RandomNumberManager::get_random_seed();
+        auto rand_gen = std::default_random_engine(random_seed);
+        auto rand_gen_infernece = std::default_random_engine(random_seed);
         std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen); 
         // doesn't need to receive activation from dependent nodes
         for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
+            int in_training_mode = true;
+            if (engine_->evaluation_frequency_ != -1) {
+                int offset = epoch_id % (engine_->evaluation_frequency_ + NUM_INFERNECE_RUNS);
+                if (offset >= engine_->evaluation_frequency_) {
+                    in_training_mode = false;
+                }
+            }
             // synchronization between all threads 
             // the main thread will synchronize with all other nodes
             pthread_barrier_wait(barrier_);
@@ -262,16 +273,30 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
             double start_time = get_time();
             // dispatch the chunk-based forwarding tasks
             // shuffle the chunks each epoch
-            std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
-            for (int chunk_id: local_chunk_ids) {
-                task.epoch_id = epoch_id;
-                task.chunk_id = chunk_id;
-                double time_elapsed = (get_time() - start_time) * 1000;    
+            if (in_training_mode) {
+                std::shuffle(std::begin(local_chunk_ids), std::end(local_chunk_ids), rand_gen);
+                for (int chunk_id: local_chunk_ids) {
+                    task.epoch_id = epoch_id;
+                    task.chunk_id = chunk_id;
+                    double time_elapsed = (get_time() - start_time) * 1000;    
 #ifdef SHOW_DISPATCH_DETAILS
-                printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
-                        time_elapsed, node_id, task.epoch_id, task.chunk_id);
+                    printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
+                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
 #endif
-                task_queue_->push(task);
+                    task_queue_->push(task);
+                }
+            } else {
+                std::shuffle(std::begin(local_chunk_ids_infernece), std::end(local_chunk_ids_infernece), rand_gen_infernece);
+                for (int chunk_id: local_chunk_ids_infernece) {
+                    task.epoch_id = epoch_id;
+                    task.chunk_id = chunk_id;
+                    double time_elapsed = (get_time() - start_time) * 1000;    
+#ifdef SHOW_DISPATCH_DETAILS
+                    printf("%.3f ms: Node %d, dispatched a forward task (epoch_id = %d, chunk_id = %d)\n",
+                            time_elapsed, node_id, task.epoch_id, task.chunk_id);
+#endif
+                    task_queue_->push(task);
+                }
             }
         }
     } else {
@@ -397,7 +422,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
-    int num_epoch = engine_->get_num_epoch();
+    int num_epoch = engine_->get_num_epoch() + engine_->total_num_inference_runs_;
     const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
     int num_local_chunks = local_chunk_ids.size();
 
@@ -523,7 +548,7 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
-    int num_epoch = engine_->get_num_epoch();
+    int num_epoch = engine_->get_num_epoch() + engine_->total_num_inference_runs_;
     const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
     int num_local_chunks = local_chunk_ids.size();
 
@@ -670,7 +695,7 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     cudaSetDevice(node_id % 4);
-    int num_epoch = engine_->get_num_epoch();
+    int num_epoch = engine_->get_num_epoch() + engine_->total_num_inference_runs_;
     const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
     int num_local_chunks = local_chunk_ids.size();
 
@@ -849,8 +874,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     int num_epoch = engine_->get_num_epoch();
     VertexId num_vertices = engine_->graph_structure_->get_num_global_vertices();
 
-    LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(num_local_chunks * num_epoch);
-    LockFreeQueue<CUDAPIPBackwardTask> * grad_gpu2cpu_queue = new LockFreeQueue<CUDAPIPBackwardTask>(num_local_chunks * num_epoch);
+    LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(
+            num_local_chunks * (num_epoch + engine_->total_num_inference_runs_));
+    LockFreeQueue<CUDAPIPBackwardTask> * grad_gpu2cpu_queue = new LockFreeQueue<CUDAPIPBackwardTask>(
+            num_local_chunks * (num_epoch + engine_->total_num_inference_runs_));
     engine_->act_gpu2cpu_queue_ = act_gpu2cpu_queue;
 
     std::thread move_act_gpu2cpu_thread(
@@ -1184,29 +1211,30 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         MPI_Barrier(MPI_COMM_WORLD);
         Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
-
         Profiler::submit_main_thread_event(GradSyncStartEvent);
-        engine_->weight_aggregator_->commit_grad();
+        if (in_training_mode) {
+            engine_->weight_aggregator_->commit_grad();
+        }
         engine_->weight_aggregator_->clear_gradients();
         Profiler::submit_main_thread_event(GradSyncCompleteEvent);
 
-        double train_acc;
-        double valid_acc;
-        double test_acc;
-        double loss;
+        //double train_acc;
+        //double valid_acc;
+        //double test_acc;
+        //double loss;
 
-        if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {  
-            if (node_id == 0) {
-                printf("    Epoch %d:", epoch_id);
-            }
-            engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
-            if (valid_acc > highest_valid_acc) {
-                highest_valid_acc = valid_acc;
-                target_test_acc = test_acc;
-                epoch_to_reach_target_acc = epoch_id + 1;
-            }
-            fflush(stdout);
-        }
+        //if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {  
+        //    if (node_id == 0) {
+        //        printf("    Epoch %d:", epoch_id);
+        //    }
+        //    engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
+        //    if (valid_acc > highest_valid_acc) {
+        //        highest_valid_acc = valid_acc;
+        //        target_test_acc = test_acc;
+        //        epoch_to_reach_target_acc = epoch_id + 1;
+        //    }
+        //    fflush(stdout);
+        //}
 
         if (in_training_mode) {
             assert(remained_inference_runs == 0);
@@ -1217,8 +1245,34 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         } else {
             assert(remained_inference_runs > 0);
             -- remained_inference_runs;
-            if (remained_inference_runs == 0) {
-                // TODO: print out the accuracy and maintain the model with the highest validation acc
+        }
+
+        if (engine_->evaluation_frequency_ == -1) {
+            // the evaluation is disabled
+            if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {
+                double train_acc, valid_acc, test_acc, loss;
+                engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
+                if (node_id == 0) {
+                    printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, loss);
+                    fflush(stdout);
+                }
+            }
+        } else {
+            // the evaluation is enabled
+            assert(engine_->evaluation_frequency_ > 0);
+            if (! in_training_mode && remained_inference_runs == 0) {
+                double train_acc, valid_acc, test_acc, loss;
+                engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
+                if (valid_accuracy > highest_valid_acc) {
+                    highest_valid_acc = valid_acc;
+                    target_test_acc = test_acc;
+                    epoch_to_reach_target_acc = epoch_id + 1;
+                }
+                if (node_id == 0) {
+                    printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n",
+                            epoch_id, loss, train_acc, valid_acc, test_acc);
+                    fflush(stdout);
+                }
             }
         }
 
@@ -2716,10 +2770,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     MPI_Allreduce(MPI_IN_PLACE, &accum_loss_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
-    if (DistributedSys::get_instance()->is_master_node()) {
-        printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", 
-                accum_loss_, accuracy_, valid_accuracy_, test_accuracy_);
-    }
+    //if (DistributedSys::get_instance()->is_master_node()) {
+    //    printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", 
+    //            accum_loss_, accuracy_, valid_accuracy_, test_accuracy_);
+    //}
     train_acc = accuracy_;
     valid_acc = valid_accuracy_;
     test_acc = test_accuracy_;
@@ -2754,6 +2808,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int node_id = DistributedSys::get_instance()->get_node_id();
     VertexId num_global_vertices = graph_structure_->get_num_global_vertices();
+    total_num_inference_runs_ = 0;
+    if (evaluation_frequency_ != -1) {
+        assert(evaluation_frequency_ > 0);
+        total_num_inference_runs_ = num_epoch / evaluation_frequency_ * NUM_INFERNECE_RUNS;
+    }
 
     printf("*** Node %d, starting model training...\n", node_id);
 
@@ -2996,9 +3055,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     int num_helper_threads_ = 4; 
     assert(pthread_barrier_init(&barrier_, NULL, num_helper_threads_ + 1) == 0);
     int num_local_chunks = local_chunk_ids_.size();
-    int total_num_forwarding_tasks = num_epoch * num_local_chunks;
-    int total_num_backwarding_tasks = num_epoch * num_local_chunks;
-
+    int total_num_forwarding_tasks = (num_epoch + total_num_inference_runs_) * num_local_chunks;
+    int total_num_backwarding_tasks = (num_epoch + total_num_inference_runs_) * num_local_chunks;
+ 
     forward_task_dispatcher_ = new CUDAPIPForwardTaskDispatcher(total_num_forwarding_tasks, &barrier_);
     forward_task_committer_ = new CUDAPIPForwardTaskCommitter(total_num_forwarding_tasks, &barrier_);
 
