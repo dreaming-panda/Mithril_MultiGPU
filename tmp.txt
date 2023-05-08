@@ -1,15 +1,15 @@
-g013.anvil.rcac.purdue.edu
-Mon May  8 13:26:39 2023       
+amadeus-MS-7B86
+Mon May  8 14:17:44 2023       
 +-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
+| NVIDIA-SMI 510.108.03   Driver Version: 510.108.03   CUDA Version: 11.6     |
 |-------------------------------+----------------------+----------------------+
 | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
-| N/A   29C    P0    55W / 400W |      0MiB / 40960MiB |      0%      Default |
-|                               |                      |             Disabled |
+|   0  NVIDIA GeForce ...  On   | 00000000:29:00.0 Off |                  N/A |
+| 44%   44C    P8     5W / 120W |    357MiB /  6144MiB |      0%      Default |
+|                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
 +-----------------------------------------------------------------------------+
@@ -17,73 +17,47 @@ Mon May  8 13:26:39 2023
 |  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
 |        ID   ID                                                   Usage      |
 |=============================================================================|
-|  No running processes found                                                 |
+|    0   N/A  N/A      1331      G   /usr/lib/xorg/Xorg                101MiB |
+|    0   N/A  N/A      2412      G   /usr/lib/xorg/Xorg                200MiB |
+|    0   N/A  N/A      2537      G   /usr/bin/gnome-shell               44MiB |
 +-----------------------------------------------------------------------------+
-
-Currently Loaded Modules:
-  1) modtree/gpu            5) mpfr/4.0.2    9) numactl/2.0.14
-  2) nccl/cuda-11.2_2.8.4   6) mpc/1.1.0    10) cuda/11.4.2
-  3) cudnn/cuda-11.2_8.1    7) gcc/11.2.0   11) openmpi/4.0.6
-  4) gmp/6.2.1              8) zlib/1.2.11  12) boost/1.74.0
-
- 
-
-Consolidate compiler generated dependencies of target cudahelp
 [ 11%] Built target context
 [ 36%] Built target core
-[ 38%] Building CXX object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o
-[ 41%] Linking CXX static library libcudahelp.a
 [ 77%] Built target cudahelp
-[ 80%] Linking CXX executable estimate_comm_volume
-[ 86%] Linking CXX executable gcn
-[ 86%] Linking CXX executable gcnii
-[ 88%] Linking CXX executable graphsage
-[ 91%] Built target estimate_comm_volume
+[ 83%] Built target estimate_comm_volume
 [ 94%] Built target OSDI2023_MULTI_NODES_gcn
-[ 97%] Built target OSDI2023_MULTI_NODES_graphsage
-[100%] Built target OSDI2023_MULTI_NODES_gcnii
-Initialized node 1 on machine g014.anvil.rcac.purdue.edu
-Initialized node 0 on machine g013.anvil.rcac.purdue.edu
+[ 94%] Built target OSDI2023_MULTI_NODES_gcnii
+[100%] Built target OSDI2023_MULTI_NODES_graphsage
+Initialized node 0 on machine amadeus-MS-7B86
 Building the CSR structure...
-Building the CSR structure...
-        It takes 0.076 seconds.
+        It takes 0.036 seconds.
 Building the CSC structure...
-        It takes 0.079 seconds.
-Building the CSC structure...
-        It takes 0.037 seconds.
-        It takes 0.041 seconds.
+        It takes 0.036 seconds.
 Building the Feature Vector...
-Building the Feature Vector...
-        It takes 0.056 seconds.
+        It takes 0.034 seconds.
 Building the Label Vector...
-        It takes 0.052 seconds.
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_arxiv
-The number of GCNII layers: 8
+        It takes 0.015 seconds.
+The graph dataset locates at /home/amadeus/ssd512/gnn_datasets/reordered/ogbn_arxiv
+The number of GCNII layers: 4
 The number of hidden units: 256
-The number of training epoches: 100
+The number of training epoches: 1000
 Learning rate: 0.001000
 The partition strategy: model
 The dropout rate: 0.500
-The checkpointed weight file: /anvil/projects/x-cis220117/saved_weights_pipe
-The random seed: 1
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 5
 Number of classes: 40
 Number of feature dimensions: 128
 Number of vertices: 169343
-Number of GPUs: 2
-        It takes 0.124 seconds.
-Building the Label Vector...
-        It takes 0.026 seconds.
+Number of GPUs: 1
 train nodes 90941, valid nodes 29799, test nodes 48603
-WARNING: the current version only applies to linear GNN models!
 GPU 0, layer [0, 4)
-GPU 1, layer [4, 8)
 *** Node 0, starting model training...
-Number of operators: 40
-0 169343 0 21
-0 169343 21 40
+Number of operators: 20
+0 169343 0 20
 Node 0, Pipeline Input Tensor: NULL
-Node 0, Pipeline Output Tensor: OPERATOR_DROPOUT
-*** Node 0 owns the partition [0, 21) x [0, 169343)
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the partition [0, 20) x [0, 169343)
 *** Node 0, constructing the helper classes...
 Operators:
     Op 0: type OPERATOR_INPUT, output tensors: 0
@@ -105,187 +79,145 @@ Operators:
     Op 16: type OPERATOR_AGGREGATION, output tensors: 16
     Op 17: type OPERATOR_WEIGHT, output tensors: 17
     Op 18: type OPERATOR_MATMUL, output tensors: 18
-    Op 19: type OPERATOR_RELU, output tensors: 19
-    Op 20: type OPERATOR_DROPOUT, output tensors: 20
-    Op 21: type OPERATOR_AGGREGATION, output tensors: 21
-    Op 22: type OPERATOR_WEIGHT, output tensors: 22
-    Op 23: type OPERATOR_MATMUL, output tensors: 23
-    Op 24: type OPERATOR_RELU, output tensors: 24
-    Op 25: type OPERATOR_DROPOUT, output tensors: 25
-    Op 26: type OPERATOR_AGGREGATION, output tensors: 26
-    Op 27: type OPERATOR_WEIGHT, output tensors: 27
-    Op 28: type OPERATOR_MATMUL, output tensors: 28
-    Op 29: type OPERATOR_RELU, output tensors: 29
-    Op 30: type OPERATOR_DROPOUT, output tensors: 30
-    Op 31: type OPERATOR_AGGREGATION, output tensors: 31
-    Op 32: type OPERATOR_WEIGHT, output tensors: 32
-    Op 33: type OPERATOR_MATMUL, output tensors: 33
-    Op 34: type OPERATOR_RELU, output tensors: 34
-    Op 35: type OPERATOR_DROPOUT, output tensors: 35
-    Op 36: type OPERATOR_AGGREGATION, output tensors: 36
-    Op 37: type OPERATOR_WEIGHT, output tensors: 37
-    Op 38: type OPERATOR_MATMUL, output tensors: 38
-    Op 39: type OPERATOR_SOFTMAX, output tensors: 39
-Boundaries: 0 0 169343 169343
+    Op 19: type OPERATOR_SOFTMAX, output tensors: 19
+Boundaries: 0 169343
 Fragments: [0, 169343)
 Chunks (number of global chunks: 16): 0-[0, 10584) 1-[10584, 21168) 2-[21168, 31752) 3-[31752, 42336) 4-[42336, 52920) 5-[52920, 63504) 6-[63504, 74088) 7-[74088, 84672) 8-[84672, 95256) ... 15-[158760, 169343)
 169343, 2484941, 2484941
 Number of vertices per chunk: 10584
-WARNING: the current version only applies to linear GNN models!
-GPU 0, layer [0, 4)
-GPU 1, layer [4, 8)
-*** Node 1, starting model training...
-Number of operators: 40
-0 169343 0 21
-0 169343 21 40
-Node 1, Pipeline Input Tensor: OPERATOR_DROPOUT
-Node 1, Pipeline Output Tensor: NULL
-*** Node 1 owns the partition [21, 40) x [0, 169343)
-*** Node 1, constructing the helper classes...
-169343, 2484941, 2484941
-Number of vertices per chunk: 10584
 csr in-out ready !*** Node 0, setting up some other necessary information...
-csr in-out ready !*** Node 1, setting up some other necessary information...
 *** Node 0, starting the helper threads...
-*** Node 1, starting the helper threads...
-+++++++++ Node 1 initializing the weights for op[21, 40)...
-+++++++++ Node 1, mapping weight op 22
-using the Pytorch initialization method.
-+++++++++ Node 0 initializing the weights for op[0, 21)...
++++++++++ Node 0 initializing the weights for op[0, 20)...
 +++++++++ Node 0, mapping weight op 1
 using the Pytorch initialization method.
-+++++++++ Node 1, mapping weight op 27
 +++++++++ Node 0, mapping weight op 7
 using the Pytorch initialization method.
-using the Pytorch initialization method.
 +++++++++ Node 0, mapping weight op 12
-+++++++++ Node 1, mapping weight op 32
-using the Pytorch initialization method.
 using the Pytorch initialization method.
 +++++++++ Node 0, mapping weight op 17
-+++++++++ Node 1, mapping weight op 37
-using the Pytorch initialization method.
 using the Pytorch initialization method.
 *** Node 0, starting task scheduling...
 
 
 
 The learning rate specified by the user: 0.001000000
-*** Node 1, starting task scheduling...
-The learning rate specified by the user: 0.001000000
-	Epoch 10:	Loss 3.41303	TrainAcc 0.0570	ValidAcc 0.0413	TestAcc 0.0299
-	Epoch 20:	Loss 3.14747	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-	Epoch 30:	Loss 2.97649	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-	Epoch 40:	Loss 2.87110	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-	Epoch 50:	Loss 2.82293	TrainAcc 0.2336	ValidAcc 0.1212	TestAcc 0.0912
-	Epoch 60:	Loss 2.71845	TrainAcc 0.2435	ValidAcc 0.1176	TestAcc 0.0907
-	Epoch 70:	Loss 2.54646	TrainAcc 0.3386	ValidAcc 0.3325	TestAcc 0.2987
-	Epoch 80:	Loss 2.35001	TrainAcc 0.3444	ValidAcc 0.3439	TestAcc 0.3063
-	Epoch 90:	Loss 2.21601	TrainAcc 0.4245	ValidAcc 0.4397	TestAcc 0.4098
+	Epoch 10:	Loss 3.26528	TrainAcc 0.1797	ValidAcc 0.0763	TestAcc 0.0588
+	Epoch 20:	Loss 2.76874	TrainAcc 0.3161	ValidAcc 0.3192	TestAcc 0.2868
+	Epoch 30:	Loss 2.24517	TrainAcc 0.4641	ValidAcc 0.4672	TestAcc 0.4361
+	Epoch 40:	Loss 1.92256	TrainAcc 0.5253	ValidAcc 0.5437	TestAcc 0.5265
+	Epoch 50:	Loss 1.79562	TrainAcc 0.5510	ValidAcc 0.5660	TestAcc 0.5493
+	Epoch 60:	Loss 1.67584	TrainAcc 0.5774	ValidAcc 0.5843	TestAcc 0.5647
+	Epoch 70:	Loss 1.57408	TrainAcc 0.5989	ValidAcc 0.5967	TestAcc 0.5759
+	Epoch 80:	Loss 1.48096	TrainAcc 0.6164	ValidAcc 0.6195	TestAcc 0.6040
+	Epoch 90:	Loss 1.42190	TrainAcc 0.6262	ValidAcc 0.6273	TestAcc 0.6128
+	Epoch 100:	Loss 1.38379	TrainAcc 0.6344	ValidAcc 0.6355	TestAcc 0.6250
+	Epoch 110:	Loss 1.35939	TrainAcc 0.6404	ValidAcc 0.6433	TestAcc 0.6341
+	Epoch 120:	Loss 1.33163	TrainAcc 0.6452	ValidAcc 0.6470	TestAcc 0.6366
+	Epoch 130:	Loss 1.31094	TrainAcc 0.6500	ValidAcc 0.6516	TestAcc 0.6448
+	Epoch 140:	Loss 1.28584	TrainAcc 0.6540	ValidAcc 0.6551	TestAcc 0.6477
+	Epoch 150:	Loss 1.27016	TrainAcc 0.6581	ValidAcc 0.6597	TestAcc 0.6528
+	Epoch 160:	Loss 1.25518	TrainAcc 0.6622	ValidAcc 0.6640	TestAcc 0.6583
+	Epoch 170:	Loss 1.24092	TrainAcc 0.6662	ValidAcc 0.6672	TestAcc 0.6605
+	Epoch 180:	Loss 1.22751	TrainAcc 0.6697	ValidAcc 0.6691	TestAcc 0.6591
+	Epoch 190:	Loss 1.21422	TrainAcc 0.6727	ValidAcc 0.6726	TestAcc 0.6641
+	Epoch 200:	Loss 1.20430	TrainAcc 0.6751	ValidAcc 0.6752	TestAcc 0.6664
+	Epoch 210:	Loss 1.19606	TrainAcc 0.6773	ValidAcc 0.6762	TestAcc 0.6669
+	Epoch 220:	Loss 1.18190	TrainAcc 0.6797	ValidAcc 0.6796	TestAcc 0.6713
+	Epoch 230:	Loss 1.17731	TrainAcc 0.6815	ValidAcc 0.6807	TestAcc 0.6715
+	Epoch 240:	Loss 1.16587	TrainAcc 0.6834	ValidAcc 0.6813	TestAcc 0.6712
+	Epoch 250:	Loss 1.15770	TrainAcc 0.6852	ValidAcc 0.6830	TestAcc 0.6706
+	Epoch 260:	Loss 1.15178	TrainAcc 0.6871	ValidAcc 0.6870	TestAcc 0.6776
+	Epoch 270:	Loss 1.14513	TrainAcc 0.6892	ValidAcc 0.6865	TestAcc 0.6765
+	Epoch 280:	Loss 1.14126	TrainAcc 0.6901	ValidAcc 0.6884	TestAcc 0.6786
+	Epoch 290:	Loss 1.13310	TrainAcc 0.6913	ValidAcc 0.6863	TestAcc 0.6729
+	Epoch 300:	Loss 1.12877	TrainAcc 0.6924	ValidAcc 0.6890	TestAcc 0.6797
+	Epoch 310:	Loss 1.12235	TrainAcc 0.6945	ValidAcc 0.6916	TestAcc 0.6827
+	Epoch 320:	Loss 1.11792	TrainAcc 0.6959	ValidAcc 0.6929	TestAcc 0.6844
+	Epoch 330:	Loss 1.11361	TrainAcc 0.6966	ValidAcc 0.6922	TestAcc 0.6806
+	Epoch 340:	Loss 1.10674	TrainAcc 0.6981	ValidAcc 0.6912	TestAcc 0.6778
+	Epoch 350:	Loss 1.10608	TrainAcc 0.6988	ValidAcc 0.6925	TestAcc 0.6793
+	Epoch 360:	Loss 1.09999	TrainAcc 0.6991	ValidAcc 0.6971	TestAcc 0.6910
+	Epoch 370:	Loss 1.09556	TrainAcc 0.7006	ValidAcc 0.6942	TestAcc 0.6822
+	Epoch 380:	Loss 1.09610	TrainAcc 0.7007	ValidAcc 0.6983	TestAcc 0.6896
+	Epoch 390:	Loss 1.09009	TrainAcc 0.7019	ValidAcc 0.6977	TestAcc 0.6883
+	Epoch 400:	Loss 1.08296	TrainAcc 0.7025	ValidAcc 0.6980	TestAcc 0.6885
+	Epoch 410:	Loss 1.08128	TrainAcc 0.7030	ValidAcc 0.6974	TestAcc 0.6859
+	Epoch 420:	Loss 1.07667	TrainAcc 0.7042	ValidAcc 0.6989	TestAcc 0.6896
+	Epoch 430:	Loss 1.07717	TrainAcc 0.7043	ValidAcc 0.6998	TestAcc 0.6902
+	Epoch 440:	Loss 1.07212	TrainAcc 0.7046	ValidAcc 0.7007	TestAcc 0.6901
+	Epoch 450:	Loss 1.06753	TrainAcc 0.7059	ValidAcc 0.6997	TestAcc 0.6896
+	Epoch 460:	Loss 1.06829	TrainAcc 0.7056	ValidAcc 0.7007	TestAcc 0.6902
+	Epoch 470:	Loss 1.06322	TrainAcc 0.7066	ValidAcc 0.7008	TestAcc 0.6910
+	Epoch 480:	Loss 1.06191	TrainAcc 0.7065	ValidAcc 0.7021	TestAcc 0.6907
+	Epoch 490:	Loss 1.05778	TrainAcc 0.7075	ValidAcc 0.6997	TestAcc 0.6877
+	Epoch 500:	Loss 1.05688	TrainAcc 0.7078	ValidAcc 0.7026	TestAcc 0.6928
+	Epoch 510:	Loss 1.05715	TrainAcc 0.7087	ValidAcc 0.7028	TestAcc 0.6937
+	Epoch 520:	Loss 1.05046	TrainAcc 0.7094	ValidAcc 0.7016	TestAcc 0.6906
+	Epoch 530:	Loss 1.05047	TrainAcc 0.7100	ValidAcc 0.7006	TestAcc 0.6872
+	Epoch 540:	Loss 1.05093	TrainAcc 0.7104	ValidAcc 0.7022	TestAcc 0.6916
+	Epoch 550:	Loss 1.04432	TrainAcc 0.7107	ValidAcc 0.7032	TestAcc 0.6922
+	Epoch 560:	Loss 1.04338	TrainAcc 0.7110	ValidAcc 0.7027	TestAcc 0.6909
+	Epoch 570:	Loss 1.04144	TrainAcc 0.7115	ValidAcc 0.7036	TestAcc 0.6910
+	Epoch 580:	Loss 1.03881	TrainAcc 0.7119	ValidAcc 0.7045	TestAcc 0.6958
+	Epoch 590:	Loss 1.04370	TrainAcc 0.7126	ValidAcc 0.7054	TestAcc 0.6950
+	Epoch 600:	Loss 1.04037	TrainAcc 0.7128	ValidAcc 0.7038	TestAcc 0.6936
+	Epoch 610:	Loss 1.03734	TrainAcc 0.7136	ValidAcc 0.7042	TestAcc 0.6934
+	Epoch 620:	Loss 1.03658	TrainAcc 0.7139	ValidAcc 0.7047	TestAcc 0.6915
+	Epoch 630:	Loss 1.03173	TrainAcc 0.7141	ValidAcc 0.7058	TestAcc 0.6960
+	Epoch 640:	Loss 1.03218	TrainAcc 0.7149	ValidAcc 0.7029	TestAcc 0.6904
+	Epoch 650:	Loss 1.02960	TrainAcc 0.7156	ValidAcc 0.7060	TestAcc 0.6946
+	Epoch 660:	Loss 1.02708	TrainAcc 0.7157	ValidAcc 0.7056	TestAcc 0.6944
+	Epoch 670:	Loss 1.02542	TrainAcc 0.7160	ValidAcc 0.7059	TestAcc 0.6957
+	Epoch 680:	Loss 1.02423	TrainAcc 0.7161	ValidAcc 0.7070	TestAcc 0.6963
+	Epoch 690:	Loss 1.02150	TrainAcc 0.7169	ValidAcc 0.7056	TestAcc 0.6930
+	Epoch 700:	Loss 1.01831	TrainAcc 0.7168	ValidAcc 0.7065	TestAcc 0.6954
+	Epoch 710:	Loss 1.01663	TrainAcc 0.7172	ValidAcc 0.7064	TestAcc 0.6925
+	Epoch 720:	Loss 1.01932	TrainAcc 0.7180	ValidAcc 0.7078	TestAcc 0.6977
+	Epoch 730:	Loss 1.01587	TrainAcc 0.7185	ValidAcc 0.7066	TestAcc 0.6938
+	Epoch 740:	Loss 1.01250	TrainAcc 0.7181	ValidAcc 0.7074	TestAcc 0.6952
+	Epoch 750:	Loss 1.01499	TrainAcc 0.7183	ValidAcc 0.7072	TestAcc 0.6959
+	Epoch 760:	Loss 1.01082	TrainAcc 0.7196	ValidAcc 0.7068	TestAcc 0.6948
+	Epoch 770:	Loss 1.01214	TrainAcc 0.7190	ValidAcc 0.7083	TestAcc 0.6985
+	Epoch 780:	Loss 1.00709	TrainAcc 0.7197	ValidAcc 0.7087	TestAcc 0.6955
+	Epoch 790:	Loss 1.00882	TrainAcc 0.7201	ValidAcc 0.7082	TestAcc 0.6935
+	Epoch 800:	Loss 1.00426	TrainAcc 0.7207	ValidAcc 0.7087	TestAcc 0.6967
+	Epoch 810:	Loss 1.00320	TrainAcc 0.7207	ValidAcc 0.7077	TestAcc 0.6952
+	Epoch 820:	Loss 1.00371	TrainAcc 0.7212	ValidAcc 0.7092	TestAcc 0.6978
+	Epoch 830:	Loss 1.00175	TrainAcc 0.7213	ValidAcc 0.7079	TestAcc 0.6956
+	Epoch 840:	Loss 1.00216	TrainAcc 0.7216	ValidAcc 0.7098	TestAcc 0.6985
+	Epoch 850:	Loss 0.99889	TrainAcc 0.7217	ValidAcc 0.7089	TestAcc 0.6985
+	Epoch 860:	Loss 0.99934	TrainAcc 0.7224	ValidAcc 0.7084	TestAcc 0.6953
+	Epoch 870:	Loss 0.99768	TrainAcc 0.7215	ValidAcc 0.7090	TestAcc 0.7001
+	Epoch 880:	Loss 0.99523	TrainAcc 0.7225	ValidAcc 0.7097	TestAcc 0.6975
+	Epoch 890:	Loss 0.99589	TrainAcc 0.7231	ValidAcc 0.7086	TestAcc 0.6952
+	Epoch 900:	Loss 0.99223	TrainAcc 0.7233	ValidAcc 0.7101	TestAcc 0.7007
+	Epoch 910:	Loss 0.99375	TrainAcc 0.7235	ValidAcc 0.7088	TestAcc 0.6982
+	Epoch 920:	Loss 0.99034	TrainAcc 0.7236	ValidAcc 0.7094	TestAcc 0.6981
+	Epoch 930:	Loss 0.99053	TrainAcc 0.7242	ValidAcc 0.7092	TestAcc 0.6947
+	Epoch 940:	Loss 0.99029	TrainAcc 0.7242	ValidAcc 0.7107	TestAcc 0.7013
+	Epoch 950:	Loss 0.98919	TrainAcc 0.7244	ValidAcc 0.7106	TestAcc 0.7007
+	Epoch 960:	Loss 0.98820	TrainAcc 0.7251	ValidAcc 0.7077	TestAcc 0.6942
+	Epoch 970:	Loss 0.98508	TrainAcc 0.7248	ValidAcc 0.7086	TestAcc 0.6944
+	Epoch 980:	Loss 0.98462	TrainAcc 0.7243	ValidAcc 0.7096	TestAcc 0.6993
+	Epoch 990:	Loss 0.98619	TrainAcc 0.7254	ValidAcc 0.7095	TestAcc 0.6986
 Node 0, Layer-level comm throughput (act): -nan GBps
-Node 1, Layer-level comm throughput (act): 9.481 GBps
-Node 1, Layer-level comm throughput (grad): -nan GBps
-Node 0, Layer-level comm throughput (grad): 9.637 GBps
-	Epoch 100:	Loss 2.10430	TrainAcc 0.4691	ValidAcc 0.4924	TestAcc 0.4683
-Node 0, GPU memory consumption: 5.417 GB
-Node 0, compression time: 0.153s, compression size: 20.995GB, throughput: 137.233GBps
-Node 0, decompression time: 0.325s, compression size: 20.995GB, throughput: 64.508GBps
-Node 0, pure compute time: 8.372 s, total compute time: 8.851 s
-Node 0, wait_for_task_time: 0.721 s, wait_for_other_gpus_time: 0.000 s
-------------------------node id 0,  per-epoch time: 0.103474 s---------------
-Node 1, GPU memory consumption: 5.195 GB
-Node 1, compression time: 0.198s, compression size: 20.995GB, throughput: 106.095GBps
-Node 1, decompression time: 0.329s, compression size: 20.995GB, throughput: 63.761GBps
-Node 1, pure compute time: 6.990 s, total compute time: 7.517 s
-Node 1, wait_for_task_time: 0.433 s, wait_for_other_gpus_time: 0.001 s
-------------------------node id 1,  per-epoch time: 0.103474 s---------------
+Node 0, Layer-level comm throughput (grad): -nan GBps
+	Epoch 1000:	Loss 0.98485	TrainAcc 0.7252	ValidAcc 0.7100	TestAcc 0.6975
+Node 0, GPU memory consumption: 4.216 GB
+Node 0, compression time: 0.000s, compression size: 0.000GB, throughput: -nanGBps
+Node 0, decompression time: 0.000s, compression size: 0.000GB, throughput: -nanGBps
+Node 0, pure compute time: 402.364 s, total compute time: 402.364 s
+Node 0, wait_for_task_time: 22.008 s, wait_for_other_gpus_time: 0.000 s
+------------------------node id 0,  per-epoch time: 0.511654 s---------------
 ************ Profiling Results ************
-	Bubble: 0.545201 (s) (5.22 percentage)
-	Compute: 8.950576 (s) (85.68 percentage)
-	GradSync: 0.155579 (s) (1.49 percentage)
-	GraphComm: 0.002899 (s) (0.03 percentage)
-	Imbalance: 0.688195 (s) (6.59 percentage)
-	LayerComm: 0.104024 (s) (1.00 percentage)
-	Layer-level communication (cluster-wide, per epoch): 0.130 GB
-Highest valid_acc: 0.4924
-Target test_acc: 0.4683
-Epoch to reach the target acc: 100
-[MPI Rank 1] Success 
+	Bubble: 31.194833 (s) (6.10 percentage)
+	Compute: 447.608275 (s) (87.54 percentage)
+	GradSync: 0.832455 (s) (0.16 percentage)
+	GraphComm: 31.689933 (s) (6.20 percentage)
+	Imbalance: 0.000304 (s) (0.00 percentage)
+	LayerComm: 0.000000 (s) (0.00 percentage)
+	Layer-level communication (cluster-wide, per epoch): 0.000 GB
+Highest valid_acc: 0.7107
+Target test_acc: 0.7013
+Epoch to reach the target acc: 940
 [MPI Rank 0] Success 
-The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_arxiv
-The number of GCN layers: 8
-The number of hidden units: 256
-The number of training epoches: 0
-Learning rate: 0.000000
-Initialized node g013.anvil.rcac.purdue.edu
-Building the CSR structure...
-        It takes 0.038 seconds.
-Building the CSC structure...
-        It takes 0.038 seconds.
-Building the Feature Vector...
-        It takes 0.053 seconds.
-Building the Label Vector...
-        It takes 0.021 seconds.
-Number of classes: 40
-Number of feature dimensions: 128
-Dropout: 0.000 
-train nodes 90941, valid nodes 29799, test nodes 48603
-*** Allocating resources for all tensors...
-    OP_TYPE: OPERATOR_INPUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_RELU
-    OP_TYPE: OPERATOR_DROPOUT
-    OP_TYPE: OPERATOR_WEIGHT
-    OP_TYPE: OPERATOR_MATMUL
-    OP_TYPE: OPERATOR_AGGREGATION
-    OP_TYPE: OPERATOR_SOFTMAX
-*** Done allocating resource.
-*** Preparing the input tensor...
-*** Done preparing the input tensor.
-*** Preparing the STD tensor...
-    Number of labels: 40
-    Number of vertices: 169343
-*** Done preparing the STD tensor.
-Version 0	Loss 3.2628	TrainAcc 0.0570	ValidAcc 0.0413	TestAcc 0.0299
-Version 1	Loss 3.0900	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-Version 2	Loss 2.9610	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-Version 3	Loss 3.0218	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
-Version 4	Loss 2.9226	TrainAcc 0.2325	ValidAcc 0.1188	TestAcc 0.0884
-Version 5	Loss 2.6892	TrainAcc 0.2486	ValidAcc 0.1323	TestAcc 0.1022
-Version 6	Loss 2.4707	TrainAcc 0.3386	ValidAcc 0.3326	TestAcc 0.2986
-Version 7	Loss 2.4387	TrainAcc 0.3433	ValidAcc 0.3429	TestAcc 0.3055
-Version 8	Loss 2.1372	TrainAcc 0.4259	ValidAcc 0.4430	TestAcc 0.4130
-Version 9	Loss 2.0060	TrainAcc 0.4695	ValidAcc 0.4928	TestAcc 0.4682
-Version 9 achieved the highest validation accuracy 0.4928 (test accuracy: 0.4682)

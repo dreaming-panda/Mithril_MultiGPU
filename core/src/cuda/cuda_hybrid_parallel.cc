@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-#define USE_RDMA 
+//#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (10)
@@ -975,7 +975,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     int epoch_id = 0;
     int remained_inference_runs = 0;
-    double train_loss = 0;
     while (epoch_id < num_epoch || remained_inference_runs > 0) {
         if (epoch_id == warmup_epoches) {
             all_epoches_time = - get_time();
@@ -1203,14 +1202,16 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
 
         // calculate the loss if necessary
-        if (engine_->is_bottommost_node_) {
+        if (engine_->is_bottommost_node_ && in_training_mode) {
             engine_->accum_loss_ = engine_->loss_->get_loss(
                     engine_->output_tensor_, engine_->std_tensor_,
                     0, engine_->graph_structure_->get_num_global_vertices()
                     );
+            //printf("%.5f\n", engine_->accum_loss_);
         }
 
         Profiler::submit_main_thread_event(GPUSyncStartEvent);
+        MPI_Bcast(&engine_->accum_loss_, 1, MPI_DOUBLE, num_nodes - 1, MPI_COMM_WORLD);
         MPI_Barrier(MPI_COMM_WORLD);
         Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
@@ -1235,23 +1236,18 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         if (engine_->evaluation_frequency_ == -1) {
             // the evaluation is disabled
-            if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {
-                double train_acc, valid_acc, test_acc, loss;
-                engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
+            if (epoch_id % EVAL_FREQUENCY == 0) {
                 if (node_id == 0) {
-                    printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, loss);
+                    printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, engine_->accum_loss_);
                     fflush(stdout);
                 }
             }
         } else {
             // the evaluation is enabled
             assert(engine_->evaluation_frequency_ > 0);
-            if (in_training_mode) {
+            if (!in_training_mode && remained_inference_runs == 0) {
                 double train_acc, valid_acc, test_acc;
-                engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, train_loss);
-            } else if (remained_inference_runs == 0) {
-                double train_acc, valid_acc, test_acc, loss;
-                engine_->calculate_accuracy_and_loss(train_acc, valid_acc, test_acc, loss);
+                engine_->calculate_accuracy(train_acc, valid_acc, test_acc);
                 if (valid_acc > highest_valid_acc) {
                     highest_valid_acc = valid_acc;
                     target_test_acc = test_acc;
@@ -1259,7 +1255,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 }
                 if (node_id == 0) {
                     printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n",
-                            epoch_id, train_loss, train_acc, valid_acc, test_acc);
+                            epoch_id, engine_->accum_loss_, train_acc, valid_acc, test_acc);
                     fflush(stdout);
                 }
             }
@@ -2731,11 +2727,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::release_resources() {
     }
 }
 
-void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss(
+void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy(
         double &train_acc, 
         double &valid_acc,
-        double &test_acc,
-        double &loss
+        double &test_acc
         ) {
     // calculate the accuracy
     double train_accuracy = 0.;
@@ -2743,6 +2738,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     double test_accuracy = 0.;
     double valid_accuracy_ = 0.;
     double test_accuracy_ = 0.;
+
     if (is_bottommost_node_) {
         Profiler::submit_main_thread_event(AccuracyCalculationTaskStartEvent);
         train_accuracy = calculate_accuracy_mask(output_tensor_, std_tensor_, 0);
@@ -2756,7 +2752,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     MPI_Allreduce(&train_accuracy, &accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&valid_accuracy, &valid_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&test_accuracy, &test_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &accum_loss_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    //MPI_Allreduce(MPI_IN_PLACE, &accum_loss_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
     //if (DistributedSys::get_instance()->is_master_node()) {
@@ -2766,8 +2762,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy_and_loss
     train_acc = accuracy_;
     valid_acc = valid_accuracy_;
     test_acc = test_accuracy_;
-    loss = accum_loss_;
-    accum_loss_ = 0;
+    //loss = accum_loss_;
+    //accum_loss_ = 0;
 }
 
 void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {

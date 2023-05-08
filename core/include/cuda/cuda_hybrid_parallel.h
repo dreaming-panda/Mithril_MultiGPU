@@ -1232,7 +1232,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void set_up_tensor_resourses();
         void release_resources();
 
-        void calculate_accuracy_and_loss(double &train_acc, double &valid_acc, double &test_acc, double &loss);
+        void calculate_accuracy(double &train_acc, double &valid_acc, double &test_acc);
         void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N);
         void zero_out_unnecessary_grad(DataType* grad, DataType* data, size_t num_elements_this_chunk);
 
