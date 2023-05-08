@@ -1107,12 +1107,12 @@ void OperatorExecutorGPUV2::add_backward(AddOperator * op, VertexId left, Vertex
 
 void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op) {
     VertexId num_vertices = graph_->get_num_global_vertices();
-    dropout_forward(op, 0, num_vertices, 0);
+    dropout_forward(op, 0, num_vertices, -1);
 }
 
 void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op) {
     VertexId num_vertices = graph_->get_num_global_vertices();
-    dropout_backward(op, 0, num_vertices, 0);
+    dropout_backward(op, 0, num_vertices, -1);
 }
 
 void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) {

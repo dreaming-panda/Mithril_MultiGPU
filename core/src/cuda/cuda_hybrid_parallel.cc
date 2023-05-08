@@ -2627,7 +2627,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_std_tensor() {
-    if(is_bottommost_node_) {
+    if(is_bottommost_node_ || is_topmost_node_) {
         Tensor * output_tensor = application_->get_output_tensor();
         output_tensor_ = output_tensor;
         assert(output_tensor->type == VERTEX_TENSOR);
@@ -3224,5 +3224,171 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_init_weight_tensor_d
     CopyFromHostToCUDADevice<DataType>(data, data_buff, num_elements, __FILE__, __LINE__);
     delete [] data_buff;
 }
+
+void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
+        double &train_acc, double &valid_acc, double &test_acc
+        ) {
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+
+    // run the slow inference on node 0
+    if (node_id == 0) {
+        auto get_num_elements(Tensor * tensor) {
+            assert(tensor);
+            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+            return resource->get_num_elements();
+        };
+
+        std::map<Tensor*, DataType*> cpu_data;
+        std::map<Tensor*, DataType*> gpu_data;
+        executor_->enable_inference_mode();
+
+        int num_operators = op_ten_manager_->get_num_operators();
+        for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
+            Operator * op = op_ten_manager_->get_operator(op_idx);
+            assert(op);
+            // move the activation from the CPU
+            // && allocate space for the input tensor
+            int num_input_tensors = op->get_num_input_tensors();
+            for (int i = 0; i < num_input_tensors; ++ i) {
+                Tensor * tensor = op->get_input_tensor(i);
+                assert(tensor);
+                assert(cpu_data.find(tensor) != cpu_data.end());
+                size_t num_elements = get_num_elements(tensor);
+                assert(num_elements > 0);
+                DataType * cpu = cpu_data[tensor];
+                DataType * gpu = NULL;
+                checkCUDA(cudaMalloc(&gpu, sizeof(DataType) * num_elements));
+                assert(cpu && gpu);
+                checkCUDA(cudaMemcpy(
+                            gpu, cpu, sizeof(DataType) * num_elements, 
+                            cudaMemcpyHostToDevice
+                            ));
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                assert(resource);
+                gpu_data[tensor] = resource->get_gpu_data();
+                resource->set_gpu_data_from_gpu(gpu);
+            }
+            // allocate space for the output tensor
+            int num_output_tensors = op->get_num_output_tensors();
+            for (int i = 0; i < num_output_tensors; ++ i) {
+                Tensor * tensor = op->get_output_tensor(i);
+                assert(tensor);
+                size_t num_elements = get_num_elements(tensor);
+                assert(num_elements > 0);
+                DataType * gpu = NULL;
+                checkCUDA(cudaMalloc(&gpu, sizeof(DataType) * num_elements));
+                assert(gpu);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                assert(resource);
+                gpu_data[tensor] = resource->get_gpu_data();
+                resource->set_gpu_data_from_gpu(gpu);
+            }
+            // do the inference
+            switch (op->get_type()) {
+                case OPERATOR_INPUT:
+                    // do nothing
+                    break;
+                case OPERATOR_WEIGHT:
+                    // do nothing
+                    break;
+                case OPERATOR_ADD:
+                    executor_->add_forward((AddOperator*)op);
+                    break;
+                case OPERATOR_RELU:
+                    executor_->relu_forward((ReluOperator*) op);
+                    break;
+                case OPERATOR_MATMUL:
+                    executor_->matmul_forward((MatmulOperator*) op);
+                    break;
+                case OPERATOR_SOFTMAX:
+                    executor_->softmax_forward((SoftmaxOperator*) op);
+                    break;
+                case OPERATOR_AGGREGATION:
+                    executor_->aggregation_forward((AggregationOperator*) op);
+                    break;
+                case OPERATOR_DROPOUT:
+                    executor_->dropout_forward((DropoutOperator*) op);
+                    break;
+                default:
+                    fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
+                    exit(-1);
+            }
+            // move the up-to-date data back to CPU
+            for (int i = 0; i < num_output_tensors; ++ i) {
+                Tensor * tensor = op->get_output_tensor(i);
+                assert(tensor);
+                size_t num_elements = get_num_elements(tensor);
+                assert(num_elements > 0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                assert(resource);
+                DataType * gpu = resource->get_gpu_data();
+                assert(gpu);
+                assert(cpu_data.find(tensor) == cpu_data.end());
+                DataType * cpu = NULL;
+                checkCUDA(cudaMallocHost(&cpu, sizeof(DataType) * num_elements));
+                assert(cpu);
+                cpu_data[tensor] = cpu;
+                checkCUDA(cudaMemcpy(
+                            cpu, gpu, sizeof(DataType) * num_elements,
+                            cudaMemcpyDeviceToHost
+                            ));
+                resource->set_gpu_data_from_gpu(gpu_data[tensor]);
+                checkCUDA(cudaFree(gpu));
+            }
+            // free the input tensors' GPU memory
+            for (int i = 0; i < num_input_tensors; ++ i) {
+                Tensor * tensor = op->get_output_tensor(i);
+                assert(tensor);
+                size_t num_elements = get_num_elements(tensor);
+                assert(num_elements > 0);
+                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                assert(resource);
+                DataType * gpu = resource->get_gpu_data();
+                assert(gpu);
+                resource->set_gpu_data_from_gpu(gpu_data[tensor]);
+                checkCUDA(cudaFree(gpu));
+            }
+        }
+        // calculate the accuracy
+        {
+            // prepare for the temporary gpu buffer
+            assert(std_tensor_);
+            assert(output_tensor_);
+            size_t num_elements = get_num_elements(output_tensor_);
+            assert(num_elements > 0);
+            DataType * gpu = NULL;
+            checkCUDA(cudaMalloc(&gpu, sizeof(DataType) * num_elements));
+            assert(gpu);
+            DataType * cpu = cpu_data[output_tensor_];
+            assert(cpu);
+            checkCUDA(cudaMemcpy(
+                        gpu, cpu, sizeof(DataType) * num_elements,
+                        cudaMemcpyHostToDevice
+                        ));
+            TensorResourceGPU * resource = (TensorResourceGPU*) output_tensor_->resource;
+            assert(resource);
+            gpu_data[output_tensor_] = resource->get_gpu_data();
+            resource->set_gpu_data_from_gpu(gpu);
+            // do the computation
+            train_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 0);
+            valid_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 1);
+            test_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 2);
+            // release the temporary GPU buffer
+            checkCUDA(cudaFree(gpu));
+            resource->set_gpu_data_from_gpu(gpu_data[output_tensor_]);
+        }
+        // release the CPU memory
+        for (std::pair<Tensor*, DataType*> p: cpu_data) {
+            checkCUDA(cudaFreeHost(p.second));
+        }
+    }
+
+    MPI_Bcast(&train_acc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&valid_acc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&test_acc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+}
+
+
 
 

@@ -1236,6 +1236,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N);
         void zero_out_unnecessary_grad(DataType* grad, DataType* data, size_t num_elements_this_chunk);
 
+        void run_exact_infernece(double &train_acc, double &valid_acc, double &test_acc);
+
         friend class CUDAPIPForwardTaskDispatcher;
         friend class CUDAPIPBackwardTaskDispatcher;
         friend class CUDAPIPGraphDataActivationUpdateTaskDispatcher;
