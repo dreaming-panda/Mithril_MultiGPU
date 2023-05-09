@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 00:30:00 
+#SBATCH -t 00:15:00 
 #SBATCH --nodes 1
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
