@@ -982,6 +982,9 @@ class CUDAPIPWeightAggregator {
         WeightDumper * weight_dumper_;
         int epoch_id_;
 
+        // the optimal weights
+        std::map<WeightOperator*, DataType*> optimal_weights_;
+
         // a helper function
         void element_wise_add_gpu(DataType * src_0, DataType * src_1, DataType * dst, size_t num_elements);
 
@@ -1006,6 +1009,12 @@ class CUDAPIPWeightAggregator {
         // check whether all weights are consistent across all GPUs
         // this is expensive and only invokes at the end of the training
         void check_weights_consistency();
+
+        // maintaining the optimal weights
+        void update_optimal_weights();
+        const std::map<WeightOperator*, DataType*> get_optimal_weights() {
+            return optimal_weights_;
+        }
 
         // other helper functions
         double get_comm() {return comm_;}
@@ -1236,7 +1245,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N);
         void zero_out_unnecessary_grad(DataType* grad, DataType* data, size_t num_elements_this_chunk);
 
-        void run_exact_inference(double &train_acc, double &valid_acc, double &test_acc);
+        void run_exact_inference(double &train_acc, double &valid_acc, double &test_acc,
+                const std::map<WeightOperator*, DataType*>& weight_data);
 
         friend class CUDAPIPForwardTaskDispatcher;
         friend class CUDAPIPBackwardTaskDispatcher;
