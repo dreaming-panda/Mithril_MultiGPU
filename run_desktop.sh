@@ -8,9 +8,9 @@ make -j
 
 num_layers=4
 hunits=256
-lr=1e-3
+lr=3e-3
 graph=ogbn_arxiv
-epoch=100
+epoch=1000
 decay=1e-5
 chunks=16
 dropout=0.5
