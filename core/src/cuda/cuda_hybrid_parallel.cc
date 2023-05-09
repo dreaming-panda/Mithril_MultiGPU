@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-#define USE_RDMA 
+//#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (10)
@@ -1307,7 +1307,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     engine_->weight_aggregator_->update_optimal_weights();
                 }
                 if (node_id == 0) {
-                    printf("Epoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tHighestValidAcc %.4f\n",
+                    printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tHighestValidAcc %.4f\n",
                             epoch_id, engine_->accum_loss_, train_acc, valid_acc, highest_valid_acc);
                     fflush(stdout);
                 }

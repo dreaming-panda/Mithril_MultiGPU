@@ -109,7 +109,8 @@ int main(int argc, char ** argv) {
         ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The file storing the checkpointed weights.")
         ("seed", po::value<int>()->default_value(1234), "The random seed.")
         ("alpha", po::value<double>()->default_value(0.1), "GCNII hyper-parameter alpha.")
-        ("lambda", po::value<double>()->default_value(0.5), "GCNII hyper-parameter lambda.");
+        ("lambda", po::value<double>()->default_value(0.5), "GCNII hyper-parameter lambda.")
+        ("eval_freq", po::value<int>()->default_value(-1), "The evaluation frequency (for how many epoches the model is evaluated, -1: no evaluation, better for throughput measurement)");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -138,6 +139,7 @@ int main(int argc, char ** argv) {
     int random_seed = vm["seed"].as<int>();
     double alpha = vm["alpha"].as<double>();
     double lambda = vm["lambda"].as<double>();
+    int evaluation_frequency = vm["eval_freq"].as<int>();
 
     Context::init_context();
     int node_id = DistributedSys::get_instance()->get_node_id();
@@ -214,6 +216,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_weight_file(weight_file);
     execution_engine->set_num_chunks(num_chunks);
     execution_engine->set_aggregation_type(NORM_SUM);
+    execution_engine->set_evaluation_frequency(evaluation_frequency);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {
