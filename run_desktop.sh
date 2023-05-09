@@ -2,7 +2,6 @@
 
 hostname
 nvidia-smi
-module list
 
 cd build
 make -j
@@ -21,3 +20,5 @@ eval_freq=-1
 
 mpirun -n 1 -N 1 ./applications/async_multi_gpus/$model --graph /home/amadeus/ssd512/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq
 
+cd /home/amadeus/ssd512/baseline/Mithril_MultiGPU/build
+./applications/single_gpu/gcn_inference --graph /home/amadeus/ssd512/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --weight_file /tmp/saved_weights_pipe

@@ -1125,6 +1125,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             }
         }
 
+        // FIXME: no need to do the backward for inference runs
         while (num_scheduled_backward_tasks < num_local_chunks) { 
 #ifdef BOOST_ARCH_X86
             __asm volatile ("pause" ::: "memory");
@@ -1240,6 +1241,23 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 if (node_id == 0) {
                     printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, engine_->accum_loss_);
                     fflush(stdout);
+                    //// pull the latest weights
+                    //for (WeightOperator * op: engine_->local_weight_ops_) {
+                    //    assert(op != NULL);
+                    //    assert(op->get_num_output_tensors() == 1);
+                    //    Tensor * tensor = op->get_output_tensor(0);
+                    //    assert(tensor != NULL);
+                    //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+                    //    assert(resource != NULL);
+                    //    DataType * data = resource->get_gpu_data();
+                    //    assert(data != NULL);
+                    //    engine_->weight_aggregator_->pull_weights(op, data);
+                    //}
+                    //double train_acc, valid_acc, test_acc;
+                    //engine_->run_exact_inference(train_acc, valid_acc, test_acc);
+                    //printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n",
+                    //        epoch_id, engine_->accum_loss_, train_acc, valid_acc, test_acc);
+                    //fflush(stdout);
                 }
             }
         } else {
@@ -3247,9 +3265,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
         for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
             Operator * op = op_ten_manager_->get_operator(op_idx);
             assert(op);
+            int num_input_tensors = op->get_num_input_tensors();
+            int num_output_tensors = op->get_num_output_tensors();
+            //printf("Processing op %s with %d inputs and %d outputs\n",
+            //        get_op_type_str(op->get_type()).c_str(), num_input_tensors, num_output_tensors);
             // move the activation from the CPU
             // && allocate space for the input tensor
-            int num_input_tensors = op->get_num_input_tensors();
             for (int i = 0; i < num_input_tensors; ++ i) {
                 Tensor * tensor = op->get_input_tensor(i);
                 assert(tensor);
@@ -3270,7 +3291,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                 resource->set_gpu_data_from_gpu(gpu);
             }
             // allocate space for the output tensor
-            int num_output_tensors = op->get_num_output_tensors();
             for (int i = 0; i < num_output_tensors; ++ i) {
                 Tensor * tensor = op->get_output_tensor(i);
                 assert(tensor);
@@ -3283,6 +3303,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                 assert(resource);
                 gpu_data[tensor] = resource->get_gpu_data();
                 resource->set_gpu_data_from_gpu(gpu);
+                if (op->get_type() == OPERATOR_INPUT || 
+                        op->get_type() == OPERATOR_WEIGHT) {
+                    checkCUDA(cudaMemcpy(
+                                gpu, gpu_data[tensor], sizeof(DataType) * num_elements,
+                                cudaMemcpyDeviceToDevice
+                                ));
+                }
             }
             // do the inference
             switch (op->get_type()) {
@@ -3338,7 +3365,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
             }
             // free the input tensors' GPU memory
             for (int i = 0; i < num_input_tensors; ++ i) {
-                Tensor * tensor = op->get_output_tensor(i);
+                Tensor * tensor = op->get_input_tensor(i);
                 assert(tensor);
                 size_t num_elements = get_num_elements(tensor);
                 assert(num_elements > 0);
