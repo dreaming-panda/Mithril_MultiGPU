@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-//#define USE_RDMA 
+#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (10)
@@ -1290,11 +1290,31 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             // the evaluation is disabled
             if (epoch_id % EVAL_FREQUENCY == 0) {
                 if (node_id == 0) {
-                    printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, engine_->accum_loss_);
-                    fflush(stdout);
+                    if (! engine_->always_exact_inferences_) {
+                        printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, engine_->accum_loss_);
+                        fflush(stdout);
+                    } else {
+                        double train_acc, valid_acc, test_acc;
+                        engine_->run_exact_inference(
+                                train_acc, valid_acc, test_acc,
+                                engine_->weight_aggregator_->get_curr_weights()
+                                );
+                        if (valid_acc > highest_valid_acc) {
+                            highest_valid_acc = valid_acc;
+                            target_test_acc = test_acc;
+                            epoch_to_reach_target_acc = epoch_id;
+                            engine_->weight_aggregator_->update_optimal_weights();
+                        }
+                        if (node_id == 0) {
+                            printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\tHighestValidAcc %.4f\n",
+                                    epoch_id, engine_->accum_loss_, train_acc, valid_acc, test_acc, highest_valid_acc);
+                            fflush(stdout);
+                        }
+                    }
                 }
             }
         } else {
+            assert(! engine_->always_exact_inferences_);
             // the evaluation is enabled
             assert(engine_->evaluation_frequency_ > 0);
             if (!in_training_mode && remained_inference_runs == 0) {
@@ -2027,6 +2047,7 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
         assert(data != NULL && grad != NULL);
         weight_ops_data_.push_back(data);
         weight_ops_grad_.push_back(grad);
+        curr_weights_[op] = data;
         // remember to initialize the weight data
         // need to make sure that the initial weights are the same across all gpus
         engine->hybrid_init_weight_tensor_data(data, num_elements, tensor->dims[0]);

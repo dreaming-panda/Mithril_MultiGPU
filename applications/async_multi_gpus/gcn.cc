@@ -94,7 +94,8 @@ int main(int argc, char ** argv) {
         ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.")
         ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The file storing the checkpointed weights.")
         ("seed", po::value<int>()->default_value(1234), "The random seed.")
-        ("eval_freq", po::value<int>()->default_value(-1), "The evaluation frequency (for how many epoches the model is evaluated, -1: no evaluation, better for throughput measurement)");
+        ("eval_freq", po::value<int>()->default_value(-1), "The evaluation frequency (for how many epoches the model is evaluated, -1: no evaluation, better for throughput measurement)")
+        ("exact_inference", po::value<int>()->default_value(0), "1: always using exact inference to select the optimal weights (might be slower), 0: using approximate inference during the training.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -122,6 +123,7 @@ int main(int argc, char ** argv) {
     std::string weight_file = vm["weight_file"].as<std::string>();
     int random_seed = vm["seed"].as<int>();
     int evaluation_frequency = vm["eval_freq"].as<int>();
+    double always_exact_inference = vm["exact_inference"].as<int>() == 1;
 
     Context::init_context();
     int node_id = DistributedSys::get_instance()->get_node_id();
@@ -197,6 +199,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_num_chunks(num_chunks);
     execution_engine->set_aggregation_type(NORM_SUM);
     execution_engine->set_evaluation_frequency(evaluation_frequency);
+    execution_engine->set_always_exact_inference(always_exact_inference);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {
