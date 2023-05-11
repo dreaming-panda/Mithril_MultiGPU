@@ -970,6 +970,7 @@ class CUDAPIPWeightAggregator {
         std::vector<size_t> weight_op_num_elements_;
         std::vector<DataType*> weight_ops_data_;
         std::vector<DataType*> weight_ops_grad_;
+        std::map<WeightOperator*, DataType*> curr_weights_;
         DataType * aggr_buffer_;
 
         AbstractLowerLevelOptimizer * optimizer_;
@@ -981,6 +982,9 @@ class CUDAPIPWeightAggregator {
         // the weight file
         WeightDumper * weight_dumper_;
         int epoch_id_;
+
+        // the optimal weights
+        std::map<WeightOperator*, DataType*> optimal_weights_;
 
         // a helper function
         void element_wise_add_gpu(DataType * src_0, DataType * src_1, DataType * dst, size_t num_elements);
@@ -1006,6 +1010,16 @@ class CUDAPIPWeightAggregator {
         // check whether all weights are consistent across all GPUs
         // this is expensive and only invokes at the end of the training
         void check_weights_consistency();
+
+        // maintaining the optimal weights
+        void update_optimal_weights();
+        const std::map<WeightOperator*, DataType*> get_optimal_weights() {
+            return optimal_weights_;
+        }
+
+        const std::map<WeightOperator*, DataType*> get_curr_weights() {
+            return curr_weights_;
+        }
 
         // other helper functions
         double get_comm() {return comm_;}
@@ -1098,6 +1112,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         int evaluation_frequency_ = -1; // the model weights are evaluated every evaluation_frequency_ epoches, -1: means no evaluation
         int total_num_inference_runs_;
+        bool always_exact_inferences_ = false;
 
         inline int get_num_epoch() {
             return num_epoch_;
@@ -1236,7 +1251,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N);
         void zero_out_unnecessary_grad(DataType* grad, DataType* data, size_t num_elements_this_chunk);
 
-        void run_exact_inference(double &train_acc, double &valid_acc, double &test_acc);
+        void run_exact_inference(double &train_acc, double &valid_acc, double &test_acc,
+                const std::map<WeightOperator*, DataType*>& weight_data);
 
         friend class CUDAPIPForwardTaskDispatcher;
         friend class CUDAPIPBackwardTaskDispatcher;
@@ -1279,6 +1295,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         inline void set_evaluation_frequency(int evaluation_frequency) {
             evaluation_frequency_ = evaluation_frequency;
+        }
+        inline void set_always_exact_inference(bool always_exact_inferences) {
+            always_exact_inferences_ = always_exact_inferences;
         }
 };
 

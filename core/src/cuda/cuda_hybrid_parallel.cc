@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-//#define USE_RDMA 
+#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (10)
@@ -1290,28 +1290,31 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             // the evaluation is disabled
             if (epoch_id % EVAL_FREQUENCY == 0) {
                 if (node_id == 0) {
-                    printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, engine_->accum_loss_);
-                    fflush(stdout);
-                    //// pull the latest weights
-                    //for (WeightOperator * op: engine_->local_weight_ops_) {
-                    //    assert(op != NULL);
-                    //    assert(op->get_num_output_tensors() == 1);
-                    //    Tensor * tensor = op->get_output_tensor(0);
-                    //    assert(tensor != NULL);
-                    //    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-                    //    assert(resource != NULL);
-                    //    DataType * data = resource->get_gpu_data();
-                    //    assert(data != NULL);
-                    //    engine_->weight_aggregator_->pull_weights(op, data);
-                    //}
-                    //double train_acc, valid_acc, test_acc;
-                    //engine_->run_exact_inference(train_acc, valid_acc, test_acc);
-                    //printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n",
-                    //        epoch_id, engine_->accum_loss_, train_acc, valid_acc, test_acc);
-                    //fflush(stdout);
+                    if (! engine_->always_exact_inferences_) {
+                        printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, engine_->accum_loss_);
+                        fflush(stdout);
+                    } else {
+                        double train_acc, valid_acc, test_acc;
+                        engine_->run_exact_inference(
+                                train_acc, valid_acc, test_acc,
+                                engine_->weight_aggregator_->get_curr_weights()
+                                );
+                        if (valid_acc > highest_valid_acc) {
+                            highest_valid_acc = valid_acc;
+                            target_test_acc = test_acc;
+                            epoch_to_reach_target_acc = epoch_id;
+                            engine_->weight_aggregator_->update_optimal_weights();
+                        }
+                        if (node_id == 0) {
+                            printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\tHighestValidAcc %.4f\n",
+                                    epoch_id, engine_->accum_loss_, train_acc, valid_acc, test_acc, highest_valid_acc);
+                            fflush(stdout);
+                        }
+                    }
                 }
             }
         } else {
+            assert(! engine_->always_exact_inferences_);
             // the evaluation is enabled
             assert(engine_->evaluation_frequency_ > 0);
             if (!in_training_mode && remained_inference_runs == 0) {
@@ -1321,10 +1324,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     highest_valid_acc = valid_acc;
                     target_test_acc = test_acc;
                     epoch_to_reach_target_acc = epoch_id;
+                    engine_->weight_aggregator_->update_optimal_weights();
                 }
                 if (node_id == 0) {
-                    printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n",
-                            epoch_id, engine_->accum_loss_, train_acc, valid_acc, test_acc);
+                    printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tHighestValidAcc %.4f\n",
+                            epoch_id, engine_->accum_loss_, train_acc, valid_acc, highest_valid_acc);
                     fflush(stdout);
                 }
             }
@@ -1346,6 +1350,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     }
     t += get_time();
     all_epoches_time += get_time();
+
+    double train_acc, valid_acc, test_acc;
+    engine_->run_exact_inference(train_acc, valid_acc, test_acc, 
+            engine_->weight_aggregator_->get_optimal_weights()
+            );
 
     size_t free_mem_size = 0;
     size_t total_mem_size = 0;
@@ -1402,7 +1411,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         printf("\tLayer-level communication (cluster-wide, per epoch): %.3f GB\n",
                 avg_layer_comm / 1024. / 1024. / 1024.);
         printf("Highest valid_acc: %.4f\n", highest_valid_acc);
-        printf("Target test_acc: %.4f\n", target_test_acc);
+        printf("Target test_acc: %.4f\n", test_acc);
         printf("Epoch to reach the target acc: %d\n", epoch_to_reach_target_acc);
     }
     fflush(stdout);
@@ -2038,6 +2047,7 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
         assert(data != NULL && grad != NULL);
         weight_ops_data_.push_back(data);
         weight_ops_grad_.push_back(grad);
+        curr_weights_[op] = data;
         // remember to initialize the weight data
         // need to make sure that the initial weights are the same across all gpus
         engine->hybrid_init_weight_tensor_data(data, num_elements, tensor->dims[0]);
@@ -2050,6 +2060,16 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
     assert(aggr_buffer_ != NULL);
     // init the epoch id 
     epoch_id_ = 0;
+    // allocate space for the optimal weights
+    for (int i = 0; i < weight_ops_.size(); ++ i) {
+        WeightOperator * weight_op = weight_ops_[i];
+        assert(weight_op);
+        size_t num_elements = weight_op_num_elements_[i];
+        DataType * data = NULL;
+        checkCUDA(cudaMalloc(&data, sizeof(DataType) * num_elements));
+        assert(data);
+        optimal_weights_[weight_op] = data;
+    }
 }
 
 CUDAPIPWeightAggregator::~CUDAPIPWeightAggregator() {
@@ -2061,6 +2081,9 @@ CUDAPIPWeightAggregator::~CUDAPIPWeightAggregator() {
     for (DataType * grad: weight_ops_grad_) {
         assert(grad != NULL);
         DeallocateCUDAMemory<DataType>(&grad, __FILE__, __LINE__);
+    }
+    for (std::pair<WeightOperator*, DataType*> p: optimal_weights_) {
+        checkCUDA(cudaFree(p.second));
     }
     assert(aggr_buffer_);
     delete [] aggr_buffer_;
@@ -2156,6 +2179,22 @@ void CUDAPIPWeightAggregator::check_weights_consistency() {
         DataType * data = weight_ops_data_[i];
         assert(data != NULL);
         check_consistency_gpu_array(data, num_elements);
+    }
+}
+
+void CUDAPIPWeightAggregator::update_optimal_weights() {
+    int num_weight_operators = (int) weight_ops_.size();
+    for (int i = 0; i < num_weight_operators; ++ i) {
+        WeightOperator * op = weight_ops_[i];
+        size_t num_elements = weight_op_num_elements_[i];
+        DataType * data = weight_ops_data_[i];
+        assert(op && data && num_elements > 0);
+        DataType * saved_data = optimal_weights_[op];
+        assert(saved_data);
+        checkCUDA(cudaMemcpy(
+                    saved_data, data, sizeof(DataType) * num_elements, 
+                    cudaMemcpyDeviceToDevice
+                    ));
     }
 }
 
@@ -3295,7 +3334,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_init_weight_tensor_d
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
-        double &train_acc, double &valid_acc, double &test_acc
+        double &train_acc, double &valid_acc, double &test_acc,
+        const std::map<WeightOperator*, DataType*> &weights_data
         ) {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
@@ -3318,6 +3358,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
             assert(op);
             int num_input_tensors = op->get_num_input_tensors();
             int num_output_tensors = op->get_num_output_tensors();
+            bool is_input_data_transient[num_input_tensors];
+            bool is_output_data_transient[num_output_tensors];
             //printf("Processing op %s with %d inputs and %d outputs\n",
             //        get_op_type_str(op->get_type()).c_str(), num_input_tensors, num_output_tensors);
             // move the activation from the CPU
@@ -3340,6 +3382,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                 assert(resource);
                 gpu_data[tensor] = resource->get_gpu_data();
                 resource->set_gpu_data_from_gpu(gpu);
+                is_input_data_transient[i] = tensor->is_data_transient;
+                tensor->is_data_transient = false;
             }
             // allocate space for the output tensor
             for (int i = 0; i < num_output_tensors; ++ i) {
@@ -3354,13 +3398,21 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                 assert(resource);
                 gpu_data[tensor] = resource->get_gpu_data();
                 resource->set_gpu_data_from_gpu(gpu);
-                if (op->get_type() == OPERATOR_INPUT || 
-                        op->get_type() == OPERATOR_WEIGHT) {
+                if (op->get_type() == OPERATOR_INPUT) {
                     checkCUDA(cudaMemcpy(
                                 gpu, gpu_data[tensor], sizeof(DataType) * num_elements,
                                 cudaMemcpyDeviceToDevice
                                 ));
+                } else if (op->get_type() == OPERATOR_WEIGHT) {
+                    WeightOperator * weight_op = (WeightOperator*) op;
+                    DataType * src_data = weights_data.at(weight_op);
+                    checkCUDA(cudaMemcpy(
+                                gpu, src_data, 
+                                sizeof(DataType) * num_elements, cudaMemcpyDeviceToDevice
+                                ));
                 }
+                is_output_data_transient[i] = tensor->is_data_transient;
+                tensor->is_data_transient = false;
             }
             // do the inference
             switch (op->get_type()) {
@@ -3413,6 +3465,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                             ));
                 resource->set_gpu_data_from_gpu(gpu_data[tensor]);
                 checkCUDA(cudaFree(gpu));
+                tensor->is_data_transient = is_output_data_transient[i];
             }
             // free the input tensors' GPU memory
             for (int i = 0; i < num_input_tensors; ++ i) {
@@ -3426,6 +3479,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                 assert(gpu);
                 resource->set_gpu_data_from_gpu(gpu_data[tensor]);
                 checkCUDA(cudaFree(gpu));
+                tensor->is_data_transient = is_input_data_transient[i];
             }
         }
         // calculate the accuracy
@@ -3466,7 +3520,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
     MPI_Bcast(&valid_acc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&test_acc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 }
-
 
 
 

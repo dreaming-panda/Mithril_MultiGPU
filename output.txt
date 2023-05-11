@@ -1,15 +1,28 @@
+<<<<<<< HEAD
 g003.anvil.rcac.purdue.edu
 Tue May  9 14:28:30 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
+=======
+amadeus-MS-7B86
+Tue May  9 20:53:27 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 510.108.03   Driver Version: 510.108.03   CUDA Version: 11.6     |
+>>>>>>> cbd0fb6a05ee691e8ef10322b56bf3b7ba9a5a55
 |-------------------------------+----------------------+----------------------+
 | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
+<<<<<<< HEAD
 |   0  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
 | N/A   28C    P0    50W / 400W |      0MiB / 40960MiB |      0%      Default |
 |                               |                      |             Disabled |
+=======
+|   0  NVIDIA GeForce ...  On   | 00000000:29:00.0 Off |                  N/A |
+| 42%   37C    P8     5W / 120W |    343MiB /  6144MiB |      0%      Default |
+|                               |                      |                  N/A |
+>>>>>>> cbd0fb6a05ee691e8ef10322b56bf3b7ba9a5a55
 +-------------------------------+----------------------+----------------------+
                                                                                
 +-----------------------------------------------------------------------------+
@@ -17,6 +30,7 @@ Tue May  9 14:28:30 2023
 |  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
 |        ID   ID                                                   Usage      |
 |=============================================================================|
+<<<<<<< HEAD
 |  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
 
@@ -67,6 +81,67 @@ Number of operators: 40
 Node 0, Pipeline Input Tensor: NULL
 Node 0, Pipeline Output Tensor: NULL
 *** Node 0 owns the partition [0, 40) x [0, 169343)
+=======
+|    0   N/A  N/A      1360      G   /usr/lib/xorg/Xorg                101MiB |
+|    0   N/A  N/A      2435      G   /usr/lib/xorg/Xorg                186MiB |
+|    0   N/A  N/A      2561      G   /usr/bin/gnome-shell               44MiB |
++-----------------------------------------------------------------------------+
+[ 11%] Built target context
+[ 36%] Built target core
+Consolidate compiler generated dependencies of target cudahelp
+[ 38%] Building CXX object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o
+[ 41%] Linking CXX static library libcudahelp.a
+[ 77%] Built target cudahelp
+[ 80%] Linking CXX executable estimate_comm_volume
+[ 83%] Linking CXX executable gcnii
+[ 86%] Linking CXX executable gcn
+[ 88%] Linking CXX executable graphsage
+[ 91%] Built target estimate_comm_volume
+[ 94%] Built target OSDI2023_MULTI_NODES_gcnii
+[ 97%] Built target OSDI2023_MULTI_NODES_graphsage
+[100%] Built target OSDI2023_MULTI_NODES_gcn
+Initialized node 0 on machine amadeus-MS-7B86
+Initialized node 1 on machine amadeus-MS-7B86
+Building the CSR structure...
+Building the CSR structure...
+        It takes 0.037 seconds.
+Building the CSC structure...
+        It takes 0.039 seconds.
+Building the CSC structure...
+        It takes 0.036 seconds.
+        It takes 0.039 seconds.
+Building the Feature Vector...
+Building the Feature Vector...
+        It takes 0.036 seconds.
+Building the Label Vector...
+        It takes 0.036 seconds.
+Building the Label Vector...
+        It takes 0.016 seconds.
+The graph dataset locates at /home/amadeus/ssd512/gnn_datasets/reordered/ogbn_arxiv
+The number of GCNII layers: 4
+The number of hidden units: 256
+The number of training epoches: 100
+Learning rate: 0.003000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 5
+Number of classes: 40
+Number of feature dimensions: 128
+Number of vertices: 169343
+Number of GPUs: 2
+        It takes 0.016 seconds.
+train nodes 90941, valid nodes 29799, test nodes 48603
+GPU 0, layer [0, 2)
+GPU 1, layer [2, 4)
+*** Node 0, starting model training...
+Number of operators: 20
+0 169343 0 11
+0 169343 11 20
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 0 owns the partition [0, 11) x [0, 169343)
+>>>>>>> cbd0fb6a05ee691e8ef10322b56bf3b7ba9a5a55
 *** Node 0, constructing the helper classes...
 Operators:
     Op 0: type OPERATOR_INPUT, output tensors: 0
@@ -88,6 +163,7 @@ Operators:
     Op 16: type OPERATOR_AGGREGATION, output tensors: 16
     Op 17: type OPERATOR_WEIGHT, output tensors: 17
     Op 18: type OPERATOR_MATMUL, output tensors: 18
+<<<<<<< HEAD
     Op 19: type OPERATOR_RELU, output tensors: 19
     Op 20: type OPERATOR_DROPOUT, output tensors: 20
     Op 21: type OPERATOR_AGGREGATION, output tensors: 21
@@ -472,6 +548,100 @@ Building the Feature Vector...
         It takes 0.055 seconds.
 Building the Label Vector...
         It takes 0.021 seconds.
+=======
+    Op 19: type OPERATOR_SOFTMAX, output tensors: 19
+GPU 0, layer [0, 2)
+GPU 1, layer [2, 4)
+*** Node 1, starting model training...
+Number of operators: 20
+0 169343 0 11
+0 169343 11 20
+Node 1, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 1, Pipeline Output Tensor: NULL
+*** Node 1 owns the partition [11, 20) x [0, 169343)
+*** Node 1, constructing the helper classes...
+Boundaries: 0 0 169343 169343
+Fragments: [0, 169343)
+Chunks (number of global chunks: 16): 0-[0, 10584) 1-[10584, 21168) 2-[21168, 31752) 3-[31752, 42336) 4-[42336, 52920) 5-[52920, 63504) 6-[63504, 74088) 7-[74088, 84672) 8-[84672, 95256) ... 15-[158760, 169343)
+169343, 2484941, 2484941
+169343, 2484941, 2484941
+Number of vertices per chunk: 10584
+Number of vertices per chunk: 10584
+csr in-out ready !*** Node 1, setting up some other necessary information...
+csr in-out ready !*** Node 0, setting up some other necessary information...
+*** Node 1, starting the helper threads...
+*** Node 0, starting the helper threads...
++++++++++ Node 1 initializing the weights for op[11, 20)...
++++++++++ Node 1, mapping weight op 12
++++++++++ Node 0 initializing the weights for op[0, 11)...
++++++++++ Node 0, mapping weight op 1
+using the Pytorch initialization method.
+using the Pytorch initialization method.
++++++++++ Node 0, mapping weight op 7
+using the Pytorch initialization method.
++++++++++ Node 1, mapping weight op 17
+using the Pytorch initialization method.
+*** Node 0, starting task scheduling...
+*** Node 1, starting task scheduling...
+The learning rate specified by the user: 0.003000000
+
+
+
+The learning rate specified by the user: 0.003000000
+	Epoch 10:	Loss 2.93923	TrainAcc 0.2930	ValidAcc 0.3037	TestAcc 0.2749	HighestValidAcc 0.3037
+	Epoch 20:	Loss 2.04452	TrainAcc 0.4461	ValidAcc 0.4593	TestAcc 0.4643	HighestValidAcc 0.4593
+	Epoch 30:	Loss 1.85199	TrainAcc 0.5290	ValidAcc 0.5521	TestAcc 0.5434	HighestValidAcc 0.5521
+	Epoch 40:	Loss 1.65803	TrainAcc 0.5730	ValidAcc 0.5856	TestAcc 0.5780	HighestValidAcc 0.5856
+	Epoch 50:	Loss 1.51878	TrainAcc 0.6044	ValidAcc 0.6002	TestAcc 0.5782	HighestValidAcc 0.6002
+	Epoch 60:	Loss 1.41111	TrainAcc 0.6266	ValidAcc 0.6322	TestAcc 0.6240	HighestValidAcc 0.6322
+	Epoch 70:	Loss 1.35591	TrainAcc 0.6346	ValidAcc 0.6371	TestAcc 0.6227	HighestValidAcc 0.6371
+	Epoch 80:	Loss 1.31853	TrainAcc 0.6432	ValidAcc 0.6519	TestAcc 0.6448	HighestValidAcc 0.6519
+	Epoch 90:	Loss 1.29103	TrainAcc 0.6511	ValidAcc 0.6559	TestAcc 0.6475	HighestValidAcc 0.6559
+Node 0, Layer-level comm throughput (act): -nan GBps
+Node 1, Layer-level comm throughput (act): 4.991 GBps
+Node 1, Layer-level comm throughput (grad): -nan GBps
+Node 0, Layer-level comm throughput (grad): 5.113 GBps
+Node 1, GPU memory consumption: 4.944 GB
+Node 1, compression time: 4.370s, compression size: 16.150GB, throughput: 3.696GBps
+Node 1, decompression time: 1.517s, compression size: 16.150GB, throughput: 10.649GBps
+Node 1, pure compute time: 14.450 s, total compute time: 20.337 s
+Node 1, wait_for_task_time: 9.249 s, wait_for_other_gpus_time: 19.168 s
+------------------------node id 1,  per-epoch time: 0.659627 s---------------
+	Epoch 100:	Loss 1.26286	TrainAcc 0.6569	ValidAcc 0.6599	TestAcc 0.6526	HighestValidAcc 0.6599
+Node 0, GPU memory consumption: 4.944 GB
+Node 0, compression time: 6.326s, compression size: 16.150GB, throughput: 2.553GBps
+Node 0, decompression time: 1.001s, compression size: 16.150GB, throughput: 16.126GBps
+Node 0, pure compute time: 17.547 s, total compute time: 24.874 s
+Node 0, wait_for_task_time: 13.866 s, wait_for_other_gpus_time: 0.040 s
+------------------------node id 0,  per-epoch time: 0.673500 s---------------
+************ Profiling Results ************
+	Bubble: 23.905994 (s) (35.20 percentage)
+	Compute: 25.871688 (s) (38.09 percentage)
+	GradSync: 0.793379 (s) (1.17 percentage)
+	GraphComm: 13.242313 (s) (19.50 percentage)
+	Imbalance: 3.762112 (s) (5.54 percentage)
+	LayerComm: 0.339201 (s) (0.50 percentage)
+	Layer-level communication (cluster-wide, per epoch): 0.097 GB
+Highest valid_acc: 0.6599
+Target test_acc: 0.6526
+Epoch to reach the target acc: 100
+[MPI Rank 1] Success 
+[MPI Rank 0] Success 
+The graph dataset locates at /home/amadeus/ssd512/gnn_datasets/reordered/ogbn_arxiv
+The number of GCN layers: 4
+The number of hidden units: 256
+The number of training epoches: 0
+Learning rate: 0.000000
+Initialized node amadeus-MS-7B86
+Building the CSR structure...
+        It takes 0.033 seconds.
+Building the CSC structure...
+        It takes 0.032 seconds.
+Building the Feature Vector...
+        It takes 0.034 seconds.
+Building the Label Vector...
+        It takes 0.015 seconds.
+>>>>>>> cbd0fb6a05ee691e8ef10322b56bf3b7ba9a5a55
 Number of classes: 40
 Number of feature dimensions: 128
 Dropout: 0.000 
@@ -496,6 +666,7 @@ train nodes 90941, valid nodes 29799, test nodes 48603
     OP_TYPE: OPERATOR_WEIGHT
     OP_TYPE: OPERATOR_MATMUL
     OP_TYPE: OPERATOR_AGGREGATION
+<<<<<<< HEAD
     OP_TYPE: OPERATOR_RELU
     OP_TYPE: OPERATOR_DROPOUT
     OP_TYPE: OPERATOR_WEIGHT
@@ -516,6 +687,8 @@ train nodes 90941, valid nodes 29799, test nodes 48603
     OP_TYPE: OPERATOR_WEIGHT
     OP_TYPE: OPERATOR_MATMUL
     OP_TYPE: OPERATOR_AGGREGATION
+=======
+>>>>>>> cbd0fb6a05ee691e8ef10322b56bf3b7ba9a5a55
     OP_TYPE: OPERATOR_SOFTMAX
 *** Done allocating resource.
 *** Preparing the input tensor...
@@ -524,6 +697,7 @@ train nodes 90941, valid nodes 29799, test nodes 48603
     Number of labels: 40
     Number of vertices: 169343
 *** Done preparing the STD tensor.
+<<<<<<< HEAD
 Version 0	Loss 3.2773	TrainAcc 0.0597	ValidAcc 0.0345	TestAcc 0.0291
 Version 1	Loss 3.1051	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
 Version 2	Loss 3.0013	TrainAcc 0.1791	ValidAcc 0.0763	TestAcc 0.0586
@@ -825,3 +999,16 @@ Version 297	Loss 0.8172	TrainAcc 0.7507	ValidAcc 0.7073	TestAcc 0.6947
 Version 298	Loss 0.8234	TrainAcc 0.7488	ValidAcc 0.7031	TestAcc 0.6879
 Version 299	Loss 0.8148	TrainAcc 0.7519	ValidAcc 0.7140	TestAcc 0.7022
 Version 233 achieved the highest validation accuracy 0.7174 (test accuracy: 0.7096)
+=======
+Version 0	TrainAcc 0.2930	ValidAcc 0.3037	TestAcc 0.2749
+Version 1	TrainAcc 0.4461	ValidAcc 0.4593	TestAcc 0.4643
+Version 2	TrainAcc 0.5290	ValidAcc 0.5521	TestAcc 0.5434
+Version 3	TrainAcc 0.5730	ValidAcc 0.5856	TestAcc 0.5780
+Version 4	TrainAcc 0.6044	ValidAcc 0.6002	TestAcc 0.5782
+Version 5	TrainAcc 0.6266	ValidAcc 0.6322	TestAcc 0.6240
+Version 6	TrainAcc 0.6346	ValidAcc 0.6371	TestAcc 0.6227
+Version 7	TrainAcc 0.6432	ValidAcc 0.6519	TestAcc 0.6448
+Version 8	TrainAcc 0.6511	ValidAcc 0.6559	TestAcc 0.6475
+Version 9	TrainAcc 0.6569	ValidAcc 0.6599	TestAcc 0.6526
+Version 9 achieved the highest validation accuracy 0.6599 (test accuracy: 0.6526)
+>>>>>>> cbd0fb6a05ee691e8ef10322b56bf3b7ba9a5a55

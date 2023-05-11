@@ -38,7 +38,7 @@ class TensorResourceGPU:public AbstractTensorResource{
             return cpu_grad_;
         }
         DataType * get_gpu_data(){
-            assert(gpu_data_ != nullptr);
+            //assert(gpu_data_ != nullptr);
             return gpu_data_;
         }
         DataType * get_gpu_grad(){
