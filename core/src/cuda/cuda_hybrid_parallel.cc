@@ -12,7 +12,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-#define USE_RDMA 
+//#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (10)
@@ -1291,7 +1291,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             if (epoch_id % EVAL_FREQUENCY == 0) {
                 if (node_id == 0) {
                     if (! engine_->always_exact_inferences_) {
-                        printf("\tEpoch %d:\tLoss %.5f\n", epoch_id, engine_->accum_loss_);
+                        printf("\tEpoch %d:\tLoss %.4f\n", epoch_id, engine_->accum_loss_);
                         fflush(stdout);
                     } else {
                         double train_acc, valid_acc, test_acc;
@@ -1306,7 +1306,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                             engine_->weight_aggregator_->update_optimal_weights();
                         }
                         if (node_id == 0) {
-                            printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\tHighestValidAcc %.4f\n",
+                            printf("\tEpoch %d:\tLoss %.4f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\tBestValid %.4f\n",
                                     epoch_id, engine_->accum_loss_, train_acc, valid_acc, test_acc, highest_valid_acc);
                             fflush(stdout);
                         }
@@ -1327,7 +1327,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     engine_->weight_aggregator_->update_optimal_weights();
                 }
                 if (node_id == 0) {
-                    printf("\tEpoch %d:\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tHighestValidAcc %.4f\n",
+                    printf("\tEpoch %d:\tLoss %.4f\tTrainAcc %.4f\tValidAcc %.4f\tBestValid %.4f\n",
                             epoch_id, engine_->accum_loss_, train_acc, valid_acc, highest_valid_acc);
                     fflush(stdout);
                 }
@@ -2893,6 +2893,11 @@ void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {
 double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
 
     fprintf(stderr, "WARNING: the current version only applies to linear GNN models!\n");
+
+    if (always_exact_inferences_) {
+        evaluation_frequency_ = -1;
+        fprintf(stderr, "WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 10 epoches.\n");
+    }
 
     application_ = application;
     num_epoch_ = num_epoch;

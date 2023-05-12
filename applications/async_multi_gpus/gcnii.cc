@@ -30,7 +30,7 @@
 #include "partitioner.h"
 
 // TODO
-// [ ] allowed inference directly on this code base
+// [x] allowed inference directly on this code base
 // [ ] allowed compression or not configuration
 // [ ] allowed initialization method conf
 // [ ] allowed feature preprocessing conf
@@ -110,7 +110,10 @@ int main(int argc, char ** argv) {
         ("seed", po::value<int>()->default_value(1234), "The random seed.")
         ("alpha", po::value<double>()->default_value(0.1), "GCNII hyper-parameter alpha.")
         ("lambda", po::value<double>()->default_value(0.5), "GCNII hyper-parameter lambda.")
-        ("eval_freq", po::value<int>()->default_value(-1), "The evaluation frequency (for how many epoches the model is evaluated, -1: no evaluation, better for throughput measurement)");
+        ("eval_freq", po::value<int>()->default_value(-1), "The evaluation frequency (for how many epoches the model is evaluated, -1: no evaluation, better for throughput measurement)")
+        ("exact_inference", po::value<int>()->default_value(0), "1: always using exact inference to select the optimal weights (might be slower, only used for convergence analysis), 0: using approximate inference during the training.")
+        ("feature_pre", po::value<int>()->default_value(0), "1: preprocess features by row-based normalization, 0: no feature preprocessing")
+        ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -140,6 +143,22 @@ int main(int argc, char ** argv) {
     double alpha = vm["alpha"].as<double>();
     double lambda = vm["lambda"].as<double>();
     int evaluation_frequency = vm["eval_freq"].as<int>();
+    double always_exact_inference = vm["exact_inference"].as<int>() == 1;
+    FeaturePreprocessingMethod feature_preprocessing = NoFeaturePreprocessing;
+    if (vm["feature_pre"].as<int>() == 1) {
+        feature_preprocessing = RowNormalizationPreprocessing;
+    }
+    WeightInitializationMethod weight_init;
+    std::string weight_init_name = vm["weight_init"].as<std::string>();
+    if (weight_init_name == "xavier") {
+        weight_init = XavierInitialization;
+    } else if (weight_init_name == "pytorch") {
+        weight_init = PytorchInitialization;
+    } else {
+        fprintf(stderr, "Unrecognized weight initialization method %s.\n",
+                weight_init_name.c_str());
+        exit(-1);
+    }
 
     Context::init_context();
     int node_id = DistributedSys::get_instance()->get_node_id();
@@ -217,6 +236,9 @@ int main(int argc, char ** argv) {
     execution_engine->set_num_chunks(num_chunks);
     execution_engine->set_aggregation_type(NORM_SUM);
     execution_engine->set_evaluation_frequency(evaluation_frequency);
+    execution_engine->set_always_exact_inference(always_exact_inference);
+    execution_engine->set_feature_preprocessing_method(feature_preprocessing);
+    execution_engine->set_weight_initialization_method(weight_init);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {
