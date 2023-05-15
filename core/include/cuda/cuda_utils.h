@@ -17,10 +17,38 @@
 #include"nccl.h"
 #include"mpi.h"
 
+#define MPICHECK(cmd) do {                          \
+    int e = cmd;                                      \
+    if( e != MPI_SUCCESS ) {                          \
+        printf("Failed: MPI error %s:%d '%d'\n",        \
+                __FILE__,__LINE__, e);   \
+        exit(EXIT_FAILURE);                             \
+    }                                                 \
+} while(0)
+
+#define CUDACHECK(cmd) do {                         \
+    cudaError_t e = cmd;                              \
+    if( e != cudaSuccess ) {                          \
+        printf("Failed: Cuda error %s:%d '%s'\n",             \
+                __FILE__,__LINE__,cudaGetErrorString(e));   \
+        exit(EXIT_FAILURE);                             \
+    }                                                 \
+} while(0)
+
+#define NCCLCHECK(cmd) do {                         \
+    ncclResult_t r = cmd;                             \
+    if (r!= ncclSuccess) {                            \
+        printf("Failed, NCCL error %s:%d '%s'\n",             \
+                __FILE__,__LINE__,ncclGetErrorString(r));   \
+        exit(EXIT_FAILURE);                             \
+    }                                                 \
+} while(0)
+
 template <typename T>
 void AllocateCUDAMemory(T** out_ptr, size_t size, const char* file, const int line) {
     void* tmp_ptr = nullptr;
-    cudaMalloc(&tmp_ptr, size * sizeof(T));
+    printf("size: %lu\n", size * sizeof(T));
+    CUDACHECK(cudaMalloc(&tmp_ptr, size * sizeof(T)));
     *out_ptr = reinterpret_cast<T*>(tmp_ptr);
 }
 
@@ -29,7 +57,7 @@ void CopyFromHostToCUDADevice(T* dst_ptr, const T* src_ptr, size_t size, const c
     void* void_dst_ptr = reinterpret_cast<void*>(dst_ptr);
     const void* void_src_ptr = reinterpret_cast<const void*>(src_ptr);
     size_t size_in_bytes = size * sizeof(T);
-    cudaMemcpy(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyHostToDevice);
+    CUDACHECK(cudaMemcpy(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyHostToDevice));
 }
 
 template <typename T>
@@ -43,7 +71,7 @@ void CopyFromCUDADeviceToHost(T* dst_ptr, const T* src_ptr, size_t size, const c
     void* void_dst_ptr = reinterpret_cast<void*>(dst_ptr);
     const void* void_src_ptr = reinterpret_cast<const void*>(src_ptr);
     size_t size_in_bytes = size * sizeof(T);
-    cudaMemcpy(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToHost);
+    CUDACHECK(cudaMemcpy(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToHost));
 }
 
 template <typename T>
@@ -51,7 +79,7 @@ void CopyFromCUDADeviceToHostAsync(T* dst_ptr, const T* src_ptr, size_t size, cu
     void* void_dst_ptr = reinterpret_cast<void*>(dst_ptr);
     const void* void_src_ptr = reinterpret_cast<const void*>(src_ptr);
     size_t size_in_bytes = size * sizeof(T);
-    cudaMemcpyAsync(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToHost, stream);
+    CUDACHECK(cudaMemcpyAsync(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToHost, stream));
 }
 
 template <typename T>
@@ -59,7 +87,7 @@ void CopyFromCUDADeviceToCUDADevice(T* dst_ptr, const T* src_ptr, size_t size, c
     void* void_dst_ptr = reinterpret_cast<void*>(dst_ptr);
     const void* void_src_ptr = reinterpret_cast<const void*>(src_ptr);
     size_t size_in_bytes = size * sizeof(T);
-    cudaMemcpy(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToDevice);
+    CUDACHECK(cudaMemcpy(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToDevice));
 }
 
 template <typename T>
@@ -67,7 +95,7 @@ void CopyFromCUDADeviceToCUDADeviceAsync(T* dst_ptr, const T* src_ptr, size_t si
     void* void_dst_ptr = reinterpret_cast<void*>(dst_ptr);
     const void* void_src_ptr = reinterpret_cast<const void*>(src_ptr);
     size_t size_in_bytes = size * sizeof(T);
-    cudaMemcpyAsync(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToDevice);
+    CUDACHECK(cudaMemcpyAsync(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToDevice));
 }
 
 template <typename T>
@@ -75,21 +103,21 @@ void CopyPeerFromCUDADeviceToCUDADevice(T* dst_ptr, const int dst_device, const 
     void* void_dst_ptr = reinterpret_cast<void*>(dst_ptr);
     const void* void_src_ptr = reinterpret_cast<const void*>(src_ptr);
     size_t size_in_bytes = size * sizeof(T);
-    cudaMemcpyPeer(void_dst_ptr, dst_device, void_src_ptr, src_device, size_in_bytes);
+    CUDACHECK(cudaMemcpyPeer(void_dst_ptr, dst_device, void_src_ptr, src_device, size_in_bytes));
 }
 
 void SynchronizeCUDADevice(const char* file, const int line);
 
 template <typename T>
 void SetCUDAMemory(T* dst_ptr, int value, size_t size, const char* file, const int line) {
-    cudaMemset(reinterpret_cast<void*>(dst_ptr), value, size * sizeof(T));
-    cudaStreamSynchronize(0);
+    CUDACHECK(cudaMemset(reinterpret_cast<void*>(dst_ptr), value, size * sizeof(T)));
+    CUDACHECK(cudaStreamSynchronize(0));
 }
 
 template <typename T>
 void DeallocateCUDAMemory(T** ptr, const char* file, const int line) {
     if (*ptr != nullptr) {
-        cudaFree(reinterpret_cast<void*>(*ptr));
+        CUDACHECK(cudaFree(reinterpret_cast<void*>(*ptr)));
         *ptr = nullptr;
     }
 }
@@ -97,7 +125,7 @@ void DeallocateCUDAMemory(T** ptr, const char* file, const int line) {
 inline void print_cuda_mem_usage(int node_id) {
     size_t total_mem_size = 0;
     size_t free_mem_size = 0;
-    cudaMemGetInfo(&free_mem_size, &total_mem_size);
+    CUDACHECK(cudaMemGetInfo(&free_mem_size, &total_mem_size));
     size_t used_mem_size = total_mem_size - free_mem_size;
     printf("Node %d, GPU memory usage: %.3f GB / %.3f GB\n", node_id, 
             used_mem_size / 1024. / 1024. / 1024., total_mem_size / 1024. / 1024. / 1024.);
@@ -181,33 +209,6 @@ class CUDAVector {
         T* data_;
         size_t size_;
 };
-
-#define MPICHECK(cmd) do {                          \
-    int e = cmd;                                      \
-    if( e != MPI_SUCCESS ) {                          \
-        printf("Failed: MPI error %s:%d '%d'\n",        \
-                __FILE__,__LINE__, e);   \
-        exit(EXIT_FAILURE);                             \
-    }                                                 \
-} while(0)
-
-#define CUDACHECK(cmd) do {                         \
-    cudaError_t e = cmd;                              \
-    if( e != cudaSuccess ) {                          \
-        printf("Failed: Cuda error %s:%d '%s'\n",             \
-                __FILE__,__LINE__,cudaGetErrorString(e));   \
-        exit(EXIT_FAILURE);                             \
-    }                                                 \
-} while(0)
-
-#define NCCLCHECK(cmd) do {                         \
-    ncclResult_t r = cmd;                             \
-    if (r!= ncclSuccess) {                            \
-        printf("Failed, NCCL error %s:%d '%s'\n",             \
-                __FILE__,__LINE__,ncclGetErrorString(r));   \
-        exit(EXIT_FAILURE);                             \
-    }                                                 \
-} while(0)
 
 #endif  // LIGHTGBM_CUDA_CUDA_UTILS_H_
 

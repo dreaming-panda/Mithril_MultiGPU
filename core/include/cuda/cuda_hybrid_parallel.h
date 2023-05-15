@@ -341,6 +341,10 @@ class CUDAOperatorsAndTensorsManager {
 
         // the utility functions
         inline Operator * get_operator(int operator_idx) {
+            if (! (operator_idx >= 0 && operator_idx < num_operators_)) {
+                fprintf(stderr, "Out-of-range operator accessed! Operator %d requested, the number of operators is %d\n",
+                        operator_idx, num_operators_);
+            }
             assert(operator_idx >= 0 && operator_idx < num_operators_);
             return ordered_operator_list_[operator_idx];
         }
@@ -621,12 +625,9 @@ class CUDAVertexChunksManager {
         VertexId num_global_vertices_;
         VertexId chunk_size_;
         VertexId * chunk_offset_; // VertexId [num_global_chunks + 1]
-        std::vector<std::pair<VertexId, VertexId>> fragments_;
-        VertexId local_partition_begin_;
-        VertexId local_partition_end_;
 
     public:
-        CUDAVertexChunksManager(AbstractGraphStructure * graph, VertexId * partition_begins, VertexId * partition_ends, VertexId chunk_size);
+        CUDAVertexChunksManager(AbstractGraphStructure * graph, VertexId chunk_size);
         ~CUDAVertexChunksManager();
 
         inline int get_num_global_chunks() {
@@ -635,9 +636,9 @@ class CUDAVertexChunksManager {
         inline VertexId get_num_global_vertices() {
             return num_global_vertices_;
         }
-        inline int get_num_fragments() {
-            return (int) fragments_.size();
-        }
+        //inline int get_num_fragments() {
+        //    return (int) fragments_.size();
+        //}
         // global VID
         inline int get_chunk_id(VertexId vid) {
             assert(vid < num_global_vertices_);
@@ -658,40 +659,46 @@ class CUDAVertexChunksManager {
             assert(chunk_id >= 0 && chunk_id < num_global_chunks_);
             return chunk_offset_[chunk_id + 1];
         }
-        // global VID
-        inline int get_vertex_fragment_id(VertexId vid) {
-            assert(vid < num_global_vertices_);
-            int left = 0;
-            int right = (int) fragments_.size();
-            while (right - left > 1) {
-                int mid = (left + right) >> 1;
-                left = fragments_[mid].first <= vid ? mid: left;
-                right = fragments_[mid].first > vid ? mid: right;
+        //// global VID
+        //inline int get_vertex_fragment_id(VertexId vid) {
+        //    assert(vid < num_global_vertices_);
+        //    int left = 0;
+        //    int right = (int) fragments_.size();
+        //    while (right - left > 1) {
+        //        int mid = (left + right) >> 1;
+        //        left = fragments_[mid].first <= vid ? mid: left;
+        //        right = fragments_[mid].first > vid ? mid: right;
+        //    }
+        //    return left;
+        //}
+        //inline int get_chunk_fragment_id(int chunk_id) {
+        //    int fragment_id = get_vertex_fragment_id(chunk_offset_[chunk_id]);
+        //    assert(chunk_offset_[chunk_id] >= fragments_[fragment_id].first);
+        //    assert(chunk_offset_[chunk_id + 1] <= fragments_[fragment_id].second);
+        //    return fragment_id;
+        //}
+        //inline std::pair<VertexId, VertexId> get_fragment(int fragment_id) {
+        //    return fragments_[fragment_id];
+        //}
+        //inline bool is_local_chunk(int chunk_id) {
+        //    assert(chunk_id >= 0 && chunk_id < num_global_chunks_);
+        //    return chunk_offset_[chunk_id] >= local_partition_begin_ &&
+        //        chunk_offset_[chunk_id + 1] <= local_partition_end_;
+        //}
+        //inline void get_local_chunk_ids(std::vector<int>& local_chunk_ids) {
+        //    local_chunk_ids.clear();
+        //    int chunk_id = get_chunk_id(local_partition_begin_);
+        //    while (chunk_offset_[chunk_id] < local_partition_end_) {
+        //        local_chunk_ids.push_back(chunk_id);
+        //        chunk_id ++;
+        //    }
+        //    assert(chunk_offset_[chunk_id] == local_partition_end_);
+        //}
+        inline void get_chunk_ids(std::vector<int>& chunk_ids) {
+            chunk_ids.clear();
+            for (int i = 0; i < num_global_chunks_; ++ i) {
+                chunk_ids.push_back(i);
             }
-            return left;
-        }
-        inline int get_chunk_fragment_id(int chunk_id) {
-            int fragment_id = get_vertex_fragment_id(chunk_offset_[chunk_id]);
-            assert(chunk_offset_[chunk_id] >= fragments_[fragment_id].first);
-            assert(chunk_offset_[chunk_id + 1] <= fragments_[fragment_id].second);
-            return fragment_id;
-        }
-        inline std::pair<VertexId, VertexId> get_fragment(int fragment_id) {
-            return fragments_[fragment_id];
-        }
-        inline bool is_local_chunk(int chunk_id) {
-            assert(chunk_id >= 0 && chunk_id < num_global_chunks_);
-            return chunk_offset_[chunk_id] >= local_partition_begin_ &&
-                chunk_offset_[chunk_id + 1] <= local_partition_end_;
-        }
-        inline void get_local_chunk_ids(std::vector<int>& local_chunk_ids) {
-            local_chunk_ids.clear();
-            int chunk_id = get_chunk_id(local_partition_begin_);
-            while (chunk_offset_[chunk_id] < local_partition_end_) {
-                local_chunk_ids.push_back(chunk_id);
-                chunk_id ++;
-            }
-            assert(chunk_offset_[chunk_id] == local_partition_end_);
         }
 };
 
@@ -703,7 +710,7 @@ struct CUDAPIPPartitioning {
     int * partition_op_end; // int [num_partitions]
 };
 
-void load_partitioning(const std::string &path, CUDAPIPPartitioning &p);
+//void load_partitioning(const std::string &path, CUDAPIPPartitioning &p);
 
 class ModelPartitioner {
     public:
@@ -715,11 +722,11 @@ class ModelPartitioner {
                 );
 };
 
-class CUDAPIPPartitioner {
-    public:
-        // determine whether a partition is valid or not 
-        static bool is_valid_partition(CUDAPIPPartitioning p, VertexId num_global_vertices, int num_operators);
-};
+//class CUDAPIPPartitioner {
+//    public:
+//        // determine whether a partition is valid or not 
+//        //static bool is_valid_partition(CUDAPIPPartitioning p, VertexId num_global_vertices, int num_operators);
+//};
 
 class BPIPLocalGraph: public AbstractGraphStructure {
     protected:
@@ -1030,8 +1037,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int num_epoch_;
         bool is_topmost_node_;
         bool is_bottommost_node_;
-        VertexId partition_begin_;
-        VertexId partition_end_;
+        //VertexId partition_begin_;
+        //VertexId partition_end_;
         int num_chunks_;
         CUDAPIPPartitioning partitioning_;
         AbstractApplication * application_;
@@ -1087,8 +1094,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int local_nvalid;
         int local_ntest;
 
-        bool * cpu_has_incomming_mirrors;
-        bool * gpu_has_incomming_mirrors;
+        //bool * cpu_has_incomming_mirrors;
+        //bool * gpu_has_incomming_mirrors;
         // the scheduler
         CUDAAbstractPIPScheduler * scheduler_;
         cudnnHandle_t * cudnn_;
@@ -1129,12 +1136,12 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         inline bool is_bottommost_node() {
             return is_bottommost_node_;
         }
-        inline VertexId get_partition_begin() {
-            return partition_begin_;
-        }
-        inline VertexId get_partition_end() {
-            return partition_end_;
-        }
+        //inline VertexId get_partition_begin() {
+        //    return partition_begin_;
+        //}
+        //inline VertexId get_partition_end() {
+        //    return partition_end_;
+        //}
         inline int get_num_chunks() {
             return num_chunks_;
         }
@@ -1157,7 +1164,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
                 ) {
             assert(chunk_manager_ != NULL);
             assert(vtensor_manager_ != NULL);
-            assert(chunk_manager_->is_local_chunk(chunk_id));
+            //assert(chunk_manager_->is_local_chunk(chunk_id));
             vtensor_manager_->get_master_vertices_data(
                     tensor, 
                     chunk_manager_->get_chunk_begin(chunk_id),
@@ -1173,7 +1180,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
                 ) {
             assert(chunk_manager_ != NULL);
             assert(vtensor_manager_ != NULL);
-            assert(chunk_manager_->is_local_chunk(chunk_id));
+            //assert(chunk_manager_->is_local_chunk(chunk_id));
             vtensor_manager_->get_master_vertices_grad(
                     tensor, 
                     chunk_manager_->get_chunk_begin(chunk_id),
@@ -1207,34 +1214,34 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             assert(vid_translation_ != NULL);
             return vid_translation_->get_local_vid_outgoing_mirror(vid);
         }
-        // check whether a master vertex vid has a corresponding incomming mirror on the remote node
-        // i.e., there is an edge starting from vid to at least one master vertex of the remote node 
-        inline bool has_incoming_mirror(VertexId vid, int remote_node) {
-            VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
-            VertexId vid_end = partitioning_.partition_vid_end[remote_node];
-            if (vid >= vid_begin && vid < vid_end) return false;
-            OutEdgeList out_edges = graph_structure_->get_out_edges(vid);
-            for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
-                OutEdge e = out_edges.ptx[e_i];
-                VertexId dst = e.dst;
-                if (dst >= vid_begin && dst < vid_end) return true;
-            }
-            return false;
-        }
-        // check whether a master vertex vid has a corresponding outgoing mirror on the remote node 
-        // i.e., there is an edge starting from one master vertex of the remote node to vid
-        inline bool has_outgoing_mirror(VertexId vid, int remote_node) {
-            VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
-            VertexId vid_end = partitioning_.partition_vid_end[remote_node];
-            if (vid >= vid_begin && vid < vid_end) return false;
-            InEdgeList in_edges = graph_structure_->get_in_edges(vid);
-            for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
-                InEdge e = in_edges.ptx[e_i];
-                VertexId src = e.src;
-                if (src >= vid_begin && src < vid_end) return true;
-            }
-            return false;
-        }
+        //// check whether a master vertex vid has a corresponding incomming mirror on the remote node
+        //// i.e., there is an edge starting from vid to at least one master vertex of the remote node 
+        //inline bool has_incoming_mirror(VertexId vid, int remote_node) {
+        //    VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
+        //    VertexId vid_end = partitioning_.partition_vid_end[remote_node];
+        //    if (vid >= vid_begin && vid < vid_end) return false;
+        //    OutEdgeList out_edges = graph_structure_->get_out_edges(vid);
+        //    for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
+        //        OutEdge e = out_edges.ptx[e_i];
+        //        VertexId dst = e.dst;
+        //        if (dst >= vid_begin && dst < vid_end) return true;
+        //    }
+        //    return false;
+        //}
+        //// check whether a master vertex vid has a corresponding outgoing mirror on the remote node 
+        //// i.e., there is an edge starting from one master vertex of the remote node to vid
+        //inline bool has_outgoing_mirror(VertexId vid, int remote_node) {
+        //    VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
+        //    VertexId vid_end = partitioning_.partition_vid_end[remote_node];
+        //    if (vid >= vid_begin && vid < vid_end) return false;
+        //    InEdgeList in_edges = graph_structure_->get_in_edges(vid);
+        //    for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
+        //        InEdge e = in_edges.ptx[e_i];
+        //        VertexId src = e.src;
+        //        if (src >= vid_begin && src < vid_end) return true;
+        //    }
+        //    return false;
+        //}
 
         // invoke by the scheduler
         void perform_forward_task(CUDAPIPForwardTask task);
@@ -1243,7 +1250,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         // some initialization functions
         void generate_backward_operator_mask(const std::vector<Operator*>& operators);
-        void init_weights();
+        //void init_weights();
         void hybrid_prepare_input_tensor();
         void hybrid_prepare_std_tensor();
         void set_up_tensor_resourses();

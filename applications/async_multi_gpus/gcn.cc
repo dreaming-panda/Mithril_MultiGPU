@@ -28,6 +28,12 @@
 #include "partitioner.h"
 #include <fstream>
 
+// three steps to add the graph parallel
+// [ ] allows the GPUs within the same set to process the same layer of different chunks
+// [ ] graph-level communication
+// [ ] weight syncrhonization
+// [ ] support graph partitioning
+
 using namespace std;
 
 class GCN: public AbstractApplication {

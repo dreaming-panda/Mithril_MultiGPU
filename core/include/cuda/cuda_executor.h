@@ -42,6 +42,14 @@
     }                                                                  \
 } while(0)
 
+#define checkCUSPARSE(status) do {                                      \
+    std::stringstream _error;                                           \
+    if (status != CUSPARSE_STATUS_SUCCESS) {                            \
+        _error << "CuSparse failure: " << status;                       \
+        FatalError(_error.str());                                       \
+    }                                                                   \
+} while (0)
+
 struct LocalGraphInfo{
     VertexId left;
     VertexId right;

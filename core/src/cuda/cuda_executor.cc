@@ -80,15 +80,19 @@ void OperatorExecutorGPUV2::build_inner_csr_(){
     int* rowoffsets = graph->get_cuda_csrRowOffsets();
     int* cols = graph->get_cuda_csrColInd();
     int nnz = graph->get_nnz();
-    cusparseCreateCsr(&SpCsr_, num_vertices, num_vertices, nnz, (void *)rowoffsets, (void *)cols,(void *)values, 
-            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+    checkCUSPARSE(
+            cusparseCreateCsr(&SpCsr_, num_vertices, num_vertices, nnz, (void *)rowoffsets, (void *)cols,(void *)values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F)
+            );
 
     int* t_rows = graph->get_cuda_cscRowInd();
     int* t_cols = graph->get_cuda_cscColOffsets();
     DataType* t_values = graph->get_cuda_cscValues();
 
-    cusparseCreateCsr(&SpCsr_T, num_vertices, num_vertices, nnz, (void *)t_cols, (void *)t_rows,(void *)t_values, 
-            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+    checkCUSPARSE(
+            cusparseCreateCsr(&SpCsr_T, num_vertices, num_vertices, nnz, (void *)t_cols, (void *)t_rows,(void *)t_values, 
+                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F)
+            );
     has_Spcsr_ = true;
 }
 
@@ -163,8 +167,10 @@ unsigned int OperatorExecutorGPUV2::get_localgraph_In(VertexId left, VertexId ri
     lginfo.right = right;
     lginfo.lg = lg;
     cusparseSpMatDescr_t SpCsr;
-    cusparseCreateCsr(&SpCsr, right - left, csr_.inMatrixSize, local_nnz, (void *)(cuda_rows + left), (void *)local_cols,(void *)local_values, 
-            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+    checkCUSPARSE(
+            cusparseCreateCsr(&SpCsr, right - left, csr_.inMatrixSize, local_nnz, (void *)(cuda_rows + left), (void *)local_cols,(void *)local_values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F)
+            );
 
 
     lginfo.spcsr = SpCsr;
@@ -215,8 +221,10 @@ unsigned int OperatorExecutorGPUV2::get_localgraph_Out(VertexId left, VertexId r
     lginfo.right = right;
     lginfo.lg = lg;
     cusparseSpMatDescr_t SpCsr;
-    cusparseCreateCsr(&SpCsr, right - left, csr_.outMatrixSize, local_nnz, (void *)(cuda_rows + left), (void *)local_cols,(void *)local_values, 
-            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F);
+    checkCUSPARSE(
+            cusparseCreateCsr(&SpCsr, right - left, csr_.outMatrixSize, local_nnz, (void *)(cuda_rows + left), (void *)local_cols,(void *)local_values, 
+            CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_32F)
+            );
     lginfo.spcsr = SpCsr;
     lginfo.dbuffer = nullptr;
     lginfo.alloc = false;
