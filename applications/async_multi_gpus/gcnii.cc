@@ -32,8 +32,11 @@
 // TODO
 // [x] allowed inference directly on this code base
 // [ ] allowed compression or not configuration
-// [ ] allowed initialization method conf
-// [ ] allowed feature preprocessing conf
+// [x] allowed initialization method conf
+// [x] allowed feature preprocessing conf
+// [ ] collecting the mirror data
+// [ ] transferring the mirror data to remote nodes with RDMA
+// [ ] updating the received graph data
 
 class GCNII: public AbstractApplication {
     private:
