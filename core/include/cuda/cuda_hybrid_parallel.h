@@ -626,7 +626,7 @@ class CUDAVertexChunksManager {
         VertexId local_partition_end_;
 
     public:
-        CUDAVertexChunksManager(AbstractGraphStructure * graph, VertexId * partition_begins, VertexId * partition_ends, VertexId chunk_size);
+        CUDAVertexChunksManager(AbstractGraphStructure * graph, VertexId chunk_size);
         ~CUDAVertexChunksManager();
 
         inline int get_num_global_chunks() {
@@ -695,19 +695,26 @@ class CUDAVertexChunksManager {
         }
 };
 
-struct CUDAPIPPartitioning {
+//struct CUDAModelPartitioning {
+//    int num_partitions;
+//    VertexId * partition_vid_begin; // VertexId [num_partitions]
+//    VertexId * partition_vid_end; // VertexId [num_partitions]
+//    int * partition_op_begin; // int [num_partitions]
+//    int * partition_op_end; // int [num_partitions]
+//};
+
+// model level partitioning
+struct CUDAModelPartitioning {
     int num_partitions;
-    VertexId * partition_vid_begin; // VertexId [num_partitions]
-    VertexId * partition_vid_end; // VertexId [num_partitions]
     int * partition_op_begin; // int [num_partitions]
     int * partition_op_end; // int [num_partitions]
 };
 
-void load_partitioning(const std::string &path, CUDAPIPPartitioning &p);
+void load_partitioning(const std::string &path, CUDAModelPartitioning &p);
 
 class ModelPartitioner {
     public:
-        static CUDAPIPPartitioning get_model_parallel_partition(
+        static CUDAModelPartitioning get_model_parallel_partition(
                 AbstractApplication * application,
                 int num_gpus, int num_layers,
                 const std::vector<double>& cost_each_layer,
@@ -715,11 +722,11 @@ class ModelPartitioner {
                 );
 };
 
-class CUDAPIPPartitioner {
-    public:
-        // determine whether a partition is valid or not 
-        static bool is_valid_partition(CUDAPIPPartitioning p, VertexId num_global_vertices, int num_operators);
-};
+//class CUDAPIPPartitioner {
+//    public:
+//        // determine whether a partition is valid or not 
+//        static bool is_valid_partition(CUDAModelPartitioning p, VertexId num_global_vertices, int num_operators);
+//};
 
 class BPIPLocalGraph: public AbstractGraphStructure {
     protected:
@@ -1033,7 +1040,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         VertexId partition_begin_;
         VertexId partition_end_;
         int num_chunks_;
-        CUDAPIPPartitioning partitioning_;
+        CUDAModelPartitioning partitioning_;
         AbstractApplication * application_;
 
         CUDAOperatorsAndTensorsManager * op_ten_manager_;
@@ -1087,7 +1094,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int local_nvalid;
         int local_ntest;
 
-        bool * cpu_has_incomming_mirrors;
+        //bool * cpu_has_incomming_mirrors;
         bool * gpu_has_incomming_mirrors;
         // the scheduler
         CUDAAbstractPIPScheduler * scheduler_;
@@ -1204,34 +1211,34 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             assert(vid_translation_ != NULL);
             return vid_translation_->get_local_vid_outgoing_mirror(vid);
         }
-        // check whether a master vertex vid has a corresponding incomming mirror on the remote node
-        // i.e., there is an edge starting from vid to at least one master vertex of the remote node 
-        inline bool has_incoming_mirror(VertexId vid, int remote_node) {
-            VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
-            VertexId vid_end = partitioning_.partition_vid_end[remote_node];
-            if (vid >= vid_begin && vid < vid_end) return false;
-            OutEdgeList out_edges = graph_structure_->get_out_edges(vid);
-            for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
-                OutEdge e = out_edges.ptx[e_i];
-                VertexId dst = e.dst;
-                if (dst >= vid_begin && dst < vid_end) return true;
-            }
-            return false;
-        }
-        // check whether a master vertex vid has a corresponding outgoing mirror on the remote node 
-        // i.e., there is an edge starting from one master vertex of the remote node to vid
-        inline bool has_outgoing_mirror(VertexId vid, int remote_node) {
-            VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
-            VertexId vid_end = partitioning_.partition_vid_end[remote_node];
-            if (vid >= vid_begin && vid < vid_end) return false;
-            InEdgeList in_edges = graph_structure_->get_in_edges(vid);
-            for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
-                InEdge e = in_edges.ptx[e_i];
-                VertexId src = e.src;
-                if (src >= vid_begin && src < vid_end) return true;
-            }
-            return false;
-        }
+        //// check whether a master vertex vid has a corresponding incomming mirror on the remote node
+        //// i.e., there is an edge starting from vid to at least one master vertex of the remote node 
+        //inline bool has_incoming_mirror(VertexId vid, int remote_node) {
+        //    VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
+        //    VertexId vid_end = partitioning_.partition_vid_end[remote_node];
+        //    if (vid >= vid_begin && vid < vid_end) return false;
+        //    OutEdgeList out_edges = graph_structure_->get_out_edges(vid);
+        //    for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
+        //        OutEdge e = out_edges.ptx[e_i];
+        //        VertexId dst = e.dst;
+        //        if (dst >= vid_begin && dst < vid_end) return true;
+        //    }
+        //    return false;
+        //}
+        //// check whether a master vertex vid has a corresponding outgoing mirror on the remote node 
+        //// i.e., there is an edge starting from one master vertex of the remote node to vid
+        //inline bool has_outgoing_mirror(VertexId vid, int remote_node) {
+        //    VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
+        //    VertexId vid_end = partitioning_.partition_vid_end[remote_node];
+        //    if (vid >= vid_begin && vid < vid_end) return false;
+        //    InEdgeList in_edges = graph_structure_->get_in_edges(vid);
+        //    for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
+        //        InEdge e = in_edges.ptx[e_i];
+        //        VertexId src = e.src;
+        //        if (src >= vid_begin && src < vid_end) return true;
+        //    }
+        //    return false;
+        //}
 
         // invoke by the scheduler
         void perform_forward_task(CUDAPIPForwardTask task);
@@ -1275,7 +1282,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         double execute_application(AbstractApplication * application, int num_epoch); // returned: the training accucacy of the last epoch
         
         // some setting-up helper functions
-        void set_partition(CUDAPIPPartitioning partition) {
+        void set_partition(CUDAModelPartitioning partition) {
             partitioning_ = partition;
         }
         void set_num_chunks(int num_chunks) {

@@ -7,7 +7,7 @@ cd build
 make -j
 
 num_layers=8
-hunits=32
+hunits=64
 lr=3e-3
 graph=ogbn_arxiv
 epoch=3000

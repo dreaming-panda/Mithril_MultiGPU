@@ -1702,8 +1702,8 @@ CUDAVertexTensorDataGradManager::~CUDAVertexTensorDataGradManager() {
 
 CUDAVertexChunksManager::CUDAVertexChunksManager(
         AbstractGraphStructure * graph, 
-        VertexId * partition_begins,
-        VertexId * partition_ends,
+        //VertexId * partition_begins,
+        //VertexId * partition_ends,
         VertexId chunk_size
         ) {
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
@@ -1712,8 +1712,8 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
     num_global_vertices_ = graph->get_num_global_vertices();
     chunk_size_ = chunk_size;
 
-    local_partition_begin_ = partition_begins[node_id];
-    local_partition_end_ = partition_ends[node_id];
+    local_partition_begin_ = 0;
+    local_partition_end_ = num_global_vertices_;
 
     // we do not allow a chunk to be cross partition boundaries
     // to simply the pipeline design
@@ -1724,8 +1724,8 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
     boundaries.clear();
     boundaries.resize(num_nodes * 2);
     for (int p_i = 0; p_i < num_nodes; ++ p_i) {
-        boundaries[p_i] = partition_begins[p_i];
-        boundaries[p_i + num_nodes] = partition_ends[p_i];
+        boundaries[p_i] = 0;
+        boundaries[p_i + num_nodes] = num_global_vertices_;
     }
     std::sort(boundaries.begin(), boundaries.end());
 
@@ -1819,40 +1819,40 @@ CUDAVertexChunksManager::~CUDAVertexChunksManager() {
     chunk_offset_ = NULL;
 }
 
-bool CUDAPIPPartitioner::is_valid_partition(CUDAPIPPartitioning p, VertexId num_global_vertices, int num_operators) {
-    std::vector<std::pair<VertexId, VertexId>> boundaries;
-    int num_partitions = p.num_partitions;
-    for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
-        boundaries.clear();
-        for (int p_i = 0; p_i < num_partitions; ++ p_i) {
-            if (op_idx >= p.partition_op_begin[p_i] &&
-                    op_idx < p.partition_op_end[p_i]) {
-                boundaries.push_back(std::make_pair(p.partition_vid_begin[p_i], p.partition_vid_end[p_i]));
-            }
-        }
-        std::sort(
-                boundaries.begin(), boundaries.end(), 
-                [](const std::pair<VertexId, VertexId>& a, const std::pair<VertexId, VertexId>& b) {
-                return a.first < b.first;
-                }
-                );
-        VertexId sum = 0;
-        int num_boundaries = (int) boundaries.size();
-        for (int i = 0; i < num_boundaries; ++ i) {
-            assert(boundaries[i].first < boundaries[i].second);
-            sum += boundaries[i].second - boundaries[i].first;
-            if (i > 0 && boundaries[i - 1].second > boundaries[i].first) {
-                return false;
-            }
-        }
-        if (sum != num_global_vertices) {
-            return false;
-        }
-    }
-    return true;
-}
+//bool CUDAPIPPartitioner::is_valid_partition(CUDAModelPartitioning p, VertexId num_global_vertices, int num_operators) {
+//    std::vector<std::pair<VertexId, VertexId>> boundaries;
+//    int num_partitions = p.num_partitions;
+//    for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
+//        boundaries.clear();
+//        for (int p_i = 0; p_i < num_partitions; ++ p_i) {
+//            if (op_idx >= p.partition_op_begin[p_i] &&
+//                    op_idx < p.partition_op_end[p_i]) {
+//                boundaries.push_back(std::make_pair(p.partition_vid_begin[p_i], p.partition_vid_end[p_i]));
+//            }
+//        }
+//        std::sort(
+//                boundaries.begin(), boundaries.end(), 
+//                [](const std::pair<VertexId, VertexId>& a, const std::pair<VertexId, VertexId>& b) {
+//                return a.first < b.first;
+//                }
+//                );
+//        VertexId sum = 0;
+//        int num_boundaries = (int) boundaries.size();
+//        for (int i = 0; i < num_boundaries; ++ i) {
+//            assert(boundaries[i].first < boundaries[i].second);
+//            sum += boundaries[i].second - boundaries[i].first;
+//            if (i > 0 && boundaries[i - 1].second > boundaries[i].first) {
+//                return false;
+//            }
+//        }
+//        if (sum != num_global_vertices) {
+//            return false;
+//        }
+//    }
+//    return true;
+//}
 
-CUDAPIPPartitioning ModelPartitioner::get_model_parallel_partition(
+CUDAModelPartitioning ModelPartitioner::get_model_parallel_partition(
         AbstractApplication * application,
         int num_gpus, int num_layers,
         const std::vector<double>& cost_each_layer,
@@ -1867,13 +1867,13 @@ CUDAPIPPartitioning ModelPartitioner::get_model_parallel_partition(
     for (int i = 0; i < num_layers; ++ i) {
         remained_cost += cost_each_layer[i];
     }
-    CUDAPIPPartitioning partition;
+    CUDAModelPartitioning partition;
     partition.num_partitions = num_gpus;
-    partition.partition_vid_begin = new VertexId [num_gpus];
-    partition.partition_vid_end = new VertexId [num_gpus];
+    //partition.partition_vid_begin = new VertexId [num_gpus];
+    //partition.partition_vid_end = new VertexId [num_gpus];
     partition.partition_op_begin = new int [num_gpus];
     partition.partition_op_end = new int [num_gpus];
-    assert(partition.partition_vid_begin && partition.partition_vid_end);
+    //assert(partition.partition_vid_begin && partition.partition_vid_end);
     assert(partition.partition_op_begin && partition.partition_op_end);
     int layer_begin = 0;
     for (int i = 0; i < num_gpus; ++ i) {
@@ -1889,8 +1889,8 @@ CUDAPIPPartitioning ModelPartitioner::get_model_parallel_partition(
         }
         remained_cost -= cost;
         printf("GPU %d, layer [%d, %d)\n", i, layer_begin, j);
-        partition.partition_vid_begin[i] = 0;
-        partition.partition_vid_end[i] = num_vertices;
+        //partition.partition_vid_begin[i] = 0;
+        //partition.partition_vid_end[i] = num_vertices;
         std::pair<int, int> beginning_layer = operators_each_layer[layer_begin];
         partition.partition_op_begin[i] = beginning_layer.first;
         std::pair<int, int> ending_layer = operators_each_layer[j - 1];
@@ -2199,7 +2199,7 @@ void CUDAPIPWeightAggregator::update_optimal_weights() {
 }
 
 DistributedPIPHybridParallelExecutionEngineGPU::DistributedPIPHybridParallelExecutionEngineGPU() {
-    cpu_has_incomming_mirrors = nullptr;
+    //cpu_has_incomming_mirrors = nullptr;
     gpu_has_incomming_mirrors = nullptr;
 }
 
@@ -2646,13 +2646,16 @@ void DistributedPIPHybridParallelExecutionEngineGPU::init_weights() {
 void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor() {
     // do not need to allocate resource for it 
     // will be handled by the VertexTensorDataGradManager
+    VertexId num_vertices = graph_structure_->get_num_global_vertices();
     if (is_topmost_node_) {
         int node_id = DistributedSys::get_instance()->get_node_id();
         Tensor * input_tensor = application_->get_input_tensor();
         {
             // set up the features of the master vertices
-            VertexId vid_begin = partitioning_.partition_vid_begin[node_id];
-            VertexId vid_end = partitioning_.partition_vid_end[node_id];
+            //VertexId vid_begin = partitioning_.partition_vid_begin[node_id];
+            //VertexId vid_end = partitioning_.partition_vid_end[node_id];
+            VertexId vid_begin = 0;
+            VertexId vid_end = num_vertices;
             DataType * data = NULL;
             size_t num_elements = 0;
             vtensor_manager_->get_master_vertices_data(
@@ -2722,41 +2725,41 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
                 offset += num_features;
             }
         }
-        if (vtensor_manager_->is_input_to_aggregation(input_tensor)) {
-            // set up the features of the incoming mirror vertices
-            VertexId vid_begin = 0;
-            VertexId vid_end = graph_structure_->get_num_global_vertices();
-            if (vid_end == partitioning_.partition_vid_end[node_id]) {
-                vid_end = partitioning_.partition_vid_begin[node_id];
-            }
-            DataType * data = NULL;
-            size_t num_elements = 0;
-            vtensor_manager_->get_incoming_mirror_vertices_data(
-                    input_tensor, vid_begin, vid_end, data, num_elements
-                    );
+        //if (vtensor_manager_->is_input_to_aggregation(input_tensor)) {
+        //    // set up the features of the incoming mirror vertices
+        //    VertexId vid_begin = 0;
+        //    VertexId vid_end = graph_structure_->get_num_global_vertices();
+        //    //if (vid_end == partitioning_.partition_vid_end[node_id]) {
+        //    //    vid_end = partitioning_.partition_vid_begin[node_id];
+        //    //}
+        //    DataType * data = NULL;
+        //    size_t num_elements = 0;
+        //    vtensor_manager_->get_incoming_mirror_vertices_data(
+        //            input_tensor, vid_begin, vid_end, data, num_elements
+        //            );
 
-            int num_features = graph_non_structural_data_->get_num_feature_dimensions();
-            assert(input_tensor->dims[0] == -1);
-            assert(input_tensor->dims[1] == num_features);
+        //    int num_features = graph_non_structural_data_->get_num_feature_dimensions();
+        //    assert(input_tensor->dims[0] == -1);
+        //    assert(input_tensor->dims[1] == num_features);
 
-            VertexId num_incoming_mirror_vertices = vid_translation_->get_num_incoming_mirror_vertices();
-            assert(num_elements % num_features == 0);
-            assert(num_elements / num_features == num_incoming_mirror_vertices);
+        //    VertexId num_incoming_mirror_vertices = vid_translation_->get_num_incoming_mirror_vertices();
+        //    assert(num_elements % num_features == 0);
+        //    assert(num_elements / num_features == num_incoming_mirror_vertices);
 
-            VertexId num_master_vertices = partitioning_.partition_vid_end[node_id] - 
-                partitioning_.partition_vid_begin[node_id];
-            size_t offset = 0;
-            for (VertexId i = 0; i < num_incoming_mirror_vertices; ++ i) {
-                assert(false);
-                VertexId v = vid_translation_->get_global_vid_incoming_mirror(i + num_master_vertices);
-                FeatureVector feature_vec = graph_non_structural_data_->get_feature(v);
-                assert(feature_vec.vec_len == num_features);
-                assert(feature_vec.data != NULL);
-                //memcpy(data + offset, feature_vec.data, sizeof(DataType) * num_features);
-                CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
-                offset += num_features;
-            }
-        }
+        //    VertexId num_master_vertices = partitioning_.partition_vid_end[node_id] - 
+        //        partitioning_.partition_vid_begin[node_id];
+        //    size_t offset = 0;
+        //    for (VertexId i = 0; i < num_incoming_mirror_vertices; ++ i) {
+        //        assert(false);
+        //        VertexId v = vid_translation_->get_global_vid_incoming_mirror(i + num_master_vertices);
+        //        FeatureVector feature_vec = graph_non_structural_data_->get_feature(v);
+        //        assert(feature_vec.vec_len == num_features);
+        //        assert(feature_vec.data != NULL);
+        //        //memcpy(data + offset, feature_vec.data, sizeof(DataType) * num_features);
+        //        CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
+        //        offset += num_features;
+        //    }
+        //}
     }
 }
 
@@ -2801,8 +2804,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::set_up_tensor_resourses() {
     VertexId num_local_vertices = vid_translation_->get_num_master_vertices();
     int num_tensors = op_ten_manager_->get_num_tensors();
     int node_id = DistributedSys::get_instance()->get_node_id();
-    VertexId vid_begin = partitioning_.partition_vid_begin[node_id];
-    VertexId vid_end = partitioning_.partition_vid_end[node_id];
+    VertexId num_vertices = graph_structure_->get_num_global_vertices();
+    //VertexId vid_begin = partitioning_.partition_vid_begin[node_id];
+    //VertexId vid_end = partitioning_.partition_vid_end[node_id];
+    VertexId vid_begin = 0, vid_end = num_vertices;
     for (int i = 0; i < num_tensors; ++ i) {
         Tensor * tensor = op_ten_manager_->get_tensor(i);
         assert(tensor != NULL);
@@ -2900,21 +2905,21 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy(
     //accum_loss_ = 0;
 }
 
-void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {
-    FILE * fin = fopen(path.c_str(), "r");
-    assert(fin != NULL);
-    assert(fscanf(fin, "%d", &p.num_partitions) == 1); // the first line: the number of partitions
-    for (int i = 0; i < p.num_partitions; ++ i) {
-        VertexId vid_begin, vid_end;
-        int op_begin, op_end;
-        assert(fscanf(fin, "%u%u%d%d", &vid_begin, &vid_end, &op_begin, &op_end) == 4); //each following line: the range of the vertices and operators
-        p.partition_vid_begin[i] = vid_begin;
-        p.partition_vid_end[i] = vid_end;
-        p.partition_op_begin[i] = op_begin;
-        p.partition_op_end[i] = op_end;
-    }
-    assert(fclose(fin) == 0);
-}
+//void load_partitioning(const std::string &path, CUDAModelPartitioning &p) {
+//    FILE * fin = fopen(path.c_str(), "r");
+//    assert(fin != NULL);
+//    assert(fscanf(fin, "%d", &p.num_partitions) == 1); // the first line: the number of partitions
+//    for (int i = 0; i < p.num_partitions; ++ i) {
+//        VertexId vid_begin, vid_end;
+//        int op_begin, op_end;
+//        assert(fscanf(fin, "%u%u%d%d", &vid_begin, &vid_end, &op_begin, &op_end) == 4); //each following line: the range of the vertices and operators
+//        p.partition_vid_begin[i] = vid_begin;
+//        p.partition_vid_end[i] = vid_end;
+//        p.partition_op_begin[i] = op_begin;
+//        p.partition_op_end[i] = op_end;
+//    }
+//    assert(fclose(fin) == 0);
+//}
 
 double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(AbstractApplication * application, int num_epoch) {
 
@@ -2941,36 +2946,36 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     printf("*** Node %d, starting model training...\n", node_id);
 
     // construct a partitioning
-    CUDAPIPPartitioning partitioning;
-    partitioning.num_partitions = num_nodes;
-    partitioning.partition_vid_begin = new VertexId [num_nodes];
-    partitioning.partition_vid_end = new VertexId [num_nodes];
-    partitioning.partition_op_begin = new int [num_nodes];
-    partitioning.partition_op_end = new int [num_nodes];
+    CUDAModelPartitioning partitioning;
+    //partitioning.num_partitions = num_nodes;
+    //partitioning.partition_vid_begin = new VertexId [num_nodes];
+    //partitioning.partition_vid_end = new VertexId [num_nodes];
+    //partitioning.partition_op_begin = new int [num_nodes];
+    //partitioning.partition_op_end = new int [num_nodes];
 
     partitioning = partitioning_;
 
     assert(num_nodes == partitioning.num_partitions);
-    printf("Number of operators: %d\n", num_operators);
-    for (int p_i = 0; p_i < num_nodes; ++ p_i) {
-        VertexId vid_begin = partitioning.partition_vid_begin[p_i];
-        VertexId vid_end = partitioning.partition_vid_end[p_i]; 
-        int op_begin = partitioning.partition_op_begin[p_i];
-        int op_end = partitioning.partition_op_end[p_i];
-        printf("%u %u %d %d\n", vid_begin, vid_end, op_begin, op_end);
-        assert(vid_begin < vid_end);
-        assert(vid_begin >= 0);
-        assert(vid_end <= num_global_vertices);
-        assert(op_begin < op_end);
-        assert(op_begin >= 0);
-        assert(op_end <= num_operators);
-    }
+    //printf("Number of operators: %d\n", num_operators);
+    //for (int p_i = 0; p_i < num_nodes; ++ p_i) {
+    //    VertexId vid_begin = partitioning.partition_vid_begin[p_i];
+    //    VertexId vid_end = partitioning.partition_vid_end[p_i]; 
+    //    int op_begin = partitioning.partition_op_begin[p_i];
+    //    int op_end = partitioning.partition_op_end[p_i];
+    //    printf("%u %u %d %d\n", vid_begin, vid_end, op_begin, op_end);
+    //    assert(vid_begin < vid_end);
+    //    assert(vid_begin >= 0);
+    //    assert(vid_end <= num_global_vertices);
+    //    assert(op_begin < op_end);
+    //    assert(op_begin >= 0);
+    //    assert(op_end <= num_operators);
+    //}
 
     {
-        VertexId vid_begin = partitioning.partition_vid_begin[node_id];
-        VertexId vid_end = partitioning.partition_vid_end[node_id];
-        assert(vid_begin == 0);
-        assert(vid_end == num_global_vertices);
+        VertexId vid_begin = 0;
+        VertexId vid_end = num_global_vertices;
+        //assert(vid_begin == 0);
+        //assert(vid_end == num_global_vertices);
         int op_begin = partitioning.partition_op_begin[node_id];
         int op_end = partitioning.partition_op_end[node_id];
         // set the pipeline input tensor
@@ -2997,16 +3002,15 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         }
     }
 
-    printf("*** Node %d owns the partition [%d, %d) x [%u, %u)\n", 
-            node_id, partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id],
-            partitioning.partition_vid_begin[node_id], partitioning.partition_vid_end[node_id]);
+    printf("*** Node %d owns the model-level partition [%d, %d)\n", 
+            node_id, partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id]);
 
     // construct the helper classes
     printf("*** Node %d, constructing the helper classes...\n", node_id);
     op_ten_manager_ = new CUDAOperatorsAndTensorsManager(operators);
     vid_translation_ = new CUDAVertexIdTranslationTable(
-            graph_structure_, 
-            partitioning.partition_vid_begin[node_id], partitioning.partition_vid_end[node_id]
+            graph_structure_, 0, num_global_vertices
+            //partitioning.partition_vid_begin[node_id], partitioning.partition_vid_end[node_id]
             );
 
     VertexId max_chunk_size = (graph_structure_->get_num_global_vertices() + user_specified_num_chunks_ - 1) /
@@ -3018,7 +3022,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             );
 
     chunk_manager_ = new CUDAVertexChunksManager(
-            graph_structure_, partitioning.partition_vid_begin, partitioning.partition_vid_end,
+            graph_structure_, 
+            //partitioning.partition_vid_begin, partitioning.partition_vid_end,
             max_chunk_size
             );
 
@@ -3056,8 +3061,10 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     // set up some meta information
     is_topmost_node_ = (partitioning.partition_op_begin[node_id] == 0);
     is_bottommost_node_ = (partitioning.partition_op_end[node_id] == num_operators);
-    partition_begin_ = partitioning.partition_vid_begin[node_id];
-    partition_end_ = partitioning.partition_vid_end[node_id];
+    //partition_begin_ = partitioning.partition_vid_begin[node_id];
+    //partition_end_ = partitioning.partition_vid_end[node_id];
+    partition_begin_ = 0;
+    partition_end_ = num_global_vertices;
     num_chunks_ = chunk_manager_->get_num_global_chunks();
 
     // the shared buffers for data compression and decompression
@@ -3243,12 +3250,12 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     this->gpu_valid_mask_ = local_gpu_valid_mask_;
     this->gpu_test_mask_ = local_gpu_test_mask_;
 
-    cpu_has_incomming_mirrors = new bool [num_nodes * lgraph->get_num_master_vertices()];
-    for(int n_i = 0; n_i < num_nodes; ++n_i){
-        for(int v_i = 0; v_i < lgraph->get_num_master_vertices(); ++v_i){
-            cpu_has_incomming_mirrors[lgraph->get_num_master_vertices() * n_i + v_i] = this->has_incoming_mirror(vid_translation_->get_global_vid_master_vertex(v_i), n_i);
-        }
-    }
+    //cpu_has_incomming_mirrors = new bool [num_nodes * lgraph->get_num_master_vertices()];
+    //for(int n_i = 0; n_i < num_nodes; ++n_i){
+    //    for(int v_i = 0; v_i < lgraph->get_num_master_vertices(); ++v_i){
+    //        cpu_has_incomming_mirrors[lgraph->get_num_master_vertices() * n_i + v_i] = this->has_incoming_mirror(vid_translation_->get_global_vid_master_vertex(v_i), n_i);
+    //    }
+    //}
 
     // start task scheduling
     scheduler_ = new CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(
@@ -3320,11 +3327,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     delete weight_dumper;
 
     // destroy the partitioning
-    delete [] partitioning.partition_vid_begin;
-    delete [] partitioning.partition_vid_end;
+    //delete [] partitioning.partition_vid_begin;
+    //delete [] partitioning.partition_vid_end;
     delete [] partitioning.partition_op_begin;
     delete [] partitioning.partition_op_end;
-    delete [] cpu_has_incomming_mirrors;
+    //delete [] cpu_has_incomming_mirrors;
     DeallocateCUDAMemory<int>(&local_gpu_training_mask_, __FILE__, __LINE__);
     DeallocateCUDAMemory<int>(&local_gpu_valid_mask_, __FILE__, __LINE__);
     DeallocateCUDAMemory<int>(&local_gpu_test_mask_, __FILE__, __LINE__);

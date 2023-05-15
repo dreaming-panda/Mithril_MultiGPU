@@ -253,7 +253,7 @@ int main(int argc, char ** argv) {
             // assumed that the cost of each layer is the same
             cost_each_layer.push_back(1.);
         }
-        CUDAPIPPartitioning partition = ModelPartitioner::get_model_parallel_partition(
+        CUDAModelPartitioning partition = ModelPartitioner::get_model_parallel_partition(
                 gcn, num_gpus, num_layers + 2, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
