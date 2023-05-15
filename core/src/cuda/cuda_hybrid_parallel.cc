@@ -2525,48 +2525,48 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     Profiler::submit_main_thread_event(BackwardTaskCompleteEvent);
 }
 
-void DistributedPIPHybridParallelExecutionEngineGPU::add_white_noise() {
-    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-    int node_id = DistributedSys::get_instance()->get_node_id();
-    VertexId num_vertices = graph_structure_->get_num_global_vertices();
-
-    int op_begin = partitioning_.partition_op_begin[node_id];
-    int op_end = partitioning_.partition_op_end[node_id];
-    for (int op_idx = op_begin; op_idx < op_end; ++ op_idx) {
-        Operator * op = op_ten_manager_->get_operator(op_idx);
-        if (op->get_type() == OPERATOR_AGGREGATION) {
-            Tensor * in_tensor = op->get_input_tensor(0);
-            size_t num_elements_per_vertex = in_tensor->dims[1];
-            size_t num_elements = num_elements_per_vertex * num_vertices;
-            TensorResourceGPU * resource = (TensorResourceGPU*) in_tensor->resource;
-            DataType * gpu_data = resource->get_gpu_data();
-            DataType * cpu_data = new DataType [num_elements];
-            checkCUDA(cudaMemcpy(cpu_data, gpu_data, 
-                        sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost));
-            int num_threads = 24;
-#pragma omp parallel num_threads(num_threads)
-            {
-                std::default_random_engine generator;
-                std::normal_distribution<double> distribution(0.0, 1.0);
-
-                int thread_id = omp_get_thread_num();
-                size_t begin = num_elements / num_threads * thread_id;
-                size_t end = num_elements / num_threads * (thread_id + 1);
-                if (thread_id == num_threads - 1) {
-                    end = num_elements;
-                }
-                for (size_t i = begin; i < end; ++ i) {
-                    cpu_data[i] += distribution(generator);
-                }
-            }
-            checkCUDA(cudaMemcpy(
-                        gpu_data, cpu_data, sizeof(DataType) * num_elements,
-                        cudaMemcpyHostToDevice
-                        ));
-            delete [] cpu_data;
-        }
-    }
-}
+//void DistributedPIPHybridParallelExecutionEngineGPU::add_white_noise() {
+//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+//    int node_id = DistributedSys::get_instance()->get_node_id();
+//    VertexId num_vertices = graph_structure_->get_num_global_vertices();
+//
+//    int op_begin = partitioning_.partition_op_begin[node_id];
+//    int op_end = partitioning_.partition_op_end[node_id];
+//    for (int op_idx = op_begin; op_idx < op_end; ++ op_idx) {
+//        Operator * op = op_ten_manager_->get_operator(op_idx);
+//        if (op->get_type() == OPERATOR_AGGREGATION) {
+//            Tensor * in_tensor = op->get_input_tensor(0);
+//            size_t num_elements_per_vertex = in_tensor->dims[1];
+//            size_t num_elements = num_elements_per_vertex * num_vertices;
+//            TensorResourceGPU * resource = (TensorResourceGPU*) in_tensor->resource;
+//            DataType * gpu_data = resource->get_gpu_data();
+//            DataType * cpu_data = new DataType [num_elements];
+//            checkCUDA(cudaMemcpy(cpu_data, gpu_data, 
+//                        sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost));
+//            int num_threads = 24;
+//#pragma omp parallel num_threads(num_threads)
+//            {
+//                std::default_random_engine generator;
+//                std::normal_distribution<double> distribution(0.0, 1.0);
+//
+//                int thread_id = omp_get_thread_num();
+//                size_t begin = num_elements / num_threads * thread_id;
+//                size_t end = num_elements / num_threads * (thread_id + 1);
+//                if (thread_id == num_threads - 1) {
+//                    end = num_elements;
+//                }
+//                for (size_t i = begin; i < end; ++ i) {
+//                    cpu_data[i] += distribution(generator);
+//                }
+//            }
+//            checkCUDA(cudaMemcpy(
+//                        gpu_data, cpu_data, sizeof(DataType) * num_elements,
+//                        cudaMemcpyHostToDevice
+//                        ));
+//            delete [] cpu_data;
+//        }
+//    }
+//}
 
 void DistributedPIPHybridParallelExecutionEngineGPU::generate_backward_operator_mask(
         const std::vector<Operator*>& operators
@@ -2668,15 +2668,15 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
             assert(num_elements % num_features == 0);
             assert(num_elements / num_features == vid_end - vid_begin);
 
-            size_t offset = 0;
-            for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
-                FeatureVector feature_vec = graph_non_structural_data_->get_feature(v_i);
-                assert(feature_vec.vec_len == num_features);
-                assert(feature_vec.data != NULL);
-                if (feature_preprocess_method_ == NoFeaturePreprocessing) {
-                    // do nothing
-                } else if (feature_preprocess_method_ == RowNormalizationPreprocessing) {
-                    // feature row-based normalization 
+            if (feature_preprocess_method_ == NoFeaturePreprocessing) {
+                // do nothing
+            } else if (feature_preprocess_method_ == RowNormalizationPreprocessing) {
+                // row-based normalization
+#pragma omp parallel for 
+                for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
+                    FeatureVector feature_vec = graph_non_structural_data_->get_feature(v_i);
+                    assert(feature_vec.vec_len == num_features);
+                    assert(feature_vec.data != NULL);
                     double sum = 0;
                     for (int i = 0; i < num_features; ++ i) {
                         sum += feature_vec.data[i];
@@ -2688,10 +2688,36 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
                             feature_vec.data[i] = bad_value ? 0.0: feature_vec.data[i];
                         }
                     }
-                } else {
-                    fprintf(stderr, "Undefined feature preprocessing method.\n");
-                    assert(false);
                 }
+            } else {
+                fprintf(stderr, "Undefined feature preprocessing method.\n");
+                assert(false);
+            }
+
+            size_t offset = 0;
+            for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
+                FeatureVector feature_vec = graph_non_structural_data_->get_feature(v_i);
+                assert(feature_vec.vec_len == num_features);
+                assert(feature_vec.data != NULL);
+                //if (feature_preprocess_method_ == NoFeaturePreprocessing) {
+                //    // do nothing
+                //} else if (feature_preprocess_method_ == RowNormalizationPreprocessing) {
+                //    // feature row-based normalization 
+                //    double sum = 0;
+                //    for (int i = 0; i < num_features; ++ i) {
+                //        sum += feature_vec.data[i];
+                //    }
+                //    if (sum != 0) {
+                //        for (int i = 0; i < num_features; ++ i) {
+                //            feature_vec.data[i] /= sum;
+                //            bool bad_value = isinf(feature_vec.data[i]) || isnan(feature_vec.data[i]);
+                //            feature_vec.data[i] = bad_value ? 0.0: feature_vec.data[i];
+                //        }
+                //    }
+                //} else {
+                //    fprintf(stderr, "Undefined feature preprocessing method.\n");
+                //    assert(false);
+                //}
                 CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
                 offset += num_features;
             }
