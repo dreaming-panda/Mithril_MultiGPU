@@ -697,8 +697,8 @@ class CUDAVertexChunksManager {
 
 struct CUDAPIPPartitioning {
     int num_partitions;
-    VertexId * partition_vid_begin; // VertexId [num_partitions]
-    VertexId * partition_vid_end; // VertexId [num_partitions]
+    //VertexId * partition_vid_begin; // VertexId [num_partitions]
+    //VertexId * partition_vid_end; // VertexId [num_partitions]
     int * partition_op_begin; // int [num_partitions]
     int * partition_op_end; // int [num_partitions]
 };
@@ -709,7 +709,7 @@ class ModelPartitioner {
     public:
         static CUDAPIPPartitioning get_model_parallel_partition(
                 AbstractApplication * application,
-                int num_gpus, int num_layers,
+                int num_stages, int num_layers,
                 const std::vector<double>& cost_each_layer,
                 VertexId num_vertices
                 );
@@ -1114,6 +1114,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int total_num_inference_runs_;
         bool always_exact_inferences_ = false;
 
+        // data parallel-related configurations
+        int num_data_parallel_ways_ = 1;
+
         inline int get_num_epoch() {
             return num_epoch_;
         }
@@ -1236,8 +1239,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         // invoke by the scheduler
         void perform_forward_task(CUDAPIPForwardTask task);
         void perform_backward_task(CUDAPIPBackwardTask task);
-        //void add_white_noise();
-        void scale_down(DataType * data, size_t N, double factor);
+        //void scale_down(DataType * data, size_t N, double factor);
 
         // some initialization functions
         void generate_backward_operator_mask(const std::vector<Operator*>& operators);
@@ -1298,6 +1300,40 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         inline void set_always_exact_inference(bool always_exact_inferences) {
             always_exact_inferences_ = always_exact_inferences;
+        }
+        inline void set_num_data_parallel_ways(int num_data_parallel_ways) {
+            num_data_parallel_ways_ = num_data_parallel_ways;
+        }
+        inline int get_num_stages() {
+            int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+            assert(num_nodes % num_data_parallel_ways_ == 0);
+            int num_stages = num_nodes / num_data_parallel_ways_;
+            return num_stages;
+        }
+        inline int get_stage_id() {
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int num_stages = get_num_stages();
+            int stage_id = node_id % num_stages;
+            return stage_id;
+        }
+        inline int get_data_parallel_way_id() {
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int num_stages = get_num_stages();
+            int way_id = node_id / num_stages;
+            return way_id;
+        }
+        inline bool is_master_node() {
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            return node_id == 0;
+        }
+        inline bool is_first_stage() {
+            int stage_id = get_stage_id();
+            return stage_id == 0;
+        }
+        inline bool is_last_stage() {
+            int stage_id = get_stage_id();
+            int num_stages = get_num_stages();
+            return stage_id == num_stages - 1;
         }
 };
 

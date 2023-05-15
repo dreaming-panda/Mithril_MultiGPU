@@ -89,21 +89,21 @@ void DistributedPIPHybridParallelExecutionEngineGPU::zero_out_unnecessary_grad(D
     cudaStreamSynchronize(0);
 }
 
-__global__ void scale_down_kernel(
-        DataType * data, size_t N, double factor
-        ) {
-    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < N) {
-        data[idx] *= factor;
-    }
-}
-
-void DistributedPIPHybridParallelExecutionEngineGPU::scale_down(DataType * data, size_t N, double factor) {
-    const int block_size = 1024;
-    const int num_blocks = (N + block_size - 1) / block_size;
-    scale_down_kernel<<<num_blocks, block_size>>>(data, N, factor);
-    cudaStreamSynchronize(0);
-}
+//__global__ void scale_down_kernel(
+//        DataType * data, size_t N, double factor
+//        ) {
+//    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+//    if (idx < N) {
+//        data[idx] *= factor;
+//    }
+//}
+//
+//void DistributedPIPHybridParallelExecutionEngineGPU::scale_down(DataType * data, size_t N, double factor) {
+//    const int block_size = 1024;
+//    const int num_blocks = (N + block_size - 1) / block_size;
+//    scale_down_kernel<<<num_blocks, block_size>>>(data, N, factor);
+//    cudaStreamSynchronize(0);
+//}
 
 
 

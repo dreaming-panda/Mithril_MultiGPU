@@ -1854,7 +1854,7 @@ bool CUDAPIPPartitioner::is_valid_partition(CUDAPIPPartitioning p, VertexId num_
 
 CUDAPIPPartitioning ModelPartitioner::get_model_parallel_partition(
         AbstractApplication * application,
-        int num_gpus, int num_layers,
+        int num_stages, int num_layers,
         const std::vector<double>& cost_each_layer,
         VertexId num_vertices
         ) {
@@ -1868,16 +1868,16 @@ CUDAPIPPartitioning ModelPartitioner::get_model_parallel_partition(
         remained_cost += cost_each_layer[i];
     }
     CUDAPIPPartitioning partition;
-    partition.num_partitions = num_gpus;
-    partition.partition_vid_begin = new VertexId [num_gpus];
-    partition.partition_vid_end = new VertexId [num_gpus];
-    partition.partition_op_begin = new int [num_gpus];
-    partition.partition_op_end = new int [num_gpus];
-    assert(partition.partition_vid_begin && partition.partition_vid_end);
+    partition.num_partitions = num_stages;
+    //partition.partition_vid_begin = new VertexId [num_stages];
+    //partition.partition_vid_end = new VertexId [num_stages];
+    partition.partition_op_begin = new int [num_stages];
+    partition.partition_op_end = new int [num_stages];
+    //assert(partition.partition_vid_begin && partition.partition_vid_end);
     assert(partition.partition_op_begin && partition.partition_op_end);
     int layer_begin = 0;
-    for (int i = 0; i < num_gpus; ++ i) {
-        double mean_cost = remained_cost / (num_gpus - i);
+    for (int i = 0; i < num_stages; ++ i) {
+        double mean_cost = remained_cost / (num_stages - i);
         double cost = 0;
         int j = layer_begin;
         while (j < num_layers) {
@@ -1888,9 +1888,9 @@ CUDAPIPPartitioning ModelPartitioner::get_model_parallel_partition(
             }
         }
         remained_cost -= cost;
-        printf("GPU %d, layer [%d, %d)\n", i, layer_begin, j);
-        partition.partition_vid_begin[i] = 0;
-        partition.partition_vid_end[i] = num_vertices;
+        printf("Stage %d, layer [%d, %d)\n", i, layer_begin, j);
+        //partition.partition_vid_begin[i] = 0;
+        //partition.partition_vid_end[i] = num_vertices;
         std::pair<int, int> beginning_layer = operators_each_layer[layer_begin];
         partition.partition_op_begin[i] = beginning_layer.first;
         std::pair<int, int> ending_layer = operators_each_layer[j - 1];
@@ -2525,49 +2525,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     Profiler::submit_main_thread_event(BackwardTaskCompleteEvent);
 }
 
-//void DistributedPIPHybridParallelExecutionEngineGPU::add_white_noise() {
-//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-//    int node_id = DistributedSys::get_instance()->get_node_id();
-//    VertexId num_vertices = graph_structure_->get_num_global_vertices();
-//
-//    int op_begin = partitioning_.partition_op_begin[node_id];
-//    int op_end = partitioning_.partition_op_end[node_id];
-//    for (int op_idx = op_begin; op_idx < op_end; ++ op_idx) {
-//        Operator * op = op_ten_manager_->get_operator(op_idx);
-//        if (op->get_type() == OPERATOR_AGGREGATION) {
-//            Tensor * in_tensor = op->get_input_tensor(0);
-//            size_t num_elements_per_vertex = in_tensor->dims[1];
-//            size_t num_elements = num_elements_per_vertex * num_vertices;
-//            TensorResourceGPU * resource = (TensorResourceGPU*) in_tensor->resource;
-//            DataType * gpu_data = resource->get_gpu_data();
-//            DataType * cpu_data = new DataType [num_elements];
-//            checkCUDA(cudaMemcpy(cpu_data, gpu_data, 
-//                        sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost));
-//            int num_threads = 24;
-//#pragma omp parallel num_threads(num_threads)
-//            {
-//                std::default_random_engine generator;
-//                std::normal_distribution<double> distribution(0.0, 1.0);
-//
-//                int thread_id = omp_get_thread_num();
-//                size_t begin = num_elements / num_threads * thread_id;
-//                size_t end = num_elements / num_threads * (thread_id + 1);
-//                if (thread_id == num_threads - 1) {
-//                    end = num_elements;
-//                }
-//                for (size_t i = begin; i < end; ++ i) {
-//                    cpu_data[i] += distribution(generator);
-//                }
-//            }
-//            checkCUDA(cudaMemcpy(
-//                        gpu_data, cpu_data, sizeof(DataType) * num_elements,
-//                        cudaMemcpyHostToDevice
-//                        ));
-//            delete [] cpu_data;
-//        }
-//    }
-//}
-
 void DistributedPIPHybridParallelExecutionEngineGPU::generate_backward_operator_mask(
         const std::vector<Operator*>& operators
         ) {
@@ -2699,25 +2656,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
                 FeatureVector feature_vec = graph_non_structural_data_->get_feature(v_i);
                 assert(feature_vec.vec_len == num_features);
                 assert(feature_vec.data != NULL);
-                //if (feature_preprocess_method_ == NoFeaturePreprocessing) {
-                //    // do nothing
-                //} else if (feature_preprocess_method_ == RowNormalizationPreprocessing) {
-                //    // feature row-based normalization 
-                //    double sum = 0;
-                //    for (int i = 0; i < num_features; ++ i) {
-                //        sum += feature_vec.data[i];
-                //    }
-                //    if (sum != 0) {
-                //        for (int i = 0; i < num_features; ++ i) {
-                //            feature_vec.data[i] /= sum;
-                //            bool bad_value = isinf(feature_vec.data[i]) || isnan(feature_vec.data[i]);
-                //            feature_vec.data[i] = bad_value ? 0.0: feature_vec.data[i];
-                //        }
-                //    }
-                //} else {
-                //    fprintf(stderr, "Undefined feature preprocessing method.\n");
-                //    assert(false);
-                //}
                 CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
                 offset += num_features;
             }
@@ -2886,18 +2824,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy(
     MPI_Allreduce(&train_accuracy, &accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&valid_accuracy, &valid_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&test_accuracy, &test_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    //MPI_Allreduce(MPI_IN_PLACE, &accum_loss_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
-    //if (DistributedSys::get_instance()->is_master_node()) {
-    //    printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", 
-    //            accum_loss_, accuracy_, valid_accuracy_, test_accuracy_);
-    //}
     train_acc = accuracy_;
     valid_acc = valid_accuracy_;
     test_acc = test_accuracy_;
-    //loss = accum_loss_;
-    //accum_loss_ = 0;
 }
 
 void load_partitioning(const std::string &path, CUDAPIPPartitioning &p) {
@@ -2931,6 +2862,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     int num_operators = operators.size();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_stages = get_num_stages();
+    int stage_id = get_stage_id();
+    int way_id = get_way_id();
     VertexId num_global_vertices = graph_structure_->get_num_global_vertices();
     total_num_inference_runs_ = 0;
     if (evaluation_frequency_ != -1) {
@@ -2941,16 +2875,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     printf("*** Node %d, starting model training...\n", node_id);
 
     // construct a partitioning
-    CUDAPIPPartitioning partitioning;
-    partitioning.num_partitions = num_nodes;
-    partitioning.partition_vid_begin = new VertexId [num_nodes];
-    partitioning.partition_vid_end = new VertexId [num_nodes];
-    partitioning.partition_op_begin = new int [num_nodes];
-    partitioning.partition_op_end = new int [num_nodes];
+    CUDAPIPPartitioning partitioning = partitioning_;
 
-    partitioning = partitioning_;
-
-    assert(num_nodes == partitioning.num_partitions);
+    assert(num_stages == partitioning.num_partitions);
     printf("Number of operators: %d\n", num_operators);
     for (int p_i = 0; p_i < num_nodes; ++ p_i) {
         VertexId vid_begin = partitioning.partition_vid_begin[p_i];
