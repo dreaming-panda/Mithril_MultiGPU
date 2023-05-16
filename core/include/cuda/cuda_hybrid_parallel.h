@@ -1121,6 +1121,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int total_num_inference_runs_;
         bool always_exact_inferences_ = false;
 
+        // data-parallel-related settings
+        int num_dp_ways_ = 1; // number of data parallel ways
+
         inline int get_num_epoch() {
             return num_epoch_;
         }
@@ -1305,6 +1308,27 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         inline void set_always_exact_inference(bool always_exact_inferences) {
             always_exact_inferences_ = always_exact_inferences;
+        }
+        inline int get_num_stages() {
+            int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+            assert(num_nodes % num_dp_ways_ == 0);
+            int num_stages = num_nodes / num_dp_ways_;
+            return num_stages;
+        }
+        inline int get_stage_id() {
+            int num_stages = get_num_stages();
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int stage_id = node_id % num_stages;
+            return stage_id;
+        }
+        inline bool is_first_stage() {
+            int stage_id = get_stage_id();
+            return stage_id == 0;
+        }
+        inline bool is_last_stage() {
+            int stage_id = get_stage_id();
+            int num_stages = get_num_stages();
+            return stage_id == num_stages - 1;
         }
 };
 
