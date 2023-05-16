@@ -1258,6 +1258,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void release_resources();
 
         void calculate_accuracy(double &train_acc, double &valid_acc, double &test_acc);
+        DataType calculate_prediction_hits_with_mask(VertexId vbegin, VertexId vend, int * mask);
+        DataType calculate_train_prediction_hits(VertexId vbegin, VertexId vend);
+        DataType calculate_valid_prediction_hits(VertexId vbegin, VertexId vend);
+        DataType calculate_test_prediction_hits(VertexId vbegin, VertexId vend);
         void hybrid_init_weight_tensor_data(DataType * data, size_t num_elements, int N);
         void zero_out_unnecessary_grad(DataType* grad, DataType* data, size_t num_elements_this_chunk);
 

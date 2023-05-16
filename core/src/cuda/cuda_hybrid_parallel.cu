@@ -2,6 +2,8 @@
 #include <math.h>
 #include <cuda_runtime.h>
 
+#include <thrust/reduce.h>
+
 #include "cuda/cuda_hybrid_parallel.h"
 
 __global__ void element_wise_add_kernel(
@@ -104,6 +106,75 @@ void DistributedPIPHybridParallelExecutionEngineGPU::scale_down(DataType * data,
     scale_down_kernel<<<num_blocks, block_size>>>(data, N, factor);
     cudaStreamSynchronize(0);
 }
+
+__global__ void calculate_prediction_hits_kernel(
+        DataType * output_data, DataType * std_data, int N,
+        DataType * hits_buff, int output_size, int * mask
+        ) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) {
+        int pred = 0;
+        DataType pred_prob = output_data[idx * output_size];
+        for (int i = 1; i < output_size; ++ i) {
+            DataType prob = output_data[idx * output_size + i];
+            pred = prob > pred_prob ? i: pred;
+            pred_prob = prob > pred_prob ? prob: pred_prob;
+        }
+        bool hit = std_data[idx * output_size + pred] > 0.99 && mask[idx] == 1;
+        hits_buff[idx] = hit ? 1.0 : 0.0;
+    }
+}
+
+DataType DistributedPIPHybridParallelExecutionEngineGPU::calculate_prediction_hits_with_mask(
+        VertexId vbegin, VertexId vend, int * mask
+        ) {
+    assert(output_tensor_ && std_tensor_);
+    TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor_->resource;
+    TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor_->resource;
+    assert(output_resource && std_resource);
+    DataType * output_data = output_resource->get_gpu_data();
+    DataType * std_data = std_resource->get_gpu_data();
+    assert(output_data && std_data);
+    assert(output_tensor_->dims[0] == std_tensor_->dims[0]);
+    assert(output_tensor_->dims[1] == std_tensor_->dims[1]);
+    int output_size = output_tensor_->dims[1];
+
+    int N = vend - vbegin;
+    int block_size = 1024;
+    int num_blocks = (N + block_size - 1) / block_size;
+    calculate_prediction_hits_kernel<<<num_blocks, block_size>>>(
+            &output_data[vbegin * output_size], 
+            &std_data[vbegin * output_size],
+            N, &cuda_acc[vbegin],
+            output_size, &mask[vbegin]
+            );
+    DataType hits = thrust::reduce(
+            thrust::device,
+            cuda_acc + vbegin, cuda_acc + vend
+            );
+
+    return hits;
+}
+
+DataType DistributedPIPHybridParallelExecutionEngineGPU::calculate_train_prediction_hits(VertexId vbegin, VertexId vend) {
+    return calculate_prediction_hits_with_mask(
+            vbegin, vend, gpu_training_mask_
+            );
+}
+
+DataType DistributedPIPHybridParallelExecutionEngineGPU::calculate_valid_prediction_hits(VertexId vbegin, VertexId vend) {
+    return calculate_prediction_hits_with_mask(
+            vbegin, vend, gpu_valid_mask_
+            );
+}
+
+DataType DistributedPIPHybridParallelExecutionEngineGPU::calculate_test_prediction_hits(VertexId vbegin, VertexId vend) {
+    return calculate_prediction_hits_with_mask(
+            vbegin, vend, gpu_test_mask_
+            );
+}
+
+
 
 
 

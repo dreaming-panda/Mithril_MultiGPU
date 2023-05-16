@@ -973,7 +973,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     MPI_Barrier(MPI_COMM_WORLD);
 
     double highest_valid_acc = 0;
-    double target_test_acc = 0;
     int epoch_to_reach_target_acc = 0;
 
     double orignal_lr = engine_->optimizer_->get_learning_rate();
@@ -1268,10 +1267,31 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     engine_->output_tensor_, engine_->std_tensor_,
                     0, engine_->graph_structure_->get_num_global_vertices()
                     );
+        } 
+
+        if (in_training_mode) {
+            if (engine_->is_bottommost_node_) {
+                engine_->accum_loss_ = 0;
+                for (int chunk_id: local_chunk_ids) {
+                    VertexId vid_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
+                    VertexId vid_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
+                    engine_->accum_loss_ += engine_->loss_->get_loss(
+                            engine_->output_tensor_, engine_->std_tensor_,
+                            vid_begin, vid_end
+                            );
+                }
+            } else {
+                engine_->accum_loss_ = 0;
+            }
         }
 
         Profiler::submit_main_thread_event(GPUSyncStartEvent);
-        MPI_Bcast(&engine_->accum_loss_, 1, MPI_DOUBLE, num_nodes - 1, MPI_COMM_WORLD);
+        if (in_training_mode) {
+            MPI_Allreduce(
+                    MPI_IN_PLACE, &engine_->accum_loss_, 1, 
+                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD
+                    );
+        }
         MPI_Barrier(MPI_COMM_WORLD);
         Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
@@ -1309,7 +1329,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                                 );
                         if (valid_acc > highest_valid_acc) {
                             highest_valid_acc = valid_acc;
-                            target_test_acc = test_acc;
+                            //target_test_acc = test_acc;
                             epoch_to_reach_target_acc = epoch_id;
                             engine_->weight_aggregator_->update_optimal_weights();
                         }
@@ -1326,11 +1346,36 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             // the evaluation is enabled
             assert(engine_->evaluation_frequency_ > 0);
             if (!in_training_mode && remained_inference_runs == 0) {
-                double train_acc, valid_acc, test_acc;
-                engine_->calculate_accuracy(train_acc, valid_acc, test_acc);
+                Profiler::submit_main_thread_event(AccuracyCalculationTaskStartEvent);
+                DataType train_hits = 0;
+                DataType valid_hits = 0;
+                if (engine_->is_bottommost_node_) {
+                    for (int i: local_chunk_ids) {
+                        VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(i);
+                        VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(i);
+                        train_hits += engine_->calculate_train_prediction_hits(chunk_begin, chunk_end);
+                        valid_hits += engine_->calculate_valid_prediction_hits(chunk_begin, chunk_end);
+                    }
+                }
+                MPI_Allreduce(
+                        MPI_IN_PLACE, &train_hits, 1, 
+                        DistributedSys::get_mpi_data_type<DataType>(),
+                        MPI_SUM, MPI_COMM_WORLD
+                        );
+                MPI_Allreduce(
+                        MPI_IN_PLACE, &valid_hits, 1, 
+                        DistributedSys::get_mpi_data_type<DataType>(),
+                        MPI_SUM, MPI_COMM_WORLD
+                        );
+                double train_acc = train_hits / double(engine_->ntrain);
+                double valid_acc = valid_hits / double(engine_->nvalid);
+                Profiler::submit_main_thread_event(AccuracyCalculationTaskCompleteEvent);
+
+                //double train_acc, valid_acc, test_acc;
+                //engine_->calculate_accuracy(train_acc, valid_acc, test_acc);
+
                 if (valid_acc > highest_valid_acc) {
                     highest_valid_acc = valid_acc;
-                    target_test_acc = test_acc;
                     epoch_to_reach_target_acc = epoch_id;
                     engine_->weight_aggregator_->update_optimal_weights();
                 }
@@ -2925,18 +2970,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::calculate_accuracy(
     MPI_Allreduce(&train_accuracy, &accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&valid_accuracy, &valid_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&test_accuracy, &test_accuracy_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    //MPI_Allreduce(MPI_IN_PLACE, &accum_loss_, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     Profiler::submit_main_thread_event(GPUSynCompleteEvent);
 
-    //if (DistributedSys::get_instance()->is_master_node()) {
-    //    printf("\tLoss %.5f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\n", 
-    //            accum_loss_, accuracy_, valid_accuracy_, test_accuracy_);
-    //}
     train_acc = accuracy_;
     valid_acc = valid_accuracy_;
     test_acc = test_accuracy_;
-    //loss = accum_loss_;
-    //accum_loss_ = 0;
 }
 
 //void load_partitioning(const std::string &path, CUDAModelPartitioning &p) {

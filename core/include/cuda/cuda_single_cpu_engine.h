@@ -26,7 +26,6 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         cudnnTensorDescriptor_t hit_descriptor;
         DataType * d_hit_;
         DataType * d_inter_;
-        DataType * cuda_acc;
         cudnnTensorDescriptor_t data_descriptor;
         LearningRateScheduler * lr_scheduler_;
         VertexId vertices_;
@@ -51,6 +50,7 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
         int * gpu_valid_mask_;
         int * test_mask_;
         int * gpu_test_mask_;
+        DataType * cuda_acc;
         int ntrain;
         int nvalid;
         int ntest;
