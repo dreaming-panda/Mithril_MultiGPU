@@ -2709,6 +2709,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
             }
 
             size_t offset = 0;
+            DataType * tmp_cpu_data = NULL;
+            checkCUDA(cudaMallocHost(&tmp_cpu_data, sizeof(DataType) * (vid_end - vid_begin) * num_features));
+            assert(tmp_cpu_data);
             for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
                 FeatureVector feature_vec = graph_non_structural_data_->get_feature(v_i);
                 assert(feature_vec.vec_len == num_features);
@@ -2732,9 +2735,15 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
                 //    fprintf(stderr, "Undefined feature preprocessing method.\n");
                 //    assert(false);
                 //}
-                CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
+                memcpy(tmp_cpu_data + offset, feature_vec.data, num_features * sizeof(DataType));
+                //CopyFromHostToCUDADevice<DataType>(data + offset, feature_vec.data, num_features, __FILE__, __LINE__);
                 offset += num_features;
             }
+            checkCUDA(cudaMemcpy(
+                        data, tmp_cpu_data, sizeof(DataType) * (vid_end - vid_begin) * num_features,
+                        cudaMemcpyHostToDevice
+                        ));
+            checkCUDA(cudaFreeHost(tmp_cpu_data));
         }
         //if (vtensor_manager_->is_input_to_aggregation(input_tensor)) {
         //    // set up the features of the incoming mirror vertices
@@ -2801,13 +2810,24 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_std_tensor()
         assert(std_tensor_->dims[1] == num_labels); // must be in one-hot representation
 
         size_t offset = 0;
+        DataType * tmp_cpu_data = NULL;
+        checkCUDA(cudaMallocHost(
+                    &tmp_cpu_data, sizeof(DataType) * (vid_end - vid_begin) * num_labels
+                    ));
+        assert(tmp_cpu_data);
         for (VertexId v_i = vid_begin; v_i < vid_end; ++ v_i) {
             LabelVector label_vec = graph_non_structural_data_->get_label(v_i);
             assert(label_vec.vec_len == num_labels);
             assert(label_vec.data != NULL);
-            CopyFromHostToCUDADevice<DataType>(data + offset, label_vec.data, num_labels, __FILE__, __LINE__);
+            //CopyFromHostToCUDADevice<DataType>(data + offset, label_vec.data, num_labels, __FILE__, __LINE__);
+            memcpy(tmp_cpu_data + offset, label_vec.data, num_labels * sizeof(DataType));
             offset += num_labels;
         }
+        checkCUDA(cudaMemcpy(
+                    data, tmp_cpu_data, sizeof(DataType) * (vid_end - vid_begin) * num_labels,
+                    cudaMemcpyHostToDevice
+                    ));
+        checkCUDA(cudaFreeHost(tmp_cpu_data));
     }
 }
 
@@ -3231,8 +3251,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     set_up_tensor_resourses();
     init_weights();
 
+
     hybrid_prepare_input_tensor();
     hybrid_prepare_std_tensor();
+    printf("Node %d, TEST\n", node_id);
+
 
     accum_loss_ = 0.;
     OperatorExecutorGPUV2 * executor = (OperatorExecutorGPUV2*) executor_;
