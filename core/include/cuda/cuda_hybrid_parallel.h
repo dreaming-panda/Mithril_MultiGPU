@@ -1330,6 +1330,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int num_stages = get_num_stages();
             return stage_id == num_stages - 1;
         }
+        inline bool is_master_node() {
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            return node_id == 0;
+        }
 };
 
 #endif

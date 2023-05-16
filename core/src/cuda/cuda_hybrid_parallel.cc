@@ -37,7 +37,7 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
     assert(memoryalive == true);
     //process in-matrix
     host_csrRowOffsets_In_[0] = 0;
-    int node_id = DistributedSys::get_instance()->get_node_id();
+    //int node_id = DistributedSys::get_instance()->get_node_id();
     for(int i = 0; i <= num_master_vertices_; ++i)
     {
         host_csrRowOffsets_In_[i] = index_to_incoming_edges_[i] + i; 
@@ -184,7 +184,7 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
 
 void CUDABPIPLocalGraph::TestCsr()
 {   
-    int node_id = DistributedSys::get_instance()->get_node_id();
+    //int node_id = DistributedSys::get_instance()->get_node_id();
     //test in-matrix
     for(int i = 0; i < nnz_in_; ++i)
     {
@@ -901,6 +901,7 @@ CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::~CUDAPIP1Forward1BackwardPri
 void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int stage_id = engine_->get_stage_id();
 
     LockFreeQueue<CUDAPIPForwardTask> * forward_task_dispatcher_queue_ = forward_task_dispatcher_->get_task_queue();
     LockFreeQueue<CUDAPIPForwardTask> * forward_task_committer_queue_ = forward_task_committer_->get_task_queue();
@@ -935,7 +936,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 for (int epoch_id = 0; epoch_id < num_epoch + engine_->total_num_inference_runs_; ++ epoch_id) {
                     for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
                         act_gpu2cpu_queue->pop_blocking(task);
-                        if (node_id < num_nodes - 1) {
+                        //if (node_id < num_nodes - 1) {
+                        if (! engine_->is_last_stage()) {
                             engine_->data_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
                         }
                         forward_task_committer_queue_->push(task);
@@ -949,7 +951,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
                     for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
                         grad_gpu2cpu_queue->pop_blocking(task);
-                        if (node_id > 0) {
+                        //if (node_id > 0) {
+                        if (! engine_->is_first_stage()) {
                             engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
                         }
                         backward_task_committer_queue_->push(task);
@@ -992,8 +995,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     std::vector<Operator*> aggr_ops;
     std::vector<DataType*> historical_data;
-    for (int op_idx = engine_->partitioning_.partition_op_begin[node_id]; 
-            op_idx < engine_->partitioning_.partition_op_end[node_id]; ++ op_idx) {
+    for (int op_idx = engine_->partitioning_.partition_op_begin[stage_id]; 
+            op_idx < engine_->partitioning_.partition_op_end[stage_id]; ++ op_idx) {
         Operator * op = engine_->op_ten_manager_->get_operator(op_idx);
         if (op->get_type() == OPERATOR_AGGREGATION) {
             aggr_ops.push_back(op);
@@ -1104,7 +1107,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 forward_task_dispatcher_queue_->pop_blocking(task);
                 wait_for_task_time += get_time();
 
-                if (node_id > 0) {
+                //if (node_id > 0) {
+                if (! engine_->is_first_stage()) {
                     engine_->data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
                     // also remember to move the data for recomputation (if enabled)
                     if (engine_->global_shared_tensor_ != NULL) {
@@ -1160,7 +1164,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     fastest_chunk = std::min(fastest_chunk, t);
                 }
 
-                if (node_id > 0) {
+                //if (node_id > 0) {
+                if (! engine_->is_first_stage()) {
                     engine_->data_decompressors_[task.chunk_id]->release_gpu_buffers();
                 }
             }
@@ -1187,7 +1192,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     backward_task_dispatcher_queue_->pop_blocking(task);
                     wait_for_task_time += get_time();
                     {
-                        if (node_id < num_nodes - 1) {
+                        //if (node_id < num_nodes - 1) {
+                        if (! engine_->is_last_stage()) {
                             engine_->grad_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
                             if (engine_->global_shared_tensor_) {
                                 int num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
@@ -1222,7 +1228,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 #endif
                         engine_->perform_backward_task(task); 
     
-                        if (node_id < num_nodes - 1) {
+                        //if (node_id < num_nodes - 1) {
+                        if (! engine_->is_last_stage()) {
                             engine_->grad_decompressors_[task.chunk_id]->release_gpu_buffers();
                         }
     
@@ -1491,8 +1498,8 @@ CUDAVertexIdTranslationTable::CUDAVertexIdTranslationTable(
         ) {
     assert(graph != NULL);
 
-    int node_id = DistributedSys::get_instance()->get_node_id();
-    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    //int node_id = DistributedSys::get_instance()->get_node_id();
+    //int num_nodes = DistributedSys::get_instance()->get_num_nodes();
 
     num_global_vertices_ = graph->get_num_global_vertices();
     num_master_vertices_ = local_partition_end - local_partition_begin;
@@ -2211,13 +2218,14 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     // pull the latest weights from the parameter servers and stash them 
     int chunk_id = task.chunk_id;
 
-    int node_id = DistributedSys::get_instance()->get_node_id();
+    //int node_id = DistributedSys::get_instance()->get_node_id();
+    int stage_id = get_stage_id();
     VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
     VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
     VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
     VertexId local_vid_end = vid_translation_->get_local_vid_master_vertex(global_vid_end);
-    int op_idx_begin = partitioning_.partition_op_begin[node_id];
-    int op_idx_end = partitioning_.partition_op_end[node_id];
+    int op_idx_begin = partitioning_.partition_op_begin[stage_id];
+    int op_idx_end = partitioning_.partition_op_end[stage_id];
 
     if (pipeline_input_tensor_ != NULL && COMPRESS_DATA) {
         decompression_time_ -= get_time();
@@ -2285,7 +2293,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
         compression_size_ += sizeof(DataType) * num_elements_this_chunk;
     }
 
-    if (node_id == 0 && global_shared_tensor_) {
+    if (stage_id == 0 && global_shared_tensor_) {
         int num_elements_per_vertex = global_shared_tensor_->dims[1];
         VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
         VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
@@ -2310,14 +2318,16 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAPIPBackwardTask task) {
     Profiler::submit_main_thread_event(BackwardTaskStartEvent);
     int chunk_id = task.chunk_id;
-    int node_id = DistributedSys::get_instance()->get_node_id();
+    //int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int stage_id = get_stage_id();
+    int num_stages = get_num_stages();
     VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
     VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
     VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
     VertexId local_vid_end = vid_translation_->get_local_vid_master_vertex(global_vid_end);
-    int op_idx_begin = partitioning_.partition_op_begin[node_id];
-    int op_idx_end = partitioning_.partition_op_end[node_id];
+    int op_idx_begin = partitioning_.partition_op_begin[stage_id];
+    int op_idx_end = partitioning_.partition_op_end[stage_id];
 
     if (is_bottommost_node_) {
         loss_->calculate_gradients(
@@ -2349,7 +2359,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         if (tensor == output_tensor_ || tensor == pipeline_output_tensor_) {
             continue;
         }
-        if (node_id < num_nodes - 1 && tensor == global_shared_tensor_) {
+        if (stage_id < num_stages - 1 && tensor == global_shared_tensor_) {
             continue;
         }
         DataType * grad = NULL;
@@ -2468,7 +2478,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     }
     compute_time_ += get_time();
 
-    if (node_id > 0 && global_shared_tensor_) {
+    if (stage_id > 0 && global_shared_tensor_) {
         int num_elements_per_vertex = global_shared_tensor_->dims[1];
         VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
         VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
@@ -2609,8 +2619,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::generate_backward_operator_
 // find out all local weight tensors and initialize them
 void DistributedPIPHybridParallelExecutionEngineGPU::init_weights() {
     int node_id = DistributedSys::get_instance()->get_node_id();
-    int local_op_begin = partitioning_.partition_op_begin[node_id];
-    int local_op_end = partitioning_.partition_op_end[node_id];
+    int stage_id = get_stage_id();
+    int local_op_begin = partitioning_.partition_op_begin[stage_id];
+    int local_op_end = partitioning_.partition_op_end[stage_id];
 
     printf("+++++++++ Node %d initializing the weights for op[%d, %d)...\n",
             node_id, local_op_begin, local_op_end);
@@ -2639,7 +2650,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::init_weights() {
         assert(tensor != NULL);
         assert(tensor->resource != NULL);
         tensor->resource->map();
-        init_weight_tensor(tensor);
+        //init_weight_tensor(tensor); initialization is done in weight aggregator
     }
 }
 
