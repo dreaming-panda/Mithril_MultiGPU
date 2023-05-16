@@ -2947,6 +2947,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     int num_operators = operators.size();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int node_id = DistributedSys::get_instance()->get_node_id();
+    int stage_id = get_stage_id();
+    int num_stages = get_num_stages();
     VertexId num_global_vertices = graph_structure_->get_num_global_vertices();
     total_num_inference_runs_ = 0;
     if (evaluation_frequency_ != -1) {
@@ -2987,10 +2989,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         VertexId vid_end = num_global_vertices;
         //assert(vid_begin == 0);
         //assert(vid_end == num_global_vertices);
-        int op_begin = partitioning.partition_op_begin[node_id];
-        int op_end = partitioning.partition_op_end[node_id];
+        int op_begin = partitioning.partition_op_begin[stage_id];
+        int op_end = partitioning.partition_op_end[stage_id];
         // set the pipeline input tensor
-        if (node_id == 0) {
+        //if (node_id == 0) {
+        if (is_first_stage()) {
             pipeline_input_tensor_ = NULL;
             printf("Node %d, Pipeline Input Tensor: NULL\n", node_id);
         } else {
@@ -3001,7 +3004,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                     get_op_type_str(operators[op_begin - 1]->get_type()).c_str());
         }
         // set the pipeline output tensor
-        if (node_id == num_nodes - 1) {
+        //if (node_id == num_nodes - 1) {
+        if (is_last_stage()) {
             pipeline_output_tensor_ = NULL;
             printf("Node %d, Pipeline Output Tensor: NULL\n", node_id);
         } else {
@@ -3014,7 +3018,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     }
 
     printf("*** Node %d owns the model-level partition [%d, %d)\n", 
-            node_id, partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id]);
+            node_id, partitioning.partition_op_begin[stage_id], partitioning.partition_op_end[stage_id]);
 
     // construct the helper classes
     printf("*** Node %d, constructing the helper classes...\n", node_id);
@@ -3028,7 +3032,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         user_specified_num_chunks_;
     vtensor_manager_ = new CUDAVertexTensorDataGradManager(
             op_ten_manager_, vid_translation_,
-            partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id],
+            //partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id],
+            partitioning.partition_op_begin[stage_id], partitioning.partition_op_end[stage_id],
             max_chunk_size, application->get_output_tensor()
             );
 
@@ -3070,8 +3075,10 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     generate_backward_operator_mask(operators);
 
     // set up some meta information
-    is_topmost_node_ = (partitioning.partition_op_begin[node_id] == 0);
-    is_bottommost_node_ = (partitioning.partition_op_end[node_id] == num_operators);
+    //is_topmost_node_ = (partitioning.partition_op_begin[node_id] == 0);
+    //is_bottommost_node_ = (partitioning.partition_op_end[node_id] == num_operators);
+    is_topmost_node_ = is_first_stage();
+    is_bottommost_node_ = is_last_stage();
     //partition_begin_ = partitioning.partition_vid_begin[node_id];
     //partition_end_ = partitioning.partition_vid_end[node_id];
     partition_begin_ = 0;
@@ -3146,7 +3153,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                         );
             }
             // passing sync
-            if (node_id < num_nodes - 1) {
+            //if (node_id < num_nodes - 1) {
+            if (! is_last_stage()) {
                 MPI_Win_lock(
                         MPI_LOCK_SHARED, node_id + 1, 0, act_comm_wins_[chunk_id]
                         );
@@ -3169,7 +3177,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
                         );
             }
             // passive sync
-            if (node_id > 0) {
+            //if (node_id > 0) {
+            if (! is_first_stage()) {
                 MPI_Win_lock(
                         MPI_LOCK_SHARED, node_id - 1, 0, grad_comm_wins_[chunk_id]
                         );
@@ -3287,10 +3296,12 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 #ifdef USE_RDMA
         // release the windows
         for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
-            if (node_id < num_nodes - 1) {
+            //if (node_id < num_nodes - 1) {
+            if (! is_last_stage()) {
                 MPI_Win_unlock(node_id + 1, act_comm_wins_[chunk_id]);
             }
-            if (node_id > 0) {
+            //if (node_id > 0) {
+            if (! is_first_stage()) {
                 MPI_Win_unlock(node_id - 1, grad_comm_wins_[chunk_id]);
             }
         }
