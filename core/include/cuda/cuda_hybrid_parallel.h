@@ -1122,7 +1122,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         bool always_exact_inferences_ = false;
 
         // data-parallel-related settings
-        int num_dp_ways_ = 1; // number of data parallel ways
+        int num_dp_ways_ = 2; // number of data parallel ways
 
         inline int get_num_epoch() {
             return num_epoch_;
@@ -1320,6 +1320,15 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int node_id = DistributedSys::get_instance()->get_node_id();
             int stage_id = node_id % num_stages;
             return stage_id;
+        }
+        inline int get_num_dp_ways() {
+            return num_dp_ways_;
+        }
+        inline int get_dp_way_id() {
+            int num_stages = get_num_stages();
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int way_id = node_id / num_stages;
+            return way_id;
         }
         inline bool is_first_stage() {
             int stage_id = get_stage_id();

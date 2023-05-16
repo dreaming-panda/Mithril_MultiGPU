@@ -237,6 +237,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
     const std::vector<int>& local_chunk_ids_tmp = engine_->get_local_chunk_ids();
     std::vector<int> local_chunk_ids;
     std::vector<int> local_chunk_ids_infernece;
+
     for (int i: local_chunk_ids_tmp) {
         local_chunk_ids.push_back(i);
         local_chunk_ids_infernece.push_back(i);
@@ -1861,7 +1862,7 @@ CUDAVertexChunksManager::~CUDAVertexChunksManager() {
 
 CUDAModelPartitioning ModelPartitioner::get_model_parallel_partition(
         AbstractApplication * application,
-        int num_gpus, int num_layers,
+        int num_stages, int num_layers,
         const std::vector<double>& cost_each_layer,
         VertexId num_vertices
         ) {
@@ -1875,16 +1876,16 @@ CUDAModelPartitioning ModelPartitioner::get_model_parallel_partition(
         remained_cost += cost_each_layer[i];
     }
     CUDAModelPartitioning partition;
-    partition.num_partitions = num_gpus;
-    //partition.partition_vid_begin = new VertexId [num_gpus];
-    //partition.partition_vid_end = new VertexId [num_gpus];
-    partition.partition_op_begin = new int [num_gpus];
-    partition.partition_op_end = new int [num_gpus];
+    partition.num_partitions = num_stages;
+    //partition.partition_vid_begin = new VertexId [num_stages];
+    //partition.partition_vid_end = new VertexId [num_stages];
+    partition.partition_op_begin = new int [num_stages];
+    partition.partition_op_end = new int [num_stages];
     //assert(partition.partition_vid_begin && partition.partition_vid_end);
     assert(partition.partition_op_begin && partition.partition_op_end);
     int layer_begin = 0;
-    for (int i = 0; i < num_gpus; ++ i) {
-        double mean_cost = remained_cost / (num_gpus - i);
+    for (int i = 0; i < num_stages; ++ i) {
+        double mean_cost = remained_cost / (num_stages - i);
         double cost = 0;
         int j = layer_begin;
         while (j < num_layers) {
@@ -2318,7 +2319,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAPIPBackwardTask task) {
     Profiler::submit_main_thread_event(BackwardTaskStartEvent);
     int chunk_id = task.chunk_id;
-    //int node_id = DistributedSys::get_instance()->get_node_id();
+    int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int stage_id = get_stage_id();
     int num_stages = get_num_stages();
@@ -2330,9 +2331,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     int op_idx_end = partitioning_.partition_op_end[stage_id];
 
     if (is_bottommost_node_) {
+        //printf("Node %d, going to calculate gradients\n", node_id);
         loss_->calculate_gradients(
                 output_tensor_, std_tensor_, local_vid_begin, local_vid_end
                 );
+        //printf("Node %d, finished gradients calculation\n", node_id);
     }
 
     assert(COMPRESS_DATA);
@@ -2988,7 +2991,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     partitioning = partitioning_;
 
-    assert(num_nodes == partitioning.num_partitions);
+    assert(num_stages == partitioning.num_partitions);
     //printf("Number of operators: %d\n", num_operators);
     //for (int p_i = 0; p_i < num_nodes; ++ p_i) {
     //    VertexId vid_begin = partitioning.partition_vid_begin[p_i];
@@ -3088,8 +3091,20 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     assert(weight_aggregator_ != NULL);
 
     printf("*** Node %d, setting up some other necessary information...\n", node_id);
+
     // construct local chunk IDs
-    chunk_manager_->get_local_chunk_ids(local_chunk_ids_);
+    // FIXME: a simple chunk distribution strategy
+    int num_ways = get_num_dp_ways();
+    int way_id = get_dp_way_id();
+    std::vector<int> tmp_chunk_ids;
+    chunk_manager_->get_local_chunk_ids(tmp_chunk_ids);
+    local_chunk_ids_.clear();
+    for (int i: tmp_chunk_ids) {
+        if (i % num_ways == way_id) {
+            // round robin
+            local_chunk_ids_.push_back(i);
+        }
+    }
 
     // some necessary initialization
     generate_backward_operator_mask(operators);
@@ -3254,8 +3269,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
 
     hybrid_prepare_input_tensor();
     hybrid_prepare_std_tensor();
-    printf("Node %d, TEST\n", node_id);
-
+    //printf("Node %d, TEST\n", node_id);
 
     accum_loss_ = 0.;
     OperatorExecutorGPUV2 * executor = (OperatorExecutorGPUV2*) executor_;

@@ -232,8 +232,9 @@ int main(int argc, char ** argv) {
             // assumed that the cost of each layer is the same
             cost_each_layer.push_back(1.);
         }
+        int num_stages = execution_engine->get_num_stages();
         CUDAModelPartitioning partition = ModelPartitioner::get_model_parallel_partition(
-                sage, num_gpus, num_layers, cost_each_layer, num_vertices
+                sage, num_stages, num_layers, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
     } else {

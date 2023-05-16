@@ -386,6 +386,7 @@ __global__ void calculate_nll_loss_gradients_kernel(
 }
 
 void NLLLoss::calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right) {
+    //printf("NLLLOSS:calculate gradients\n");
     assert(output_tensor && std_tensor);
 
     assert(output_tensor->type == VERTEX_TENSOR);
