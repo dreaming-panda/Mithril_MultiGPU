@@ -139,12 +139,20 @@ class GraphDataPropagator {
         uint8_t * send_buff_;
         size_t send_buff_size_;
         MPI_Comm peer_group_;
+        size_t comm_volume_;
 
         struct RecvBuffHeader {
             int chunk_id;
             int tensor_id;
             size_t payload_size;
+            size_t random_;
         } __attribute__((packed));
+
+        struct RecvBuffTrailer {
+            uint8_t checksum;
+        } __attribute__((packed));
+
+        uint8_t get_checksum(uint8_t* data, size_t data_size);
 
         // propagate the graph data to the peer gpus
         // this is a high-level wrapper of the MPI PUT op 

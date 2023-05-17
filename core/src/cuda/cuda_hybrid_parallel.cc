@@ -2,6 +2,7 @@
 #include <random>
 
 #include <math.h>
+#include <unistd.h>
 
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_utils.h"
@@ -235,9 +236,11 @@ GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEn
     int num_ways = engine_->get_num_dp_ways();
     VertexId num_vertices = engine_->graph_structure_->get_num_global_vertices();
     VertexId num_vertices_per_way = (VertexId) (imbalance_factor_ * num_vertices / num_ways);
-    recv_buff_size_per_way_ = num_vertices_per_way * max_embedding_dimension * sizeof(DataType) + sizeof(RecvBuffHeader);
+    recv_buff_size_per_way_ = num_vertices_per_way * max_embedding_dimension * sizeof(DataType) 
+        + sizeof(RecvBuffHeader) + sizeof(RecvBuffTrailer);
     recv_buff_size_ = recv_buff_size_per_way_ * num_ways;
     checkCUDA(cudaMallocHost(&recv_buff_, recv_buff_size_));
+    memset(recv_buff_, 0, recv_buff_size_);
 #ifdef USE_RDMA
     // setting up the direct memory access
     MPI_Win_create(
@@ -255,8 +258,14 @@ GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEn
     // setting up the sender buffer
     send_buff_size_ = recv_buff_size_per_way_;
     checkCUDA(cudaMallocHost(&send_buff_, send_buff_size_));
+    memset(send_buff_, 0, send_buff_size_);
     // setting up the comm 
     MPI_Comm_split(MPI_COMM_WORLD, stage_id, node_id, &peer_group_);
+    int group_size;
+    MPI_Comm_size(peer_group_, &group_size);
+    assert(group_size == num_ways);
+
+    comm_volume_ = 0;
 }
 
 GraphDataPropagator::~GraphDataPropagator() {
@@ -276,7 +285,20 @@ GraphDataPropagator::~GraphDataPropagator() {
     checkCUDA(cudaFreeHost(send_buff_));
 }
 
+uint8_t GraphDataPropagator::get_checksum(uint8_t* data, size_t data_size) {
+    uint8_t checksum = 0;
+    for (size_t i = 0; i < data_size; ++ i) {
+        checksum ^= data[i];
+    }
+    return checksum;
+}
+
 void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_stages = engine_->get_num_stages();
+    int way_id = engine_->get_dp_way_id();
+
     // obtain the GPU data
     DataType * gpu_data = NULL;
     size_t num_elements = 0;
@@ -290,24 +312,25 @@ void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool pro
     assert(gpu_data && num_elements);
 
     // set up the send buffer
-    size_t send_data_size = sizeof(RecvBuffHeader) + sizeof(DataType) * num_elements;
+    size_t send_data_size = sizeof(RecvBuffHeader) + sizeof(DataType) * num_elements + sizeof(RecvBuffTrailer);
     assert(send_buff_ && send_buff_size_ >= send_data_size);
     RecvBuffHeader * header = (RecvBuffHeader*) send_buff_;
     header->chunk_id = chunk_id;
     header->tensor_id = engine_->op_ten_manager_->get_tensor_index(tensor);
     header->payload_size = sizeof(DataType) * num_elements;
+    header->random_ = comm_volume_;
     checkCUDA(cudaMemcpy(
                 send_buff_ + sizeof(RecvBuffHeader), gpu_data, 
                 sizeof(DataType) * num_elements,
                 cudaMemcpyDeviceToHost
                 ));
+    RecvBuffTrailer * trailer = (RecvBuffTrailer*) (send_buff_ + sizeof(RecvBuffHeader) + header->payload_size);
+    trailer->checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
+    printf("Node %d, sending a packet with checksum %d\n", node_id, (int) trailer->checksum);
 
     // send out the data in a circulant way
-    int node_id = DistributedSys::get_instance()->get_node_id();
-    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-    int num_stages = engine_->get_num_stages();
-    int way_id = engine_->get_dp_way_id();
-    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; dst_node = (dst_node + num_stages) % num_nodes) {
+    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; 
+            dst_node = (dst_node + num_stages) % num_nodes) {
         size_t remote_disp = recv_buff_size_per_way_ * way_id;
         assert(recv_buff_size_per_way_ >= send_data_size);
         MPI_Put(
@@ -315,6 +338,7 @@ void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool pro
                 dst_node, remote_disp, send_data_size, MPI_CHAR,
                 recv_buff_win_
                );
+        comm_volume_ += send_data_size;
     }
 }
 
@@ -322,12 +346,13 @@ void GraphDataPropagator::flush_graph_data() {
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int num_stages = engine_->get_num_stages();
-    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; dst_node = (dst_node + num_stages) % num_nodes) {
+    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; 
+            dst_node = (dst_node + num_stages) % num_nodes) {
         MPI_Win_flush(dst_node, recv_buff_win_);
     }
 }
 
-void GraphDataPropagato::retrieve_graph_data_to_gpu(bool propagate_act) {
+void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
     int num_ways = engine_->get_num_dp_ways();
     int stage_id = engine_->get_stage_id();
     int num_stages = engine_->get_num_stages();
@@ -340,11 +365,29 @@ void GraphDataPropagato::retrieve_graph_data_to_gpu(bool propagate_act) {
         if (header->payload_size == 0) {
             continue;
         }
-        Tensor * tensor = op_ten_manager_->get_tensor(header->tensor_id);
+
+        // validate the checksum
+        RecvBuffTrailer * trailer = (RecvBuffTrailer*) (
+                recv_buff_ + recv_buff_size_per_way_ * i + sizeof(RecvBuffHeader) + header->payload_size
+                );
+        size_t checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
+        if (checksum != trailer->checksum) {
+            fprintf(stderr, "ERROR: Node %d, receving data from peer on way %d, checksum failed %d/%d\n", 
+                    node_id, i, (int) checksum, (int) trailer->checksum);
+        } 
+        //else {
+        //    fprintf(stderr, "Node %d, receving data from peer on way %d, checksum passed %d/%d\n", 
+        //            node_id, i, (int) checksum, (int) trailer->checksum);
+        //}
+        assert(checksum == trailer->checksum);
+
+        // copy the data to the GPU
+        Tensor * tensor = engine_->op_ten_manager_->get_tensor(header->tensor_id);
         assert(tensor);
         DataType * gpu_data = NULL;
         size_t num_elements = 0;
         if (propagate_act) {
+            //fprintf(stderr, "Input OP: %s\n", get_op_type_str(tensor->op->get_type()).c_str());
             assert(! tensor->is_data_transient);
             engine_->get_vertex_tensor_data_by_chunk(tensor, header->chunk_id, gpu_data, num_elements);
         } else {
@@ -358,6 +401,7 @@ void GraphDataPropagato::retrieve_graph_data_to_gpu(bool propagate_act) {
                     gpu_data, cpu_data, header->payload_size,
                     cudaMemcpyHostToDevice
                     ));
+        header->payload_size = 0;
     }
 
     checkCUDA(cudaStreamSynchronize(0));
@@ -366,6 +410,28 @@ void GraphDataPropagato::retrieve_graph_data_to_gpu(bool propagate_act) {
 void GraphDataPropagator::propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
     put_graph_data(tensor, chunk_id, propagate_act);
     flush_graph_data();
+    //int way_id = engine_->get_dp_way_id();
+    //int num_ways = engine_->get_num_dp_ways();
+    //int num_stages = engine_->get_num_stages();
+    //int stage_id = engine_->get_stage_id();
+    //if (way_id == 0)  {
+    //    int test = 0;
+    //    for (int i = 1; i < num_ways; ++ i) {
+    //        MPI_Send(
+    //                &test, 1, MPI_INT, 
+    //                i * num_stages + stage_id,
+    //                100, MPI_COMM_WORLD
+    //                );
+    //    }
+    //} else {
+    //    int test = 0;
+    //    MPI_Status status;
+    //    MPI_Recv(
+    //            &test, 1, MPI_INT, 
+    //            stage_id, 100, MPI_COMM_WORLD,
+    //            &status
+    //            );
+    //}
     MPI_Barrier(peer_group_);
     retrieve_graph_data_to_gpu(propagate_act);
 }
@@ -2466,11 +2532,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_AGGREGATION:
-                // graph data propagation
-                Tensor * tensor = op->get_input_tensor(0);
-                graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true);
-                // do the actual computation
-                executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                {
+                    // graph data propagation
+                    Tensor * tensor = op->get_input_tensor(0);
+                    graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true);
+                    // do the actual computation
+                    executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                }
                 break;
             case OPERATOR_DROPOUT:
                 executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
@@ -2634,11 +2702,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_AGGREGATION:
-                // graph data propagation
-                Tensor * tensor = op->get_output_tensor(0);
-                graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
-                // do the actual computation
-                executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                {
+                    // graph data propagation
+                    Tensor * tensor = op->get_output_tensor(0);
+                    graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
+                    // do the actual computation
+                    executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                }
                 break;
             case OPERATOR_DROPOUT:
                 executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
