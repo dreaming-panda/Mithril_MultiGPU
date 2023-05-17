@@ -127,6 +127,15 @@ class LockFreeQueue {
         }
 };
 
+class GraphDataPropagator {
+    private:
+        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
+    public:
+        GraphDataPropagator(DistributedPIPHybridParallelExecutionEngineGPU * engine);
+        ~GraphDataPropagator();
+        void propagate_graph_data(Tensor * tensor, int chunk_id); // propagate the 
+};
+
 template<typename T>
 class CUDAAbstractTaskDispatcher {
     protected:
@@ -695,14 +704,6 @@ class CUDAVertexChunksManager {
         }
 };
 
-//struct CUDAModelPartitioning {
-//    int num_partitions;
-//    VertexId * partition_vid_begin; // VertexId [num_partitions]
-//    VertexId * partition_vid_end; // VertexId [num_partitions]
-//    int * partition_op_begin; // int [num_partitions]
-//    int * partition_op_end; // int [num_partitions]
-//};
-
 // model level partitioning
 struct CUDAModelPartitioning {
     int num_partitions;
@@ -721,12 +722,6 @@ class ModelPartitioner {
                 VertexId num_vertices
                 );
 };
-
-//class CUDAPIPPartitioner {
-//    public:
-//        // determine whether a partition is valid or not 
-//        static bool is_valid_partition(CUDAModelPartitioning p, VertexId num_global_vertices, int num_operators);
-//};
 
 class BPIPLocalGraph: public AbstractGraphStructure {
     protected:
@@ -1214,34 +1209,6 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             assert(vid_translation_ != NULL);
             return vid_translation_->get_local_vid_outgoing_mirror(vid);
         }
-        //// check whether a master vertex vid has a corresponding incomming mirror on the remote node
-        //// i.e., there is an edge starting from vid to at least one master vertex of the remote node 
-        //inline bool has_incoming_mirror(VertexId vid, int remote_node) {
-        //    VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
-        //    VertexId vid_end = partitioning_.partition_vid_end[remote_node];
-        //    if (vid >= vid_begin && vid < vid_end) return false;
-        //    OutEdgeList out_edges = graph_structure_->get_out_edges(vid);
-        //    for (EdgeId e_i = 0; e_i < out_edges.num_out_edges; ++ e_i) {
-        //        OutEdge e = out_edges.ptx[e_i];
-        //        VertexId dst = e.dst;
-        //        if (dst >= vid_begin && dst < vid_end) return true;
-        //    }
-        //    return false;
-        //}
-        //// check whether a master vertex vid has a corresponding outgoing mirror on the remote node 
-        //// i.e., there is an edge starting from one master vertex of the remote node to vid
-        //inline bool has_outgoing_mirror(VertexId vid, int remote_node) {
-        //    VertexId vid_begin = partitioning_.partition_vid_begin[remote_node];
-        //    VertexId vid_end = partitioning_.partition_vid_end[remote_node];
-        //    if (vid >= vid_begin && vid < vid_end) return false;
-        //    InEdgeList in_edges = graph_structure_->get_in_edges(vid);
-        //    for (EdgeId e_i = 0; e_i < in_edges.num_in_edges; ++ e_i) {
-        //        InEdge e = in_edges.ptx[e_i];
-        //        VertexId src = e.src;
-        //        if (src >= vid_begin && src < vid_end) return true;
-        //    }
-        //    return false;
-        //}
 
         // invoke by the scheduler
         void perform_forward_task(CUDAPIPForwardTask task);
@@ -1281,6 +1248,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         friend class CUDAPIPGraphDataGradientUpdateReceiver;
         friend class CUDAPIPParallelParameterServer;
         friend class CUDAPIPWeightAggregator;
+        friend class GraphDataPropagator;
 
     public:
         DistributedPIPHybridParallelExecutionEngineGPU();
