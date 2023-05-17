@@ -216,6 +216,160 @@ void CUDABPIPLocalGraph::TestCsr()
     }
 }
 
+GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEngineGPU * engine): engine_(engine) {
+    int num_operators = engine_->op_ten_manager_->get_num_operators();
+    int max_embedding_dimension = 0;
+    for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
+        Operator * op = engine_->op_ten_manager_->get_operator(op_idx);
+        assert(op);
+        if (op->get_type() == OPERATOR_AGGREGATION) {
+            assert(op->get_num_output_tensors() == 1);
+            Tensor * tensor = op->get_output_tensor(0);
+            assert(tensor);
+            max_embedding_dimension = std::max(
+                    max_embedding_dimension, tensor->dims[1]
+                    );
+        }
+    }
+    // setting up the recv buffer
+    int num_ways = engine_->get_num_dp_ways();
+    VertexId num_vertices = engine_->graph_structure_->get_num_global_vertices();
+    VertexId num_vertices_per_way = (VertexId) (imbalance_factor_ * num_vertices / num_ways);
+    recv_buff_size_per_way_ = num_vertices_per_way * max_embedding_dimension * sizeof(DataType) + sizeof(RecvBuffHeader);
+    recv_buff_size_ = recv_buff_size_per_way_ * num_ways;
+    checkCUDA(cudaMallocHost(&recv_buff_, recv_buff_size_));
+#ifdef USE_RDMA
+    // setting up the direct memory access
+    MPI_Win_create(
+            recv_buff_, recv_buff_size_, sizeof(uint8_t),
+            MPI_INFO_NULL, MPI_COMM_WORLD, &recv_buff_win_
+            );
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_stages = engine_->get_num_stages();
+    int stage_id = engine_->get_stage_id();
+    for (int i = (node_id + num_stages) % num_nodes; i != node_id; i = (i + num_stages) % num_nodes) {
+        MPI_Win_lock(MPI_LOCK_SHARED, i, 0, recv_buff_win_);
+    }
+#endif
+    // setting up the sender buffer
+    send_buff_size_ = recv_buff_size_per_way_;
+    checkCUDA(cudaMallocHost(&send_buff_, send_buff_size_));
+    // setting up the comm 
+    MPI_Comm_split(MPI_COMM_WORLD, stage_id, node_id, &peer_group_);
+}
+
+GraphDataPropagator::~GraphDataPropagator() {
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_stages = engine_->get_num_stages();
+    int stage_id = engine_->get_stage_id();
+#ifdef USE_RDMA
+    // free the mpi windows
+    for (int i = (node_id + num_stages) % num_nodes; i != node_id; i = (i + num_stages) % num_nodes) {
+        MPI_Win_unlock(i, recv_buff_win_);
+    }
+    MPI_Win_free(&recv_buff_win_);
+#endif
+    // free the buffers
+    checkCUDA(cudaFreeHost(recv_buff_));
+    checkCUDA(cudaFreeHost(send_buff_));
+}
+
+void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
+    // obtain the GPU data
+    DataType * gpu_data = NULL;
+    size_t num_elements = 0;
+    if (propagate_act) {
+        assert(! tensor->is_data_transient);
+        engine_->get_vertex_tensor_data_by_chunk(tensor, chunk_id, gpu_data, num_elements);
+    } else {
+        assert(! tensor->is_grad_transient);
+        engine_->get_vertex_tensor_grad_by_chunk(tensor, chunk_id, gpu_data, num_elements);
+    }
+    assert(gpu_data && num_elements);
+
+    // set up the send buffer
+    size_t send_data_size = sizeof(RecvBuffHeader) + sizeof(DataType) * num_elements;
+    assert(send_buff_ && send_buff_size_ >= send_data_size);
+    RecvBuffHeader * header = (RecvBuffHeader*) send_buff_;
+    header->chunk_id = chunk_id;
+    header->tensor_id = engine_->op_ten_manager_->get_tensor_index(tensor);
+    header->payload_size = sizeof(DataType) * num_elements;
+    checkCUDA(cudaMemcpy(
+                send_buff_ + sizeof(RecvBuffHeader), gpu_data, 
+                sizeof(DataType) * num_elements,
+                cudaMemcpyDeviceToHost
+                ));
+
+    // send out the data in a circulant way
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_stages = engine_->get_num_stages();
+    int way_id = engine_->get_dp_way_id();
+    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; dst_node = (dst_node + num_stages) % num_nodes) {
+        size_t remote_disp = recv_buff_size_per_way_ * way_id;
+        assert(recv_buff_size_per_way_ >= send_data_size);
+        MPI_Put(
+                send_buff_, send_data_size, MPI_CHAR,
+                dst_node, remote_disp, send_data_size, MPI_CHAR,
+                recv_buff_win_
+               );
+    }
+}
+
+void GraphDataPropagator::flush_graph_data() {
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_stages = engine_->get_num_stages();
+    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; dst_node = (dst_node + num_stages) % num_nodes) {
+        MPI_Win_flush(dst_node, recv_buff_win_);
+    }
+}
+
+void GraphDataPropagato::retrieve_graph_data_to_gpu(bool propagate_act) {
+    int num_ways = engine_->get_num_dp_ways();
+    int stage_id = engine_->get_stage_id();
+    int num_stages = engine_->get_num_stages();
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+
+    for (int i = 0; i < num_ways; ++ i) {
+        assert(recv_buff_);
+        RecvBuffHeader * header = (RecvBuffHeader*) (recv_buff_ + recv_buff_size_per_way_ * i);
+        if (header->payload_size == 0) {
+            continue;
+        }
+        Tensor * tensor = op_ten_manager_->get_tensor(header->tensor_id);
+        assert(tensor);
+        DataType * gpu_data = NULL;
+        size_t num_elements = 0;
+        if (propagate_act) {
+            assert(! tensor->is_data_transient);
+            engine_->get_vertex_tensor_data_by_chunk(tensor, header->chunk_id, gpu_data, num_elements);
+        } else {
+            assert(! tensor->is_grad_transient);
+            engine_->get_vertex_tensor_grad_by_chunk(tensor, header->chunk_id, gpu_data, num_elements);
+        }
+        assert(gpu_data && num_elements);
+        assert(header->payload_size == sizeof(DataType) * num_elements);
+        uint8_t * cpu_data = recv_buff_ + recv_buff_size_per_way_ * i + sizeof(RecvBuffHeader);
+        checkCUDA(cudaMemcpyAsync(
+                    gpu_data, cpu_data, header->payload_size,
+                    cudaMemcpyHostToDevice
+                    ));
+    }
+
+    checkCUDA(cudaStreamSynchronize(0));
+}
+
+void GraphDataPropagator::propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
+    put_graph_data(tensor, chunk_id, propagate_act);
+    flush_graph_data();
+    MPI_Barrier(peer_group_);
+    retrieve_graph_data_to_gpu(propagate_act);
+}
+
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
         int max_num_tasks,
         pthread_barrier_t * barrier): 
@@ -2312,6 +2466,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_AGGREGATION:
+                // graph data propagation
+                Tensor * tensor = op->get_input_tensor(0);
+                graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true);
+                // do the actual computation
                 executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_DROPOUT:
@@ -2476,6 +2634,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_AGGREGATION:
+                // graph data propagation
+                Tensor * tensor = op->get_output_tensor(0);
+                graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
+                // do the actual computation
                 executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_DROPOUT:
@@ -3351,6 +3513,10 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     //        cpu_has_incomming_mirrors[lgraph->get_num_master_vertices() * n_i + v_i] = this->has_incoming_mirror(vid_translation_->get_global_vid_master_vertex(v_i), n_i);
     //    }
     //}
+    //
+
+    graph_data_propagator_ = new GraphDataPropagator(this);
+    assert(graph_data_propagator_);
 
     // start task scheduling
     scheduler_ = new CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(
@@ -3362,6 +3528,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     delete scheduler_;
 
     release_resources();
+
+    delete graph_data_propagator_;
 
     delete compression_buff;
     delete decompression_data_buff;

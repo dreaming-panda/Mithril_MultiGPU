@@ -129,11 +129,47 @@ class LockFreeQueue {
 
 class GraphDataPropagator {
     private:
+        const double imbalance_factor_ = 1.25;
+
         DistributedPIPHybridParallelExecutionEngineGPU * engine_;
+        uint8_t * recv_buff_; // the receiver-side buffer (CPU)
+        size_t recv_buff_size_;
+        size_t recv_buff_size_per_way_;
+        MPI_Win recv_buff_win_;
+        uint8_t * send_buff_;
+        size_t send_buff_size_;
+        MPI_Comm peer_group_;
+
+        struct RecvBuffHeader {
+            int chunk_id;
+            int tensor_id;
+            size_t payload_size;
+        } __attribute__((packed));
+
+        // propagate the graph data to the peer gpus
+        // this is a high-level wrapper of the MPI PUT op 
+        // the gpu buffer will be avaiable after the function returns
+        // however, the data might not be fully propagated yet
+        // propagate_act: true propagating the activation, 
+        // otherwise: propagate the gradients
+        void put_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
+        // ensure that the graph data is propagated to the remote
+        // CPU recv buffer
+        // NOTE: this is not a collective call
+        void flush_graph_data();
+        // move the received graph data to the GPU
+        // propagate_act: true propagating the activation, 
+        // otherwise: propagate the gradients
+        void retrieve_graph_data_to_gpu(bool propagate_act);
+
     public:
         GraphDataPropagator(DistributedPIPHybridParallelExecutionEngineGPU * engine);
         ~GraphDataPropagator();
-        void propagate_graph_data(Tensor * tensor, int chunk_id); // propagate the 
+        // propagate the graph data of the specified chunk to the peer GPUs
+        // this is a collective call for all GPUs in gpu_groups_[tensor]
+        // propagate_act: true propagating the activation, 
+        // otherwise: propagate the gradients
+        void propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
 };
 
 template<typename T>
@@ -1118,6 +1154,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         // data-parallel-related settings
         int num_dp_ways_ = 2; // number of data parallel ways
+        GraphDataPropagator * graph_data_propagator_;
 
         inline int get_num_epoch() {
             return num_epoch_;
