@@ -1,0 +1,433 @@
+g007.anvil.rcac.purdue.edu
+Wed May 17 18:26:49 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  NVIDIA A100-SXM...  On   | 00000000:01:00.0 Off |                    0 |
+| N/A   36C    P0    53W / 400W |      0MiB / 40960MiB |      0%      Default |
+|                               |                      |             Disabled |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+
+Currently Loaded Modules:
+  1) modtree/gpu            5) mpfr/4.0.2    9) numactl/2.0.14
+  2) nccl/cuda-11.2_2.8.4   6) mpc/1.1.0    10) cuda/11.4.2
+  3) cudnn/cuda-11.2_8.1    7) gcc/11.2.0   11) openmpi/4.0.6
+  4) gmp/6.2.1              8) zlib/1.2.11  12) boost/1.74.0
+
+ 
+
+Consolidate compiler generated dependencies of target cudahelp
+[ 11%] Built target context
+[ 36%] Built target core
+[ 77%] Built target cudahelp
+[ 83%] Built target estimate_comm_volume
+[ 94%] Built target OSDI2023_MULTI_NODES_gcn
+[100%] Built target OSDI2023_MULTI_NODES_graphsage
+[100%] Built target OSDI2023_MULTI_NODES_gcnii
+Initialized node 1 on machine g009.anvil.rcac.purdue.edu
+Initialized node 0 on machine g007.anvil.rcac.purdue.edu
+Building the CSR structure...
+Building the CSR structure...
+        It takes 0.038 seconds.
+Building the CSC structure...
+        It takes 0.038 seconds.
+Building the CSC structure...
+        It takes 0.038 seconds.
+        It takes 0.039 seconds.
+Building the Feature Vector...
+Building the Feature Vector...
+        It takes 0.054 seconds.
+Building the Label Vector...
+        It takes 0.056 seconds.
+Building the Label Vector...
+        It takes 0.021 seconds.
+The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/reordered/ogbn_arxiv
+The number of GCNII layers: 8
+The number of hidden units: 16
+The number of training epoches: 5000
+Learning rate: 0.003000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /anvil/projects/x-cis220117/saved_weights_pipe
+The random seed: 5
+GCN hyper-parameter alpha: 0.000000
+GCN hyper-parameter lambda: 0.500000
+Number of classes: 40
+Number of feature dimensions: 128
+Number of vertices: 169343
+Number of GPUs: 2
+        It takes 0.022 seconds.
+train nodes 90941, valid nodes 29799, test nodes 48603
+WARNING: the current version only applies to linear GNN models!
+GPU 0, layer [0, 10)
+*** Node 0, starting model training...
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the model-level partition [0, 65)
+*** Node 0, constructing the helper classes...
+Operators:
+    Op 0: type OPERATOR_INPUT, output tensors: 0
+    Op 1: type OPERATOR_DROPOUT, output tensors: 1
+    Op 2: type OPERATOR_WEIGHT, output tensors: 2
+    Op 3: type OPERATOR_MATMUL, output tensors: 3
+    Op 4: type OPERATOR_RELU, output tensors: 4
+    Op 5: type OPERATOR_DROPOUT, output tensors: 5
+    Op 6: type OPERATOR_AGGREGATION, output tensors: 6
+    Op 7: type OPERATOR_ADD, output tensors: 7
+    Op 8: type OPERATOR_WEIGHT, output tensors: 8
+    Op 9: type OPERATOR_MATMUL, output tensors: 9
+    Op 10: type OPERATOR_ADD, output tensors: 10
+    Op 11: type OPERATOR_RELU, output tensors: 11
+    Op 12: type OPERATOR_DROPOUT, output tensors: 12
+    Op 13: type OPERATOR_AGGREGATION, output tensors: 13
+    Op 14: type OPERATOR_ADD, output tensors: 14
+    Op 15: type OPERATOR_WEIGHT, output tensors: 15
+    Op 16: type OPERATOR_MATMUL, output tensors: 16
+    Op 17: type OPERATOR_ADD, output tensors: 17
+    Op 18: type OPERATOR_RELU, output tensors: 18
+    Op 19: type OPERATOR_DROPOUT, output tensors: 19
+    Op 20: type OPERATOR_AGGREGATION, output tensors: 20
+    Op 21: type OPERATOR_ADD, output tensors: 21
+    Op 22: type OPERATOR_WEIGHT, output tensors: 22
+    Op 23: type OPERATOR_MATMUL, output tensors: 23
+    Op 24: type OPERATOR_ADD, output tensors: 24
+    Op 25: type OPERATOR_RELU, output tensors: 25
+    Op 26: type OPERATOR_DROPOUT, output tensors: 26
+    Op 27: type OPERATOR_AGGREGATION, output tensors: 27
+    Op 28: type OPERATOR_ADD, output tensors: 28
+    Op 29: type OPERATOR_WEIGHT, output tensors: 29
+    Op 30: type OPERATOR_MATMUL, output tensors: 30
+    Op 31: type OPERATOR_ADD, output tensors: 31
+    Op 32: type OPERATOR_RELU, output tensors: 32
+    Op 33: type OPERATOR_DROPOUT, output tensors: 33
+    Op 34: type OPERATOR_AGGREGATION, output tensors: 34
+    Op 35: type OPERATOR_ADD, output tensors: 35
+    Op 36: type OPERATOR_WEIGHT, output tensors: 36
+    Op 37: type OPERATOR_MATMUL, output tensors: 37
+    Op 38: type OPERATOR_ADD, output tensors: 38
+    Op 39: type OPERATOR_RELU, output tensors: 39
+    Op 40: type OPERATOR_DROPOUT, output tensors: 40
+    Op 41: type OPERATOR_AGGREGATION, output tensors: 41
+    Op 42: type OPERATOR_ADD, output tensors: 42
+    Op 43: type OPERATOR_WEIGHT, output tensors: 43
+    Op 44: type OPERATOR_MATMUL, output tensors: 44
+    Op 45: type OPERATOR_ADD, output tensors: 45
+    Op 46: type OPERATOR_RELU, output tensors: 46
+    Op 47: type OPERATOR_DROPOUT, output tensors: 47
+    Op 48: type OPERATOR_AGGREGATION, output tensors: 48
+    Op 49: type OPERATOR_ADD, output tensors: 49
+    Op 50: type OPERATOR_WEIGHT, output tensors: 50
+    Op 51: type OPERATOR_MATMUL, output tensors: 51
+    Op 52: type OPERATOR_ADD, output tensors: 52
+    Op 53: type OPERATOR_RELU, output tensors: 53
+    Op 54: type OPERATOR_DROPOUT, output tensors: 54
+    Op 55: type OPERATOR_AGGREGATION, output tensors: 55
+    Op 56: type OPERATOR_ADD, output tensors: 56
+    Op 57: type OPERATOR_WEIGHT, output tensors: 57
+    Op 58: type OPERATOR_MATMUL, output tensors: 58
+    Op 59: type OPERATOR_ADD, output tensors: 59
+    Op 60: type OPERATOR_RELU, output tensors: 60
+    Op 61: type OPERATOR_DROPOUT, output tensors: 61
+    Op 62: type OPERATOR_WEIGHT, output tensors: 62
+    Op 63: type OPERATOR_MATMUL, output tensors: 63
+    Op 64: type OPERATOR_SOFTMAX, output tensors: 64
+Boundaries: 0 0 169343 169343
+Fragments: [0, 169343)
+Chunks (number of global chunks: 16): 0-[0, 10584) 1-[10584, 21168) 2-[21168, 31752) 3-[31752, 42336) 4-[42336, 52920) 5-[52920, 63504) 6-[63504, 74088) 7-[74088, 84672) 8-[84672, 95256) ... 15-[158760, 169343)
+169343, 2484941, 2484941
+Number of vertices per chunk: 10584
+WARNING: the current version only applies to linear GNN models!
+GPU 0, layer [0, 10)
+*** Node 1, starting model training...
+Node 1, Pipeline Input Tensor: NULL
+Node 1, Pipeline Output Tensor: NULL
+*** Node 1 owns the model-level partition [0, 65)
+*** Node 1, constructing the helper classes...
+169343, 2484941, 2484941
+Number of vertices per chunk: 10584
+csr in-out ready !*** Node 0, setting up some other necessary information...
+csr in-out ready !*** Node 1, setting up some other necessary information...
+*** Node 0, starting the helper threads...
+*** Node 1, starting the helper threads...
++++++++++ Node 0 initializing the weights for op[0, 65)...
++++++++++ Node 0, mapping weight op 2
++++++++++ Node 0, mapping weight op 8
++++++++++ Node 0, mapping weight op 15
++++++++++ Node 0, mapping weight op 22
++++++++++ Node 0, mapping weight op 29
++++++++++ Node 0, mapping weight op 36
++++++++++ Node 0, mapping weight op 43
++++++++++ Node 0, mapping weight op 50
++++++++++ Node 0, mapping weight op 57
++++++++++ Node 0, mapping weight op 62
++++++++++ Node 1 initializing the weights for op[0, 65)...
++++++++++ Node 1, mapping weight op 2
++++++++++ Node 1, mapping weight op 8
++++++++++ Node 1, mapping weight op 15
++++++++++ Node 1, mapping weight op 22
++++++++++ Node 1, mapping weight op 29
++++++++++ Node 1, mapping weight op 36
++++++++++ Node 1, mapping weight op 43
++++++++++ Node 1, mapping weight op 50
++++++++++ Node 1, mapping weight op 57
++++++++++ Node 1, mapping weight op 62
+*** Node 0, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.003000000
+*** Node 1, starting task scheduling...
+The learning rate specified by the user: 0.003000000
+	Epoch 10:	Loss 3.6190	TrainAcc 0.0600	ValidAcc 0.0345	BestValid 0.0345
+	Epoch 20:	Loss 3.3959	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 30:	Loss 3.2744	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 40:	Loss 3.1703	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 50:	Loss 3.1028	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 60:	Loss 3.0452	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 70:	Loss 3.0015	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 80:	Loss 2.9672	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 90:	Loss 2.9477	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 100:	Loss 2.9382	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 110:	Loss 2.9240	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 120:	Loss 2.9173	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 130:	Loss 2.9128	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 140:	Loss 2.9076	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 150:	Loss 2.9031	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 160:	Loss 2.9042	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 170:	Loss 2.8979	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 180:	Loss 2.8927	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 190:	Loss 2.8892	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 200:	Loss 2.8868	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 210:	Loss 2.8866	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 220:	Loss 2.8810	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 230:	Loss 2.8767	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 240:	Loss 2.8751	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 250:	Loss 2.8707	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 260:	Loss 2.8700	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 270:	Loss 2.8665	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 280:	Loss 2.8622	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 290:	Loss 2.8644	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 300:	Loss 2.8550	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 310:	Loss 2.8576	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 320:	Loss 2.8496	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 330:	Loss 2.8437	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 340:	Loss 2.8286	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 350:	Loss 2.8215	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 360:	Loss 2.8060	TrainAcc 0.1791	ValidAcc 0.0763	BestValid 0.0763
+	Epoch 370:	Loss 2.7930	TrainAcc 0.1796	ValidAcc 0.0765	BestValid 0.0765
+	Epoch 380:	Loss 2.7709	TrainAcc 0.2764	ValidAcc 0.2991	BestValid 0.2991
+	Epoch 390:	Loss 2.7633	TrainAcc 0.2795	ValidAcc 0.3008	BestValid 0.3008
+	Epoch 400:	Loss 2.7393	TrainAcc 0.2812	ValidAcc 0.3021	BestValid 0.3021
+	Epoch 410:	Loss 2.7297	TrainAcc 0.2815	ValidAcc 0.3024	BestValid 0.3024
+	Epoch 420:	Loss 2.7068	TrainAcc 0.2818	ValidAcc 0.3031	BestValid 0.3031
+	Epoch 430:	Loss 2.7010	TrainAcc 0.2819	ValidAcc 0.3031	BestValid 0.3031
+	Epoch 440:	Loss 2.6820	TrainAcc 0.2820	ValidAcc 0.3031	BestValid 0.3031
+	Epoch 450:	Loss 2.6725	TrainAcc 0.2823	ValidAcc 0.3032	BestValid 0.3032
+	Epoch 460:	Loss 2.6642	TrainAcc 0.2823	ValidAcc 0.3035	BestValid 0.3035
+	Epoch 470:	Loss 2.6532	TrainAcc 0.2824	ValidAcc 0.3034	BestValid 0.3035
+	Epoch 480:	Loss 2.6307	TrainAcc 0.2823	ValidAcc 0.3034	BestValid 0.3035
+	Epoch 490:	Loss 2.6271	TrainAcc 0.2823	ValidAcc 0.3035	BestValid 0.3035
+	Epoch 500:	Loss 2.6300	TrainAcc 0.2824	ValidAcc 0.3035	BestValid 0.3035
+	Epoch 510:	Loss 2.6136	TrainAcc 0.2823	ValidAcc 0.3035	BestValid 0.3035
+	Epoch 520:	Loss 2.6048	TrainAcc 0.2822	ValidAcc 0.3036	BestValid 0.3036
+	Epoch 530:	Loss 2.5950	TrainAcc 0.2823	ValidAcc 0.3036	BestValid 0.3036
+	Epoch 540:	Loss 2.5989	TrainAcc 0.2825	ValidAcc 0.3035	BestValid 0.3036
+	Epoch 550:	Loss 2.5866	TrainAcc 0.2826	ValidAcc 0.3036	BestValid 0.3036
+	Epoch 560:	Loss 2.5812	TrainAcc 0.2826	ValidAcc 0.3037	BestValid 0.3037
+	Epoch 570:	Loss 2.5746	TrainAcc 0.2824	ValidAcc 0.3037	BestValid 0.3037
+	Epoch 580:	Loss 2.5770	TrainAcc 0.2828	ValidAcc 0.3037	BestValid 0.3037
+	Epoch 590:	Loss 2.5720	TrainAcc 0.2829	ValidAcc 0.3038	BestValid 0.3038
+	Epoch 600:	Loss 2.5635	TrainAcc 0.2833	ValidAcc 0.3044	BestValid 0.3044
+	Epoch 610:	Loss 2.5563	TrainAcc 0.2841	ValidAcc 0.3051	BestValid 0.3051
+	Epoch 620:	Loss 2.5561	TrainAcc 0.2847	ValidAcc 0.3057	BestValid 0.3057
+	Epoch 630:	Loss 2.5567	TrainAcc 0.2848	ValidAcc 0.3057	BestValid 0.3057
+	Epoch 640:	Loss 2.5513	TrainAcc 0.2857	ValidAcc 0.3069	BestValid 0.3069
+	Epoch 650:	Loss 2.5490	TrainAcc 0.2855	ValidAcc 0.3066	BestValid 0.3069
+	Epoch 660:	Loss 2.5393	TrainAcc 0.2864	ValidAcc 0.3072	BestValid 0.3072
+	Epoch 670:	Loss 2.5439	TrainAcc 0.2865	ValidAcc 0.3073	BestValid 0.3073
+	Epoch 680:	Loss 2.5366	TrainAcc 0.2876	ValidAcc 0.3082	BestValid 0.3082
+	Epoch 690:	Loss 2.5361	TrainAcc 0.2881	ValidAcc 0.3085	BestValid 0.3085
+	Epoch 700:	Loss 2.5314	TrainAcc 0.2881	ValidAcc 0.3086	BestValid 0.3086
+	Epoch 710:	Loss 2.5294	TrainAcc 0.2884	ValidAcc 0.3091	BestValid 0.3091
+	Epoch 720:	Loss 2.5256	TrainAcc 0.2891	ValidAcc 0.3096	BestValid 0.3096
+	Epoch 730:	Loss 2.5281	TrainAcc 0.2881	ValidAcc 0.3087	BestValid 0.3096
+	Epoch 740:	Loss 2.5299	TrainAcc 0.2883	ValidAcc 0.3086	BestValid 0.3096
+	Epoch 750:	Loss 2.5208	TrainAcc 0.2897	ValidAcc 0.3103	BestValid 0.3103
+	Epoch 760:	Loss 2.5117	TrainAcc 0.2903	ValidAcc 0.3105	BestValid 0.3105
+	Epoch 770:	Loss 2.5108	TrainAcc 0.2906	ValidAcc 0.3110	BestValid 0.3110
+	Epoch 780:	Loss 2.5161	TrainAcc 0.2922	ValidAcc 0.3115	BestValid 0.3115
+	Epoch 790:	Loss 2.5115	TrainAcc 0.3022	ValidAcc 0.3161	BestValid 0.3161
+	Epoch 800:	Loss 2.5103	TrainAcc 0.3075	ValidAcc 0.3183	BestValid 0.3183
+	Epoch 810:	Loss 2.5062	TrainAcc 0.3128	ValidAcc 0.3200	BestValid 0.3200
+	Epoch 820:	Loss 2.5090	TrainAcc 0.3150	ValidAcc 0.3214	BestValid 0.3214
+	Epoch 830:	Loss 2.5033	TrainAcc 0.3166	ValidAcc 0.3220	BestValid 0.3220
+	Epoch 840:	Loss 2.5042	TrainAcc 0.3194	ValidAcc 0.3233	BestValid 0.3233
+	Epoch 850:	Loss 2.5036	TrainAcc 0.3209	ValidAcc 0.3243	BestValid 0.3243
+	Epoch 860:	Loss 2.4967	TrainAcc 0.3215	ValidAcc 0.3245	BestValid 0.3245
+	Epoch 870:	Loss 2.4967	TrainAcc 0.3228	ValidAcc 0.3246	BestValid 0.3246
+	Epoch 880:	Loss 2.4916	TrainAcc 0.3234	ValidAcc 0.3247	BestValid 0.3247
+	Epoch 890:	Loss 2.4918	TrainAcc 0.3243	ValidAcc 0.3250	BestValid 0.3250
+	Epoch 900:	Loss 2.4963	TrainAcc 0.3251	ValidAcc 0.3268	BestValid 0.3268
+	Epoch 910:	Loss 2.4906	TrainAcc 0.3257	ValidAcc 0.3269	BestValid 0.3269
+	Epoch 920:	Loss 2.4901	TrainAcc 0.3273	ValidAcc 0.3275	BestValid 0.3275
+	Epoch 930:	Loss 2.4866	TrainAcc 0.3283	ValidAcc 0.3282	BestValid 0.3282
+	Epoch 940:	Loss 2.4830	TrainAcc 0.3284	ValidAcc 0.3285	BestValid 0.3285
+	Epoch 950:	Loss 2.4752	TrainAcc 0.3287	ValidAcc 0.3291	BestValid 0.3291
+	Epoch 960:	Loss 2.4716	TrainAcc 0.3307	ValidAcc 0.3292	BestValid 0.3292
+	Epoch 970:	Loss 2.4665	TrainAcc 0.3331	ValidAcc 0.3304	BestValid 0.3304
+	Epoch 980:	Loss 2.4725	TrainAcc 0.3330	ValidAcc 0.3304	BestValid 0.3304
+	Epoch 990:	Loss 2.4731	TrainAcc 0.3342	ValidAcc 0.3312	BestValid 0.3312
+	Epoch 1000:	Loss 2.4684	TrainAcc 0.3355	ValidAcc 0.3320	BestValid 0.3320
+	Epoch 1010:	Loss 2.4618	TrainAcc 0.3408	ValidAcc 0.3345	BestValid 0.3345
+	Epoch 1020:	Loss 2.4604	TrainAcc 0.3412	ValidAcc 0.3345	BestValid 0.3345
+	Epoch 1030:	Loss 2.4614	TrainAcc 0.3453	ValidAcc 0.3363	BestValid 0.3363
+	Epoch 1040:	Loss 2.4590	TrainAcc 0.3469	ValidAcc 0.3374	BestValid 0.3374
+	Epoch 1050:	Loss 2.4613	TrainAcc 0.3472	ValidAcc 0.3391	BestValid 0.3391
+	Epoch 1060:	Loss 2.4537	TrainAcc 0.3468	ValidAcc 0.3394	BestValid 0.3394
+	Epoch 1070:	Loss 2.4536	TrainAcc 0.3551	ValidAcc 0.3433	BestValid 0.3433
+	Epoch 1080:	Loss 2.4518	TrainAcc 0.3540	ValidAcc 0.3417	BestValid 0.3433
+	Epoch 1090:	Loss 2.4542	TrainAcc 0.3591	ValidAcc 0.3450	BestValid 0.3450
+	Epoch 1100:	Loss 2.4483	TrainAcc 0.3576	ValidAcc 0.3445	BestValid 0.3450
+	Epoch 1110:	Loss 2.4422	TrainAcc 0.3615	ValidAcc 0.3486	BestValid 0.3486
+	Epoch 1120:	Loss 2.4477	TrainAcc 0.3655	ValidAcc 0.3504	BestValid 0.3504
+	Epoch 1130:	Loss 2.4456	TrainAcc 0.3688	ValidAcc 0.3515	BestValid 0.3515
+	Epoch 1140:	Loss 2.4390	TrainAcc 0.3679	ValidAcc 0.3515	BestValid 0.3515
+	Epoch 1150:	Loss 2.4458	TrainAcc 0.3692	ValidAcc 0.3517	BestValid 0.3517
+	Epoch 1160:	Loss 2.4443	TrainAcc 0.3704	ValidAcc 0.3517	BestValid 0.3517
+	Epoch 1170:	Loss 2.4382	TrainAcc 0.3740	ValidAcc 0.3544	BestValid 0.3544
+	Epoch 1180:	Loss 2.4393	TrainAcc 0.3759	ValidAcc 0.3552	BestValid 0.3552
+	Epoch 1190:	Loss 2.4333	TrainAcc 0.3774	ValidAcc 0.3560	BestValid 0.3560
+	Epoch 1200:	Loss 2.4304	TrainAcc 0.3770	ValidAcc 0.3564	BestValid 0.3564
+	Epoch 1210:	Loss 2.4261	TrainAcc 0.3792	ValidAcc 0.3582	BestValid 0.3582
+	Epoch 1220:	Loss 2.4203	TrainAcc 0.3785	ValidAcc 0.3570	BestValid 0.3582
+	Epoch 1230:	Loss 2.4284	TrainAcc 0.3803	ValidAcc 0.3574	BestValid 0.3582
+	Epoch 1240:	Loss 2.4256	TrainAcc 0.3802	ValidAcc 0.3586	BestValid 0.3586
+	Epoch 1250:	Loss 2.4143	TrainAcc 0.3829	ValidAcc 0.3591	BestValid 0.3591
+	Epoch 1260:	Loss 2.4211	TrainAcc 0.3826	ValidAcc 0.3590	BestValid 0.3591
+	Epoch 1270:	Loss 2.4207	TrainAcc 0.3852	ValidAcc 0.3619	BestValid 0.3619
+	Epoch 1280:	Loss 2.4180	TrainAcc 0.3846	ValidAcc 0.3600	BestValid 0.3619
+	Epoch 1290:	Loss 2.4166	TrainAcc 0.3860	ValidAcc 0.3602	BestValid 0.3619
+	Epoch 1300:	Loss 2.4182	TrainAcc 0.3853	ValidAcc 0.3596	BestValid 0.3619
+	Epoch 1310:	Loss 2.4119	TrainAcc 0.3867	ValidAcc 0.3615	BestValid 0.3619
+	Epoch 1320:	Loss 2.4080	TrainAcc 0.3869	ValidAcc 0.3616	BestValid 0.3619
+	Epoch 1330:	Loss 2.4148	TrainAcc 0.3881	ValidAcc 0.3622	BestValid 0.3622
+	Epoch 1340:	Loss 2.4091	TrainAcc 0.3870	ValidAcc 0.3617	BestValid 0.3622
+	Epoch 1350:	Loss 2.4040	TrainAcc 0.3888	ValidAcc 0.3615	BestValid 0.3622
+	Epoch 1360:	Loss 2.4103	TrainAcc 0.3892	ValidAcc 0.3624	BestValid 0.3624
+	Epoch 1370:	Loss 2.4008	TrainAcc 0.3905	ValidAcc 0.3626	BestValid 0.3626
+	Epoch 1380:	Loss 2.4086	TrainAcc 0.3895	ValidAcc 0.3627	BestValid 0.3627
+	Epoch 1390:	Loss 2.4005	TrainAcc 0.3911	ValidAcc 0.3630	BestValid 0.3630
+	Epoch 1400:	Loss 2.4067	TrainAcc 0.3910	ValidAcc 0.3638	BestValid 0.3638
+	Epoch 1410:	Loss 2.3958	TrainAcc 0.3919	ValidAcc 0.3638	BestValid 0.3638
+	Epoch 1420:	Loss 2.3945	TrainAcc 0.3925	ValidAcc 0.3642	BestValid 0.3642
+	Epoch 1430:	Loss 2.3971	TrainAcc 0.3921	ValidAcc 0.3627	BestValid 0.3642
+	Epoch 1440:	Loss 2.3969	TrainAcc 0.3913	ValidAcc 0.3641	BestValid 0.3642
+	Epoch 1450:	Loss 2.3985	TrainAcc 0.3938	ValidAcc 0.3645	BestValid 0.3645
+	Epoch 1460:	Loss 2.3896	TrainAcc 0.3932	ValidAcc 0.3644	BestValid 0.3645
+	Epoch 1470:	Loss 2.3945	TrainAcc 0.3937	ValidAcc 0.3655	BestValid 0.3655
+	Epoch 1480:	Loss 2.3880	TrainAcc 0.3930	ValidAcc 0.3649	BestValid 0.3655
+	Epoch 1490:	Loss 2.3921	TrainAcc 0.3935	ValidAcc 0.3645	BestValid 0.3655
+	Epoch 1500:	Loss 2.3935	TrainAcc 0.3942	ValidAcc 0.3651	BestValid 0.3655
+	Epoch 1510:	Loss 2.3898	TrainAcc 0.3936	ValidAcc 0.3657	BestValid 0.3657
+	Epoch 1520:	Loss 2.3891	TrainAcc 0.3942	ValidAcc 0.3661	BestValid 0.3661
+	Epoch 1530:	Loss 2.3951	TrainAcc 0.3950	ValidAcc 0.3653	BestValid 0.3661
+	Epoch 1540:	Loss 2.3923	TrainAcc 0.3959	ValidAcc 0.3667	BestValid 0.3667
+	Epoch 1550:	Loss 2.3971	TrainAcc 0.3965	ValidAcc 0.3665	BestValid 0.3667
+	Epoch 1560:	Loss 2.3877	TrainAcc 0.3961	ValidAcc 0.3664	BestValid 0.3667
+	Epoch 1570:	Loss 2.3830	TrainAcc 0.3967	ValidAcc 0.3673	BestValid 0.3673
+	Epoch 1580:	Loss 2.3908	TrainAcc 0.3972	ValidAcc 0.3684	BestValid 0.3684
+	Epoch 1590:	Loss 2.3800	TrainAcc 0.3980	ValidAcc 0.3677	BestValid 0.3684
+	Epoch 1600:	Loss 2.3852	TrainAcc 0.3971	ValidAcc 0.3675	BestValid 0.3684
+	Epoch 1610:	Loss 2.3842	TrainAcc 0.3985	ValidAcc 0.3689	BestValid 0.3689
+	Epoch 1620:	Loss 2.3789	TrainAcc 0.3987	ValidAcc 0.3686	BestValid 0.3689
+	Epoch 1630:	Loss 2.3824	TrainAcc 0.3990	ValidAcc 0.3685	BestValid 0.3689
+	Epoch 1640:	Loss 2.3770	TrainAcc 0.3975	ValidAcc 0.3689	BestValid 0.3689
+	Epoch 1650:	Loss 2.3899	TrainAcc 0.3986	ValidAcc 0.3694	BestValid 0.3694
+	Epoch 1660:	Loss 2.3705	TrainAcc 0.3991	ValidAcc 0.3693	BestValid 0.3694
+	Epoch 1670:	Loss 2.3795	TrainAcc 0.3985	ValidAcc 0.3687	BestValid 0.3694
+	Epoch 1680:	Loss 2.3847	TrainAcc 0.4000	ValidAcc 0.3703	BestValid 0.3703
+	Epoch 1690:	Loss 2.3793	TrainAcc 0.3987	ValidAcc 0.3687	BestValid 0.3703
+	Epoch 1700:	Loss 2.3744	TrainAcc 0.3971	ValidAcc 0.3684	BestValid 0.3703
+	Epoch 1710:	Loss 2.3747	TrainAcc 0.3985	ValidAcc 0.3689	BestValid 0.3703
+	Epoch 1720:	Loss 2.3811	TrainAcc 0.3991	ValidAcc 0.3683	BestValid 0.3703
+	Epoch 1730:	Loss 2.3731	TrainAcc 0.4006	ValidAcc 0.3705	BestValid 0.3705
+	Epoch 1740:	Loss 2.3701	TrainAcc 0.3998	ValidAcc 0.3697	BestValid 0.3705
+	Epoch 1750:	Loss 2.3691	TrainAcc 0.4007	ValidAcc 0.3696	BestValid 0.3705
+	Epoch 1760:	Loss 2.3641	TrainAcc 0.4009	ValidAcc 0.3712	BestValid 0.3712
+	Epoch 1770:	Loss 2.3716	TrainAcc 0.4015	ValidAcc 0.3709	BestValid 0.3712
+	Epoch 1780:	Loss 2.3687	TrainAcc 0.4007	ValidAcc 0.3706	BestValid 0.3712
+	Epoch 1790:	Loss 2.3649	TrainAcc 0.4003	ValidAcc 0.3715	BestValid 0.3715
+	Epoch 1800:	Loss 2.3694	TrainAcc 0.4011	ValidAcc 0.3703	BestValid 0.3715
+	Epoch 1810:	Loss 2.3655	TrainAcc 0.4008	ValidAcc 0.3707	BestValid 0.3715
+	Epoch 1820:	Loss 2.3623	TrainAcc 0.4027	ValidAcc 0.3713	BestValid 0.3715
+	Epoch 1830:	Loss 2.3654	TrainAcc 0.3998	ValidAcc 0.3691	BestValid 0.3715
+	Epoch 1840:	Loss 2.3585	TrainAcc 0.4017	ValidAcc 0.3713	BestValid 0.3715
+	Epoch 1850:	Loss 2.3612	TrainAcc 0.4013	ValidAcc 0.3697	BestValid 0.3715
+	Epoch 1860:	Loss 2.3608	TrainAcc 0.4007	ValidAcc 0.3708	BestValid 0.3715
+	Epoch 1870:	Loss 2.3596	TrainAcc 0.4007	ValidAcc 0.3692	BestValid 0.3715
+	Epoch 1880:	Loss 2.3586	TrainAcc 0.4028	ValidAcc 0.3718	BestValid 0.3718
+	Epoch 1890:	Loss 2.3596	TrainAcc 0.4023	ValidAcc 0.3707	BestValid 0.3718
+	Epoch 1900:	Loss 2.3565	TrainAcc 0.4017	ValidAcc 0.3707	BestValid 0.3718
+	Epoch 1910:	Loss 2.3499	TrainAcc 0.4041	ValidAcc 0.3732	BestValid 0.3732
+	Epoch 1920:	Loss 2.3481	TrainAcc 0.4014	ValidAcc 0.3720	BestValid 0.3732
+	Epoch 1930:	Loss 2.3535	TrainAcc 0.4041	ValidAcc 0.3729	BestValid 0.3732
+	Epoch 1940:	Loss 2.3620	TrainAcc 0.4067	ValidAcc 0.3753	BestValid 0.3753
+	Epoch 1950:	Loss 2.3608	TrainAcc 0.4022	ValidAcc 0.3710	BestValid 0.3753
+	Epoch 1960:	Loss 2.3636	TrainAcc 0.4045	ValidAcc 0.3728	BestValid 0.3753
+	Epoch 1970:	Loss 2.3533	TrainAcc 0.4070	ValidAcc 0.3755	BestValid 0.3755
+	Epoch 1980:	Loss 2.3607	TrainAcc 0.4082	ValidAcc 0.3774	BestValid 0.3774
+	Epoch 1990:	Loss 2.3594	TrainAcc 0.4088	ValidAcc 0.3773	BestValid 0.3774
+	Epoch 2000:	Loss 2.3618	TrainAcc 0.4088	ValidAcc 0.3774	BestValid 0.3774
+	Epoch 2010:	Loss 2.3593	TrainAcc 0.4100	ValidAcc 0.3792	BestValid 0.3792
+	Epoch 2020:	Loss 2.3522	TrainAcc 0.4167	ValidAcc 0.3919	BestValid 0.3919
+	Epoch 2030:	Loss 2.3522	TrainAcc 0.4131	ValidAcc 0.3824	BestValid 0.3919
+	Epoch 2040:	Loss 2.3510	TrainAcc 0.4139	ValidAcc 0.3850	BestValid 0.3919
+	Epoch 2050:	Loss 2.3589	TrainAcc 0.4137	ValidAcc 0.3859	BestValid 0.3919
+	Epoch 2060:	Loss 2.3504	TrainAcc 0.4125	ValidAcc 0.3818	BestValid 0.3919
+	Epoch 2070:	Loss 2.3486	TrainAcc 0.4284	ValidAcc 0.4175	BestValid 0.4175
+	Epoch 2080:	Loss 2.3489	TrainAcc 0.4273	ValidAcc 0.4154	BestValid 0.4175
+	Epoch 2090:	Loss 2.3418	TrainAcc 0.4120	ValidAcc 0.3805	BestValid 0.4175
+	Epoch 2100:	Loss 2.3440	TrainAcc 0.4227	ValidAcc 0.4064	BestValid 0.4175
+	Epoch 2110:	Loss 2.3466	TrainAcc 0.4327	ValidAcc 0.4252	BestValid 0.4252
+	Epoch 2120:	Loss 2.3516	TrainAcc 0.4368	ValidAcc 0.4368	BestValid 0.4368
+	Epoch 2130:	Loss 2.3434	TrainAcc 0.4225	ValidAcc 0.4026	BestValid 0.4368
+	Epoch 2140:	Loss 2.3473	TrainAcc 0.4365	ValidAcc 0.4357	BestValid 0.4368
+	Epoch 2150:	Loss 2.3486	TrainAcc 0.4236	ValidAcc 0.4046	BestValid 0.4368
+	Epoch 2160:	Loss 2.3485	TrainAcc 0.4297	ValidAcc 0.4169	BestValid 0.4368
+ERROR: Node 0, receving data from peer on way 1, checksum failed 194/86
+gcnii: /home/x-jchen5/Mithril_MultiGPU/core/src/cuda/cuda_hybrid_parallel.cc:382: void GraphDataPropagator::retrieve_graph_data_to_gpu(bool): Assertion `checksum == trailer->checksum' failed.
+[g007:1879912] *** Process received signal ***
+[g007:1879912] Signal: Aborted (6)
+[g007:1879912] Signal code:  (-6)
+[g007:1879912] [ 0] /lib64/libc.so.6(+0x4eb80)[0x14e37e12eb80]
+[g007:1879912] [ 1] /lib64/libc.so.6(gsignal+0x10f)[0x14e37e12eaff]
+[g007:1879912] [ 2] /lib64/libc.so.6(abort+0x127)[0x14e37e101ea5]
+[g007:1879912] [ 3] /lib64/libc.so.6(+0x21d79)[0x14e37e101d79]
+[g007:1879912] [ 4] /lib64/libc.so.6(+0x47456)[0x14e37e127456]
+[g007:1879912] [ 5] ./applications/async_multi_gpus/gcnii(_ZN19GraphDataPropagator26retrieve_graph_data_to_gpuEb+0xa3a)[0x468d5a]
+[g007:1879912] [ 6] ./applications/async_multi_gpus/gcnii(_ZN46DistributedPIPHybridParallelExecutionEngineGPU20perform_forward_taskE18CUDAPIPForwardTask+0x695)[0x46a515]
+[g007:1879912] [ 7] ./applications/async_multi_gpus/gcnii(_ZN50CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler13schedule_taskEv+0x1994)[0x476e24]
+[g007:1879912] [ 8] ./applications/async_multi_gpus/gcnii(_ZN46DistributedPIPHybridParallelExecutionEngineGPU19execute_applicationEP19AbstractApplicationi+0x1e94)[0x47c694]
+[g007:1879912] [ 9] ./applications/async_multi_gpus/gcnii(main+0x16c7)[0x4412b7]
+[g007:1879912] [10] /lib64/libc.so.6(__libc_start_main+0xe5)[0x14e37e11ad85]
+[g007:1879912] [11] ./applications/async_multi_gpus/gcnii(_start+0x2e)[0x441a8e]
+[g007:1879912] *** End of error message ***
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun noticed that process rank 0 with PID 0 on node g007 exited on signal 6 (Aborted).
+--------------------------------------------------------------------------

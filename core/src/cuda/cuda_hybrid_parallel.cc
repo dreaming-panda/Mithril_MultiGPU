@@ -326,7 +326,7 @@ void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool pro
                 ));
     RecvBuffTrailer * trailer = (RecvBuffTrailer*) (send_buff_ + sizeof(RecvBuffHeader) + header->payload_size);
     trailer->checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
-    printf("Node %d, sending a packet with checksum %d\n", node_id, (int) trailer->checksum);
+    //printf("Node %d, sending a packet with checksum %d\n", node_id, (int) trailer->checksum);
 
     // send out the data in a circulant way
     for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; 
