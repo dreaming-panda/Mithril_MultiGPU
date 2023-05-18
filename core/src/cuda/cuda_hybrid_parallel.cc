@@ -13,7 +13,7 @@
 #define MODEL
 #define OPTIMIZE
 #define FIXPART
-#define USE_RDMA 
+//#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
 #define EVAL_FREQUENCY (10)
@@ -218,6 +218,11 @@ void CUDABPIPLocalGraph::TestCsr()
 }
 
 GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEngineGPU * engine): engine_(engine) {
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_stages = engine_->get_num_stages();
+    int stage_id = engine_->get_stage_id();
+
     int num_operators = engine_->op_ten_manager_->get_num_operators();
     int max_embedding_dimension = 0;
     for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
@@ -247,13 +252,9 @@ GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEn
             recv_buff_, recv_buff_size_, sizeof(uint8_t),
             MPI_INFO_NULL, MPI_COMM_WORLD, &recv_buff_win_
             );
-    int node_id = DistributedSys::get_instance()->get_node_id();
-    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-    int num_stages = engine_->get_num_stages();
-    int stage_id = engine_->get_stage_id();
-    for (int i = (node_id + num_stages) % num_nodes; i != node_id; i = (i + num_stages) % num_nodes) {
-        MPI_Win_lock(MPI_LOCK_SHARED, i, 0, recv_buff_win_);
-    }
+    //for (int i = (node_id + num_stages) % num_nodes; i != node_id; i = (i + num_stages) % num_nodes) {
+    //    MPI_Win_lock(MPI_LOCK_SHARED, i, 0, recv_buff_win_);
+    //}
 #endif
     // setting up the sender buffer
     send_buff_size_ = recv_buff_size_per_way_;
@@ -274,10 +275,10 @@ GraphDataPropagator::~GraphDataPropagator() {
     int num_stages = engine_->get_num_stages();
     int stage_id = engine_->get_stage_id();
 #ifdef USE_RDMA
-    // free the mpi windows
-    for (int i = (node_id + num_stages) % num_nodes; i != node_id; i = (i + num_stages) % num_nodes) {
-        MPI_Win_unlock(i, recv_buff_win_);
-    }
+    //// free the mpi windows
+    //for (int i = (node_id + num_stages) % num_nodes; i != node_id; i = (i + num_stages) % num_nodes) {
+    //    MPI_Win_unlock(i, recv_buff_win_);
+    //}
     MPI_Win_free(&recv_buff_win_);
 #endif
     // free the buffers
@@ -326,19 +327,50 @@ void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool pro
                 ));
     RecvBuffTrailer * trailer = (RecvBuffTrailer*) (send_buff_ + sizeof(RecvBuffHeader) + header->payload_size);
     trailer->checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
-    printf("Node %d, sending a packet with checksum %d\n", node_id, (int) trailer->checksum);
+    //printf("Node %d, sending a packet with checksum %d\n", node_id, (int) trailer->checksum);
 
     // send out the data in a circulant way
+    std::vector<MPI_Request> requests;
     for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; 
             dst_node = (dst_node + num_stages) % num_nodes) {
-        size_t remote_disp = recv_buff_size_per_way_ * way_id;
-        assert(recv_buff_size_per_way_ >= send_data_size);
-        MPI_Put(
-                send_buff_, send_data_size, MPI_CHAR,
-                dst_node, remote_disp, send_data_size, MPI_CHAR,
-                recv_buff_win_
-               );
+        // use two-sided mpi
+        MPI_Request request;
+        MPI_Isend(
+                send_buff_, send_data_size, MPI_CHAR, 
+                dst_node, ActivationInterchanging,
+                MPI_COMM_WORLD, &request
+                );
+        requests.push_back(request);
+
+        //// use onesided mpi
+        //size_t remote_disp = recv_buff_size_per_way_ * way_id;
+        //assert(recv_buff_size_per_way_ >= send_data_size);
+        //MPI_Win_lock(MPI_LOCK_SHARED, dst_node, 0, recv_buff_win_);
+        //MPI_Put(
+        //        send_buff_, send_data_size, MPI_CHAR,
+        //        dst_node, remote_disp, send_data_size, MPI_CHAR,
+        //        recv_buff_win_
+        //       );
+        //MPI_Win_flush(dst_node, recv_buff_win_);
+        //MPI_Win_unlock(dst_node, recv_buff_win_);
+
         comm_volume_ += send_data_size;
+    }
+
+    for (int src_node = (node_id + num_stages) % num_nodes; src_node != node_id; 
+            src_node = (src_node + num_stages) % num_nodes) {
+        int way_id = src_node / num_stages;
+        size_t disp = recv_buff_size_per_way_ * way_id;
+        MPI_Status status;
+        MPI_Recv(
+                recv_buff_ + disp, recv_buff_size_per_way_, MPI_CHAR,
+                src_node, ActivationInterchanging, MPI_COMM_WORLD, 
+                &status
+                );
+    }
+    for (MPI_Request request: requests) {
+        MPI_Status status;
+        MPI_Wait(&request, &status);
     }
 }
 
@@ -348,7 +380,8 @@ void GraphDataPropagator::flush_graph_data() {
     int num_stages = engine_->get_num_stages();
     for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; 
             dst_node = (dst_node + num_stages) % num_nodes) {
-        MPI_Win_flush(dst_node, recv_buff_win_);
+        //MPI_Win_flush(dst_node, recv_buff_win_);
+        //MPI_Win_unlock(dst_node, recv_buff_win_);
     }
 }
 
@@ -561,6 +594,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
                         [&](uint8_t * buff, size_t buff_size) {
                         size_t compressed_data_size = 0;
 #ifdef USE_RDMA
+                        MPI_Status status;
                         MPI_Recv(
                                 &compressed_data_size, 1, 
                                 DistributedSys::get_mpi_data_type<size_t>(),
@@ -570,7 +604,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
 #else
                         MPI_Status status;
                         MPI_Recv(
-                                buff, 1, MPI_CHAR,
+                                buff, buff_size, MPI_CHAR,
                                 remote_node, ForwardActivationPassing,
                                 MPI_COMM_WORLD, &status
                                 );
@@ -741,12 +775,25 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                 engine_->grad_decompressors_[task.chunk_id]->receive_compressed_data(
                         [&](uint8_t * buff, size_t buff_size) {
                         size_t compressed_data_size = 0;
+#ifdef USE_RDMA
+                        MPI_Status status;
                         MPI_Recv(
                                 &compressed_data_size, 1, 
                                 DistributedSys::get_mpi_data_type<size_t>(),
                                 remote_node, BackwardGradientPassing,
                                 MPI_COMM_WORLD, &status
                                 );
+#else
+                        MPI_Status status;
+                        MPI_Recv(
+                                buff, buff_size, MPI_CHAR, 
+                                remote_node, BackwardGradientPassing,
+                                MPI_COMM_WORLD, &status
+                                );
+                        int count = 0;
+                        MPI_Get_count(&status, MPI_CHAR, &count);
+                        compressed_data_size = count;
+#endif
                         comm += compressed_data_size;
                         return compressed_data_size;
                         }, true // buff in CPU
@@ -1040,6 +1087,7 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                     assert(compressed_data);
                     assert(compressed_data_size);
 
+#ifdef USE_RDMA
                     MPI_Put(
                             compressed_data, compressed_data_size, MPI_CHAR,
                             remote_node, 0, compressed_data_size, MPI_CHAR,
@@ -1052,6 +1100,13 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
                             remote_node, BackwardGradientPassing,
                             MPI_COMM_WORLD
                             );
+#else 
+                    MPI_Send(
+                            compressed_data, compressed_data_size, MPI_CHAR,
+                            remote_node, BackwardGradientPassing,
+                            MPI_COMM_WORLD
+                            );
+#endif
                 }
                 // send out the h0
                 if (engine_->global_shared_tensor_) {
