@@ -1,11 +1,11 @@
 /*
-Copyright 2021, University of Southern California
+   Copyright 2021, University of Southern California
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,6 +22,7 @@ limitations under the License.
 #include <cmath>
 #include <unistd.h>
 #define SLEEP_TIME 2
+
 GraphStructureFullyReplicated::GraphStructureFullyReplicated(const std::string meta_data_file, const std::string edge_list_file, const std::string vertex_partitioning_file)
 {
     this->load_from_file(meta_data_file,edge_list_file,vertex_partitioning_file);
@@ -57,7 +58,7 @@ bool GraphStructureFullyReplicated::is_local_vertex(VertexId v)
 {
     if(v <= this->num_global_vertices-1 && v >= 0)
     {
-       return true;
+        return true;
     }
     return false;
 }
@@ -148,7 +149,7 @@ void GraphStructureFullyReplicated::load_from_file(const std::string meta_data_f
             break;
         counter++;
     }
-     for(VertexId i = row_counter+1;i<=num_global_vertices;i++)
+    for(VertexId i = row_counter+1;i<=num_global_vertices;i++)
     {
         Row_Index[i] = Row_Index[row_counter];
     }
@@ -179,32 +180,32 @@ void GraphStructureFullyReplicated::load_from_file(const std::string meta_data_f
     }
     infile.close();
 
-   VertexId row = 0;
-   for(EdgeId i = 0; i<=num_global_edges-1;i++)
-   {
-       while(Row_Index[row] < i+1)
-       {
-           row++;
-       }
-       VertexId src = row-1;
-       VertexId dst = Col_Index[i];
-       VertexId x = get_in_degree(src);
-       VertexId y = get_in_degree(dst);
-       edge_data[i] = static_cast<DataType>(1.0/(sqrt(x+1)*sqrt(y+1)));
-   }
-   VertexId col = 0;
-   for(EdgeId i = 0; i<=num_global_edges-1;i++)
-   {
-       while(Reversed_Col_Index[col] < i+1)
-       {
-           col++;
-       }
-       VertexId dst = col-1;
-       VertexId src = Reversed_Row_Index[i];
-       VertexId x = get_in_degree(src);
-       VertexId y = get_in_degree(dst);
-       Reversed_edge_data[i] = static_cast<DataType>(1.0/(sqrt(x+1)*sqrt(y+1)));
-   }
+    VertexId row = 0;
+    for(EdgeId i = 0; i<=num_global_edges-1;i++)
+    {
+        while(Row_Index[row] < i+1)
+        {
+            row++;
+        }
+        VertexId src = row-1;
+        VertexId dst = Col_Index[i];
+        VertexId x = get_in_degree(src);
+        VertexId y = get_in_degree(dst);
+        edge_data[i] = static_cast<DataType>(1.0/(sqrt(x+1)*sqrt(y+1)));
+    }
+    VertexId col = 0;
+    for(EdgeId i = 0; i<=num_global_edges-1;i++)
+    {
+        while(Reversed_Col_Index[col] < i+1)
+        {
+            col++;
+        }
+        VertexId dst = col-1;
+        VertexId src = Reversed_Row_Index[i];
+        VertexId x = get_in_degree(src);
+        VertexId y = get_in_degree(dst);
+        Reversed_edge_data[i] = static_cast<DataType>(1.0/(sqrt(x+1)*sqrt(y+1)));
+    }
 
 }
 
@@ -240,7 +241,7 @@ void GraphStructureFullyReplicatedV2::load_from_file(
     std::ifstream in(edge_list_file, std::ios::binary);
     printf("Building the CSR structure...\n");
     double start_time = get_time();
-    
+
     VertexId last_src = 0;
     csr_idx_[0] = 0;
     for (EdgeId e_i = 0; e_i < num_edges_; ++ e_i) {
@@ -249,12 +250,12 @@ void GraphStructureFullyReplicatedV2::load_from_file(
         src = inner.src;
         dst = inner.dst;
         //assert(fscanf(f, "%u%u%d", &src, &dst, &edge_data) == 3);
-       // printf("%u, %u\n",src, dst);
+        // printf("%u, %u\n",src, dst);
         out_edges_[e_i].dst = dst;
         //printf("%d %d\n", src, dst);
         if(src == dst)
         {selfcirclenumber++;
-       // printf("%d %d", src, dst);
+            // printf("%d %d", src, dst);
         }
         if (src != last_src) {
             for (; last_src + 1 < src; ++ last_src) {
@@ -285,7 +286,7 @@ void GraphStructureFullyReplicatedV2::load_from_file(
         src = inner.src;
         dst = inner.dst;
         // assert(fscanf(f, "%u%u%d", &src, &dst, &edge_data) == 3);
-   //     printf("%d, %d",src, dst);
+        //     printf("%d, %d",src, dst);
         in_edges_[e_i].src = src;
         if (dst != last_dst) {
             for (; last_dst + 1 < dst; ++ last_dst) {
@@ -355,7 +356,7 @@ void GraphNonStructualDataFullyReplicated::load_from_file(const std::string meta
     printf("Building the Feature Vector...\n");
     for (VertexId i = 0; i < num_vertices; i++)
     {
-        
+
         DataType *feature = new DataType[num_feature_dimensions];
         infile.read((char*)feature, sizeof(DataType)*num_feature_dimensions);
         features[i].data = feature;
@@ -423,7 +424,7 @@ void GraphStructurePartiallyReplicated::load_from_file(const std::string meta_da
     std::ifstream readfile(meta_data_file);
     assert(readfile.good());
     VertexId number_of_vertices;
-    
+
     EdgeId number_of_edges;
     Dimension num_feature_dimensions;
     Category num_labels;
@@ -504,7 +505,7 @@ void GraphStructurePartiallyReplicated::load_from_file(const std::string meta_da
             break;
         ecounter++;
     }
-     for(VertexId i = row_counter+1;i<=num_local_vertices;i++)
+    for(VertexId i = row_counter+1;i<=num_local_vertices;i++)
     {
         Row_Index[i] = Row_Index[row_counter];
     }
@@ -571,9 +572,9 @@ void GraphStructurePartiallyReplicated::load_from_file(const std::string meta_da
         VertexId src = Reversed_Row_Index[i];
         Reversed_edge_data[i] = static_cast<DataType>(1.0 / (sqrt(In_Egde_Number_Table[src] + 1) * sqrt(In_Egde_Number_Table[dst] + 1)));
     }
-   // std::cout<<"load graph end"<<std::endl;
+    // std::cout<<"load graph end"<<std::endl;
     //std::cout<<this->num_global_vertices<<std::endl;
-   // MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Barrier(MPI_COMM_WORLD);
 }
 VertexId GraphStructurePartiallyReplicated::get_num_global_vertices()
 {  
@@ -624,11 +625,11 @@ void GraphStructurePartiallyReplicated::Server_Running()
         {
             active_neibours[source] = false;
             active_neibours_number--;
-           // std::cout<<processor_id<<" receive exit from : : :"<<source<<std::endl;
+            // std::cout<<processor_id<<" receive exit from : : :"<<source<<std::endl;
             if (active_neibours_number == 0)
             {
                 thread_active = false;
-              //  std::cout<<processor_id<<" finish finish finish finish finish "<<std::endl;
+                //  std::cout<<processor_id<<" finish finish finish finish finish "<<std::endl;
             }
         }
         else if (recv.type == ASK_IN)
@@ -768,11 +769,11 @@ bool GraphStructurePartiallyReplicated::Server_Join()
         //std::cout<<processor_id<<std::endl;
         //sleep(SLEEP_TIME);
     };
-   // std::cout<<processor_id<<" here "<<std::endl;
-   // MPI_Barrier(MPI_COMM_WORLD);
+    // std::cout<<processor_id<<" here "<<std::endl;
+    // MPI_Barrier(MPI_COMM_WORLD);
     if (!thread_active && server_thread.joinable())
     {   
-       // std::cout<<processor_id<<std::endl;
+        // std::cout<<processor_id<<std::endl;
         server_thread.join();
         return true;
     }
@@ -825,7 +826,7 @@ void GraphNonStructualDataPartiallyReplicated::load_from_file(const std::string 
     num_vertices = number_of_vertices;
     num_labels = number_labels;
     readfile.close();
-   // std::cout<<"meta_data: "<<num_feature_dimensions<<" "<<num_vertices<<" "<<num_labels<<std::endl;
+    // std::cout<<"meta_data: "<<num_feature_dimensions<<" "<<num_vertices<<" "<<num_labels<<std::endl;
     ProcessorId ids;
     VertexId vids;
     VertexId local_vertex = 0;
@@ -851,10 +852,10 @@ void GraphNonStructualDataPartiallyReplicated::load_from_file(const std::string 
         if (i == this->processor_id)
         {   
             num_local_vertices = v_num;
-           
+
         }
     }
-   // std::cout<<"part: "<<num_local_vertices<<std::endl;
+    // std::cout<<"part: "<<num_local_vertices<<std::endl;
     partfile.close();
     labels = new LabelVector[num_local_vertices];
     features = new FeatureVector[num_local_vertices];
@@ -864,7 +865,7 @@ void GraphNonStructualDataPartiallyReplicated::load_from_file(const std::string 
     {
         VertexId v;
         infile >> v;
-       // if(processor_id == 1)std::cout<<"vertices: "<<v<<std::endl;
+        // if(processor_id == 1)std::cout<<"vertices: "<<v<<std::endl;
         if (belong[v] != this->processor_id)
         {   
             for (Dimension i = 0; i < num_feature_dimensions; i++)
@@ -884,7 +885,7 @@ void GraphNonStructualDataPartiallyReplicated::load_from_file(const std::string 
         std::map<VertexId, VertexId>::iterator it;
         it = global2local_mapping.find(v);
         VertexId local_v = it->second;
-       // if(processor_id == 1)std::cout<<"vertices: "<<local_v<<std::endl;
+        // if(processor_id == 1)std::cout<<"vertices: "<<local_v<<std::endl;
         features[local_v].data = feature;
         features[local_v].vec_len = num_feature_dimensions;
     }
@@ -895,7 +896,7 @@ void GraphNonStructualDataPartiallyReplicated::load_from_file(const std::string 
     {
         VertexId v;
         inputfile >> v;
-       // if(processor_id == 1)std::cout<<"label_vertices: "<<v<<std::endl;
+        // if(processor_id == 1)std::cout<<"label_vertices: "<<v<<std::endl;
         if (belong[v] != this->processor_id)
         {
             for (Category i = 0; i < num_labels; i++)
@@ -920,8 +921,8 @@ void GraphNonStructualDataPartiallyReplicated::load_from_file(const std::string 
         labels[local_v].vec_len = num_labels;
     }
     inputfile.close();
-   // std::cout<<"load data end "<<processor_id<<std::endl;
-   // MPI_Barrier(MPI_COMM_WORLD);
+    // std::cout<<"load data end "<<processor_id<<std::endl;
+    // MPI_Barrier(MPI_COMM_WORLD);
 }
 GraphNonStructualDataPartiallyReplicated::~GraphNonStructualDataPartiallyReplicated()
 {
@@ -982,13 +983,13 @@ void GraphNonStructualDataPartiallyReplicated::Server_Running()
         int source = status.MPI_SOURCE;
         if (recv.type == EXIT)
         {  
-           // std::cout<<processor_id<<" receive exit from "<<source<<std::endl;
+            // std::cout<<processor_id<<" receive exit from "<<source<<std::endl;
             active_neibours[source] = false;
             active_neibours_number--;
             if (active_neibours_number == 0)
             {
                 thread_active = false;
-              //  std::cout<<processor_id<<" finish finish finish finish finish ! ! ! !"<<std::endl;
+                //  std::cout<<processor_id<<" finish finish finish finish finish ! ! ! !"<<std::endl;
             }
         }
         else if (recv.type == ASK_FEATURE)
@@ -1072,21 +1073,21 @@ void GraphNonStructualDataPartiallyReplicated::Server_Exit()
         if (i != this->processor_id)
         {
             struct Vertex_Query vq = {EXIT, 0};
-          //  std::cout<<processor_id<<" send exit to "<<i<<std::endl;
+            //  std::cout<<processor_id<<" send exit to "<<i<<std::endl;
             MPI_Send(&vq, 1, MPI_Vertex_Query, i, LISTEN_TAG_NON, MPI_COMM_WORLD);
         }
     }
 }
 bool GraphNonStructualDataPartiallyReplicated::Server_Join()
 {   
-    
+
     while (thread_active || !server_thread.joinable())
     { 
-       //sleep(SLEEP_TIME);
+        //sleep(SLEEP_TIME);
     }
     if (!thread_active && server_thread.joinable())
     {   
-       // std::cout<<processor_id<<" done "<<std::endl;
+        // std::cout<<processor_id<<" done "<<std::endl;
         server_thread.join();
         return true;
     }

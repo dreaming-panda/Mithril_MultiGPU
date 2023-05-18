@@ -46,8 +46,6 @@ enum OperatorType {
     OPERATOR_SOFTMAX,
     OPERATOR_AGGREGATION,
     OPERATOR_ADD,
-    OPERATOR_IDEN,
-    OPERATOR_MATMULADD,
     OPERATOR_DROPOUT
 };
 
@@ -59,6 +57,8 @@ struct Tensor {
     int dims[MAX_NUM_DIM];
     Operator * op;
     int idx;
+    bool is_data_transient; // transient: need to be recomputed
+    bool is_grad_transient; // only need to store the grad of a single chunk
 
     // the resource data managed by the execution engine
     AbstractTensorResource * resource;
@@ -71,20 +71,22 @@ class Operator {
         int num_input_tensors_;
         int num_output_tensors_;
         OperatorType type_;
+        bool is_transient_;
 
         void init_output_tensors();
 
     public:
-        Operator(int num_output_tensors, OperatorType type);
-        Operator(Tensor * t, int num_output_tensors, OperatorType type);
-        Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType type);
-        Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, OperatorType type);
+        Operator(int num_output_tensors, OperatorType type, bool is_transient = false);
+        Operator(Tensor * t, int num_output_tensors, OperatorType type, bool is_transient = false);
+        Operator(Tensor * a, Tensor * b, int num_output_tensors, OperatorType type, bool is_transient = false);
+        Operator(Tensor * a, Tensor * b, Tensor * c, int num_output_tensors, OperatorType type, bool is_transient = false);
         virtual ~Operator() {}
         Tensor * get_output_tensor(int idx);
         int get_num_output_tensors();
         Tensor * get_input_tensor(int idx);
         int get_num_input_tensors();
         OperatorType get_type();
+        bool get_is_transient() {return is_transient_;}
 };
 
 // the input operator outputs a single vertex tensor
@@ -99,7 +101,7 @@ class InputOperator: public Operator {
 
 class ReluOperator: public Operator {
     public:
-        ReluOperator(Tensor * t);
+        ReluOperator(Tensor * t, bool is_transient = false);
         ~ReluOperator() {}
 };
 
@@ -112,47 +114,41 @@ class WeightOperator: public Operator {
 
 class MatmulOperator: public Operator {
     public:
-        MatmulOperator(Tensor * a, Tensor * b);
+        MatmulOperator(Tensor * a, Tensor * b, bool is_transient = false);
         ~MatmulOperator() {}
 };
-class MatmulAddOperator: public Operator{
-    public:
-        MatmulAddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta);
-        ~MatmulAddOperator() {}
-        DataType alpha;
-        DataType beta;
-};
+
 class SoftmaxOperator: public Operator {
+    private:
+        bool log_output_;
     public:
-        SoftmaxOperator(Tensor * t);
+        SoftmaxOperator(Tensor * t, bool log_output = false, bool is_transient = false);
         ~SoftmaxOperator() {}
+        inline bool get_log_output() {return log_output_;}
 };
+
 class AddOperator: public Operator {
         public:
-        AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta);
+        AddOperator(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient = false);
         ~AddOperator() {}
         DataType alpha;
         DataType beta;
 };
-class IDentityOperator: public Operator {
-    public:
-        
-        IDentityOperator(int dim_0, int dim_1);
-        ~IDentityOperator() {}
-};
+
 class DropoutOperator: public Operator {
     public:
-        DropoutOperator(Tensor * a, double dropout_rate);
+        DropoutOperator(Tensor * a, double dropout_rate, bool is_transient = false);
         ~DropoutOperator() {}
         double dropout_rate_;
 };
+
 // graph operators
 
 class AggregationOperator: public Operator {
     private:
         AggregationType type_;
     public:
-        AggregationOperator(Tensor * t, AggregationType type);
+        AggregationOperator(Tensor * t, AggregationType type, bool is_transient = false);
         ~AggregationOperator() {}
         AggregationType get_aggregation_type();
 };

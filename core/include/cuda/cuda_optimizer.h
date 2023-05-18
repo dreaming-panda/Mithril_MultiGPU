@@ -25,6 +25,7 @@ class LowerLevelSGDOptimizerGPU: public AbstractLowerLevelOptimizer {
             learning_rate_ = new_lr;
         }
 };
+
 class SGDOptimizerGPU: public AbstractOptimizer {
     private:
         double learning_rate_;
@@ -42,11 +43,10 @@ class SGDOptimizerGPU: public AbstractOptimizer {
         // sophisticated weight updates (e.g., async. update in
         // pipeline parallel) can be implemented
         AbstractLowerLevelOptimizer * get_lower_level_optimizer();
-       void SetLearningRate(double new_lr){
+        void SetLearningRate(double new_lr){
             lower_level_optimizer_->SetLearningRate(new_lr);
         }
 };
-
 
 class LowerLevelAdamOptimizerGPU: public AbstractLowerLevelOptimizer {
     private:
@@ -72,6 +72,7 @@ class LowerLevelAdamOptimizerGPU: public AbstractLowerLevelOptimizer {
                 DataType * grad,
                 DataType * weight_to_update,
                 size_t num_elements);
+
     public:
         LowerLevelAdamOptimizerGPU(
                 double learning_rate = 1e-3, 
@@ -87,13 +88,14 @@ class LowerLevelAdamOptimizerGPU: public AbstractLowerLevelOptimizer {
                 size_t num_elements
                 );
         void SetLearningRate(double new_lr){
-           // printf("mmmmm\n");
+            // printf("mmmmm\n");
             learning_rate_ = new_lr;
         }
         double get_learning_rate() {
             return learning_rate_;
         }
 };
+
 class AdamOptimizerGPU: public AbstractOptimizer {
     private:
         LowerLevelAdamOptimizerGPU * lower_level_optimizer_;
@@ -117,17 +119,13 @@ class AdamOptimizerGPU: public AbstractOptimizer {
         // pipeline parallel) can be implemented
         AbstractLowerLevelOptimizer * get_lower_level_optimizer();
         void SetLearningRate(double new_lr){
-            //printf("chanege lr! %.9f\n", new_lr);
-           // printf("chanege lr!\n");
-           // printf("chanege lr!\n");
-           // printf("chanege lr!\n");
-           // printf("chanege lr!\n");
             lower_level_optimizer_->SetLearningRate(new_lr);
         }
         double get_learning_rate() {
             return lower_level_optimizer_->get_learning_rate();
         }
 };
+
 class LearningRateScheduler{
     private:
         const double min_learning_rate_;
@@ -140,20 +138,16 @@ class LearningRateScheduler{
         int last_epoch_;
         int cooldown_counter_;
         const int cooldown_;
-       // AdamOptimizerGPU * optimizer_;
+
     public:
         LearningRateScheduler(double min_lr, double cur_lr, double factor, double eps, int patience, int cooldown):
-        min_learning_rate_(min_lr),current_learning_rate_(cur_lr),factor_(factor),eps_(eps),patience_(patience),cooldown_(cooldown)
-        {
+            min_learning_rate_(min_lr),current_learning_rate_(cur_lr),factor_(factor),eps_(eps),patience_(patience),cooldown_(cooldown) {
             best_loss_ = double(FLT_MAX) ;
             bad_epochs_ = 0;
             last_epoch_ = 0;
             cooldown_counter_ = 0;
         };
         double Step(double loss){
-            // optimizer_->SetLearningRate(5e-3);
-            
-            //this->current_learning_rate_ = 5e-3;
             int epoch = this->last_epoch_ + 1;
             this->last_epoch_ = epoch;
             if(loss < this->best_loss_ ){
@@ -166,20 +160,13 @@ class LearningRateScheduler{
                 this->cooldown_counter_ --;
                 this->bad_epochs_ = 0;
             }
-           // printf("1111\n");
             if(this->bad_epochs_ > this->patience_){
-              //   printf("2222\n");
                 double old_lr = this->current_learning_rate_;
                 double new_lr = std::max(old_lr * this->factor_, this->min_learning_rate_);
                 if(old_lr - new_lr > this->eps_){
-                  //  printf("3333\n");
-                  //  printf("%d, %f, %f, %f\n", 1, this->current_learning_rate_, old_lr, new_lr);
                     printf("\nreduce learning rate from %f\n", this->current_learning_rate_);
                     this->current_learning_rate_  = new_lr;
                     printf("\nreduce learning rate to %f\n", this->current_learning_rate_);
-                  //  printf("lr scheduler work\n");
-                   // optimizer_->SetLearningRate(5e-3);
-                   //  printf("lr scheduler work done\n");
                 }
                 this->cooldown_counter_ = this->cooldown_;
                 this->bad_epochs_ = 0;
@@ -187,4 +174,5 @@ class LearningRateScheduler{
             return this->current_learning_rate_;
         }  
 };
+
 #endif

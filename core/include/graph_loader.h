@@ -1,12 +1,12 @@
 
 /*
-Copyright 2021, University of Southern California
+   Copyright 2021, University of Southern California
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -51,7 +51,6 @@ class AbstractGraphNonStructualDataLoader {
 };
 
 class GraphStructureLoaderFullyReplicated: public AbstractGraphStructureLoader {
-    // TODO
     public:
         GraphStructureLoaderFullyReplicated();
         ~GraphStructureLoaderFullyReplicated();
@@ -68,7 +67,6 @@ class GraphStructureLoaderFullyReplicated: public AbstractGraphStructureLoader {
 };
 
 class GraphNonStructualDataLoaderFullyReplicated: public AbstractGraphNonStructualDataLoader {
-    // TODO
     public:
         GraphNonStructualDataLoaderFullyReplicated();
         ~GraphNonStructualDataLoaderFullyReplicated();
@@ -112,7 +110,7 @@ class GraphNonStructualDataLoaderPartiallyReplicated: public AbstractGraphNonStr
         ProcessorId processor_num;
     public:
         GraphNonStructualDataLoaderPartiallyReplicated();
-         GraphNonStructualDataLoaderPartiallyReplicated(ProcessorId processor_id, ProcessorId processor_num);
+        GraphNonStructualDataLoaderPartiallyReplicated(ProcessorId processor_id, ProcessorId processor_num);
         ~GraphNonStructualDataLoaderPartiallyReplicated(){};
         // functions for loading the graph non-structural data
         // what is returned must be a GraphNonStructualDataFullyReplicated instance

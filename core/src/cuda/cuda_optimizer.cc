@@ -1,5 +1,6 @@
 #include"cuda/cuda_optimizer.h"
 #include"cuda/cuda_resource.h"
+
 SGDOptimizerGPU::SGDOptimizerGPU(double learning_rate): learning_rate_(learning_rate) {
     assert(learning_rate > 0);
     lower_level_optimizer_ = new LowerLevelSGDOptimizerGPU(learning_rate);
@@ -38,15 +39,11 @@ void SGDOptimizerGPU::optimize_weights(
                 assert(output_tensor->dims[i] > 0);
                 data_len *= output_tensor->dims[i];
             }
-          //  CopyFromCUDADeviceToHost<DataType>(data,cuda_data, data_len, __FILE__, __LINE__);
-           // CopyFromCUDADeviceToHost<DataType>(grad,cuda_grad, data_len, __FILE__, __LINE__);
             lower_level_optimizer_->optimize_weights(
                     op, cuda_grad, cuda_data, data_len
                     );
-          //  CopyFromHostToCUDADevice<DataType>(cuda_data,data, data_len, __FILE__, __LINE__);
-           // CopyFromHostToCUDADevice<DataType>(cuda_grad,grad, data_len, __FILE__, __LINE__);
         }
-        
+
     }
 }
 
@@ -81,54 +78,50 @@ void LowerLevelSGDOptimizerGPU::optimize_weights(
     const float alpha1 = 0.0f;
     const float beta = 1.0f;
     cudnnOpTensor(cudnn_,AddDesc,&alpha0, data_descriptor, (void *)grad ,&alpha1, data_descriptor, (void *)grad,
-    &beta, data_descriptor, weight_to_update);
-
-
-/*#pragma omp parallel for
-    for (size_t i = 0; i < num_elements; ++ i) {
-    //   if(isnan(grad[i]))grad[i] = 0.1;
-        weight_to_update[i] -= grad[i] * learning_rate_;
-    }*/
+            &beta, data_descriptor, weight_to_update);
 }
+
 LowerLevelAdamOptimizerGPU::LowerLevelAdamOptimizerGPU(
-                double learning_rate, 
-                double weight_decay,
-                double beta1,
-                double beta2,
-                double epsilon):learning_rate_(learning_rate), 
+        double learning_rate, 
+        double weight_decay,
+        double beta1,
+        double beta2,
+        double epsilon):learning_rate_(learning_rate), 
     weight_decay_(weight_decay), beta1_(beta1), beta2_(beta2), epsilon_(epsilon){
-            states_.clear();
-            //printf("Learning RATE: %.9f\n", learning_rate_);
+        states_.clear();
     };
+
 LowerLevelAdamOptimizerGPU::~LowerLevelAdamOptimizerGPU(){
-            for (std::pair<Operator*, OptimizerStateGPU> state_pair: states_) {
-                    OptimizerStateGPU state = state_pair.second;
-                    DeallocateCUDAMemory<DataType>(&state.v_t_gpu, __FILE__, __LINE__);
-                    DeallocateCUDAMemory<DataType>(&state.m_t_gpu, __FILE__, __LINE__);
+    for (std::pair<Operator*, OptimizerStateGPU> state_pair: states_) {
+        OptimizerStateGPU state = state_pair.second;
+        DeallocateCUDAMemory<DataType>(&state.v_t_gpu, __FILE__, __LINE__);
+        DeallocateCUDAMemory<DataType>(&state.m_t_gpu, __FILE__, __LINE__);
     }
 };
+
 void LowerLevelAdamOptimizerGPU::init_state(Operator * op, size_t num_elements){
-            OptimizerStateGPU state;
-            state.t = 0;
-            AllocateCUDAMemory<DataType>(&state.v_t_gpu, num_elements, __FILE__, __LINE__);
-            AllocateCUDAMemory<DataType>(&state.m_t_gpu, num_elements,__FILE__,__LINE__);
-            SetCUDAMemory<DataType>(state.v_t_gpu, 0, num_elements, __FILE__, __LINE__);
-            SetCUDAMemory<DataType>(state.m_t_gpu, 0, num_elements, __FILE__, __LINE__);
-            state.exp_beta1 = 1.;
-            state.exp_beta2 = 1.;
-            states_[op] = state;
-        };
+    OptimizerStateGPU state;
+    state.t = 0;
+    AllocateCUDAMemory<DataType>(&state.v_t_gpu, num_elements, __FILE__, __LINE__);
+    AllocateCUDAMemory<DataType>(&state.m_t_gpu, num_elements,__FILE__,__LINE__);
+    SetCUDAMemory<DataType>(state.v_t_gpu, 0, num_elements, __FILE__, __LINE__);
+    SetCUDAMemory<DataType>(state.m_t_gpu, 0, num_elements, __FILE__, __LINE__);
+    state.exp_beta1 = 1.;
+    state.exp_beta2 = 1.;
+    states_[op] = state;
+};
+
 void LowerLevelAdamOptimizerGPU::optimize_weights(
-                Operator * op, 
-                DataType * grad,
-                DataType * weight_to_update,
-                size_t num_elements
-                ){
+        Operator * op, 
+        DataType * grad,
+        DataType * weight_to_update,
+        size_t num_elements
+        ){
     if (states_.count(op) == 0) {
         init_state(op, num_elements);
     }
     LaunchOptimizeWeights(op,grad,weight_to_update,num_elements);
-                };
+};
 
 AdamOptimizerGPU::AdamOptimizerGPU(
         double learning_rate,
@@ -137,8 +130,6 @@ AdamOptimizerGPU::AdamOptimizerGPU(
         double beta2,
         double epsilon
         ) {
-    //printf("Creating an Adam Optimizer...\n");
-    //printf("High-level optimizer, Learning RATE: %.9f\n", learning_rate);
     lower_level_optimizer_ = new LowerLevelAdamOptimizerGPU(
             learning_rate, weight_decay,
             beta1, beta2, epsilon
@@ -155,7 +146,6 @@ void AdamOptimizerGPU::optimize_weights(
         const std::vector<bool> operator_mask
         ) {
     int num_operators = operators.size();
-    //printf("Optimize weight: ");
     for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
         Operator * op = operators[op_idx];
         if (operator_mask[op_idx] && op->get_type() == OPERATOR_WEIGHT) {
@@ -179,29 +169,11 @@ void AdamOptimizerGPU::optimize_weights(
                 assert(output_tensor->dims[i] > 0);
                 data_len *= output_tensor->dims[i];
             }
-         //   DataType * data_ = new DataType[data_len];
-         //   DataType * grad_ = new DataType[data_len];
-           // CopyFromCUDADeviceToHost<DataType>(data_, cuda_data, data_len, __FILE__, __LINE__);
-           // CopyFromCUDADeviceToHost<DataType>(grad_, cuda_grad, data_len, __FILE__, __LINE__);
             lower_level_optimizer_->optimize_weights(
                     op, cuda_grad, cuda_data, data_len
                     );
-            //{
-            //    DataType datas[data_len];
-            //    cudaMemcpy(datas, cuda_data, data_len * sizeof(DataType), cudaMemcpyDeviceToHost);
-            //    double sum = 0;
-            //    for (int i = 0; i < data_len; ++ i) {
-            //        sum += datas[i];
-            //    }
-            //    printf("OP %d, sum: %.9f ", op_idx, sum);
-            //}
-           // CopyFromHostToCUDADevice<DataType>(cuda_data, data_, data_len, __FILE__, __LINE__);
-           // CopyFromHostToCUDADevice<DataType>(cuda_grad, grad_, data_len, __FILE__, __LINE__);
-          //  delete [] data_;
-          //  delete [] grad_;
         }
     }
-    //printf("\n");
 }
 
 // the lower-level optimizer classes provided a lower-level 

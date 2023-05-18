@@ -85,6 +85,7 @@ double get_mem_usage() {
     return rss / 1024.;
 }
 
+RandomNumberManager * RandomNumberManager::instance = NULL;
 
 
 

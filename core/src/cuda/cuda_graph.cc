@@ -8,6 +8,7 @@ CUDAFullyStructualGraph::~CUDAFullyStructualGraph()
 {
     if(is_alive_)destroy();
 }
+
 void CUDAFullyStructualGraph::DeallocateHostCsrBuffer()
 {
     assert(host_csr_store_ == true);
@@ -20,6 +21,7 @@ void CUDAFullyStructualGraph::DeallocateHostCsrBuffer()
     delete [] host_cscValues_;
     host_csr_store_ = false;
 }
+
 void CUDAFullyStructualGraph::DeallocateCudaCsrBuffer()
 {
     assert(use_gpu_ == true && gpu_csr_store_ == true);
@@ -31,22 +33,11 @@ void CUDAFullyStructualGraph::DeallocateCudaCsrBuffer()
     DeallocateCUDAMemory<DataType>(&cuda_cscValues_,__FILE__,__LINE__);
     gpu_csr_store_ = false;
 }
-/*void CUDAFullyStructualGraph::InitMemory()
-{
-    assert(use_gpu_ == true);
-    assert(is_alive_ == true);
-    int nnz = get_num_global_vertices() + get_num_global_edges();
-    AllocateCUDAMemory<int>(&cuda_csrRowOffsets_, get_num_global_vertices() + 1, __FILE__, __LINE__);
-    AllocateCUDAMemory<int>(&cuda_csrColInd_, nnz, __FILE__, __LINE__);
-    AllocateCUDAMemory<DataType>(&cuda_csrValues_, nnz, __FILE__, __LINE__);
-    host_csrRowOffsets_ = new int[get_num_global_vertices() + 1];
-    host_csrColInd_ = new int[nnz];
-    host_csrValues_ = new DataType[nnz];
-}*/
+
 void CUDAFullyStructualGraph::InitCsrBuffer()
 {   
     //AllocateCUDAMemory<int>(&cuda_csrColInd_, 100, __FILE__, __LINE__);
-   // printf("allocate cuda");
+    // printf("allocate cuda");
     assert(host_csrColInd_ != nullptr);
     assert(host_csrRowOffsets_ != nullptr);
     assert(host_csrValues_ != nullptr);
@@ -74,36 +65,36 @@ void CUDAFullyStructualGraph::InitCsrBuffer()
     int selfcirc_count = 0;
     for(VertexId vi = 0; vi < get_num_global_vertices(); ++vi)
     {
-      //  host_csrColInd_[nnz_count] = vi;
-     //   host_csrValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
-     //   ++nnz_count;
+        //  host_csrColInd_[nnz_count] = vi;
+        //   host_csrValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
+        //   ++nnz_count;
         InEdgeList in_edge_list = get_in_edges(vi);
         OutEdgeList o_list = get_out_edges(vi);
-     //   cout << vi << ": ";
+        //   cout << vi << ": ";
         bool selfposition = false;
         for(EdgeId i = 0; i < o_list.num_out_edges; ++i)
         {
             VertexId dst = o_list.ptx[i].dst;
-          //  cout << dst << " ";
-           assert(dst != vi);
-           if(dst == vi && selfposition == false){
-               selfposition = true;
-               host_csrColInd_[nnz_count] = vi;
-               host_csrValues_[nnz_count] = 2./(get_in_degree(vi) + 1);
-               ++nnz_count;
-               ++selfcirc_count;
-               for(int k = vi + 1; k < get_num_global_vertices() + 1; k++){
-                   host_csrRowOffsets_[k]--;
-               }
-               continue;
-           }
+            //  cout << dst << " ";
+            assert(dst != vi);
+            if(dst == vi && selfposition == false){
+                selfposition = true;
+                host_csrColInd_[nnz_count] = vi;
+                host_csrValues_[nnz_count] = 2./(get_in_degree(vi) + 1);
+                ++nnz_count;
+                ++selfcirc_count;
+                for(int k = vi + 1; k < get_num_global_vertices() + 1; k++){
+                    host_csrRowOffsets_[k]--;
+                }
+                continue;
+            }
             if(dst > vi && selfposition == false)
             {
                 host_csrColInd_[nnz_count] = vi;
                 host_csrValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
                 ++nnz_count;
                 selfposition = true;
-              //  cout << vi << " ";
+                //  cout << vi << " ";
             }
             host_csrColInd_[nnz_count] = dst;
             host_csrValues_[nnz_count] = o_list.ptx[i].norm_factor;
@@ -111,22 +102,11 @@ void CUDAFullyStructualGraph::InitCsrBuffer()
         }
         if(selfposition == false){
             host_csrColInd_[nnz_count] = vi;
-                host_csrValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
-                ++nnz_count;
-                selfposition = true;
-             //   cout << vi << " ";
+            host_csrValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
+            ++nnz_count;
+            selfposition = true;
+            //   cout << vi << " ";
         }
-    //    cout << endl;
-     //   for(EdgeId i = 0; i < in_edge_list.num_in_edges; ++i)
-     //   {
-     //       VertexId src  = in_edge_list.ptx[i].src;
-     //       assert(src != vi);
-      //      host_csrColInd_[nnz_count] = src;
-      //      host_csrValues_[nnz_count] = in_edge_list.ptx[i].norm_factor;
-      //      ++nnz_count;
-         //   cout << src << " ";
-     //   }
-     //   cout << endl;
     }
     //cout << nnz_count <<" "<<get_num_global_vertices()<<" "<<get_num_global_edges()<<" "<<selfcirclenumber<<" "<<selfcirc_count<<" "<<nnz<<endl;
     assert(nnz_count == nnz);
@@ -135,36 +115,36 @@ void CUDAFullyStructualGraph::InitCsrBuffer()
     nnz_count = 0;
     for(VertexId vi = 0; vi < get_num_global_vertices(); ++vi)
     {
-      //  host_csrColInd_[nnz_count] = vi;
-     //   host_csrValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
-     //   ++nnz_count;
+        //  host_csrColInd_[nnz_count] = vi;
+        //   host_csrValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
+        //   ++nnz_count;
         InEdgeList in_edge_list = get_in_edges(vi);
         OutEdgeList o_list = get_out_edges(vi);
-     //   cout << vi << ": ";
+        //   cout << vi << ": ";
         bool selfposition = false;
         for(EdgeId i = 0; i < in_edge_list.num_in_edges; ++i)
         {
             VertexId src = in_edge_list.ptx[i].src;
-          //  cout << dst << " ";
-           assert(src != vi);
-           if(src == vi && selfposition == false){
-               selfposition = true;
-               host_cscRowInd_[nnz_count] = vi;
-               host_cscValues_[nnz_count] = 2./(get_in_degree(vi) + 1);
-               ++nnz_count;
-               ++selfcirc_count;
-               for(int k = vi + 1; k < get_num_global_vertices() + 1; k++){
-                   host_cscColOffsets_[k]--;
-               }
-               continue;
-           }
+            //  cout << dst << " ";
+            assert(src != vi);
+            if(src == vi && selfposition == false){
+                selfposition = true;
+                host_cscRowInd_[nnz_count] = vi;
+                host_cscValues_[nnz_count] = 2./(get_in_degree(vi) + 1);
+                ++nnz_count;
+                ++selfcirc_count;
+                for(int k = vi + 1; k < get_num_global_vertices() + 1; k++){
+                    host_cscColOffsets_[k]--;
+                }
+                continue;
+            }
             if(src > vi && selfposition == false)
             {
                 host_cscRowInd_[nnz_count] = vi;
                 host_cscValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
                 ++nnz_count;
                 selfposition = true;
-              //  cout << vi << " ";
+                //  cout << vi << " ";
             }
             host_cscRowInd_[nnz_count] = src;
             host_cscValues_[nnz_count] = in_edge_list.ptx[i].norm_factor;
@@ -172,22 +152,11 @@ void CUDAFullyStructualGraph::InitCsrBuffer()
         }
         if(selfposition == false){
             host_cscRowInd_[nnz_count] = vi;
-                host_cscValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
-                ++nnz_count;
-                selfposition = true;
-             //   cout << vi << " ";
+            host_cscValues_[nnz_count] = 1./(get_in_degree(vi) + 1);
+            ++nnz_count;
+            selfposition = true;
+            //   cout << vi << " ";
         }
-    //    cout << endl;
-     //   for(EdgeId i = 0; i < in_edge_list.num_in_edges; ++i)
-     //   {
-     //       VertexId src  = in_edge_list.ptx[i].src;
-     //       assert(src != vi);
-      //      host_csrColInd_[nnz_count] = src;
-      //      host_csrValues_[nnz_count] = in_edge_list.ptx[i].norm_factor;
-      //      ++nnz_count;
-         //   cout << src << " ";
-     //   }
-     //   cout << endl;
     }
     //cout << nnz_count <<" "<<get_num_global_vertices()<<" "<<get_num_global_edges()<<" "<<selfcirclenumber<<" "<<selfcirc_count<<" "<<nnz<<endl;
     assert(nnz_count == nnz);
@@ -203,7 +172,7 @@ void CUDAFullyStructualGraph::InitCsrBuffer()
     CopyFromHostToCUDADevice<int>(cuda_cscRowInd_, host_cscRowInd_, nnz, __FILE__, __LINE__);
     CopyFromHostToCUDADevice<DataType>(cuda_cscValues_, host_cscValues_, nnz, __FILE__, __LINE__);
     gpu_csr_store_ = true;
-    
+
 }
 void CUDAFullyNonStructualGraph::InitCudaBuffer()
 {   

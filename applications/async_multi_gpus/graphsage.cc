@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <stdio.h>
+#include <math.h>
 
 #include <string>
 #include <sstream> 
 #include <thread>
+#include <fstream>
 
 #include <boost/program_options.hpp>
 
@@ -19,34 +21,32 @@
 #include "cuda/cuda_graph.h"
 #include "cublas_v2.h"
 #include "cuda/cuda_loss.h"
-#include"cuda/cuda_executor.h"
+#include "cuda/cuda_executor.h"
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_optimizer.h"
 #include "cuda/cuda_single_cpu_engine.h"
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
 #include "partitioner.h"
-#include <fstream>
 
-using namespace std;
-
-class GCN: public AbstractApplication {
+class GraphSage: public AbstractApplication {
     private:
         int num_layers_;
         int num_hidden_units_;
         int num_classes_;
         double dropout_rate_;
+        bool enable_recomputation_;
 
     public:
-        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate): 
+        GraphSage(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate):
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), 
-            num_classes_(num_classes), dropout_rate_(dropout_rate) {
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate) {
                 assert(num_layers >= 1);
                 assert(num_hidden_units >= 1);
                 assert(num_classes >= 1);
+                enable_recomputation_ = true;
         }
-        ~GCN() {}
+        ~GraphSage() {}
 
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
@@ -55,27 +55,29 @@ class GCN: public AbstractApplication {
                 if (i == num_layers_ - 1) {
                     output_size = num_classes_;
                 }
-
+                // process the embeddings
+                Tensor * t_0 = fc(t, output_size, "None", true);
+                // the aggregated results
                 if (i == 0) {
-                    t = fc(t, output_size); 
-                    t = aggregation(t, NORM_SUM);    
+                    t = fc(t, output_size, "None", true);
+                    t = aggregation(t, MEAN, true);
                 } else {
-                    t = aggregation(t, NORM_SUM);    
-                    t = fc(t, output_size); 
+                    t = aggregation(t, MEAN, true);
+                    t = fc(t, output_size, "None", true);
                 }
-
-                if (i == num_layers_ - 1) { 
-                    t = softmax(t, true); 
+                // added the transformed aggregated results with the transformed embeddings
+                t = add(t_0, t, 1., 1., enable_recomputation_);
+                if (i == num_layers_ - 1) {
+                    t = log_softmax(t, enable_recomputation_);
                 } else {
-                    t = relu(t, true); // enable recomputation for relu
-                    t = dropout(t, dropout_rate_, true);  // enable recomputation for dropout
+                    t = relu(t, enable_recomputation_);
+                    t = dropout(t, dropout_rate_, enable_recomputation_);
                 }
                 next_layer();
             }
             return t;
         }
 };
-
 
 int main(int argc, char ** argv) {
     // parse input arguments
@@ -187,11 +189,11 @@ int main(int argc, char ** argv) {
     }
 
     // IIitialize the engine
-    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features, dropout);
+    GraphSage * sage = new GraphSage(num_layers, num_hidden_units, num_classes, num_features, dropout);
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
-    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
+    NLLLoss * loss = new NLLLoss();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
 
     // loading the dataset masks
@@ -214,7 +216,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_loss(loss);
     execution_engine->set_weight_file(weight_file);
     execution_engine->set_num_chunks(num_chunks);
-    execution_engine->set_aggregation_type(NORM_SUM);
+    execution_engine->set_aggregation_type(MEAN);
     execution_engine->set_evaluation_frequency(evaluation_frequency);
     execution_engine->set_always_exact_inference(always_exact_inference);
     execution_engine->set_feature_preprocessing_method(feature_preprocessing);
@@ -231,7 +233,7 @@ int main(int argc, char ** argv) {
             cost_each_layer.push_back(1.);
         }
         CUDAPIPPartitioning partition = ModelPartitioner::get_model_parallel_partition(
-                gcn, num_gpus, num_layers, cost_each_layer, num_vertices
+                sage, num_gpus, num_layers, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
     } else {
@@ -241,10 +243,10 @@ int main(int argc, char ** argv) {
     }
 
     // model training
-    execution_engine->execute_application(gcn, num_epoch);
+    execution_engine->execute_application(sage, num_epoch);
 
     // destroy the model and the engine
-    delete gcn;
+    delete sage;
     delete execution_engine;
     delete optimizer;
     delete executor;
@@ -257,7 +259,6 @@ int main(int argc, char ** argv) {
     Context::finalize_context();
     printf("[MPI Rank %d] Success \n", node_id);
     return 0;
-
 }
 
 

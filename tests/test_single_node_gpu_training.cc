@@ -130,7 +130,7 @@ int main(int argc, char ** argv) {
     AbstractExecutionEngine * execution_engine = new SingleNodeExecutionEngineCPU();
     //AbstractOptimizer * optimizer = new AdamOptimizerCPU(0.2e-3,0.);
     AbstractOptimizer * optimizer = new SGDOptimizerCPU(0.3);
-    OperatorExecutorGPU * executor = new OperatorExecutorGPU(graph_structure);
+    OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
     cublasHandle_t cublas;
     cublasCreate(&cublas);
     cudnnHandle_t cudnn;

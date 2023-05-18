@@ -748,778 +748,778 @@ void CrossEntropyLossCPU::calculate_gradients(Tensor * output_tensor, Tensor * s
 // OperatorExecutorCPU
 
 // forwarding operations
-void OperatorExecutorCPU::relu_forward(ReluOperator * op) {
-    relu_forward(op, 0, graph_->get_num_global_vertices());
-
-    /*
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    size_t num_elements = input_tensor_resource->get_num_elements();
-    assert(num_elements == output_tensor_resource->get_num_elements());
-
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_data != NULL);
-    assert(output_data != NULL);
-
-#pragma omp parallel for
-    for (size_t i = 0; i < num_elements; ++ i) {
-        output_data[i] = input_data[i] > 0 ? input_data[i]: 0;
-    }
-    */
-}
-
-void OperatorExecutorCPU::matmul_forward(MatmulOperator * op) {
-    matmul_forward(op, 0, graph_->get_num_global_vertices());
-
-    /*
-    assert(op->get_num_input_tensors() == 2);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor_0 = op->get_input_tensor(0);
-    Tensor * input_tensor_1 = op->get_input_tensor(1);
-    Tensor * output_tensor = op->get_output_tensor(0);
-
-    TensorResourceCPU * input_tensor_resource_0 = (TensorResourceCPU*) input_tensor_0->resource;
-    TensorResourceCPU * input_tensor_resource_1 = (TensorResourceCPU*) input_tensor_1->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-
-    DataType * input_data_0 = input_tensor_resource_0->get_data();
-    DataType * input_data_1 = input_tensor_resource_1->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-
-    VertexId num_vertices = graph_->get_num_global_vertices();
-    size_t N = num_vertices;
-    size_t K = input_tensor_0->dims[1];
-    assert(input_tensor_1->dims[0] == K);
-    size_t M = input_tensor_1->dims[1];
-
-#pragma omp parallel for 
-    for (size_t i = 0; i < N; ++ i) {
-        for (size_t j = 0; j < M; ++ j) {
-            DataType d = 0;
-            for (size_t k = 0; k < K; ++ k) {
-                d += input_data_0[i * K + k] * input_data_1[k * M + j];
-            }
-            output_data[i * M + j] = d;
-        }
-    }
-    */
-}
-
-void OperatorExecutorCPU::softmax_forward(SoftmaxOperator * op) {
-    softmax_forward(op, 0, graph_->get_num_global_vertices());
-
-    /*
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-    
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-
-    VertexId num_vertices = graph_->get_num_global_vertices();
-    int activation_size = input_tensor->dims[1];
-    assert(output_tensor->dims[1] == activation_size);
-
-#pragma omp parallel for 
-    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
-        DataType * input_activation = &input_data[v_i * activation_size];
-        DataType * output_activation = &output_data[v_i * activation_size];
-        DataType sum = 0.;
-        for (int i = 0; i < activation_size; ++ i) {
-            sum += exp(input_activation[i]);
-        }
-        for (int i = 0; i < activation_size; ++ i) {
-            output_activation[i] = exp(input_activation[i]) / sum;
-        }
-    }
-    */
-}
-
-void OperatorExecutorCPU::aggregation_forward(AggregationOperator * op) {
-    aggregation_forward(op, 0, graph_->get_num_global_vertices());
-
-    /*
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_data != NULL);
-    assert(output_data != NULL);
-
-    AbstractGraphStructure * graph = graph_;
-    assert(graph != NULL);
-
-    VertexId num_vertices = graph->get_num_global_vertices();
-    int activation_size = input_tensor->dims[1];
-    assert(output_tensor->dims[1] == activation_size);
-
-#pragma omp parallel for schedule(dynamic) 
-    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
-        InEdgeList in_edge_list = graph->get_in_edges(v_i);
-        //printf("Vertex %u, number of in-edges: %llu\n", v_i, in_edge_list.num_in_edges);
-        DataType * input_activation = &input_data[v_i * activation_size];
-        DataType * output_activation = &output_data[v_i * activation_size];
-        DataType norm_fact = 1. / double(in_edge_list.num_in_edges + 1);
-        for (int i = 0; i < activation_size; ++ i) {
-            output_activation[i] = input_activation[i] * norm_fact;
-        }
-        for (EdgeId i = 0; i < in_edge_list.num_in_edges; ++ i) {
-            InEdge e = in_edge_list.ptx[i];
-            VertexId src = e.src;
-            DataType * src_activation = &input_data[src * activation_size];
-            for (int j = 0; j < activation_size; ++ j) {
-                output_activation[j] += e.norm_factor * src_activation[j];
-            }
-        }
-    }
-    */
-}
-
-void OperatorExecutorCPU::relu_forward(ReluOperator * op, VertexId left, VertexId right) {
-   assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-    assert(input_tensor->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    VertexId num_vertices = input_tensor_resource->get_num_vertices();
-    size_t num_elements = input_tensor_resource->get_num_elements();
-    assert(num_elements % num_vertices == 0);
-    size_t num_elements_per_vertex = num_elements / num_vertices;
-
-    size_t start_idx = num_elements_per_vertex * left;
-    size_t end_idx = num_elements_per_vertex * right;
-
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_data != NULL);
-    assert(output_data != NULL);
-
-#pragma omp parallel for 
-    for (size_t i = start_idx; i < end_idx; ++ i) {
-        output_data[i] = input_data[i] > 0 ? input_data[i]: 0;
-
-        assert(!isnan(output_data[i]));
-    }
-   /* assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    size_t num_elements = input_tensor_resource->get_num_elements();
-    assert(num_elements == output_tensor_resource->get_num_elements());
-
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_data != NULL);
-    assert(output_data != NULL);
-    cudnnActivationDescriptor_t relu_descriptor;
-    cudnnCreateActivationDescriptor(&relu_descriptor);
-    cudnnSetActivationDescriptor(relu_descriptor,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,0);
-    float alpha = 1.0;
-    float beta = 0.0;
-    cudnnTensorDescriptor_t input_descriptor;;
-    cudnnCreateTensorDescriptor(&input_descriptor);
-    cudnnSetTensor4dDescriptor(input_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
-    cudnnTensorDescriptor_t out_descriptor;;
-    cudnnCreateTensorDescriptor(&out_descriptor);
-    cudnnSetTensor4dDescriptor(out_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
-    DataType* d_input;
-    DataType* d_output;
-    AllocateCUDAMemory<DataType>(&d_input, num_elements, __FILE__, __LINE__);
-    AllocateCUDAMemory<DataType>(&d_output, num_elements, __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<DataType>(d_input, input_data, num_elements, __FILE__, __LINE__);
-    CopyFromHostToCUDADevice<DataType>(d_output, output_data, num_elements, __FILE__, __LINE__);
-    cudnnHandle_t cudnn_handle_;
-    cudnnCreate(&cudnn_handle_);
-    cudnnActivationForward(cudnn_handle_, relu_descriptor,&alpha, input_descriptor, (const void*)d_input, &beta,out_descriptor,(void*)d_output);
-    CopyFromCUDADeviceToHost<DataType>(output_data,d_output, num_elements, __FILE__, __LINE__);
-    DeallocateCUDAMemory<DataType>(&d_input, __FILE__, __LINE__);
-    DeallocateCUDAMemory<DataType>(&d_output, __FILE__, __LINE__);
-    cudnnDestroy(cudnn_handle_);*/
-}
-
-void OperatorExecutorCPU::matmul_forward(MatmulOperator * op, VertexId left, VertexId right) {
-    assert(op->get_num_input_tensors() == 2);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor_0 = op->get_input_tensor(0);
-    Tensor * input_tensor_1 = op->get_input_tensor(1);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor_0 != NULL);
-    assert(input_tensor_1 != NULL);
-    assert(output_tensor != NULL);
-    assert(input_tensor_0->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-
-    TensorResourceCPU * input_tensor_resource_0 = (TensorResourceCPU*) input_tensor_0->resource;
-    TensorResourceCPU * input_tensor_resource_1 = (TensorResourceCPU*) input_tensor_1->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource_0 != NULL);
-    assert(input_tensor_resource_1 != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_data_0 = input_tensor_resource_0->get_data();
-    DataType * input_data_1 = input_tensor_resource_1->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_data_0 != NULL);
-    assert(input_data_1 != NULL);
-    assert(output_data != NULL);
-
-    size_t K = input_tensor_0->dims[1];
-    assert(input_tensor_1->dims[0] == K);
-    size_t M = input_tensor_1->dims[1];
-
-#pragma omp parallel for 
-    for (size_t i = left; i < right; ++ i) {
-        for (size_t j = 0; j < M; ++ j) {
-            DataType d = 0;
-            for (size_t k = 0; k < K; ++ k) {
-                d += input_data_0[i * K + k] * input_data_1[k * M + j];
-            }
-            output_data[i * M + j] = d;
-
-            assert(!isnan(output_data[i * M + j]));
-        }
-    }
-}
-
-void OperatorExecutorCPU::softmax_forward(SoftmaxOperator * op, VertexId left, VertexId right) {
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-    assert(input_tensor->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-    
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_data != NULL);
-    assert(output_data != NULL);
-
-    int activation_size = input_tensor->dims[1];
-    assert(output_tensor->dims[1] == activation_size);
-
-#pragma omp parallel for 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType * input_activation = &input_data[v_i * activation_size];
-        DataType * output_activation = &output_data[v_i * activation_size];
-        DataType sum = 0.;
-        int max_index = 0;
-        for (int i = 0; i < activation_size; ++ i) {
-           // input_activation[i] = std::min(float(20.0), input_activation[i]);
-            if(input_activation[i] > input_activation[max_index]){
-                max_index = i;
-            }
-        }
-        DataType M = input_activation[max_index];
-        for (int i = 0; i < activation_size; ++ i) {
-           // input_activation[i] = std::min(float(20.0), input_activation[i]);
-            sum += exp(input_activation[i] - M);
-        }
-        for (int i = 0; i < activation_size; ++ i) {
-            output_activation[i] = exp(input_activation[i] - M) / sum;
-            if(isnan(output_activation[i])){
-                printf("%d, %f, %f\n", 1, input_activation[i], sum);
-                assert(false);
-            }
-          //  assert(!isnan(output_activation[i]));
-        }
-    }
-
-}
-
-void OperatorExecutorCPU::aggregation_forward(AggregationOperator * op, VertexId left, VertexId right) {
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-    assert(input_tensor->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_data != NULL);
-    assert(output_data != NULL);
-
-    AbstractGraphStructure * graph = graph_;
-    assert(graph != NULL);
-
-    int activation_size = input_tensor->dims[1];
-    assert(output_tensor->dims[1] == activation_size);
-
-#pragma omp parallel for schedule(dynamic) 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        InEdgeList in_edge_list = graph->get_in_edges(v_i);  
-        DataType * input_activation = &input_data[v_i * activation_size];
-        DataType * output_activation = &output_data[v_i * activation_size];
-        DataType norm_fact = 1. / double(in_edge_list.num_in_edges + 1);
-        for (int i = 0; i < activation_size; ++ i) {
-            output_activation[i] = input_activation[i] * norm_fact;
-            assert(!isnan(output_activation[i]));
-        }
-        for (EdgeId i = 0; i < in_edge_list.num_in_edges; ++ i) { 
-            InEdge e = in_edge_list.ptx[i];
-            VertexId src = e.src;
-            DataType * src_activation = &input_data[src * activation_size];
-            for (int j = 0; j < activation_size; ++ j) {
-                output_activation[j] += e.norm_factor * src_activation[j];
-
-                assert(!isnan(output_activation[j]));
-            }
-        }
-    }
-}
-
-// backwarding operations
-void OperatorExecutorCPU::relu_backward(ReluOperator * op) {
-    relu_backward(op, 0, graph_->get_num_global_vertices());
-
-    /*
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    size_t num_elements = input_tensor_resource->get_num_elements();
-    assert(num_elements == output_tensor_resource->get_num_elements());
-
-    DataType * input_grad = input_tensor_resource->get_grad();
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_grad = output_tensor_resource->get_grad();
-    assert(input_grad != NULL);
-    assert(input_data != NULL);
-    assert(output_grad != NULL);
-
-#pragma omp parallel for 
-    for (size_t i = 0; i < num_elements; ++ i) {
-        input_grad[i] += (input_data[i] > 0 ? output_grad[i]: 0);
-    }
-    */
-}
-
-void OperatorExecutorCPU::matmul_backward(MatmulOperator * op) {
-    matmul_backward(op, 0, graph_->get_num_global_vertices());
-
-    /*
-    assert(op != NULL);
-
-    assert(op->get_num_input_tensors() == 2);
-    assert(op->get_num_output_tensors() == 1);
-    Tensor * input_tensor_0 = op->get_input_tensor(0);
-    Tensor * input_tensor_1 = op->get_input_tensor(1);
-    Tensor * output_tensor = op->get_output_tensor(0);
-
-    TensorResourceCPU * input_tensor_resource_0 = (TensorResourceCPU*) input_tensor_0->resource;
-    TensorResourceCPU * input_tensor_resource_1 = (TensorResourceCPU*) input_tensor_1->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource_0 != NULL);
-    assert(input_tensor_resource_1 != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_data_0 = input_tensor_resource_0->get_data();
-    DataType * input_data_1 = input_tensor_resource_1->get_data();
-    DataType * input_grad_0 = input_tensor_resource_0->get_grad();
-    DataType * input_grad_1 = input_tensor_resource_1->get_grad();
-    DataType * output_grad = output_tensor_resource->get_grad();
-    assert(input_data_0 != NULL);
-    assert(input_data_1 != NULL);
-    assert(input_grad_0 != NULL);
-    assert(input_grad_1 != NULL);
-    assert(output_grad != NULL);
-
-    // C = A x B
-    // A size: N x K, B size: K x M, C size: N x M
-    size_t N = graph_->get_num_global_vertices();
-    size_t K = input_tensor_0->dims[1];
-    assert(input_tensor_1->dims[0] == K);
-    size_t M = input_tensor_1->dims[1];
-
-    // D(A) = D(C) x B^T 
-#pragma omp parallel for 
-    for (size_t i = 0; i < N; ++ i) {
-        for (size_t k = 0; k < K; ++ k) {
-            DataType d = 0.;
-            for (size_t j = 0; j < M; ++ j) {
-                d += output_grad[i * M + j] * input_data_1[k * M + j]; // B^T[j][k] = B[k][j]
-            }
-            input_grad_0[i * K + k] += d;
-        }
-    }
-
-    // D(B) = A^T x D(C)
-#pragma omp parallel for 
-    for (size_t k = 0; k < K; ++ k) {
-        for (size_t j = 0; j < M; ++ j) {
-            DataType d = 0.;
-            for (size_t i = 0; i < N; ++ i) {
-                d += input_data_0[i * K + k] * output_grad[i * M + j]; // A^T[k][i] = A[i][k]
-            }
-            input_grad_1[k * M + j] += d;
-        }
-    }
-    */
-}
-
-void OperatorExecutorCPU::softmax_backward(SoftmaxOperator * op) {
-    softmax_backward(op, 0, graph_->get_num_global_vertices());
-
-    /*
-    assert(op != NULL);
-
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-    assert(input_tensor->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_grad = input_tensor_resource->get_grad();
-    DataType * output_grad = output_tensor_resource->get_grad();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_grad != NULL);
-    assert(output_grad != NULL);
-    assert(output_data != NULL);
-
-    AbstractGraphStructure * graph = graph_;
-    VertexId num_vertices = graph->get_num_global_vertices();
-    int activation_size = input_tensor->dims[1];
-    assert(output_tensor->dims[1] == activation_size);
-
-#pragma omp parallel for 
-    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
-        DataType * in = &input_grad[v_i * activation_size];
-        DataType * out = &output_grad[v_i * activation_size];
-        DataType * out_data = &output_data[v_i * activation_size];
-        for (int j = 0; j < activation_size; ++ j) {
-            DataType grad = 0.;
-            for (int i = 0; i < activation_size; ++ i) {
-                // to enable conditional movement (to avoid branches)
-                DataType diff_i_j = - out_data[i] * out_data[j];
-                DataType same_i_j = out_data[i] * (1. - out_data[i]);
-                DataType grad_inc = (i != j ? diff_i_j: same_i_j) * out[i];
-                grad += grad_inc;
-            }
-            in[j] += grad;
-        }
-    }
-    */
-}
-
-void OperatorExecutorCPU::aggregation_backward(AggregationOperator * op) {
-    aggregation_backward(op, 0, graph_->get_num_global_vertices());
-
-    /*
-    assert(op != NULL);
-
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_grad = input_tensor_resource->get_grad();
-    DataType * output_grad = output_tensor_resource->get_grad();
-    assert(input_grad != NULL);
-    assert(output_grad != NULL);
-
-    AbstractGraphStructure * graph = graph_;
-    VertexId num_vertices = graph->get_num_global_vertices();
-    int activation_size = input_tensor->dims[1];
-    assert(output_tensor->dims[1] == activation_size);
-
-#pragma omp parallel for schedule(dynamic) 
-    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
-        DataType vtx_norm_factor = 1. / double(graph->get_in_degree(v_i) + 1);
-        DataType * in = &input_grad[v_i * activation_size];
-        DataType * out = &output_grad[v_i * activation_size];
-        for (int i = 0; i < activation_size; ++ i) {
-            in[i] += out[i] * vtx_norm_factor;
-        }
-        OutEdgeList out_edge_list = graph->get_out_edges(v_i);
-        //printf("Vertex %u, number of out-edges: %llu\n", v_i, out_edge_list.num_out_edges);
-        for (EdgeId e_i = 0; e_i < out_edge_list.num_out_edges; ++ e_i) {
-            OutEdge e = out_edge_list.ptx[e_i];
-            DataType * dst = &output_grad[e.dst * activation_size];
-            for (int i = 0; i < activation_size; ++ i) {
-                in[i] += dst[i] * e.norm_factor;
-            }
-        }
-    }
-    */
-}
-
-void OperatorExecutorCPU::relu_backward(ReluOperator * op, VertexId left, VertexId right) {
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    size_t num_elements = input_tensor_resource->get_num_elements();
-    assert(num_elements == output_tensor_resource->get_num_elements());
-
-    VertexId num_vertices = input_tensor_resource->get_num_vertices();
-    assert(num_elements % num_vertices == 0);
-    size_t num_elements_per_vertex = num_elements / num_vertices;
-    size_t start_idx = left * num_elements_per_vertex;
-    size_t end_idx = right * num_elements_per_vertex;
-
-    DataType * input_grad = input_tensor_resource->get_grad();
-    DataType * input_data = input_tensor_resource->get_data();
-    DataType * output_grad = output_tensor_resource->get_grad();
-    assert(input_grad != NULL);
-    assert(input_data != NULL);
-    assert(output_grad != NULL);
-
-#pragma omp parallel for 
-    for (size_t i = start_idx; i < end_idx; ++ i) {
-        input_grad[i] += (input_data[i] > 0 ? output_grad[i]: 0);
-
-        assert(!isnan(input_grad[i]));
-    }
-}
-
-void OperatorExecutorCPU::matmul_backward(MatmulOperator * op, VertexId left, VertexId right) {
-    assert(op != NULL);
-
-    assert(op->get_num_input_tensors() == 2);
-    assert(op->get_num_output_tensors() == 1);
-    Tensor * input_tensor_0 = op->get_input_tensor(0);
-    Tensor * input_tensor_1 = op->get_input_tensor(1);
-    Tensor * output_tensor = op->get_output_tensor(0);
-
-    TensorResourceCPU * input_tensor_resource_0 = (TensorResourceCPU*) input_tensor_0->resource;
-    TensorResourceCPU * input_tensor_resource_1 = (TensorResourceCPU*) input_tensor_1->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource_0 != NULL);
-    assert(input_tensor_resource_1 != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_data_0 = input_tensor_resource_0->get_data();
-    DataType * input_data_1 = input_tensor_resource_1->get_data();
-    DataType * input_grad_0 = input_tensor_resource_0->get_grad();
-    DataType * input_grad_1 = input_tensor_resource_1->get_grad();
-    DataType * output_grad = output_tensor_resource->get_grad();
-    assert(input_data_0 != NULL);
-    assert(input_data_1 != NULL);
-    assert(input_grad_0 != NULL);
-    assert(input_grad_1 != NULL);
-    assert(output_grad != NULL);
-
-    // C = A x B
-    // A size: N x K, B size: K x M, C size: N x M
-    //size_t N = input_tensor_resource->get_num_vertices();
-    size_t K = input_tensor_0->dims[1];
-    assert(input_tensor_1->dims[0] == K);
-    size_t M = input_tensor_1->dims[1];
-
-    // D(A) = D(C) x B^T 
-#pragma omp parallel for 
-    for (size_t i = left; i < right; ++ i) {
-        for (size_t k = 0; k < K; ++ k) {
-            DataType d = 0.;
-            for (size_t j = 0; j < M; ++ j) {
-                d += output_grad[i * M + j] * input_data_1[k * M + j]; // B^T[j][k] = B[k][j]
-            }
-            input_grad_0[i * K + k] += d;
-
-            assert(!isnan(input_grad_0[i * K + k]));
-        }
-    }
-
-    // D(B) = A^T x D(C)
-#pragma omp parallel for 
-    for (size_t k = 0; k < K; ++ k) {
-        for (size_t j = 0; j < M; ++ j) {
-            DataType d = 0.;
-            for (size_t i = left; i < right; ++ i) {
-                d += input_data_0[i * K + k] * output_grad[i * M + j]; // A^T[k][i] = A[i][k]
-            }
-            input_grad_1[k * M + j] += d;
-            assert(!isnan(input_grad_1[k * M + j]));
-        }
-    }
-
-}
-
-void OperatorExecutorCPU::softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right) {
-    assert(op != NULL);
-
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-    assert(input_tensor->type == VERTEX_TENSOR);
-    assert(output_tensor->type == VERTEX_TENSOR);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_grad = input_tensor_resource->get_grad();
-    DataType * output_grad = output_tensor_resource->get_grad();
-    DataType * output_data = output_tensor_resource->get_data();
-    assert(input_grad != NULL);
-    assert(output_grad != NULL);
-    assert(output_data != NULL);
-
-    AbstractGraphStructure * graph = graph_;
-    VertexId num_vertices = input_tensor_resource->get_num_vertices();
-    int activation_size = input_tensor->dims[1];
-    assert(output_tensor->dims[1] == activation_size);
-
-#pragma omp parallel for 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType * in = &input_grad[v_i * activation_size];
-        DataType * out = &output_grad[v_i * activation_size];
-        DataType * out_data = &output_data[v_i * activation_size];
-        for (int j = 0; j < activation_size; ++ j) {
-            DataType grad = 0.;
-            for (int i = 0; i < activation_size; ++ i) {
-                // to enable conditional movement (to avoid branches)
-                DataType diff_i_j = - out_data[i] * out_data[j];
-                DataType same_i_j = out_data[i] * (1. - out_data[i]);
-                DataType grad_inc = (i != j ? diff_i_j: same_i_j) * out[i];
-                grad += grad_inc;
-            }
-            in[j] += grad;
-            assert(!isnan(in[j]));
-        }
-    }
-}
-
-void OperatorExecutorCPU::aggregation_backward(AggregationOperator * op, VertexId left, VertexId right) {
-    assert(op != NULL);
-
-    assert(op->get_num_input_tensors() == 1);
-    assert(op->get_num_output_tensors() == 1);
-    Tensor * input_tensor = op->get_input_tensor(0);
-    Tensor * output_tensor = op->get_output_tensor(0);
-    assert(input_tensor != NULL);
-    assert(output_tensor != NULL);
-
-    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
-    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
-    assert(input_tensor_resource != NULL);
-    assert(output_tensor_resource != NULL);
-
-    DataType * input_grad = input_tensor_resource->get_grad();
-    DataType * output_grad = output_tensor_resource->get_grad();
-    assert(input_grad != NULL);
-    assert(output_grad != NULL);
-
-    AbstractGraphStructure * graph = graph_;
-    VertexId num_vertices = input_tensor_resource->get_num_vertices();
-    int activation_size = input_tensor->dims[1];
-    assert(output_tensor->dims[1] == activation_size);
-
-#pragma omp parallel for schedule(dynamic) 
-    for (VertexId v_i = left; v_i < right; ++ v_i) {
-        DataType vtx_norm_factor = 1. / double(graph->get_in_degree(v_i) + 1);
-        DataType * in = &input_grad[v_i * activation_size];
-        DataType * out = &output_grad[v_i * activation_size];
-        for (int i = 0; i < activation_size; ++ i) {
-            in[i] += out[i] * vtx_norm_factor;
-            assert(!isnan(in[i]));
-        }
-        OutEdgeList out_edge_list = graph->get_out_edges(v_i);
-        //printf("Vertex %u, number of out-edges: %llu\n", v_i, out_edge_list.num_out_edges);
-        for (EdgeId e_i = 0; e_i < out_edge_list.num_out_edges; ++ e_i) {
-            OutEdge e = out_edge_list.ptx[e_i];
-            DataType * dst = &output_grad[e.dst * activation_size];
-            for (int i = 0; i < activation_size; ++ i) {
-                in[i] += dst[i] * e.norm_factor;
-                assert(!isnan(in[i]));
-            }
-        }
-    }
-}
+//void OperatorExecutorCPU::relu_forward(ReluOperator * op) {
+//    relu_forward(op, 0, graph_->get_num_global_vertices());
+//
+//    /*
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    size_t num_elements = input_tensor_resource->get_num_elements();
+//    assert(num_elements == output_tensor_resource->get_num_elements());
+//
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_data != NULL);
+//    assert(output_data != NULL);
+//
+//#pragma omp parallel for
+//    for (size_t i = 0; i < num_elements; ++ i) {
+//        output_data[i] = input_data[i] > 0 ? input_data[i]: 0;
+//    }
+//    */
+//}
+
+//void OperatorExecutorCPU::matmul_forward(MatmulOperator * op) {
+//    matmul_forward(op, 0, graph_->get_num_global_vertices());
+//
+//    /*
+//    assert(op->get_num_input_tensors() == 2);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor_0 = op->get_input_tensor(0);
+//    Tensor * input_tensor_1 = op->get_input_tensor(1);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//
+//    TensorResourceCPU * input_tensor_resource_0 = (TensorResourceCPU*) input_tensor_0->resource;
+//    TensorResourceCPU * input_tensor_resource_1 = (TensorResourceCPU*) input_tensor_1->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//
+//    DataType * input_data_0 = input_tensor_resource_0->get_data();
+//    DataType * input_data_1 = input_tensor_resource_1->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//
+//    VertexId num_vertices = graph_->get_num_global_vertices();
+//    size_t N = num_vertices;
+//    size_t K = input_tensor_0->dims[1];
+//    assert(input_tensor_1->dims[0] == K);
+//    size_t M = input_tensor_1->dims[1];
+//
+//#pragma omp parallel for 
+//    for (size_t i = 0; i < N; ++ i) {
+//        for (size_t j = 0; j < M; ++ j) {
+//            DataType d = 0;
+//            for (size_t k = 0; k < K; ++ k) {
+//                d += input_data_0[i * K + k] * input_data_1[k * M + j];
+//            }
+//            output_data[i * M + j] = d;
+//        }
+//    }
+//    */
+//}
+//
+//void OperatorExecutorCPU::softmax_forward(SoftmaxOperator * op) {
+//    softmax_forward(op, 0, graph_->get_num_global_vertices());
+//
+//    /*
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//    
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//
+//    VertexId num_vertices = graph_->get_num_global_vertices();
+//    int activation_size = input_tensor->dims[1];
+//    assert(output_tensor->dims[1] == activation_size);
+//
+//#pragma omp parallel for 
+//    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
+//        DataType * input_activation = &input_data[v_i * activation_size];
+//        DataType * output_activation = &output_data[v_i * activation_size];
+//        DataType sum = 0.;
+//        for (int i = 0; i < activation_size; ++ i) {
+//            sum += exp(input_activation[i]);
+//        }
+//        for (int i = 0; i < activation_size; ++ i) {
+//            output_activation[i] = exp(input_activation[i]) / sum;
+//        }
+//    }
+//    */
+//}
+//
+//void OperatorExecutorCPU::aggregation_forward(AggregationOperator * op) {
+//    aggregation_forward(op, 0, graph_->get_num_global_vertices());
+//
+//    /*
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_data != NULL);
+//    assert(output_data != NULL);
+//
+//    AbstractGraphStructure * graph = graph_;
+//    assert(graph != NULL);
+//
+//    VertexId num_vertices = graph->get_num_global_vertices();
+//    int activation_size = input_tensor->dims[1];
+//    assert(output_tensor->dims[1] == activation_size);
+//
+//#pragma omp parallel for schedule(dynamic) 
+//    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
+//        InEdgeList in_edge_list = graph->get_in_edges(v_i);
+//        //printf("Vertex %u, number of in-edges: %llu\n", v_i, in_edge_list.num_in_edges);
+//        DataType * input_activation = &input_data[v_i * activation_size];
+//        DataType * output_activation = &output_data[v_i * activation_size];
+//        DataType norm_fact = 1. / double(in_edge_list.num_in_edges + 1);
+//        for (int i = 0; i < activation_size; ++ i) {
+//            output_activation[i] = input_activation[i] * norm_fact;
+//        }
+//        for (EdgeId i = 0; i < in_edge_list.num_in_edges; ++ i) {
+//            InEdge e = in_edge_list.ptx[i];
+//            VertexId src = e.src;
+//            DataType * src_activation = &input_data[src * activation_size];
+//            for (int j = 0; j < activation_size; ++ j) {
+//                output_activation[j] += e.norm_factor * src_activation[j];
+//            }
+//        }
+//    }
+//    */
+//}
+//
+//void OperatorExecutorCPU::relu_forward(ReluOperator * op, VertexId left, VertexId right) {
+//   assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//    assert(input_tensor->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+//    size_t num_elements = input_tensor_resource->get_num_elements();
+//    assert(num_elements % num_vertices == 0);
+//    size_t num_elements_per_vertex = num_elements / num_vertices;
+//
+//    size_t start_idx = num_elements_per_vertex * left;
+//    size_t end_idx = num_elements_per_vertex * right;
+//
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_data != NULL);
+//    assert(output_data != NULL);
+//
+//#pragma omp parallel for 
+//    for (size_t i = start_idx; i < end_idx; ++ i) {
+//        output_data[i] = input_data[i] > 0 ? input_data[i]: 0;
+//
+//        assert(!isnan(output_data[i]));
+//    }
+//   /* assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    size_t num_elements = input_tensor_resource->get_num_elements();
+//    assert(num_elements == output_tensor_resource->get_num_elements());
+//
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_data != NULL);
+//    assert(output_data != NULL);
+//    cudnnActivationDescriptor_t relu_descriptor;
+//    cudnnCreateActivationDescriptor(&relu_descriptor);
+//    cudnnSetActivationDescriptor(relu_descriptor,CUDNN_ACTIVATION_RELU,CUDNN_PROPAGATE_NAN,0);
+//    float alpha = 1.0;
+//    float beta = 0.0;
+//    cudnnTensorDescriptor_t input_descriptor;;
+//    cudnnCreateTensorDescriptor(&input_descriptor);
+//    cudnnSetTensor4dDescriptor(input_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+//    cudnnTensorDescriptor_t out_descriptor;;
+//    cudnnCreateTensorDescriptor(&out_descriptor);
+//    cudnnSetTensor4dDescriptor(out_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, 1, 1, 1, num_elements);
+//    DataType* d_input;
+//    DataType* d_output;
+//    AllocateCUDAMemory<DataType>(&d_input, num_elements, __FILE__, __LINE__);
+//    AllocateCUDAMemory<DataType>(&d_output, num_elements, __FILE__, __LINE__);
+//    CopyFromHostToCUDADevice<DataType>(d_input, input_data, num_elements, __FILE__, __LINE__);
+//    CopyFromHostToCUDADevice<DataType>(d_output, output_data, num_elements, __FILE__, __LINE__);
+//    cudnnHandle_t cudnn_handle_;
+//    cudnnCreate(&cudnn_handle_);
+//    cudnnActivationForward(cudnn_handle_, relu_descriptor,&alpha, input_descriptor, (const void*)d_input, &beta,out_descriptor,(void*)d_output);
+//    CopyFromCUDADeviceToHost<DataType>(output_data,d_output, num_elements, __FILE__, __LINE__);
+//    DeallocateCUDAMemory<DataType>(&d_input, __FILE__, __LINE__);
+//    DeallocateCUDAMemory<DataType>(&d_output, __FILE__, __LINE__);
+//    cudnnDestroy(cudnn_handle_);*/
+//}
+//
+//void OperatorExecutorCPU::matmul_forward(MatmulOperator * op, VertexId left, VertexId right) {
+//    assert(op->get_num_input_tensors() == 2);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor_0 = op->get_input_tensor(0);
+//    Tensor * input_tensor_1 = op->get_input_tensor(1);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor_0 != NULL);
+//    assert(input_tensor_1 != NULL);
+//    assert(output_tensor != NULL);
+//    assert(input_tensor_0->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//
+//    TensorResourceCPU * input_tensor_resource_0 = (TensorResourceCPU*) input_tensor_0->resource;
+//    TensorResourceCPU * input_tensor_resource_1 = (TensorResourceCPU*) input_tensor_1->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource_0 != NULL);
+//    assert(input_tensor_resource_1 != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_data_0 = input_tensor_resource_0->get_data();
+//    DataType * input_data_1 = input_tensor_resource_1->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_data_0 != NULL);
+//    assert(input_data_1 != NULL);
+//    assert(output_data != NULL);
+//
+//    size_t K = input_tensor_0->dims[1];
+//    assert(input_tensor_1->dims[0] == K);
+//    size_t M = input_tensor_1->dims[1];
+//
+//#pragma omp parallel for 
+//    for (size_t i = left; i < right; ++ i) {
+//        for (size_t j = 0; j < M; ++ j) {
+//            DataType d = 0;
+//            for (size_t k = 0; k < K; ++ k) {
+//                d += input_data_0[i * K + k] * input_data_1[k * M + j];
+//            }
+//            output_data[i * M + j] = d;
+//
+//            assert(!isnan(output_data[i * M + j]));
+//        }
+//    }
+//}
+//
+//void OperatorExecutorCPU::softmax_forward(SoftmaxOperator * op, VertexId left, VertexId right) {
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//    assert(input_tensor->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//    
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_data != NULL);
+//    assert(output_data != NULL);
+//
+//    int activation_size = input_tensor->dims[1];
+//    assert(output_tensor->dims[1] == activation_size);
+//
+//#pragma omp parallel for 
+//    for (VertexId v_i = left; v_i < right; ++ v_i) {
+//        DataType * input_activation = &input_data[v_i * activation_size];
+//        DataType * output_activation = &output_data[v_i * activation_size];
+//        DataType sum = 0.;
+//        int max_index = 0;
+//        for (int i = 0; i < activation_size; ++ i) {
+//           // input_activation[i] = std::min(float(20.0), input_activation[i]);
+//            if(input_activation[i] > input_activation[max_index]){
+//                max_index = i;
+//            }
+//        }
+//        DataType M = input_activation[max_index];
+//        for (int i = 0; i < activation_size; ++ i) {
+//           // input_activation[i] = std::min(float(20.0), input_activation[i]);
+//            sum += exp(input_activation[i] - M);
+//        }
+//        for (int i = 0; i < activation_size; ++ i) {
+//            output_activation[i] = exp(input_activation[i] - M) / sum;
+//            if(isnan(output_activation[i])){
+//                printf("%d, %f, %f\n", 1, input_activation[i], sum);
+//                assert(false);
+//            }
+//          //  assert(!isnan(output_activation[i]));
+//        }
+//    }
+//
+//}
+//
+//void OperatorExecutorCPU::aggregation_forward(AggregationOperator * op, VertexId left, VertexId right) {
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//    assert(input_tensor->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_data != NULL);
+//    assert(output_data != NULL);
+//
+//    AbstractGraphStructure * graph = graph_;
+//    assert(graph != NULL);
+//
+//    int activation_size = input_tensor->dims[1];
+//    assert(output_tensor->dims[1] == activation_size);
+//
+//#pragma omp parallel for schedule(dynamic) 
+//    for (VertexId v_i = left; v_i < right; ++ v_i) {
+//        InEdgeList in_edge_list = graph->get_in_edges(v_i);  
+//        DataType * input_activation = &input_data[v_i * activation_size];
+//        DataType * output_activation = &output_data[v_i * activation_size];
+//        DataType norm_fact = 1. / double(in_edge_list.num_in_edges + 1);
+//        for (int i = 0; i < activation_size; ++ i) {
+//            output_activation[i] = input_activation[i] * norm_fact;
+//            assert(!isnan(output_activation[i]));
+//        }
+//        for (EdgeId i = 0; i < in_edge_list.num_in_edges; ++ i) { 
+//            InEdge e = in_edge_list.ptx[i];
+//            VertexId src = e.src;
+//            DataType * src_activation = &input_data[src * activation_size];
+//            for (int j = 0; j < activation_size; ++ j) {
+//                output_activation[j] += e.norm_factor * src_activation[j];
+//
+//                assert(!isnan(output_activation[j]));
+//            }
+//        }
+//    }
+//}
+//
+//// backwarding operations
+//void OperatorExecutorCPU::relu_backward(ReluOperator * op) {
+//    relu_backward(op, 0, graph_->get_num_global_vertices());
+//
+//    /*
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    size_t num_elements = input_tensor_resource->get_num_elements();
+//    assert(num_elements == output_tensor_resource->get_num_elements());
+//
+//    DataType * input_grad = input_tensor_resource->get_grad();
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_grad = output_tensor_resource->get_grad();
+//    assert(input_grad != NULL);
+//    assert(input_data != NULL);
+//    assert(output_grad != NULL);
+//
+//#pragma omp parallel for 
+//    for (size_t i = 0; i < num_elements; ++ i) {
+//        input_grad[i] += (input_data[i] > 0 ? output_grad[i]: 0);
+//    }
+//    */
+//}
+//
+//void OperatorExecutorCPU::matmul_backward(MatmulOperator * op) {
+//    matmul_backward(op, 0, graph_->get_num_global_vertices());
+//
+//    /*
+//    assert(op != NULL);
+//
+//    assert(op->get_num_input_tensors() == 2);
+//    assert(op->get_num_output_tensors() == 1);
+//    Tensor * input_tensor_0 = op->get_input_tensor(0);
+//    Tensor * input_tensor_1 = op->get_input_tensor(1);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//
+//    TensorResourceCPU * input_tensor_resource_0 = (TensorResourceCPU*) input_tensor_0->resource;
+//    TensorResourceCPU * input_tensor_resource_1 = (TensorResourceCPU*) input_tensor_1->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource_0 != NULL);
+//    assert(input_tensor_resource_1 != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_data_0 = input_tensor_resource_0->get_data();
+//    DataType * input_data_1 = input_tensor_resource_1->get_data();
+//    DataType * input_grad_0 = input_tensor_resource_0->get_grad();
+//    DataType * input_grad_1 = input_tensor_resource_1->get_grad();
+//    DataType * output_grad = output_tensor_resource->get_grad();
+//    assert(input_data_0 != NULL);
+//    assert(input_data_1 != NULL);
+//    assert(input_grad_0 != NULL);
+//    assert(input_grad_1 != NULL);
+//    assert(output_grad != NULL);
+//
+//    // C = A x B
+//    // A size: N x K, B size: K x M, C size: N x M
+//    size_t N = graph_->get_num_global_vertices();
+//    size_t K = input_tensor_0->dims[1];
+//    assert(input_tensor_1->dims[0] == K);
+//    size_t M = input_tensor_1->dims[1];
+//
+//    // D(A) = D(C) x B^T 
+//#pragma omp parallel for 
+//    for (size_t i = 0; i < N; ++ i) {
+//        for (size_t k = 0; k < K; ++ k) {
+//            DataType d = 0.;
+//            for (size_t j = 0; j < M; ++ j) {
+//                d += output_grad[i * M + j] * input_data_1[k * M + j]; // B^T[j][k] = B[k][j]
+//            }
+//            input_grad_0[i * K + k] += d;
+//        }
+//    }
+//
+//    // D(B) = A^T x D(C)
+//#pragma omp parallel for 
+//    for (size_t k = 0; k < K; ++ k) {
+//        for (size_t j = 0; j < M; ++ j) {
+//            DataType d = 0.;
+//            for (size_t i = 0; i < N; ++ i) {
+//                d += input_data_0[i * K + k] * output_grad[i * M + j]; // A^T[k][i] = A[i][k]
+//            }
+//            input_grad_1[k * M + j] += d;
+//        }
+//    }
+//    */
+//}
+//
+//void OperatorExecutorCPU::softmax_backward(SoftmaxOperator * op) {
+//    softmax_backward(op, 0, graph_->get_num_global_vertices());
+//
+//    /*
+//    assert(op != NULL);
+//
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//    assert(input_tensor->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_grad = input_tensor_resource->get_grad();
+//    DataType * output_grad = output_tensor_resource->get_grad();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_grad != NULL);
+//    assert(output_grad != NULL);
+//    assert(output_data != NULL);
+//
+//    AbstractGraphStructure * graph = graph_;
+//    VertexId num_vertices = graph->get_num_global_vertices();
+//    int activation_size = input_tensor->dims[1];
+//    assert(output_tensor->dims[1] == activation_size);
+//
+//#pragma omp parallel for 
+//    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
+//        DataType * in = &input_grad[v_i * activation_size];
+//        DataType * out = &output_grad[v_i * activation_size];
+//        DataType * out_data = &output_data[v_i * activation_size];
+//        for (int j = 0; j < activation_size; ++ j) {
+//            DataType grad = 0.;
+//            for (int i = 0; i < activation_size; ++ i) {
+//                // to enable conditional movement (to avoid branches)
+//                DataType diff_i_j = - out_data[i] * out_data[j];
+//                DataType same_i_j = out_data[i] * (1. - out_data[i]);
+//                DataType grad_inc = (i != j ? diff_i_j: same_i_j) * out[i];
+//                grad += grad_inc;
+//            }
+//            in[j] += grad;
+//        }
+//    }
+//    */
+//}
+//
+//void OperatorExecutorCPU::aggregation_backward(AggregationOperator * op) {
+//    aggregation_backward(op, 0, graph_->get_num_global_vertices());
+//
+//    /*
+//    assert(op != NULL);
+//
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_grad = input_tensor_resource->get_grad();
+//    DataType * output_grad = output_tensor_resource->get_grad();
+//    assert(input_grad != NULL);
+//    assert(output_grad != NULL);
+//
+//    AbstractGraphStructure * graph = graph_;
+//    VertexId num_vertices = graph->get_num_global_vertices();
+//    int activation_size = input_tensor->dims[1];
+//    assert(output_tensor->dims[1] == activation_size);
+//
+//#pragma omp parallel for schedule(dynamic) 
+//    for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
+//        DataType vtx_norm_factor = 1. / double(graph->get_in_degree(v_i) + 1);
+//        DataType * in = &input_grad[v_i * activation_size];
+//        DataType * out = &output_grad[v_i * activation_size];
+//        for (int i = 0; i < activation_size; ++ i) {
+//            in[i] += out[i] * vtx_norm_factor;
+//        }
+//        OutEdgeList out_edge_list = graph->get_out_edges(v_i);
+//        //printf("Vertex %u, number of out-edges: %llu\n", v_i, out_edge_list.num_out_edges);
+//        for (EdgeId e_i = 0; e_i < out_edge_list.num_out_edges; ++ e_i) {
+//            OutEdge e = out_edge_list.ptx[e_i];
+//            DataType * dst = &output_grad[e.dst * activation_size];
+//            for (int i = 0; i < activation_size; ++ i) {
+//                in[i] += dst[i] * e.norm_factor;
+//            }
+//        }
+//    }
+//    */
+//}
+//
+//void OperatorExecutorCPU::relu_backward(ReluOperator * op, VertexId left, VertexId right) {
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    size_t num_elements = input_tensor_resource->get_num_elements();
+//    assert(num_elements == output_tensor_resource->get_num_elements());
+//
+//    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+//    assert(num_elements % num_vertices == 0);
+//    size_t num_elements_per_vertex = num_elements / num_vertices;
+//    size_t start_idx = left * num_elements_per_vertex;
+//    size_t end_idx = right * num_elements_per_vertex;
+//
+//    DataType * input_grad = input_tensor_resource->get_grad();
+//    DataType * input_data = input_tensor_resource->get_data();
+//    DataType * output_grad = output_tensor_resource->get_grad();
+//    assert(input_grad != NULL);
+//    assert(input_data != NULL);
+//    assert(output_grad != NULL);
+//
+//#pragma omp parallel for 
+//    for (size_t i = start_idx; i < end_idx; ++ i) {
+//        input_grad[i] += (input_data[i] > 0 ? output_grad[i]: 0);
+//
+//        assert(!isnan(input_grad[i]));
+//    }
+//}
+//
+//void OperatorExecutorCPU::matmul_backward(MatmulOperator * op, VertexId left, VertexId right) {
+//    assert(op != NULL);
+//
+//    assert(op->get_num_input_tensors() == 2);
+//    assert(op->get_num_output_tensors() == 1);
+//    Tensor * input_tensor_0 = op->get_input_tensor(0);
+//    Tensor * input_tensor_1 = op->get_input_tensor(1);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//
+//    TensorResourceCPU * input_tensor_resource_0 = (TensorResourceCPU*) input_tensor_0->resource;
+//    TensorResourceCPU * input_tensor_resource_1 = (TensorResourceCPU*) input_tensor_1->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource_0 != NULL);
+//    assert(input_tensor_resource_1 != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_data_0 = input_tensor_resource_0->get_data();
+//    DataType * input_data_1 = input_tensor_resource_1->get_data();
+//    DataType * input_grad_0 = input_tensor_resource_0->get_grad();
+//    DataType * input_grad_1 = input_tensor_resource_1->get_grad();
+//    DataType * output_grad = output_tensor_resource->get_grad();
+//    assert(input_data_0 != NULL);
+//    assert(input_data_1 != NULL);
+//    assert(input_grad_0 != NULL);
+//    assert(input_grad_1 != NULL);
+//    assert(output_grad != NULL);
+//
+//    // C = A x B
+//    // A size: N x K, B size: K x M, C size: N x M
+//    //size_t N = input_tensor_resource->get_num_vertices();
+//    size_t K = input_tensor_0->dims[1];
+//    assert(input_tensor_1->dims[0] == K);
+//    size_t M = input_tensor_1->dims[1];
+//
+//    // D(A) = D(C) x B^T 
+//#pragma omp parallel for 
+//    for (size_t i = left; i < right; ++ i) {
+//        for (size_t k = 0; k < K; ++ k) {
+//            DataType d = 0.;
+//            for (size_t j = 0; j < M; ++ j) {
+//                d += output_grad[i * M + j] * input_data_1[k * M + j]; // B^T[j][k] = B[k][j]
+//            }
+//            input_grad_0[i * K + k] += d;
+//
+//            assert(!isnan(input_grad_0[i * K + k]));
+//        }
+//    }
+//
+//    // D(B) = A^T x D(C)
+//#pragma omp parallel for 
+//    for (size_t k = 0; k < K; ++ k) {
+//        for (size_t j = 0; j < M; ++ j) {
+//            DataType d = 0.;
+//            for (size_t i = left; i < right; ++ i) {
+//                d += input_data_0[i * K + k] * output_grad[i * M + j]; // A^T[k][i] = A[i][k]
+//            }
+//            input_grad_1[k * M + j] += d;
+//            assert(!isnan(input_grad_1[k * M + j]));
+//        }
+//    }
+//
+//}
+//
+//void OperatorExecutorCPU::softmax_backward(SoftmaxOperator * op, VertexId left, VertexId right) {
+//    assert(op != NULL);
+//
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//    assert(input_tensor->type == VERTEX_TENSOR);
+//    assert(output_tensor->type == VERTEX_TENSOR);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_grad = input_tensor_resource->get_grad();
+//    DataType * output_grad = output_tensor_resource->get_grad();
+//    DataType * output_data = output_tensor_resource->get_data();
+//    assert(input_grad != NULL);
+//    assert(output_grad != NULL);
+//    assert(output_data != NULL);
+//
+//    AbstractGraphStructure * graph = graph_;
+//    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+//    int activation_size = input_tensor->dims[1];
+//    assert(output_tensor->dims[1] == activation_size);
+//
+//#pragma omp parallel for 
+//    for (VertexId v_i = left; v_i < right; ++ v_i) {
+//        DataType * in = &input_grad[v_i * activation_size];
+//        DataType * out = &output_grad[v_i * activation_size];
+//        DataType * out_data = &output_data[v_i * activation_size];
+//        for (int j = 0; j < activation_size; ++ j) {
+//            DataType grad = 0.;
+//            for (int i = 0; i < activation_size; ++ i) {
+//                // to enable conditional movement (to avoid branches)
+//                DataType diff_i_j = - out_data[i] * out_data[j];
+//                DataType same_i_j = out_data[i] * (1. - out_data[i]);
+//                DataType grad_inc = (i != j ? diff_i_j: same_i_j) * out[i];
+//                grad += grad_inc;
+//            }
+//            in[j] += grad;
+//            assert(!isnan(in[j]));
+//        }
+//    }
+//}
+//
+//void OperatorExecutorCPU::aggregation_backward(AggregationOperator * op, VertexId left, VertexId right) {
+//    assert(op != NULL);
+//
+//    assert(op->get_num_input_tensors() == 1);
+//    assert(op->get_num_output_tensors() == 1);
+//    Tensor * input_tensor = op->get_input_tensor(0);
+//    Tensor * output_tensor = op->get_output_tensor(0);
+//    assert(input_tensor != NULL);
+//    assert(output_tensor != NULL);
+//
+//    TensorResourceCPU * input_tensor_resource = (TensorResourceCPU*) input_tensor->resource;
+//    TensorResourceCPU * output_tensor_resource = (TensorResourceCPU*) output_tensor->resource;
+//    assert(input_tensor_resource != NULL);
+//    assert(output_tensor_resource != NULL);
+//
+//    DataType * input_grad = input_tensor_resource->get_grad();
+//    DataType * output_grad = output_tensor_resource->get_grad();
+//    assert(input_grad != NULL);
+//    assert(output_grad != NULL);
+//
+//    AbstractGraphStructure * graph = graph_;
+//    VertexId num_vertices = input_tensor_resource->get_num_vertices();
+//    int activation_size = input_tensor->dims[1];
+//    assert(output_tensor->dims[1] == activation_size);
+//
+//#pragma omp parallel for schedule(dynamic) 
+//    for (VertexId v_i = left; v_i < right; ++ v_i) {
+//        DataType vtx_norm_factor = 1. / double(graph->get_in_degree(v_i) + 1);
+//        DataType * in = &input_grad[v_i * activation_size];
+//        DataType * out = &output_grad[v_i * activation_size];
+//        for (int i = 0; i < activation_size; ++ i) {
+//            in[i] += out[i] * vtx_norm_factor;
+//            assert(!isnan(in[i]));
+//        }
+//        OutEdgeList out_edge_list = graph->get_out_edges(v_i);
+//        //printf("Vertex %u, number of out-edges: %llu\n", v_i, out_edge_list.num_out_edges);
+//        for (EdgeId e_i = 0; e_i < out_edge_list.num_out_edges; ++ e_i) {
+//            OutEdge e = out_edge_list.ptx[e_i];
+//            DataType * dst = &output_grad[e.dst * activation_size];
+//            for (int i = 0; i < activation_size; ++ i) {
+//                in[i] += dst[i] * e.norm_factor;
+//                assert(!isnan(in[i]));
+//            }
+//        }
+//    }
+//}
 
 
 

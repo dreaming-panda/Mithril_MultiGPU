@@ -1,4 +1,5 @@
 #include"cuda/cuda_resource.h"
+
 void TensorResourceGPU::map()
 {
     assert(tensor_ != nullptr);
@@ -7,27 +8,18 @@ void TensorResourceGPU::map()
     assert(cpu_grad_ == nullptr);
     assert(gpu_data_ == nullptr); // should not double map a tensor resource 
     assert(gpu_grad_ == nullptr);
-   // size_t size_ = 1;
     if (tensor_->type == VERTEX_TENSOR) {
         assert(tensor_->num_dims == 2);
         assert(tensor_->dims[0] == -1);
         assert(tensor_->dims[1] > 0);
         size_t size = sizeof(DataType) * num_vertices_ * tensor_->dims[1];
         size_t size_ = num_vertices_ * tensor_->dims[1];
-        //cpu_data_ = (DataType*) malloc(size);
-        //cpu_grad_ = (DataType*) malloc(size);
         AllocateCUDAMemory<DataType>(&gpu_data_,size_, __FILE__, __LINE__);
         AllocateCUDAMemory<DataType>(&gpu_grad_,size_, __FILE__, __LINE__);
         SetCUDAMemory<DataType>(gpu_data_, 0, size_, __FILE__, __LINE__);
         SetCUDAMemory<DataType>(gpu_grad_, 0, size_, __FILE__, __LINE__);
-        //assert(cpu_data_ != nullptr);
-        //assert(cpu_grad_ != nullptr);
         assert(gpu_data_ != nullptr);
         assert(gpu_grad_ != nullptr);
-        //memset(cpu_data_, 0, size);
-        //memset(cpu_grad_, 0, size);
-        //CopyFromHostToCUDADevice<DataType>(gpu_data_, cpu_data_, size_, __FILE__, __LINE__);
-        //CopyFromHostToCUDADevice<DataType>(gpu_grad_, cpu_grad_, size_, __FILE__, __LINE__);
     } else if (tensor_->type == EDGE_TENSOR) {
         fprintf(stderr, "The EDGE_TENSOR type has not been supported.\n");
         exit(-1);
@@ -50,25 +42,18 @@ void TensorResourceGPU::map()
         assert(gpu_grad_ != nullptr);
         memset(cpu_data_, 0, size);
         memset(cpu_grad_, 0, size);
-        // CopyFromHostToCUDADevice<DataType>(gpu_data_, cpu_data_, size_, __FILE__, __LINE__);
-        // CopyFromHostToCUDADevice<DataType>(gpu_grad_, cpu_grad_, size_, __FILE__, __LINE__);
     } else {
         fprintf(stderr, "Unrecognized tensor type.\n");
         exit(-1);
+    }
 }
-}
+
 void TensorResourceGPU::unmap(){
-            // assert(cpu_data_ != nullptr);
-            // assert(cpu_grad_ != nullptr);
-            // free(cpu_data_);
-            // free(cpu_grad_);
-            // cpu_data_ = nullptr;
-            // cpu_grad_ = nullptr;
-            DeallocateCUDAMemory<DataType>(&gpu_grad_, __FILE__, __LINE__);
-            DeallocateCUDAMemory<DataType>(&gpu_data_, __FILE__, __LINE__);
-            gpu_grad_ = nullptr;
-            gpu_data_ = nullptr;
-};
+    DeallocateCUDAMemory<DataType>(&gpu_grad_, __FILE__, __LINE__);
+    DeallocateCUDAMemory<DataType>(&gpu_data_, __FILE__, __LINE__);
+    gpu_grad_ = nullptr;
+    gpu_data_ = nullptr;
+}
 
 MultiVersionedTensorResourceGPU::MultiVersionedTensorResourceGPU(
         Tensor * tensor, 
@@ -86,7 +71,7 @@ MultiVersionedTensorResourceGPU::MultiVersionedTensorResourceGPU(
                     tensor, num_vertices);
             assert(versioned_resources_[i] != NULL);
         }
-}
+    }
 
 MultiVersionedTensorResourceGPU::~MultiVersionedTensorResourceGPU() {
     for (int i = 0; i < num_versions_; ++ i) {
@@ -166,3 +151,6 @@ VertexId MultiVersionedTensorResourceGPU::get_num_vertices() {
 int MultiVersionedTensorResourceGPU::get_num_versions() {
     return num_versions_;
 }
+
+
+

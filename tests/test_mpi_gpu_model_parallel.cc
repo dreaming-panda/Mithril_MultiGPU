@@ -129,7 +129,7 @@ int main(int argc, char ** argv) {
     // setup the execution engine
     AbstractExecutionEngine * execution_engine = new DistributedModelParallelExecutionEngineCPU();
     AbstractOptimizer * optimizer = new SGDOptimizerCPU(learning_rate);
-    OperatorExecutorGPU * executor = new OperatorExecutorGPU(graph_structure);
+    OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
     cublasHandle_t cublas;
     cublasCreate(&cublas);
     cudnnHandle_t cudnn;

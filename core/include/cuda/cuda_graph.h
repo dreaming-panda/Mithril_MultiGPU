@@ -5,6 +5,7 @@
 #include <cuda/cuda_utils.h>
 #include "graph.h"
 #include <cusparse.h>
+
 //#include <parallel/hybrid_parallel.h>
 struct LocalGraphBasic{
     int num_local_vertices;
@@ -13,34 +14,35 @@ struct LocalGraphBasic{
     DataType * cuda_local_values;
     int * cuda_local_cols;
 };
-class CUDAFullyStructualGraph:public GraphStructureFullyReplicatedV2
+
+class CUDAFullyStructualGraph: public GraphStructureFullyReplicatedV2
 {
     public:
         CUDAFullyStructualGraph():GraphStructureFullyReplicatedV2(),use_gpu_(false),host_csr_store_(false)
-        {  
-            host_csrColInd_ = nullptr;
-            host_csrRowOffsets_ = nullptr;
-            host_csrValues_ = nullptr;
-            cuda_csrColInd_ = nullptr;
-            cuda_csrRowOffsets_ =nullptr;
-            cuda_csrValues_ = nullptr;
-            csr_value_nnz_ = 0;
+    {  
+        host_csrColInd_ = nullptr;
+        host_csrRowOffsets_ = nullptr;
+        host_csrValues_ = nullptr;
+        cuda_csrColInd_ = nullptr;
+        cuda_csrRowOffsets_ =nullptr;
+        cuda_csrValues_ = nullptr;
+        csr_value_nnz_ = 0;
 
-            host_cscRowInd_ = nullptr;
-            host_cscColOffsets_ = nullptr;
-            host_cscValues_ = nullptr;
-            cuda_cscRowInd_ = nullptr;
-            cuda_cscColOffsets_ =nullptr;
-            cuda_cscValues_ = nullptr;
-         };
+        host_cscRowInd_ = nullptr;
+        host_cscColOffsets_ = nullptr;
+        host_cscValues_ = nullptr;
+        cuda_cscRowInd_ = nullptr;
+        cuda_cscColOffsets_ =nullptr;
+        cuda_cscValues_ = nullptr;
+    };
         CUDAFullyStructualGraph(
                 const std::string meta_data_file, 
                 const std::string edge_list_file, 
                 const std::string vertex_partitioning_file):GraphStructureFullyReplicatedV2(
-                meta_data_file, 
-                edge_list_file, 
-                vertex_partitioning_file
-                ),use_gpu_(false),host_csr_store_(false){
+                    meta_data_file, 
+                    edge_list_file, 
+                    vertex_partitioning_file
+                    ),use_gpu_(false),host_csr_store_(false){
                     host_csrColInd_ = nullptr;
                     host_csrRowOffsets_ = nullptr;
                     host_csrValues_ = nullptr;
@@ -147,27 +149,28 @@ class CUDAFullyStructualGraph:public GraphStructureFullyReplicatedV2
         int* cuda_cscRowInd_;
         DataType* cuda_cscValues_;
 };
+
 class CUDAFullyNonStructualGraph:public GraphNonStructualDataFullyReplicated
 {   
     public:
         CUDAFullyNonStructualGraph():GraphNonStructualDataFullyReplicated(),use_gpu_(false)
-        { 
-            cuda_feature_data_ = nullptr;
-            cuda_label_data_ = nullptr;
-          };
+    { 
+        cuda_feature_data_ = nullptr;
+        cuda_label_data_ = nullptr;
+    };
         CUDAFullyNonStructualGraph(
-                    const std::string meta_data_file, 
-                    const std::string vertex_feature_file, 
-                    const std::string vertex_label_file, 
-                    const std::string vertex_partitioning_file):GraphNonStructualDataFullyReplicated(
+                const std::string meta_data_file, 
+                const std::string vertex_feature_file, 
+                const std::string vertex_label_file, 
+                const std::string vertex_partitioning_file):GraphNonStructualDataFullyReplicated(
                     meta_data_file, 
                     vertex_feature_file, 
                     vertex_label_file, 
                     vertex_partitioning_file
                     ),use_gpu_(false){ 
-                        cuda_feature_data_ = nullptr;
-                        cuda_label_data_ = nullptr;
-                    };
+                    cuda_feature_data_ = nullptr;
+                    cuda_label_data_ = nullptr;
+                };
         ~CUDAFullyNonStructualGraph()
         {
             if(alive)destroy();
@@ -204,70 +207,5 @@ class CUDAFullyNonStructualGraph:public GraphNonStructualDataFullyReplicated
         DataType* cuda_feature_data_;
         DataType* cuda_label_data_;
 };
-/*class CUDAPIPLocalGraph:public PIPLocalGraph
-{
-    public:
-        CUDAPIPLocalGraph(PIPLocalGraph * pGraph){};
-        ~CUDAPIPLocalGraph(){};
-        const int* get_host_csrRowOffsets(bool in)
-        {
-            if(in)return host_csrRowOffsets_in_;
-            else return host_csrRowOffsets_out_;
-        }
-        const int* get_host_csrColInd(bool in)
-        {
-            if(in)return host_csrColInd_in_;
-            else return host_csrColInd_out_;
-        }
-        const DataType* get_host_csrValues(bool in)
-        {
-            if(in)return host_csrValues_in_;
-            else return host_csrValues_out_;
-        }
-        const int* get_cuda_csrRowOffsets(bool in)
-        {
-            if(in)return cuda_csrRowOffsets_in_;
-            else return cuda_csrRowOffsets_out_;
-        }
-        const int* get_cuda_csrColInd(bool in)
-        {
-            if(in)return cuda_csrColInd_in_;
-            else return cuda_csrColInd_out_;
-        }
-        const DataType* get_cuda_csrValues(bool in)
-        {
-            if(in)return cuda_csrValues_in_;
-            else return cuda_csrValues_out_;
-        }
-        int get_nnz(bool in)
-        {
-            if(in)return nnz_in_;
-            else return nnz_out_;
-        }
-        void DeallocateHostCsrBuffer(){};
-        void DeallocateCudaCsrBuffer(){};
-        void InitMemory(){};
-        void InitCsrBuffer(){};
-    private:
-    //host memory
-        int* host_csrRowOffsets_in_;
-        int* host_csrColInd_in_;
-        DataType* host_csrValues_in_;
-        int* host_csrRowOffsets_out_;
-        int* host_csrColInd_out_;
-        DataType* host_csrValues_out_;
-        int num_inMatrix_elements_;
-        int num_outMatrix_elements_;
-        int nnz_in_;
-        int nnz_out_;
-    //device memory
-        int* cuda_csrRowOffsets_in_;
-        int* cuda_csrColInd_in_;
-        DataType* cuda_csrValues_in_;
-        int* cuda_csrRowOffsets_out_;
-        int* cuda_csrColInd_out_;
-        DataType* cuda_csrValues_out_;
 
-
-};*/
 #endif
