@@ -88,7 +88,8 @@ class GCNII: public AbstractApplication {
             }
             // classification
             t = fc(t, num_classes_, "None", true);
-            t = log_softmax(t, enable_recomputation_);
+            //t = log_softmax(t, enable_recomputation_);
+            t = softmax(t, enable_recomputation_);
             next_layer();
             return t;
         }
@@ -214,7 +215,8 @@ int main(int argc, char ** argv) {
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
-    NLLLoss * loss = new NLLLoss();
+    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
+    //NLLLoss * loss = new NLLLoss();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
 
     // loading the dataset masks
