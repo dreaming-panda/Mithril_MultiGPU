@@ -100,11 +100,13 @@ __global__ void scale_down_kernel(
     }
 }
 
-void DistributedPIPHybridParallelExecutionEngineGPU::scale_down(DataType * data, size_t N, double factor) {
+void DistributedPIPHybridParallelExecutionEngineGPU::scale_vector(DataType * data, size_t N, double factor, bool sync) {
     const int block_size = 1024;
     const int num_blocks = (N + block_size - 1) / block_size;
     scale_down_kernel<<<num_blocks, block_size>>>(data, N, factor);
-    cudaStreamSynchronize(0);
+    if (sync) {
+        cudaStreamSynchronize(0);
+    }
 }
 
 __global__ void calculate_prediction_hits_kernel(

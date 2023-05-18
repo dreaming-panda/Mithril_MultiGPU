@@ -178,6 +178,7 @@ class GraphDataPropagator {
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
         void propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
+        inline MPI_Comm get_peer_group() {return peer_group_;}
 };
 
 template<typename T>
@@ -1161,7 +1162,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         bool always_exact_inferences_ = false;
 
         // data-parallel-related settings
-        int num_dp_ways_ = 1; // number of data parallel ways
+        int num_dp_ways_ = 2; // number of data parallel ways
         GraphDataPropagator * graph_data_propagator_;
 
         inline int get_num_epoch() {
@@ -1259,7 +1260,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void perform_forward_task(CUDAPIPForwardTask task);
         void perform_backward_task(CUDAPIPBackwardTask task);
         //void add_white_noise();
-        void scale_down(DataType * data, size_t N, double factor);
+        void scale_vector(DataType * data, size_t N, double factor, bool sync = true);
 
         // some initialization functions
         void generate_backward_operator_mask(const std::vector<Operator*>& operators);

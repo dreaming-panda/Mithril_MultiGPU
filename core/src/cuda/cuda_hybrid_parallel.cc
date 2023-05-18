@@ -155,7 +155,9 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
             }
             bool same_chunk = dst / vertices_per_chunk == i / vertices_per_chunk;
             host_csrColIn_Out_[nnz_out_count] = dst;
-            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 2.);  // for unbaised gradient estimation
+            host_csrColIn_Out_[nnz_out_count] = dst;
+            host_csrValue_Out_[nnz_out_count] = norm_factor;
+            //host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 2.);  // for unbaised gradient estimation
             nnz_out_count++;
         }
         if(addself == false)
@@ -2649,6 +2651,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int stage_id = get_stage_id();
     int num_stages = get_num_stages();
+    int num_ways = get_num_dp_ways();
     VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
     VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
     VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
@@ -2757,13 +2760,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_AGGREGATION:
-                {
-                    // graph data propagation
-                    Tensor * tensor = op->get_output_tensor(0);
-                    graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
-                    // do the actual computation
-                    executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
-                }
+                executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_DROPOUT:
                 executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
@@ -2801,7 +2798,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 executor_->softmax_backward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_AGGREGATION:
-                executor_->aggregation_backward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                {
+                    // graph data propagation
+                    Tensor * tensor = op->get_output_tensor(0);
+                    graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
+                    // do the actual computation
+                    executor_->aggregation_backward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                }
                 break;
             case OPERATOR_DROPOUT:
                 executor_->dropout_backward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
@@ -2832,6 +2835,29 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                     cudaMemcpyDeviceToHost
                     )
                 );
+    }
+
+    // scale the gradients for unbaised estimation
+    int processed_chunks[num_ways];
+    MPI_Allgather(
+            &task.chunk_id, 1, MPI_INT, 
+            processed_chunks, 1, MPI_INT,
+            graph_data_propagator_->get_peer_group()
+            );
+    for (int op_idx = op_idx_begin; op_idx < op_idx_end; ++ op_idx)  {
+        Operator * op = op_ten_manager_->get_operator(op_idx);
+        if (op->get_type() == OPERATOR_AGGREGATION) {
+            Tensor * tensor = op->get_output_tensor(0);
+            for (int i = 0; i < num_ways; ++ i) {
+                DataType * gpu_grad = NULL;
+                size_t num_elements = 0;
+                get_vertex_tensor_grad_by_chunk(
+                        tensor, processed_chunks[i], gpu_grad, num_elements
+                        );
+                assert(gpu_grad && num_elements);
+                scale_vector(gpu_grad, num_elements, 2.0, false);
+            }
+        }
     }
 
     // apply the gradients by pushing them to the parameter server
