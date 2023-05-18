@@ -135,11 +135,16 @@ class GraphDataPropagator {
         uint8_t * recv_buff_; // the receiver-side buffer (CPU)
         size_t recv_buff_size_;
         size_t recv_buff_size_per_way_;
-        MPI_Win recv_buff_win_;
         uint8_t * send_buff_;
         size_t send_buff_size_;
         MPI_Comm peer_group_;
         size_t comm_volume_;
+
+        // the mirror information of each local chunks
+        VertexId ** num_in_mirror_vertices_; // VertexId[chunk_id][remote_dst]
+        VertexId *** in_mirror_vertices_; // VertexId*[chunk_id][remote_dst], GPU
+        VertexId ** num_out_mirror_vertices_; // VertexId[chunk_id][remote_dst]
+        VertexId *** out_mirror_vertices_; // VertexId*[chunk_id][remote_dst], GPU
 
         struct RecvBuffHeader {
             int chunk_id;
@@ -154,17 +159,9 @@ class GraphDataPropagator {
 
         uint8_t get_checksum(uint8_t* data, size_t data_size);
 
-        // propagate the graph data to the peer gpus
-        // this is a high-level wrapper of the MPI PUT op 
-        // the gpu buffer will be avaiable after the function returns
-        // however, the data might not be fully propagated yet
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
         void put_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
-        // ensure that the graph data is propagated to the remote
-        // CPU recv buffer
-        // NOTE: this is not a collective call
-        void flush_graph_data();
         // move the received graph data to the GPU
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients

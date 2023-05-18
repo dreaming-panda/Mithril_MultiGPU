@@ -248,20 +248,12 @@ GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEn
     recv_buff_size_ = recv_buff_size_per_way_ * num_ways;
     checkCUDA(cudaMallocHost(&recv_buff_, recv_buff_size_));
     memset(recv_buff_, 0, recv_buff_size_);
-#ifdef USE_RDMA
-    // setting up the direct memory access
-    MPI_Win_create(
-            recv_buff_, recv_buff_size_, sizeof(uint8_t),
-            MPI_INFO_NULL, MPI_COMM_WORLD, &recv_buff_win_
-            );
-    //for (int i = (node_id + num_stages) % num_nodes; i != node_id; i = (i + num_stages) % num_nodes) {
-    //    MPI_Win_lock(MPI_LOCK_SHARED, i, 0, recv_buff_win_);
-    //}
-#endif
+
     // setting up the sender buffer
     send_buff_size_ = recv_buff_size_per_way_;
     checkCUDA(cudaMallocHost(&send_buff_, send_buff_size_));
     memset(send_buff_, 0, send_buff_size_);
+
     // setting up the comm 
     MPI_Comm_split(MPI_COMM_WORLD, stage_id, node_id, &peer_group_);
     int group_size;
@@ -276,13 +268,7 @@ GraphDataPropagator::~GraphDataPropagator() {
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int num_stages = engine_->get_num_stages();
     int stage_id = engine_->get_stage_id();
-#ifdef USE_RDMA
-    //// free the mpi windows
-    //for (int i = (node_id + num_stages) % num_nodes; i != node_id; i = (i + num_stages) % num_nodes) {
-    //    MPI_Win_unlock(i, recv_buff_win_);
-    //}
-    MPI_Win_free(&recv_buff_win_);
-#endif
+
     // free the buffers
     checkCUDA(cudaFreeHost(recv_buff_));
     checkCUDA(cudaFreeHost(send_buff_));
@@ -344,18 +330,6 @@ void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool pro
                 );
         requests.push_back(request);
 
-        //// use onesided mpi
-        //size_t remote_disp = recv_buff_size_per_way_ * way_id;
-        //assert(recv_buff_size_per_way_ >= send_data_size);
-        //MPI_Win_lock(MPI_LOCK_SHARED, dst_node, 0, recv_buff_win_);
-        //MPI_Put(
-        //        send_buff_, send_data_size, MPI_CHAR,
-        //        dst_node, remote_disp, send_data_size, MPI_CHAR,
-        //        recv_buff_win_
-        //       );
-        //MPI_Win_flush(dst_node, recv_buff_win_);
-        //MPI_Win_unlock(dst_node, recv_buff_win_);
-
         comm_volume_ += send_data_size;
     }
 
@@ -373,17 +347,6 @@ void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool pro
     for (MPI_Request request: requests) {
         MPI_Status status;
         MPI_Wait(&request, &status);
-    }
-}
-
-void GraphDataPropagator::flush_graph_data() {
-    int node_id = DistributedSys::get_instance()->get_node_id();
-    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
-    int num_stages = engine_->get_num_stages();
-    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; 
-            dst_node = (dst_node + num_stages) % num_nodes) {
-        //MPI_Win_flush(dst_node, recv_buff_win_);
-        //MPI_Win_unlock(dst_node, recv_buff_win_);
     }
 }
 
@@ -410,10 +373,6 @@ void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
             fprintf(stderr, "ERROR: Node %d, receving data from peer on way %d, checksum failed %d/%d\n", 
                     node_id, i, (int) checksum, (int) trailer->checksum);
         } 
-        //else {
-        //    fprintf(stderr, "Node %d, receving data from peer on way %d, checksum passed %d/%d\n", 
-        //            node_id, i, (int) checksum, (int) trailer->checksum);
-        //}
         assert(checksum == trailer->checksum);
 
         // copy the data to the GPU
@@ -444,30 +403,7 @@ void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
 
 void GraphDataPropagator::propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
     put_graph_data(tensor, chunk_id, propagate_act);
-    flush_graph_data();
-    //int way_id = engine_->get_dp_way_id();
-    //int num_ways = engine_->get_num_dp_ways();
-    //int num_stages = engine_->get_num_stages();
-    //int stage_id = engine_->get_stage_id();
-    //if (way_id == 0)  {
-    //    int test = 0;
-    //    for (int i = 1; i < num_ways; ++ i) {
-    //        MPI_Send(
-    //                &test, 1, MPI_INT, 
-    //                i * num_stages + stage_id,
-    //                100, MPI_COMM_WORLD
-    //                );
-    //    }
-    //} else {
-    //    int test = 0;
-    //    MPI_Status status;
-    //    MPI_Recv(
-    //            &test, 1, MPI_INT, 
-    //            stage_id, 100, MPI_COMM_WORLD,
-    //            &status
-    //            );
-    //}
-    MPI_Barrier(peer_group_);
+    //MPI_Barrier(peer_group_);
     retrieve_graph_data_to_gpu(propagate_act);
 }
 
