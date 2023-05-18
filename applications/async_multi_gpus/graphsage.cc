@@ -68,7 +68,8 @@ class GraphSage: public AbstractApplication {
                 // added the transformed aggregated results with the transformed embeddings
                 t = add(t_0, t, 1., 1., enable_recomputation_);
                 if (i == num_layers_ - 1) {
-                    t = log_softmax(t, enable_recomputation_);
+                    //t = log_softmax(t, enable_recomputation_);
+                    t = softmax(t, enable_recomputation_);
                 } else {
                     t = relu(t, enable_recomputation_);
                     t = dropout(t, dropout_rate_, enable_recomputation_);
@@ -193,7 +194,8 @@ int main(int argc, char ** argv) {
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
-    NLLLoss * loss = new NLLLoss();
+    //NLLLoss * loss = new NLLLoss();
+    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
 
     // loading the dataset masks
