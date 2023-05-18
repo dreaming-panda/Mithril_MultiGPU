@@ -2,7 +2,7 @@
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
 #SBATCH -t 00:15:00 
-#SBATCH --nodes 2
+#SBATCH --nodes 1
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
@@ -20,16 +20,16 @@ make -j
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
-num_layers=4
+num_layers=8
 hunits=64
 lr=1e-2
 graph=cora
-epoch=1500
+epoch=1000
 decay=5e-4
 chunks=1
 dropout=0.0
 seed=5
-model=graphsage
+model=gcnii
 eval_freq=1
 exact_inference=0
 
