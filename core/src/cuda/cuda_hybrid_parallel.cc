@@ -250,7 +250,8 @@ GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEn
     memset(recv_buff_, 0, recv_buff_size_);
 
     // setting up the sender buffer
-    send_buff_size_ = recv_buff_size_per_way_;
+    send_buff_size_per_way_ = recv_buff_size_per_way_;
+    send_buff_size_ = recv_buff_size_;
     checkCUDA(cudaMallocHost(&send_buff_, send_buff_size_));
     memset(send_buff_, 0, send_buff_size_);
 
@@ -282,49 +283,155 @@ uint8_t GraphDataPropagator::get_checksum(uint8_t* data, size_t data_size) {
     return checksum;
 }
 
-void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
+//void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
+//    int node_id = DistributedSys::get_instance()->get_node_id();
+//    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+//    int num_stages = engine_->get_num_stages();
+//    int way_id = engine_->get_dp_way_id();
+//
+//    // obtain the GPU data
+//    DataType * gpu_data = NULL;
+//    size_t num_elements = 0;
+//    if (propagate_act) {
+//        assert(! tensor->is_data_transient);
+//        engine_->get_vertex_tensor_data_by_chunk(tensor, chunk_id, gpu_data, num_elements);
+//    } else {
+//        assert(! tensor->is_grad_transient);
+//        engine_->get_vertex_tensor_grad_by_chunk(tensor, chunk_id, gpu_data, num_elements);
+//    }
+//    assert(gpu_data && num_elements);
+//
+//    // set up the send buffer
+//    size_t send_data_size = sizeof(RecvBuffHeader) + sizeof(DataType) * num_elements + sizeof(RecvBuffTrailer);
+//    assert(send_buff_ && send_buff_size_ >= send_data_size);
+//    RecvBuffHeader * header = (RecvBuffHeader*) send_buff_;
+//    header->chunk_id = chunk_id;
+//    header->tensor_id = engine_->op_ten_manager_->get_tensor_index(tensor);
+//    header->payload_size = sizeof(DataType) * num_elements;
+//    header->random_ = comm_volume_;
+//    checkCUDA(cudaMemcpy(
+//                send_buff_ + sizeof(RecvBuffHeader), gpu_data, 
+//                sizeof(DataType) * num_elements,
+//                cudaMemcpyDeviceToHost
+//                ));
+//    RecvBuffTrailer * trailer = (RecvBuffTrailer*) (send_buff_ + sizeof(RecvBuffHeader) + header->payload_size);
+//    trailer->checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
+//    //printf("Node %d, sending a packet with checksum %d\n", node_id, (int) trailer->checksum);
+//
+//    // send out the data in a circulant way
+//    std::vector<MPI_Request> requests;
+//    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; 
+//            dst_node = (dst_node + num_stages) % num_nodes) {
+//        // use two-sided mpi
+//        MPI_Request request;
+//        MPI_Isend(
+//                send_buff_, send_data_size, MPI_CHAR, 
+//                dst_node, ActivationInterchanging,
+//                MPI_COMM_WORLD, &request
+//                );
+//        requests.push_back(request);
+//
+//        comm_volume_ += send_data_size;
+//    }
+//
+//    for (int src_node = (node_id + num_stages) % num_nodes; src_node != node_id; 
+//            src_node = (src_node + num_stages) % num_nodes) {
+//        int way_id = src_node / num_stages;
+//        size_t disp = recv_buff_size_per_way_ * way_id;
+//        MPI_Status status;
+//        MPI_Recv(
+//                recv_buff_ + disp, recv_buff_size_per_way_, MPI_CHAR,
+//                src_node, ActivationInterchanging, MPI_COMM_WORLD, 
+//                &status
+//                );
+//    }
+//    for (MPI_Request request: requests) {
+//        MPI_Status status;
+//        MPI_Wait(&request, &status);
+//    }
+//}
+
+void GraphDataPropagator::collect_mirror_vertices_data(
+        VertexId * mirror_vertices, VertexId num_mirror_vertices,
+        DataType * gpu_data, int embedding_size, 
+        uint8_t * tmp_buff, size_t tmp_buff_size,
+        bool sync
+        ) {
+    // TODO
+}
+
+void GraphDataPropagator::put_graph_data(
+        Tensor * tensor, int chunk_id, bool propagate_act
+        ) {
+    assert(tensor);
+
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int num_stages = engine_->get_num_stages();
+    int stage_id = engine_->get_stage_id();
     int way_id = engine_->get_dp_way_id();
 
-    // obtain the GPU data
     DataType * gpu_data = NULL;
-    size_t num_elements = 0;
+    size_t embedding_size = tensor->dims[1];
     if (propagate_act) {
         assert(! tensor->is_data_transient);
-        engine_->get_vertex_tensor_data_by_chunk(tensor, chunk_id, gpu_data, num_elements);
+        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        assert(resource);
+        gpu_data = resource->get_gpu_data();
     } else {
         assert(! tensor->is_grad_transient);
-        engine_->get_vertex_tensor_grad_by_chunk(tensor, chunk_id, gpu_data, num_elements);
+        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        assert(resource);
+        gpu_data = resource->get_gpu_grad();
     }
-    assert(gpu_data && num_elements);
+    assert(gpu_data && embedding_size);
 
-    // set up the send buffer
-    size_t send_data_size = sizeof(RecvBuffHeader) + sizeof(DataType) * num_elements + sizeof(RecvBuffTrailer);
-    assert(send_buff_ && send_buff_size_ >= send_data_size);
-    RecvBuffHeader * header = (RecvBuffHeader*) send_buff_;
-    header->chunk_id = chunk_id;
-    header->tensor_id = engine_->op_ten_manager_->get_tensor_index(tensor);
-    header->payload_size = sizeof(DataType) * num_elements;
-    header->random_ = comm_volume_;
-    checkCUDA(cudaMemcpy(
-                send_buff_ + sizeof(RecvBuffHeader), gpu_data, 
-                sizeof(DataType) * num_elements,
-                cudaMemcpyDeviceToHost
-                ));
-    RecvBuffTrailer * trailer = (RecvBuffTrailer*) (send_buff_ + sizeof(RecvBuffHeader) + header->payload_size);
-    trailer->checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
-    //printf("Node %d, sending a packet with checksum %d\n", node_id, (int) trailer->checksum);
-
-    // send out the data in a circulant way
     std::vector<MPI_Request> requests;
-    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id; 
+    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id;
             dst_node = (dst_node + num_stages) % num_nodes) {
-        // use two-sided mpi
+        int remote_way_id = dst_node / num_stages;
+
+        VertexId * mirror_vertices = NULL;
+        VertexId num_mirror_vertices = 0;
+        if (propagate_act) {
+            mirror_vertices = in_mirror_vertices_[chunk_id][remote_way_id];
+            num_mirror_vertices = num_in_mirror_vertices_[chunk_id][remote_way_id];
+        } else {
+            mirror_vertices = out_mirror_vertices_[chunk_id][remote_way_id];
+            num_mirror_vertices = num_out_mirror_vertices_[chunk_id][remote_way_id];
+        }
+
+        uint8_t * send_data = send_buff_ + remote_way_id * send_buff_size_per_way_;
+        uint8_t * send_data_payload = send_data + sizeof(RecvBuffHeader);
+
+        // setting up the header
+        RecvBuffHeader * header = (RecvBuffHeader*) send_data;
+        header->chunk_id = chunk_id;
+        header->tensor_id = engine_->op_ten_manager_->get_tensor_index(tensor);
+        header->payload_size = sizeof(DataType) * embedding_size * num_mirror_vertices;
+        header->random_ = comm_volume_;
+
+        // collecting the payload
+        collect_mirror_vertices_data(
+                mirror_vertices, num_mirror_vertices, 
+                gpu_data, embedding_size,
+                tmp_buff_, tmp_buff_size_,
+                false
+                );
+        checkCUDA(cudaMemcpy(
+                    send_data_payload, tmp_buff_, header->payload_size,
+                    cudaMemcpyDeviceToHost
+                    ));
+
+        // set up the trailer
+        RecvBuffTrailer * trailer = (RecvBuffTrailer*) (send_data_payload + header->payload_size);
+        trailer->checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
+
+        // send the data
+        size_t send_data_size = header->payload_size + sizeof(RecvBuffHeader) + sizeof(RecvBuffTrailer);
         MPI_Request request;
         MPI_Isend(
-                send_buff_, send_data_size, MPI_CHAR, 
+                send_data, send_data_size, MPI_CHAR,
                 dst_node, ActivationInterchanging,
                 MPI_COMM_WORLD, &request
                 );
@@ -343,7 +450,11 @@ void GraphDataPropagator::put_graph_data(Tensor * tensor, int chunk_id, bool pro
                 src_node, ActivationInterchanging, MPI_COMM_WORLD, 
                 &status
                 );
+        int count = recv_buff_size_per_way_;
+        MPI_Get_count(&status, MPI_CHAR, &count);
+        assert(count < recv_buff_size_per_way_);
     }
+
     for (MPI_Request request: requests) {
         MPI_Status status;
         MPI_Wait(&request, &status);
@@ -403,7 +514,6 @@ void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
 
 void GraphDataPropagator::propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
     put_graph_data(tensor, chunk_id, propagate_act);
-    //MPI_Barrier(peer_group_);
     retrieve_graph_data_to_gpu(propagate_act);
 }
 

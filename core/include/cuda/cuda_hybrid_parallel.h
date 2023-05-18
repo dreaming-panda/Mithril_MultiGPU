@@ -132,19 +132,25 @@ class GraphDataPropagator {
         const double imbalance_factor_ = 1.25;
 
         DistributedPIPHybridParallelExecutionEngineGPU * engine_;
+        // recv buffer
         uint8_t * recv_buff_; // the receiver-side buffer (CPU)
         size_t recv_buff_size_;
         size_t recv_buff_size_per_way_;
+        // send buffer
         uint8_t * send_buff_;
         size_t send_buff_size_;
+        size_t send_buff_size_per_way_;
+
         MPI_Comm peer_group_;
         size_t comm_volume_;
 
         // the mirror information of each local chunks
-        VertexId ** num_in_mirror_vertices_; // VertexId[chunk_id][remote_dst]
-        VertexId *** in_mirror_vertices_; // VertexId*[chunk_id][remote_dst], GPU
-        VertexId ** num_out_mirror_vertices_; // VertexId[chunk_id][remote_dst]
-        VertexId *** out_mirror_vertices_; // VertexId*[chunk_id][remote_dst], GPU
+        VertexId ** num_in_mirror_vertices_; // VertexId[chunk_id][way_id]
+        VertexId *** in_mirror_vertices_; // VertexId*[chunk_id][way_id], GPU
+        VertexId ** num_out_mirror_vertices_; // VertexId[chunk_id][way_id]
+        VertexId *** out_mirror_vertices_; // VertexId*[chunk_id][way_id], GPU
+        uint8_t * tmp_buff_;
+        size_t tmp_buff_size_;
 
         struct RecvBuffHeader {
             int chunk_id;
@@ -158,6 +164,12 @@ class GraphDataPropagator {
         } __attribute__((packed));
 
         uint8_t get_checksum(uint8_t* data, size_t data_size);
+        void collect_mirror_vertices_data(
+                VertexId * mirror_vertices, VertexId num_mirror_vertices,
+                DataType * gpu_data, int embedding_size, 
+                uint8_t * tmp_buff, size_t tmp_buff_size,
+                bool sync
+                );
 
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
