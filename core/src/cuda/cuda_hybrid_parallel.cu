@@ -176,6 +176,77 @@ DataType DistributedPIPHybridParallelExecutionEngineGPU::calculate_test_predicti
             );
 }
 
+__global__ void gather_vertices_embeddings_kernel(
+        DataType * src_data, size_t src_data_size,
+        DataType * dst_data, size_t dst_data_size,
+        VertexId * vertices, VertexId num_vertices,
+        int embedding_size
+        ) {
+    // determine the index
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int boundary = embedding_size * num_vertices;
+    if (idx < boundary) {
+        int vidx = idx / embedding_size;
+        int eidx = idx % embedding_size;
+        VertexId vertex = vertices[vidx];
+        DataType data = src_data[vertex * embedding_size + eidx];
+        dst_data[vidx * embedding_size + eidx] = data;
+    }
+}
+
+__global__ void scatter_vertices_embeddings_kernel(
+        DataType * src_data, size_t src_data_size,
+        DataType * dst_data, size_t dst_data_size,
+        VertexId * vertices, VertexId num_vertices,
+        int embedding_size
+        ) {
+    // determine the index
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int boundary = embedding_size * num_vertices;
+    if (idx < boundary) {
+        int vidx = idx / embedding_size;
+        int eidx = idx % embedding_size;
+        VertexId vertex = vertices[vidx];
+        DataType data = src_data[vidx * embedding_size + eidx];
+        dst_data[vertex * embedding_size + eidx] = data;
+    }
+}
+
+void GraphDataPropagator::gather_vertices_embeddings(
+        VertexId * vertices, VertexId num_vertices, int embedding_size,
+        DataType * src_data, size_t src_data_size,
+        DataType * dst_data, size_t dst_data_size,
+        bool sync
+        ) {
+    int data_size = embedding_size * num_vertices;
+    int block_size = 1024;
+    int num_blocks = (data_size + block_size - 1) / block_size;
+    gather_vertices_embeddings_kernel<<<num_blocks, block_size>>>(
+            src_data, src_data_size, dst_data, dst_data_size, 
+            vertices, num_vertices, embedding_size
+            );
+    if (sync) {
+        cudaStreamSynchronize(0);
+    }
+}
+
+void GraphDataPropagator::scatter_vertices_embeddings(
+        VertexId * vertices, VertexId num_vertices, int embedding_size,
+        DataType * src_data, size_t src_data_size,
+        DataType * dst_data, size_t dst_data_size,
+        bool sync
+        ) {
+    int data_size = embedding_size * num_vertices;
+    int block_size = 1024;
+    int num_blocks = (data_size + block_size - 1) / block_size;
+    scatter_vertices_embeddings_kernel<<<num_blocks, block_size>>>(
+            src_data, src_data_size, dst_data, dst_data_size, 
+            vertices, num_vertices, embedding_size
+            );
+    if (sync) {
+        cudaStreamSynchronize(0);
+    }
+}
 
 
 

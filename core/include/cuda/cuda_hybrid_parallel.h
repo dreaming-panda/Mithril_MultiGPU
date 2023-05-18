@@ -35,6 +35,8 @@
 
 #define LOW_LEARNING_RATE (0)
 #define COMPRESS_DATA (true)
+#define MAX_NUM_CHUNKS (256)
+#define MAX_NUM_WAYS (64)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDAShadowGradientsMasterVertices;
@@ -144,11 +146,16 @@ class GraphDataPropagator {
         MPI_Comm peer_group_;
         size_t comm_volume_;
 
-        // the mirror information of each local chunks
-        VertexId ** num_in_mirror_vertices_; // VertexId[chunk_id][way_id]
-        VertexId *** in_mirror_vertices_; // VertexId*[chunk_id][way_id], GPU
-        VertexId ** num_out_mirror_vertices_; // VertexId[chunk_id][way_id]
-        VertexId *** out_mirror_vertices_; // VertexId*[chunk_id][way_id], GPU
+        VertexId * vertices_to_send_forward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS]; // [chunk_id][way_id]
+        VertexId num_vertices_to_send_forward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS];
+        VertexId * vertices_to_recv_forward_[MAX_NUM_CHUNKS];
+        VertexId num_vertices_to_recv_forward_[MAX_NUM_CHUNKS];
+
+        VertexId * vertices_to_send_backward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS]; // [chunk_id][way_id]
+        VertexId num_vertices_to_send_backward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS];
+        VertexId * vertices_to_recv_backward_[MAX_NUM_CHUNKS];
+        VertexId num_vertices_to_recv_backward_[MAX_NUM_CHUNKS];
+
         uint8_t * tmp_buff_;
         size_t tmp_buff_size_;
 
@@ -164,12 +171,20 @@ class GraphDataPropagator {
         } __attribute__((packed));
 
         uint8_t get_checksum(uint8_t* data, size_t data_size);
-        void collect_mirror_vertices_data(
-                VertexId * mirror_vertices, VertexId num_mirror_vertices,
-                DataType * gpu_data, int embedding_size, 
-                uint8_t * tmp_buff, size_t tmp_buff_size,
+
+        void gather_vertices_embeddings(
+                VertexId * vertices, VertexId num_vertices, int embedding_size,
+                DataType * src_data, size_t src_data_size,
+                DataType * dst_data, size_t dst_data_size,
                 bool sync
                 );
+        void scatter_vertices_embeddings(
+                VertexId * vertices, VertexId num_vertices, int embedding_size,
+                DataType * src_data, size_t src_data_size,
+                DataType * dst_data, size_t dst_data_size,
+                bool sync
+                );
+        void setup_mirror_vertices();
 
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
