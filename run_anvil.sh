@@ -20,14 +20,14 @@ make -j
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
-num_layers=8
+num_layers=64
 hunits=64
 lr=1e-2
 graph=cora
 epoch=1000
 decay=5e-4
 chunks=1
-dropout=0.0
+dropout=0.6
 seed=5
 model=gcnii
 eval_freq=1
