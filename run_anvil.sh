@@ -20,7 +20,7 @@ make -j
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
-num_layers=64
+num_layers=4
 hunits=64
 lr=1e-2
 graph=cora
@@ -29,8 +29,8 @@ decay=5e-4
 chunks=1
 dropout=0.0
 seed=5
-model=gcnii
-eval_freq=10
+model=graphsage
+eval_freq=1
 exact_inference=0
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/$model --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file $PROJECT/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference
