@@ -185,6 +185,7 @@ class GraphDataPropagator {
                 bool sync
                 );
         void setup_mirror_vertices();
+        void free_mirror_vertices();
 
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients

@@ -261,6 +261,13 @@ GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEn
     MPI_Comm_size(peer_group_, &group_size);
     assert(group_size == num_ways);
 
+    setup_mirror_vertices();
+
+    int max_chunk_size = engine_->chunk_manager_->get_max_chunk_size();
+    tmp_buff_size_ = sizeof(DataType) * max_chunk_size * max_embedding_dimension;
+    checkCUDA(cudaMalloc(&tmp_buff_, tmp_buff_size_));
+    assert(tmp_buff_);
+
     comm_volume_ = 0;
 }
 
@@ -273,6 +280,13 @@ GraphDataPropagator::~GraphDataPropagator() {
     // free the buffers
     checkCUDA(cudaFreeHost(recv_buff_));
     checkCUDA(cudaFreeHost(send_buff_));
+
+    free_mirror_vertices();
+
+    checkCUDA(cudaFree(tmp_buff_));
+
+    printf("Node %d, sent %.3f MB data\n", 
+            node_id, comm_volume_ / 1024. / 1024.);
 }
 
 uint8_t GraphDataPropagator::get_checksum(uint8_t* data, size_t data_size) {
@@ -399,7 +413,7 @@ void GraphDataPropagator::setup_mirror_vertices() {
             node_id);
 #pragma omp parallel for 
     for (int chunk_id = 0; chunk_id < num_chunks; ++ chunk_id) {
-        if (chunk2wayid[chunk_id] != way_id) {
+        if (chunk2wayid[chunk_id] == way_id) {
             continue;
         }
 
@@ -465,6 +479,25 @@ void GraphDataPropagator::setup_mirror_vertices() {
     }
 }
 
+void GraphDataPropagator::free_mirror_vertices() {
+    auto free_if_not_null = [&](VertexId * data) {
+        if (data != NULL) {
+            checkCUDA(cudaFree(data));
+        }
+    };
+
+    int num_chunks = engine_->chunk_manager_->get_num_global_chunks();
+    int num_ways = engine_->get_num_dp_ways();
+    for (int chunk_id = 0; chunk_id < num_chunks; ++ chunk_id) {
+        for (int way_id = 0; way_id < num_ways; ++ way_id) {
+            free_if_not_null(vertices_to_send_forward_[chunk_id][way_id]);
+            free_if_not_null(vertices_to_send_backward_[chunk_id][way_id]);
+        }
+        free_if_not_null(vertices_to_recv_forward_[chunk_id]);
+        free_if_not_null(vertices_to_recv_backward_[chunk_id]);
+    }
+}
+
 void GraphDataPropagator::put_graph_data(
         Tensor * tensor, int chunk_id, bool propagate_act
         ) {
@@ -491,7 +524,6 @@ void GraphDataPropagator::put_graph_data(
     }
     assert(gpu_data && embedding_size);
 
-    std::vector<MPI_Request> requests;
     for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id;
             dst_node = (dst_node + num_stages) % num_nodes) {
         int remote_way_id = dst_node / num_stages;
@@ -523,7 +555,7 @@ void GraphDataPropagator::put_graph_data(
                 (DataType*) tmp_buff_, tmp_buff_size_,
                 false
                 );
-        checkCUDA(cudaMemcpy(
+        checkCUDA(cudaMemcpyAsync(
                     send_data_payload, tmp_buff_, header->payload_size,
                     cudaMemcpyDeviceToHost
                     ));
@@ -531,6 +563,15 @@ void GraphDataPropagator::put_graph_data(
         // set up the trailer
         RecvBuffTrailer * trailer = (RecvBuffTrailer*) (send_data_payload + header->payload_size);
         trailer->checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
+    }
+    cudaStreamSynchronize(0);
+
+    std::vector<MPI_Request> requests;
+    for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id;
+            dst_node = (dst_node + num_stages) % num_nodes) {
+        int remote_way_id = dst_node / num_stages;
+        uint8_t * send_data = send_buff_ + remote_way_id * send_buff_size_per_way_;
+        RecvBuffHeader * header = (RecvBuffHeader*) send_data;
 
         // send the data
         size_t send_data_size = header->payload_size + sizeof(RecvBuffHeader) + sizeof(RecvBuffTrailer);
@@ -619,6 +660,12 @@ void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
             gpu_data = resource->get_gpu_grad();
             mirror_vertices = vertices_to_recv_backward_[header->chunk_id];
             num_mirror_vertices = num_vertices_to_recv_backward_[header->chunk_id];
+        }
+        if (embedding_size * num_mirror_vertices * sizeof(DataType) != header->payload_size) {
+            fprintf(stderr, "Node %d find out that the data of chunk %d from way %d has a consistency issue.\n",
+                    node_id, header->chunk_id, i);
+            fprintf(stderr, "Embedding size: %lu, num vertices to recv: %u\n",
+                    embedding_size, num_mirror_vertices);
         }
         assert(gpu_data && embedding_size && mirror_vertices);
         assert(sizeof(DataType) * embedding_size * num_mirror_vertices == header->payload_size);
