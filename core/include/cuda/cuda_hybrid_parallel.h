@@ -35,6 +35,8 @@
 
 #define LOW_LEARNING_RATE (0)
 #define COMPRESS_DATA (true)
+#define MAX_NUM_CHUNKS (256)
+#define MAX_NUM_WAYS (64)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDAShadowGradientsMasterVertices;
@@ -132,14 +134,30 @@ class GraphDataPropagator {
         const double imbalance_factor_ = 1.25;
 
         DistributedPIPHybridParallelExecutionEngineGPU * engine_;
+        // recv buffer
         uint8_t * recv_buff_; // the receiver-side buffer (CPU)
         size_t recv_buff_size_;
         size_t recv_buff_size_per_way_;
-        MPI_Win recv_buff_win_;
+        // send buffer
         uint8_t * send_buff_;
         size_t send_buff_size_;
+        size_t send_buff_size_per_way_;
+
         MPI_Comm peer_group_;
         size_t comm_volume_;
+
+        VertexId * vertices_to_send_forward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS]; // [chunk_id][way_id]
+        VertexId num_vertices_to_send_forward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS];
+        VertexId * vertices_to_recv_forward_[MAX_NUM_CHUNKS];
+        VertexId num_vertices_to_recv_forward_[MAX_NUM_CHUNKS];
+
+        VertexId * vertices_to_send_backward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS]; // [chunk_id][way_id]
+        VertexId num_vertices_to_send_backward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS];
+        VertexId * vertices_to_recv_backward_[MAX_NUM_CHUNKS];
+        VertexId num_vertices_to_recv_backward_[MAX_NUM_CHUNKS];
+
+        uint8_t * tmp_buff_;
+        size_t tmp_buff_size_;
 
         struct RecvBuffHeader {
             int chunk_id;
@@ -154,17 +172,24 @@ class GraphDataPropagator {
 
         uint8_t get_checksum(uint8_t* data, size_t data_size);
 
-        // propagate the graph data to the peer gpus
-        // this is a high-level wrapper of the MPI PUT op 
-        // the gpu buffer will be avaiable after the function returns
-        // however, the data might not be fully propagated yet
+        void gather_vertices_embeddings(
+                VertexId * vertices, VertexId num_vertices, int embedding_size,
+                DataType * src_data, size_t src_data_size,
+                DataType * dst_data, size_t dst_data_size,
+                bool sync
+                );
+        void scatter_vertices_embeddings(
+                VertexId * vertices, VertexId num_vertices, int embedding_size,
+                DataType * src_data, size_t src_data_size,
+                DataType * dst_data, size_t dst_data_size,
+                bool sync
+                );
+        void setup_mirror_vertices();
+        void free_mirror_vertices();
+
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
         void put_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
-        // ensure that the graph data is propagated to the remote
-        // CPU recv buffer
-        // NOTE: this is not a collective call
-        void flush_graph_data();
         // move the received graph data to the GPU
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
@@ -178,6 +203,7 @@ class GraphDataPropagator {
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
         void propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
+        inline MPI_Comm get_peer_group() {return peer_group_;}
 };
 
 template<typename T>
@@ -673,6 +699,7 @@ class CUDAVertexChunksManager {
         int num_global_chunks_;
         VertexId num_global_vertices_;
         VertexId chunk_size_;
+        VertexId max_chunk_size_;
         VertexId * chunk_offset_; // VertexId [num_global_chunks + 1]
         std::vector<std::pair<VertexId, VertexId>> fragments_;
         VertexId local_partition_begin_;
@@ -745,6 +772,9 @@ class CUDAVertexChunksManager {
                 chunk_id ++;
             }
             assert(chunk_offset_[chunk_id] == local_partition_end_);
+        }
+        inline VertexId get_max_chunk_size() {
+            return max_chunk_size_;
         }
 };
 
@@ -1161,7 +1191,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         bool always_exact_inferences_ = false;
 
         // data-parallel-related settings
-        int num_dp_ways_ = 1; // number of data parallel ways
+        int num_dp_ways_ = 2; // number of data parallel ways
         GraphDataPropagator * graph_data_propagator_;
 
         inline int get_num_epoch() {
@@ -1259,7 +1289,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void perform_forward_task(CUDAPIPForwardTask task);
         void perform_backward_task(CUDAPIPBackwardTask task);
         //void add_white_noise();
-        void scale_down(DataType * data, size_t N, double factor);
+        void scale_vector(DataType * data, size_t N, double factor, bool sync = true);
 
         // some initialization functions
         void generate_backward_operator_mask(const std::vector<Operator*>& operators);
