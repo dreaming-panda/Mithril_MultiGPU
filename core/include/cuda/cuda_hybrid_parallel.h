@@ -698,6 +698,7 @@ class CUDAVertexChunksManager {
         int num_global_chunks_;
         VertexId num_global_vertices_;
         VertexId chunk_size_;
+        VertexId max_chunk_size_;
         VertexId * chunk_offset_; // VertexId [num_global_chunks + 1]
         std::vector<std::pair<VertexId, VertexId>> fragments_;
         VertexId local_partition_begin_;
@@ -770,6 +771,9 @@ class CUDAVertexChunksManager {
                 chunk_id ++;
             }
             assert(chunk_offset_[chunk_id] == local_partition_end_);
+        }
+        inline VertexId get_max_chunk_size() {
+            return max_chunk_size_;
         }
 };
 

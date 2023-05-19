@@ -284,7 +284,185 @@ uint8_t GraphDataPropagator::get_checksum(uint8_t* data, size_t data_size) {
 }
 
 void GraphDataPropagator::setup_mirror_vertices() {
-    // TODO
+    AbstractGraphStructure * graph = engine_->graph_structure_;
+    CUDAVertexChunksManager * chunk_manager = engine_->chunk_manager_;
+    assert(graph && chunk_manager);
+    const std::vector<int> local_chunks = engine_->get_local_chunk_ids();
+
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_local_chunks = local_chunks.size();
+    int num_chunks = chunk_manager->get_num_global_chunks();
+    int num_ways = engine_->get_num_dp_ways();
+    int way_id = engine_->get_dp_way_id();
+
+    // mapping each chunk to the belonging way
+    int chunk2wayid[num_chunks];
+    memset(chunk2wayid, 0, sizeof(int) * num_chunks);
+    for (int chunk_id: local_chunks) {
+        chunk2wayid[chunk_id] = way_id;
+    }
+    MPI_Allreduce(
+            MPI_IN_PLACE, chunk2wayid, num_chunks, 
+            MPI_INT, MPI_SUM, peer_group_
+            );
+
+    // some initialization
+    memset(vertices_to_send_forward_, 0, sizeof(vertices_to_send_forward_));
+    memset(num_vertices_to_send_forward_, 0, sizeof(num_vertices_to_send_forward_));
+    memset(vertices_to_recv_forward_, 0, sizeof(vertices_to_recv_forward_));
+    memset(num_vertices_to_recv_forward_, 0, sizeof(num_vertices_to_recv_forward_));
+
+    memset(vertices_to_send_backward_, 0, sizeof(vertices_to_send_backward_));
+    memset(num_vertices_to_send_backward_, 0, sizeof(num_vertices_to_send_backward_));
+    memset(vertices_to_recv_backward_, 0, sizeof(vertices_to_recv_backward_));
+    memset(num_vertices_to_recv_backward_, 0, sizeof(num_vertices_to_recv_backward_));
+
+    printf("Node %d, discovering the vertices that will be sent across graph boundary...\n",
+            node_id);
+    // find out which vertices need to be sent
+#pragma omp parallel for 
+    for (int i = 0; i < num_local_chunks; ++ i) {
+        int chunk_id = local_chunks[i];
+
+        VertexId * vertices_to_send = new VertexId [chunk_manager->get_max_chunk_size() + 1];
+        assert(vertices_to_send);
+        VertexId num_vertices_to_send;
+
+        for (int remote_way = 0; remote_way < num_ways; ++ remote_way) {
+            if (remote_way == way_id) continue;
+
+            VertexId chunk_begin = chunk_manager->get_chunk_begin(chunk_id);
+            VertexId chunk_end = chunk_manager->get_chunk_end(chunk_id);
+
+            // find out the vertices to send during the forward phase
+            num_vertices_to_send = 0;
+            for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
+                OutEdgeList edge_list = graph->get_out_edges(v_i);
+                bool need_to_be_sent = false;
+                for (EdgeId j = 0; j < edge_list.num_out_edges; ++ j) {
+                    VertexId dst = edge_list.ptx[j].dst;
+                    if (chunk2wayid[chunk_manager->get_chunk_id(dst)] == remote_way) {
+                        need_to_be_sent = true;
+                        break;
+                    }
+                }
+                vertices_to_send[num_vertices_to_send] = v_i;
+                num_vertices_to_send += need_to_be_sent;
+            }
+            if (num_vertices_to_send > 0) {
+                // copy the data to GPU
+                VertexId * gpu_vertices = NULL;
+                checkCUDA(cudaMalloc(&gpu_vertices, sizeof(VertexId) * num_vertices_to_send));
+                assert(gpu_vertices);
+                checkCUDA(cudaMemcpy(
+                            gpu_vertices, vertices_to_send, sizeof(VertexId) * num_vertices_to_send,
+                            cudaMemcpyHostToDevice
+                            ));
+                vertices_to_send_forward_[chunk_id][remote_way] = gpu_vertices;
+                num_vertices_to_send_forward_[chunk_id][remote_way] = num_vertices_to_send;
+            } 
+
+            // find out the vertices to send during the backward phase
+            num_vertices_to_send = 0;
+            for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
+                InEdgeList edge_list = graph->get_in_edges(v_i);
+                bool need_to_be_sent = false;
+                for (EdgeId j = 0; j < edge_list.num_in_edges; ++ j) {
+                    VertexId src = edge_list.ptx[j].src;
+                    if (chunk2wayid[chunk_manager->get_chunk_id(src)] == remote_way) {
+                        need_to_be_sent = true;
+                        break;
+                    }
+                }
+                vertices_to_send[num_vertices_to_send] = v_i;
+                num_vertices_to_send += need_to_be_sent;
+            }
+            if (num_vertices_to_send) {
+                // copy the data to GPU
+                VertexId * gpu_vertices = NULL;
+                checkCUDA(cudaMalloc(&gpu_vertices, sizeof(VertexId) * num_vertices_to_send));
+                assert(gpu_vertices);
+                checkCUDA(cudaMemcpy(
+                            gpu_vertices, vertices_to_send, sizeof(VertexId) * num_vertices_to_send,
+                            cudaMemcpyHostToDevice
+                            ));
+                vertices_to_send_backward_[chunk_id][remote_way] = gpu_vertices;
+                num_vertices_to_send_backward_[chunk_id][remote_way] = num_vertices_to_send;
+            }
+        }
+
+        delete [] vertices_to_send;
+    }
+
+    // find out which vertices need to be received
+    printf("Node %d, discovering the vertices that will be received across the graph boundary.\n",
+            node_id);
+#pragma omp parallel for 
+    for (int chunk_id = 0; chunk_id < num_chunks; ++ chunk_id) {
+        if (chunk2wayid[chunk_id] != way_id) {
+            continue;
+        }
+
+        VertexId chunk_begin = chunk_manager->get_chunk_begin(chunk_id);
+        VertexId chunk_end = chunk_manager->get_chunk_end(chunk_id);
+        VertexId * vertices_to_recv = new VertexId[chunk_end - chunk_begin + 1];
+        assert(vertices_to_recv);
+        VertexId num_vertices_to_recv;
+
+        // forward phase
+        num_vertices_to_recv = 0;
+        for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
+            bool need_to_be_recv = false;
+            OutEdgeList edge_list = graph->get_out_edges(v_i);
+            for (EdgeId i = 0; i < edge_list.num_out_edges; ++ i) {
+                VertexId dst = edge_list.ptx[i].dst;
+                if (chunk2wayid[chunk_manager->get_chunk_id(dst)] == way_id) {
+                    need_to_be_recv = true;
+                    break;
+                }
+            }
+            vertices_to_recv[num_vertices_to_recv] = v_i;
+            num_vertices_to_recv += need_to_be_recv;
+        }
+        if (num_vertices_to_recv > 0) {
+            VertexId * gpu_vertices = NULL;
+            checkCUDA(cudaMalloc(&gpu_vertices, sizeof(VertexId) * num_vertices_to_recv));
+            assert(gpu_vertices);
+            checkCUDA(cudaMemcpy(
+                        gpu_vertices, vertices_to_recv, sizeof(VertexId) * num_vertices_to_recv,
+                        cudaMemcpyHostToDevice
+                        ));
+            vertices_to_recv_forward_[chunk_id] = gpu_vertices;
+            num_vertices_to_recv_forward_[chunk_id] = num_vertices_to_recv;
+        }
+
+        // backward phase
+        num_vertices_to_recv = 0;
+        for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
+            bool need_to_be_recv = false;
+            InEdgeList edge_list = graph->get_in_edges(v_i);
+            for (EdgeId i = 0; i < edge_list.num_in_edges; ++ i) {
+                VertexId src = edge_list.ptx[i].src;
+                if (chunk2wayid[chunk_manager->get_chunk_id(src)] == way_id) {
+                    need_to_be_recv = true;
+                    break;
+                }
+            }
+            vertices_to_recv[num_vertices_to_recv] = v_i;
+            num_vertices_to_recv += need_to_be_recv;
+        }
+        if (num_vertices_to_recv > 0) {
+            VertexId * gpu_vertices = NULL;
+            checkCUDA(cudaMalloc(&gpu_vertices, sizeof(VertexId) * num_vertices_to_recv));
+            assert(gpu_vertices);
+            checkCUDA(cudaMemcpy(
+                        gpu_vertices, vertices_to_recv, sizeof(VertexId) * num_vertices_to_recv,
+                        cudaMemcpyHostToDevice
+                        ));
+            vertices_to_recv_backward_[chunk_id] = gpu_vertices;
+            num_vertices_to_recv_backward_[chunk_id] = num_vertices_to_recv;
+        }
+    }
 }
 
 void GraphDataPropagator::put_graph_data(
@@ -2109,9 +2287,11 @@ CUDAVertexChunksManager::CUDAVertexChunksManager(
     assert(chunk_id == num_global_chunks_);
 
     VertexId sum = 0;
+    max_chunk_size_ = 0;
     for (int i = 0; i < num_global_chunks_; ++ i) {
         assert(chunk_offset_[i] < chunk_offset_[i + 1]);
         sum += chunk_offset_[i + 1] - chunk_offset_[i];
+        max_chunk_size_ = std::max(max_chunk_size_, chunk_offset_[i + 1] - chunk_offset_[i]);
     }
     assert(sum == num_global_vertices_);
 
