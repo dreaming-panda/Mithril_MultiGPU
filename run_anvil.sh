@@ -2,7 +2,7 @@
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
 #SBATCH -t 00:45:00 
-#SBATCH --nodes 1
+#SBATCH --nodes 4
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task 32
@@ -29,7 +29,7 @@ decay=1e-5
 chunks=16
 dropout=0.5
 seed=1
-model=gcn
+model=gcnii
 eval_freq=10
 exact_inference=0
 

@@ -1191,7 +1191,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         bool always_exact_inferences_ = false;
 
         // data-parallel-related settings
-        int num_dp_ways_ = 2; // number of data parallel ways
+        int num_dp_ways_ = 1; // number of data parallel ways
         GraphDataPropagator * graph_data_propagator_;
 
         inline int get_num_epoch() {
