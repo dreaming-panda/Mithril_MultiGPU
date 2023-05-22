@@ -97,7 +97,8 @@ int main(int argc, char ** argv) {
         ("eval_freq", po::value<int>()->default_value(-1), "The evaluation frequency (for how many epoches the model is evaluated, -1: no evaluation, better for throughput measurement)")
         ("exact_inference", po::value<int>()->default_value(0), "1: always using exact inference to select the optimal weights (might be slower, only used for convergence analysis), 0: using approximate inference during the training.")
         ("feature_pre", po::value<int>()->default_value(0), "1: preprocess features by row-based normalization, 0: no feature preprocessing")
-        ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.");
+        ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
+        ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -126,6 +127,7 @@ int main(int argc, char ** argv) {
     int random_seed = vm["seed"].as<int>();
     int evaluation_frequency = vm["eval_freq"].as<int>();
     double always_exact_inference = vm["exact_inference"].as<int>() == 1;
+    int num_dp_ways = vm["num_dp_ways"].as<int>();
     FeaturePreprocessingMethod feature_preprocessing = NoFeaturePreprocessing;
     if (vm["feature_pre"].as<int>() == 1) {
         feature_preprocessing = RowNormalizationPreprocessing;
@@ -219,6 +221,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_always_exact_inference(always_exact_inference);
     execution_engine->set_feature_preprocessing_method(feature_preprocessing);
     execution_engine->set_weight_initialization_method(weight_init);
+    execution_engine->set_num_dp_ways(num_dp_ways);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {

@@ -20,6 +20,9 @@ limitations under the License.
 #include <vector>
 #include <string>
 
+#include <boost/program_options.hpp>
+#include <boost/program_options/options_description.hpp>
+
 #include "types.h"
 #include "dataflow.h"
 
@@ -91,3 +94,7 @@ class AbstractApplication {
 };
 
 #endif
+
+
+
+

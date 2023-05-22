@@ -1400,6 +1400,11 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int node_id = DistributedSys::get_instance()->get_node_id();
             return node_id == 0;
         }
+        inline void set_num_dp_ways(int num_dp_ways) {
+            int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+            assert(num_nodes % num_dp_ways == 0);
+            num_dp_ways_ = num_dp_ways;
+        }
 };
 
 #endif

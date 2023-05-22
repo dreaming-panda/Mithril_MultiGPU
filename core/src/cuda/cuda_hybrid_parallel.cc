@@ -91,6 +91,7 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
             bool same_chunk = src / vertices_per_chunk == i / vertices_per_chunk;
             host_csrColIn_In_[nnz_in_count] = src;
             host_csrValue_In_[nnz_in_count] = norm_factor;
+            host_csrValue_In_[nnz_in_count] = same_chunk ? norm_factor: 0.0; // FIXME
             nnz_in_count++;
         }
         if(addself == false) {
@@ -157,7 +158,7 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
             host_csrColIn_Out_[nnz_out_count] = dst;
             host_csrColIn_Out_[nnz_out_count] = dst;
             host_csrValue_Out_[nnz_out_count] = norm_factor;
-            //host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 2.);  // for unbaised gradient estimation
+            host_csrValue_Out_[nnz_out_count] = norm_factor * (same_chunk ? 1.: 0.);  // for unbaised gradient estimation FIXME
             nnz_out_count++;
         }
         if(addself == false)
