@@ -285,8 +285,8 @@ GraphDataPropagator::~GraphDataPropagator() {
 
     checkCUDA(cudaFree(tmp_buff_));
 
-    printf("Node %d, sent %.3f MB data\n", 
-            node_id, comm_volume_ / 1024. / 1024.);
+    //printf("Node %d, sent %.3f MB data\n", 
+    //        node_id, comm_volume_ / 1024. / 1024.);
 }
 
 uint8_t GraphDataPropagator::get_checksum(uint8_t* data, size_t data_size) {
@@ -1952,9 +1952,22 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             );
     avg_ps_comm /= double(num_epoch);
 
+    double graph_comm = engine_->graph_data_propagator_->get_comm();
+    graph_comm /= double(num_epoch);
+
+    double total_comm = avg_layer_comm + avg_ps_comm + graph_comm;
+
     if (! node_id) {
-        printf("\tLayer-level communication (cluster-wide, per epoch): %.3f GB\n",
+        // communication statictics
+        printf("\tLayer-level communication (cluster-wide, per-epoch): %.3f GB\n",
                 avg_layer_comm / 1024. / 1024. / 1024.);
+        printf("\tGraph-level communication (cluster-wide, per-epoch): %.3f GB\n",
+                graph_comm / 1024. / 1024. / 1024.);
+        printf("\tWeight-sync communication (cluster-wide, per-epoch): %.3f GB\n",
+                avg_ps_comm / 1024. / 1024. / 1024.);
+        printf("\tTotal communication (cluster-wide, per-epoch): %.3f GB\n",
+                total_comm / 1024. / 1024. / 1024.);
+        // accuracies
         printf("Highest valid_acc: %.4f\n", highest_valid_acc);
         printf("Target test_acc: %.4f\n", test_acc);
         printf("Epoch to reach the target acc: %d\n", epoch_to_reach_target_acc);

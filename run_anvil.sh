@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p gpu 
 #SBATCH -A cis220117-gpu 
-#SBATCH -t 00:45:00 
+#SBATCH -t 00:15:00 
 #SBATCH --nodes 4
 #SBATCH --gpus-per-node 1
 #SBATCH --ntasks-per-node 1
@@ -20,17 +20,17 @@ make -j
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
-num_layers=8
+num_layers=64
 hunits=256
 lr=1e-3
 graph=ogbn_arxiv
-epoch=5000
+epoch=100
 decay=1e-5
 chunks=16
 dropout=0.5
 seed=1
 model=gcnii
-eval_freq=10
+eval_freq=-1
 exact_inference=0
 
 mpirun --map-by node:PE=$SLURM_CPUS_PER_TASK ./applications/async_multi_gpus/$model --graph $PROJECT/gnn_datasets/reordered/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file $PROJECT/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference

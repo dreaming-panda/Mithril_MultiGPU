@@ -204,6 +204,16 @@ class GraphDataPropagator {
         // otherwise: propagate the gradients
         void propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
         inline MPI_Comm get_peer_group() {return peer_group_;}
+
+        inline size_t get_comm() {
+            size_t aggr_comm = 0;
+            MPI_Allreduce(
+                    &comm_volume_, &aggr_comm, 1,
+                    DistributedSys::get_mpi_data_type<size_t>(),
+                    MPI_SUM, MPI_COMM_WORLD
+                    );
+            return aggr_comm;
+        }
 };
 
 template<typename T>
