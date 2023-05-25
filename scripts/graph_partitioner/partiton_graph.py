@@ -29,7 +29,7 @@ def dump_parts(membership, num_parts):
     print("Dumping the partitions...")
     part_file = "./tmp/%s_parts.txt" % (num_parts)
     with open(part_file, "w") as f:
-        for i in range(membership):
+        for i in membership:
             f.write(str(i) + "\n")
 
 if __name__ == "__main__":
@@ -38,14 +38,15 @@ if __name__ == "__main__":
 
     num_partitions = []
     with open("./tmp/num_partitions.txt", "r") as f:
-        line = f.readline()
-        if line == None or len(line) == 0:
-            break
-        num_partitions.append(int(line.strip()))
+        while True:
+            line = f.readline()
+            if line == None or len(line) == 0:
+                break
+            num_partitions.append(int(line.strip()))
 
     for num_parts in num_partitions:
         print("\n\n\nNumPartitions = %s" % (num_parts))
-        membership = partiton_graph(graph, num_parts)
+        membership = partition_graph(graph, num_parts)
         dump_parts(membership, num_parts)
 
 
