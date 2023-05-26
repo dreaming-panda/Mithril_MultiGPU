@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-typedef uint32_t VertexId;
+typedef int VertexId;
 typedef uint64_t EdgeId;
 typedef float DataType;
 
@@ -20,7 +20,18 @@ struct Edge {
 
 class GraphProcessor {
     private:
-        void write_file(int f, uint8_t * ptr, long size) {
+        static void read_file(int f, uint8_t * ptr, long size) {
+        	long total_read_bytes = 0;
+        	long read_bytes;
+        	while (total_read_bytes < size) {
+        		read_bytes = read(f, ptr + total_read_bytes, size - total_read_bytes);
+        		assert(read_bytes >= 0);
+        		total_read_bytes += read_bytes;
+        	}
+        	assert(total_read_bytes == size);
+        }
+
+        static void write_file(int f, uint8_t * ptr, long size) {
         	long total_write_bytes = 0;
         	long write_bytes;
         	while (total_write_bytes < size) {
@@ -34,9 +45,16 @@ class GraphProcessor {
         // removing self-loops and duplicated edges
         void prepreocess_edges(
                 EdgeId &num_edges, 
-                Edge * edges
+                Edge * edges,
+                Edge * &processed_edges
                 ) {
             printf("Removing self-loops...\n");
+            for (EdgeId i = 0; i < num_edges; ++ i) {
+                VertexId src = edges[i].src;
+                VertexId dst = edges[i].dst;
+                edges[i].src = std::min(src, dst);
+                edges[i].dst = std::max(src, dst);
+            }
             for (EdgeId i = 0; i < num_edges; ++ i) {
                 if (edges[i].src == edges[i].dst) {
                     std::swap(edges[i], edges[num_edges - 1]);
@@ -66,7 +84,19 @@ class GraphProcessor {
                     num_edges --;
                 }
             }
-            printf("Duplicated edges removed.\n");
+            printf("Adding reversed edges...\n");
+            processed_edges = new Edge [num_edges * 2];
+            assert(processed_edges);
+            for (EdgeId i = 0; i < num_edges; ++ i) {
+                VertexId src = edges[i].src;
+                VertexId dst = edges[i].dst;
+                processed_edges[i * 2].src = src;
+                processed_edges[i * 2].dst = dst;
+                processed_edges[i * 2 + 1].src = dst;
+                processed_edges[i * 2 + 1].dst = src;
+            }
+            num_edges *= 2;
+            printf("Done added the reversed edges.\n");
         }
 
         // invoke the python wrapper to partition the graoh
@@ -160,6 +190,22 @@ class GraphProcessor {
             }
         }
 
+        void dump_partition_offsets(
+                VertexId num_vertices, 
+                VertexId * partition_offsets,
+                std::string data_dir,
+                int num_parts
+                ) {
+            std::string partition_file = data_dir + "/partitions.txt";
+            FILE * f = fopen(partition_file.c_str(), "w");
+            assert(f);
+            for (int i = 0; i < num_parts; ++ i) {
+                fprintf(f, "%u %u\n", 
+                        partition_offsets[i], partition_offsets[i + 1]);
+            }
+            assert(fclose(f) == 0);
+        }
+
         void dump_graph_topology(
                 EdgeId num_edges,
                 VertexId num_vertices,
@@ -167,6 +213,7 @@ class GraphProcessor {
                 int num_labels,
                 Edge * edges,
                 int * id_mapping_old2new,
+                int * id_mapping_new2old,
                 std::string data_dir
                 ) {
             // write to the meta data file
@@ -177,6 +224,13 @@ class GraphProcessor {
                     num_vertices, num_edges, feature_size, num_labels);
             assert(fclose(meta_f) == 0);
 
+            for (EdgeId i = 0; i < num_edges; ++ i) {
+                VertexId src = edges[i].src;
+                VertexId dst = edges[i].dst;
+                edges[i].src = id_mapping_old2new[src];
+                edges[i].dst = id_mapping_old2new[dst];
+            }
+
             // write to the edge list file
             std::string edge_list_file = data_dir + "/edge_list.bin";
             int f = open(
@@ -185,35 +239,34 @@ class GraphProcessor {
                     0644
                     );
             assert(f != -1);
-            const int buff_size = 1024 * 1024;
-            Edge * edge_list_buff = new Edge [buff_size];
-            int buffered_edges = 0;
-            assert(edge_list_buff);
+            // CSR
+            std::sort(
+                    edges, edges + num_edges, [](const Edge &a, const Edge &b) {
+                        if (a.src != b.src) {
+                            return a.src < b.src;
+                        }
+                        return a.dst < b.dst;
+                    }
+                    );
+            write_file(f, (uint8_t*) edges, sizeof(Edge) * num_edges);
+            // CSC
+            std::sort(
+                    edges, edges + num_edges, [](const Edge &a, const Edge &b) {
+                        if (a.dst != b.dst) {
+                            return a.dst < b.dst;
+                        }
+                        return a.src < b.src;
+                    }
+                    );
+            write_file(f, (uint8_t*) edges, sizeof(Edge) * num_edges);
+            assert(fclose(f) == 0);
 
             for (EdgeId i = 0; i < num_edges; ++ i) {
                 VertexId src = edges[i].src;
                 VertexId dst = edges[i].dst;
-                edge_list_buff[buffered_edges].src = id_mapping_old2new[src];
-                edge_list_buff[buffered_edges].dst = id_mapping_old2new[dst];
-                ++ buffered_edges;
-                if (buffered_edges >= buff_size) {
-                    write_file(
-                            f, (uint8_t*) edge_list_buff, 
-                            sizeof(Edge) * buffered_edges
-                            );
-                    buffered_edges = 0;
-                }
+                edges[i].src = id_mapping_new2old[src];
+                edges[i].dst = id_mapping_new2old[dst];
             }
-            if (buffered_edges > 0) {
-                write_file(
-                        f, (uint8_t*) edge_list_buff, 
-                        sizeof(Edge) * buffered_edges
-                        );
-                buffered_edges = 0;
-            }
-
-            delete [] edge_list_buff;
-            assert(fclose(f) == 0);
         }
 
         void dump_features(
@@ -323,7 +376,7 @@ class GraphProcessor {
                 EdgeId num_edges,
                 int feature_size,
                 int num_labels,
-                Edge * edges, // assumed undirected graphs (both direction presented)
+                Edge * edges, // assumed undirected graphs 
                 DataType * features, // very large => probably backed up by a file with mmap
                 DataType * labels, // one hot very large => probably backed by a file with mmap
                 int * data_set_split,
@@ -332,9 +385,13 @@ class GraphProcessor {
                 ) {
             os.system(("mkdir -p " + target_graph_dir).c_str());
 
+            Edge * processed_edges = NULL;
             prepreocess_edges(
-                    num_edges, edges
+                    num_edges, edges, processed_edges
                     );
+            assert(processed_edges);
+            edges = processed_edges;
+
             perform_partitions(
                     num_vertices, num_edges, edges,
                     num_partitions
@@ -358,11 +415,15 @@ class GraphProcessor {
                         id_mapping_old2new, id_mapping_new2old,
                         partition_offsets
                         );
+                dump_partition_offsets(
+                        num_vertices, partition_offsets, 
+                        data_dir, num_parts
+                        );
                 dump_graph_topology(
                         num_edges, num_vertices, 
                         feature_size, num_labels,
                         edges, id_mapping_old2new,
-                        data_dir
+                        id_mapping_new2old, data_dir
                         );
                 dump_features(
                         num_vertices, feature_size, 
@@ -383,6 +444,7 @@ class GraphProcessor {
             delete [] membership;
             delete [] id_mapping_old2new;
             delete [] id_mapping_new2old;
+            delete [] processed_edges;
         }
 
 };
