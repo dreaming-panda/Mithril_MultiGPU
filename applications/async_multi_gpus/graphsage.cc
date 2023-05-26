@@ -50,6 +50,8 @@ class GraphSage: public AbstractApplication {
 
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
+            t = dropout(t, dropout_rate_, enable_recomputation_);
+
             for (int i = 0; i < num_layers_; ++ i) {
                 int output_size = num_hidden_units_;
                 if (i == num_layers_ - 1) {

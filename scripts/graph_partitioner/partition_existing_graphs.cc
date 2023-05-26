@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
 
 #include <string>
 #include <vector>
@@ -9,6 +13,12 @@
 #include "process_graph.hpp"
 
 int main(int argc, char ** argv) {
+    if (argc < 3) {
+        fprintf(stderr, "usage: %s <input_dir> <output_dir>\n",
+                argv[0]);
+        exit(-1);
+    }
+
     std::string input_dir = argv[1];
     std::string output_dir = argv[2];
 
@@ -30,10 +40,10 @@ int main(int argc, char ** argv) {
         std::string input_edges = input_dir + "/edge_list.bin";
         int f = open(input_edges.c_str(), O_RDONLY);
         assert(f != -1);
-        GraphProcessor::read_file(
+        read_file(
                 f, (uint8_t*) edges, sizeof(Edge) * num_edges
                 );
-        assert(fclose(f) == 0);
+        assert(close(f) == 0);
     }
 
     DataType * features = NULL;
@@ -79,7 +89,7 @@ int main(int argc, char ** argv) {
 
     GraphProcessor * graph_processor = new GraphProcessor();
     assert(graph_processor);
-    std::vector<int> num_partitions(2, 4, 8, 16, 32, 48, 64);
+    std::vector<int> num_partitions{2, 4, 8, 16, 32, 48, 64};
     graph_processor->partition_graphs(
             num_vertices, num_edges, feature_size, num_labels,
             edges, features, labels, dataset_split,

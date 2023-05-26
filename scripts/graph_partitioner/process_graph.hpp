@@ -2,12 +2,17 @@
 #define PROCESS_GRAPH_HPP
 
 #include <algorithm>
+#include <vector>
 #include <string>
 
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <assert.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 typedef int VertexId;
 typedef uint64_t EdgeId;
@@ -18,30 +23,30 @@ struct Edge {
     VertexId dst;
 } __attribute__((packed));
 
+static void read_file(int f, uint8_t * ptr, long size) {
+	long total_read_bytes = 0;
+	long read_bytes;
+	while (total_read_bytes < size) {
+		read_bytes = read(f, ptr + total_read_bytes, size - total_read_bytes);
+		assert(read_bytes >= 0);
+		total_read_bytes += read_bytes;
+	}
+	assert(total_read_bytes == size);
+}
+
+static void write_file(int f, uint8_t * ptr, long size) {
+	long total_write_bytes = 0;
+	long write_bytes;
+	while (total_write_bytes < size) {
+		write_bytes = write(f, ptr + total_write_bytes, size - total_write_bytes);
+		assert(write_bytes >= 0);
+		total_write_bytes += write_bytes;
+	}
+	assert(total_write_bytes == size);
+}
+
 class GraphProcessor {
     private:
-        static void read_file(int f, uint8_t * ptr, long size) {
-        	long total_read_bytes = 0;
-        	long read_bytes;
-        	while (total_read_bytes < size) {
-        		read_bytes = read(f, ptr + total_read_bytes, size - total_read_bytes);
-        		assert(read_bytes >= 0);
-        		total_read_bytes += read_bytes;
-        	}
-        	assert(total_read_bytes == size);
-        }
-
-        static void write_file(int f, uint8_t * ptr, long size) {
-        	long total_write_bytes = 0;
-        	long write_bytes;
-        	while (total_write_bytes < size) {
-        		write_bytes = write(f, ptr + total_write_bytes, size - total_write_bytes);
-        		assert(write_bytes >= 0);
-        		total_write_bytes += write_bytes;
-        	}
-        	assert(total_write_bytes == size);
-        }
-
         // removing self-loops and duplicated edges
         void prepreocess_edges(
                 EdgeId &num_edges, 
@@ -120,7 +125,7 @@ class GraphProcessor {
             printf("Dumping the graph data to the file...\n");
             FILE * graph_file = fopen("./tmp/graph.txt", "w");
             assert(graph_file);
-            fprintf(graph_file, "%u \# number of vertices", 
+            fprintf(graph_file, "%u # number of vertices", 
                     num_vertices);
             EdgeId edge_idx = 0;
             for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
@@ -140,7 +145,7 @@ class GraphProcessor {
             assert(fclose(partition_file) == 0);
 
             // invoke the python script
-            os.system("python ./partiton_graph.py");
+            system("python ./partiton_graph.py");
         }
 
         void load_membership(
@@ -220,7 +225,7 @@ class GraphProcessor {
             std::string meta_data_file = data_dir + "/meta_data.txt"; 
             FILE * meta_f = fopen(meta_data_file.c_str(), "w");
             assert(meta_f);
-            fprintf("%u %lu %d %d\n",
+            fprintf(meta_f, "%u %lu %d %d\n",
                     num_vertices, num_edges, feature_size, num_labels);
             assert(fclose(meta_f) == 0);
 
@@ -259,7 +264,7 @@ class GraphProcessor {
                     }
                     );
             write_file(f, (uint8_t*) edges, sizeof(Edge) * num_edges);
-            assert(fclose(f) == 0);
+            assert(close(f) == 0);
 
             for (EdgeId i = 0; i < num_edges; ++ i) {
                 VertexId src = edges[i].src;
@@ -362,7 +367,7 @@ class GraphProcessor {
             assert(f);
             for (VertexId i = 0; i < num_vertices; ++ i) {
                 VertexId old_id = id_mapping_new2old[i];
-                fprintf("%u %d\n", i, data_set_split[old_id]);
+                fprintf(f, "%u %d\n", i, data_set_split[old_id]);
             }
             assert(fclose(f) == 0);
         }
@@ -383,7 +388,7 @@ class GraphProcessor {
                 const std::vector<int>& num_partitions,
                 std::string target_graph_dir
                 ) {
-            os.system(("mkdir -p " + target_graph_dir).c_str());
+            system(("mkdir -p " + target_graph_dir).c_str());
 
             Edge * processed_edges = NULL;
             prepreocess_edges(
@@ -406,7 +411,7 @@ class GraphProcessor {
                 std::string data_dir = target_graph_dir + "/" + std::to_string(num_parts) 
                     + "_parts";
                 std::string create_dir = "mkdir -p " + data_dir;
-                os.system(create_dir.c_str());
+                system(create_dir.c_str());
 
                 load_membership(membership, num_parts, num_vertices);
                 VertexId partition_offsets[num_parts + 1];
