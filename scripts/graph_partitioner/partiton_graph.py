@@ -17,7 +17,8 @@ def load_graph():
             if len(line) > 0:
                 line = line.split(" ")
                 nbrs = [int(i) for i in line]
-            print(i, nbrs)
+            if i < 10 or num_vertices - i < 10:
+                print(i, nbrs)
             graph.append(np.array(nbrs))
             #if (i + 1) % (num_vertices / 100) == 0:
             #    print("\tLoading progress %.2f", (i + 1) * 1. / num_vertices)

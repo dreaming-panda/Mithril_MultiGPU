@@ -76,32 +76,23 @@ class GraphProcessor {
             std::sort(
                     edges, edges + num_edges, cmp
                     );
-            bool * removed = new bool [num_edges];
-            assert(removed);
-            removed[0] = false;
-            for (EdgeId i = 1; i < num_edges; ++ i) {
-                removed[i] = (edges[i].src == edges[i - 1].src &&
-                        edges[i].dst == edges[i - 1].dst);
-            }
+            //for (EdgeId i = 0; i < num_edges; ++ i) {
+            //    printf("%lu: %u - %u\n", i, edges[i].src, edges[i].dst);
+            //}
+            processed_edges = new Edge [num_edges * 2];
+            EdgeId unremoved_edges = 0;
             for (EdgeId i = 0; i < num_edges; ++ i) {
-                if (removed[i]) {
-                    std::swap(edges[i], edges[num_edges - 1]);
-                    num_edges --;
+                if (! (edges[i].src == edges[i - 1].src &&
+                        edges[i].dst == edges[i - 1].dst)) {
+                    processed_edges[unremoved_edges ++] = edges[i];
+                    processed_edges[unremoved_edges].src = edges[i].dst;
+                    processed_edges[unremoved_edges].dst = edges[i].src;
+                    unremoved_edges ++;
                 }
             }
-            printf("Adding reversed edges...\n");
-            processed_edges = new Edge [num_edges * 2];
-            assert(processed_edges);
-            for (EdgeId i = 0; i < num_edges; ++ i) {
-                VertexId src = edges[i].src;
-                VertexId dst = edges[i].dst;
-                processed_edges[i * 2].src = src;
-                processed_edges[i * 2].dst = dst;
-                processed_edges[i * 2 + 1].src = dst;
-                processed_edges[i * 2 + 1].dst = src;
-            }
-            num_edges *= 2;
-            printf("Done added the reversed edges.\n");
+            num_edges = unremoved_edges;
+            printf("Remained number of un-directed edges: %lu\n",
+                    num_edges);
         }
 
         // invoke the python wrapper to partition the graoh
@@ -125,7 +116,7 @@ class GraphProcessor {
             printf("Dumping the graph data to the file...\n");
             FILE * graph_file = fopen("./tmp/graph.txt", "w");
             assert(graph_file);
-            fprintf(graph_file, "%u # number of vertices", 
+            fprintf(graph_file, "%u # number of vertices\n", 
                     num_vertices);
             EdgeId edge_idx = 0;
             for (VertexId v_i = 0; v_i < num_vertices; ++ v_i) {
