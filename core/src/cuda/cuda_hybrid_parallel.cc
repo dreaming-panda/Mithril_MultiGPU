@@ -3653,7 +3653,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             //partitioning.partition_vid_begin, partitioning.partition_vid_end,
             //max_chunk_size
             chunk_boundary_file_, 
-            num_chunks
+            user_specified_num_chunks_
             );
     VertexId max_chunk_size = chunk_manager_->get_max_chunk_size();
     vtensor_manager_ = new CUDAVertexTensorDataGradManager(
@@ -3717,6 +3717,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     partition_begin_ = 0;
     partition_end_ = num_global_vertices;
     num_chunks_ = chunk_manager_->get_num_global_chunks();
+    assert(num_chunks_ == user_specified_num_chunks_);
 
     // the shared buffers for data compression and decompression
     SharedDataBuffer * compression_buff = new SharedDataBuffer(2); // double buffering

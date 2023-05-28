@@ -248,7 +248,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_feature_preprocessing_method(feature_preprocessing);
     execution_engine->set_weight_initialization_method(weight_init);
     execution_engine->set_num_dp_ways(num_dp_ways);
-    execution_engine->set_chunk_boundary_files(graph_path + "/partitions.txt");
+    execution_engine->set_chunk_boundary_file(graph_path + "/partitions.txt");
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {
