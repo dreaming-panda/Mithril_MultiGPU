@@ -42,7 +42,7 @@ inline long get_file_size(const std::string &file_name) {
     return st.st_size;
 }
 
-inline bool is_file_exits(const std::string &file_name) {
+inline bool is_file_exists(const std::string &file_name) {
     struct stat st;
     return stat(file_name.c_str(), &st) == 0; 
 }

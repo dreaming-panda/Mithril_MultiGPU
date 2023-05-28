@@ -2261,91 +2261,104 @@ CUDAVertexTensorDataGradManager::~CUDAVertexTensorDataGradManager() {
 
 CUDAVertexChunksManager::CUDAVertexChunksManager(
         AbstractGraphStructure * graph, 
-        //VertexId * partition_begins,
-        //VertexId * partition_ends,
-        VertexId chunk_size
+        std::string chunk_boundary_file,
+        int num_chunks
         ) {
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int node_id = DistributedSys::get_instance()->get_node_id();
 
     num_global_vertices_ = graph->get_num_global_vertices();
-    chunk_size_ = chunk_size;
 
     local_partition_begin_ = 0;
     local_partition_end_ = num_global_vertices_;
+
+    chunk_boundary_file_ = chunk_boundary_file;
+    num_global_chunks_ = num_chunks;
 
     // we do not allow a chunk to be cross partition boundaries
     // to simply the pipeline design
     // otherwise, the vertices belonging to the same chunk may
     // be processed by different pipelines
 
-    std::vector<VertexId> boundaries;
-    boundaries.clear();
-    boundaries.resize(num_nodes * 2);
-    for (int p_i = 0; p_i < num_nodes; ++ p_i) {
-        boundaries[p_i] = 0;
-        boundaries[p_i + num_nodes] = num_global_vertices_;
-    }
-    std::sort(boundaries.begin(), boundaries.end());
+    //std::vector<VertexId> boundaries;
+    //boundaries.clear();
+    //boundaries.resize(num_nodes * 2);
+    //for (int p_i = 0; p_i < num_nodes; ++ p_i) {
+    //    boundaries[p_i] = 0;
+    //    boundaries[p_i + num_nodes] = num_global_vertices_;
+    //}
+    //std::sort(boundaries.begin(), boundaries.end());
 
-    if (! node_id) {
-        printf("Boundaries:");
-        for (VertexId b: boundaries) {
-            printf(" %u", b);
-        }
-        printf("\n");
-    }
+    //if (! node_id) {
+    //    printf("Boundaries:");
+    //    for (VertexId b: boundaries) {
+    //        printf(" %u", b);
+    //    }
+    //    printf("\n");
+    //}
 
-    // construct the chunk boundaries
-    VertexId left = 0;
-    VertexId chunked_vertices = 0;
-    num_global_chunks_ = 0;
-    fragments_.clear();
-    while (left < num_nodes * 2) {
-        for (; left + 1 < num_nodes * 2 && boundaries[left + 1] == boundaries[left]; ++ left);
-        if (left + 1 < num_nodes * 2) {
-            VertexId boundary_begin = boundaries[left];
-            VertexId boundary_end = boundaries[left + 1];
-            assert(boundary_end > boundary_begin);
-            VertexId num_v = boundary_end - boundary_begin;
-            chunked_vertices += num_v;
-            num_global_chunks_ += num_v / chunk_size_;
-            if (num_v % chunk_size_ > 0) {
-                num_global_chunks_ ++;
-            }
-            fragments_.push_back(std::make_pair(boundary_begin, boundary_end));
-        }
-        ++ left;
-    }
-    assert(chunked_vertices == num_global_vertices_);
+    //// construct the chunk boundaries
+    //VertexId left = 0;
+    //VertexId chunked_vertices = 0;
+    //num_global_chunks_ = 0;
+    //fragments_.clear();
+    //while (left < num_nodes * 2) {
+    //    for (; left + 1 < num_nodes * 2 && boundaries[left + 1] == boundaries[left]; ++ left);
+    //    if (left + 1 < num_nodes * 2) {
+    //        VertexId boundary_begin = boundaries[left];
+    //        VertexId boundary_end = boundaries[left + 1];
+    //        assert(boundary_end > boundary_begin);
+    //        VertexId num_v = boundary_end - boundary_begin;
+    //        chunked_vertices += num_v;
+    //        num_global_chunks_ += num_v / chunk_size_;
+    //        if (num_v % chunk_size_ > 0) {
+    //            num_global_chunks_ ++;
+    //        }
+    //        fragments_.push_back(std::make_pair(boundary_begin, boundary_end));
+    //    }
+    //    ++ left;
+    //}
+    //assert(chunked_vertices == num_global_vertices_);
 
-    if (! node_id) {
-        printf("Fragments:");
-        for (std::pair<VertexId, VertexId> f: fragments_) {
-            printf(" [%u, %u)", f.first, f.second);
-        }
-        printf("\n");
-    }
+    //if (! node_id) {
+    //    printf("Fragments:");
+    //    for (std::pair<VertexId, VertexId> f: fragments_) {
+    //        printf(" [%u, %u)", f.first, f.second);
+    //    }
+    //    printf("\n");
+    //}
 
     chunk_offset_ = new VertexId [num_global_chunks_ + 1];
     assert(chunk_offset_ != NULL);
 
-    int chunk_id = 0;
+    FILE * f = fopen(chunk_boundary_file_.c_str(), "r");
+    assert(f);
     chunk_offset_[0] = 0;
-    for (std::pair<VertexId, VertexId> p: fragments_) {
-        VertexId boundary_begin = p.first;
-        VertexId boundary_end = p.second;
-        VertexId curr_v = boundary_begin;
-        while (curr_v < boundary_end) {
-            assert(chunk_offset_[chunk_id] == curr_v);
-            VertexId begin = curr_v;
-            VertexId end = std::min(begin + chunk_size_, boundary_end);
-            chunk_id ++;
-            chunk_offset_[chunk_id] = end;
-            curr_v = end;
-        }
+    for (int i = 0; i < num_global_chunks_; ++ i) {
+        VertexId begin, end;
+        fscanf(f, "%u%u", &begin, &end);
+        assert(chunk_offset_[i] == begin);
+        chunk_offset_[i + 1] = end;
     }
-    assert(chunk_id == num_global_chunks_);
+    assert(chunk_offset_[num_global_chunks_] == num_global_vertices_);
+    assert(fclose(f) == 0);
+
+    //int chunk_id = 0;
+    //chunk_offset_[0] = 0;
+    //for (std::pair<VertexId, VertexId> p: fragments_) {
+    //    VertexId boundary_begin = p.first;
+    //    VertexId boundary_end = p.second;
+    //    VertexId curr_v = boundary_begin;
+    //    while (curr_v < boundary_end) {
+    //        assert(chunk_offset_[chunk_id] == curr_v);
+    //        VertexId begin = curr_v;
+    //        VertexId end = std::min(begin + chunk_size_, boundary_end);
+    //        chunk_id ++;
+    //        chunk_offset_[chunk_id] = end;
+    //        curr_v = end;
+    //    }
+    //}
+    //assert(chunk_id == num_global_chunks_);
 
     VertexId sum = 0;
     max_chunk_size_ = 0;
@@ -3633,8 +3646,16 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             //partitioning.partition_vid_begin[node_id], partitioning.partition_vid_end[node_id]
             );
 
-    VertexId max_chunk_size = (graph_structure_->get_num_global_vertices() + user_specified_num_chunks_ - 1) /
-        user_specified_num_chunks_;
+    //VertexId max_chunk_size = (graph_structure_->get_num_global_vertices() + user_specified_num_chunks_ - 1) /
+    //    user_specified_num_chunks_;
+    chunk_manager_ = new CUDAVertexChunksManager(
+            graph_structure_, 
+            //partitioning.partition_vid_begin, partitioning.partition_vid_end,
+            //max_chunk_size
+            chunk_boundary_file_, 
+            num_chunks
+            );
+    VertexId max_chunk_size = chunk_manager_->get_max_chunk_size();
     vtensor_manager_ = new CUDAVertexTensorDataGradManager(
             op_ten_manager_, vid_translation_,
             //partitioning.partition_op_begin[node_id], partitioning.partition_op_end[node_id],
@@ -3642,11 +3663,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             max_chunk_size, application->get_output_tensor()
             );
 
-    chunk_manager_ = new CUDAVertexChunksManager(
-            graph_structure_, 
-            //partitioning.partition_vid_begin, partitioning.partition_vid_end,
-            max_chunk_size
-            );
 
     CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_);
     lgraph->InitMemory();

@@ -174,6 +174,7 @@ int main(int argc, char ** argv) {
     RandomNumberManager::init_random_number_manager(random_seed);
 
     // loading graph
+    graph_path += ("/" + std::to_string(num_chunks) + "_parts");
     CUDAFullyStructualGraph * graph_structure;
     AbstractGraphNonStructualData * graph_non_structural_data;
     CUDAStructualGraphLoader graph_structure_loader;
@@ -181,13 +182,13 @@ int main(int argc, char ** argv) {
     graph_structure = graph_structure_loader.load_graph_structure(
             graph_path + "/meta_data.txt",
             graph_path + "/edge_list.bin",
-            graph_path + "/vertex_structure_partition.txt"
+            ""
             );
     graph_non_structural_data = graph_non_structural_data_loader.load_graph_non_structural_data(
             graph_path + "/meta_data.txt",
             graph_path + "/feature.bin",
             graph_path + "/label.bin",
-            graph_path + "/vertex_data_partition.txt"
+            ""
             );
     graph_structure->SetCuda(true);
     int num_classes = graph_non_structural_data->get_num_labels();
@@ -247,6 +248,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_feature_preprocessing_method(feature_preprocessing);
     execution_engine->set_weight_initialization_method(weight_init);
     execution_engine->set_num_dp_ways(num_dp_ways);
+    execution_engine->set_chunk_boundary_files(graph_path + "/partitions.txt");
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {

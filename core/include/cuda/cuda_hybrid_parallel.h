@@ -708,15 +708,16 @@ class CUDAVertexChunksManager {
         // the chunk ID space is global
         int num_global_chunks_;
         VertexId num_global_vertices_;
-        VertexId chunk_size_;
+        //VertexId chunk_size_;
         VertexId max_chunk_size_;
         VertexId * chunk_offset_; // VertexId [num_global_chunks + 1]
-        std::vector<std::pair<VertexId, VertexId>> fragments_;
+        //std::vector<std::pair<VertexId, VertexId>> fragments_;
         VertexId local_partition_begin_;
         VertexId local_partition_end_;
+        std::string chunk_boundary_file_;
 
     public:
-        CUDAVertexChunksManager(AbstractGraphStructure * graph, VertexId chunk_size);
+        CUDAVertexChunksManager(AbstractGraphStructure * graph, std::string chunk_boundary_file, int num_chunks);
         ~CUDAVertexChunksManager();
 
         inline int get_num_global_chunks() {
@@ -725,9 +726,9 @@ class CUDAVertexChunksManager {
         inline VertexId get_num_global_vertices() {
             return num_global_vertices_;
         }
-        inline int get_num_fragments() {
-            return (int) fragments_.size();
-        }
+        //inline int get_num_fragments() {
+        //    return (int) fragments_.size();
+        //}
         // global VID
         inline int get_chunk_id(VertexId vid) {
             assert(vid < num_global_vertices_);
@@ -748,27 +749,27 @@ class CUDAVertexChunksManager {
             assert(chunk_id >= 0 && chunk_id < num_global_chunks_);
             return chunk_offset_[chunk_id + 1];
         }
-        // global VID
-        inline int get_vertex_fragment_id(VertexId vid) {
-            assert(vid < num_global_vertices_);
-            int left = 0;
-            int right = (int) fragments_.size();
-            while (right - left > 1) {
-                int mid = (left + right) >> 1;
-                left = fragments_[mid].first <= vid ? mid: left;
-                right = fragments_[mid].first > vid ? mid: right;
-            }
-            return left;
-        }
-        inline int get_chunk_fragment_id(int chunk_id) {
-            int fragment_id = get_vertex_fragment_id(chunk_offset_[chunk_id]);
-            assert(chunk_offset_[chunk_id] >= fragments_[fragment_id].first);
-            assert(chunk_offset_[chunk_id + 1] <= fragments_[fragment_id].second);
-            return fragment_id;
-        }
-        inline std::pair<VertexId, VertexId> get_fragment(int fragment_id) {
-            return fragments_[fragment_id];
-        }
+        //// global VID
+        //inline int get_vertex_fragment_id(VertexId vid) {
+        //    assert(vid < num_global_vertices_);
+        //    int left = 0;
+        //    int right = (int) fragments_.size();
+        //    while (right - left > 1) {
+        //        int mid = (left + right) >> 1;
+        //        left = fragments_[mid].first <= vid ? mid: left;
+        //        right = fragments_[mid].first > vid ? mid: right;
+        //    }
+        //    return left;
+        //}
+        //inline int get_chunk_fragment_id(int chunk_id) {
+        //    int fragment_id = get_vertex_fragment_id(chunk_offset_[chunk_id]);
+        //    assert(chunk_offset_[chunk_id] >= fragments_[fragment_id].first);
+        //    assert(chunk_offset_[chunk_id + 1] <= fragments_[fragment_id].second);
+        //    return fragment_id;
+        //}
+        //inline std::pair<VertexId, VertexId> get_fragment(int fragment_id) {
+        //    return fragments_[fragment_id];
+        //}
         inline bool is_local_chunk(int chunk_id) {
             assert(chunk_id >= 0 && chunk_id < num_global_chunks_);
             return chunk_offset_[chunk_id] >= local_partition_begin_ &&
@@ -1204,6 +1205,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int num_dp_ways_ = 1; // number of data parallel ways
         GraphDataPropagator * graph_data_propagator_;
 
+        std::string chunk_boundary_file_ = "NONE";
+
         inline int get_num_epoch() {
             return num_epoch_;
         }
@@ -1404,6 +1407,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int num_nodes = DistributedSys::get_instance()->get_num_nodes();
             assert(num_nodes % num_dp_ways == 0);
             num_dp_ways_ = num_dp_ways;
+        }
+        inline void set_chunk_boundary_file(std::string chunk_boundary_file) {
+            chunk_boundary_file_ = chunk_boundary_file;
         }
 };
 
