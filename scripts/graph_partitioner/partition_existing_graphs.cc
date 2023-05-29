@@ -89,7 +89,8 @@ int main(int argc, char ** argv) {
 
     GraphProcessor * graph_processor = new GraphProcessor();
     assert(graph_processor);
-    std::vector<int> num_partitions{1, 2, 4, 8, 16, 32, 48, 64};
+    //std::vector<int> num_partitions{1, 2, 4, 8, 16, 32, 48, 64};
+    std::vector<int> num_partitions{3};
     graph_processor->partition_graphs(
             num_vertices, num_edges, feature_size, num_labels,
             edges, features, labels, dataset_split,
