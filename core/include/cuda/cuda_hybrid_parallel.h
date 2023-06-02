@@ -34,7 +34,6 @@
 #define SHADOW_GPU
 
 #define LOW_LEARNING_RATE (0)
-#define COMPRESS_DATA (true)
 #define MAX_NUM_CHUNKS (256)
 #define MAX_NUM_WAYS (64)
 
@@ -1207,6 +1206,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         std::string chunk_boundary_file_ = "NONE";
 
+        bool enable_compression_ = true;
+
         inline int get_num_epoch() {
             return num_epoch_;
         }
@@ -1410,6 +1411,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
         inline void set_chunk_boundary_file(std::string chunk_boundary_file) {
             chunk_boundary_file_ = chunk_boundary_file;
+        }
+        inline void set_enable_compression(double enable_compression) {
+            enable_compression_ = enable_compression;
         }
 };
 

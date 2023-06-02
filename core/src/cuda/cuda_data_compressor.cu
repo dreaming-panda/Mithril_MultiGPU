@@ -135,35 +135,44 @@ void DataCompressor::compress_data(DataType * data) {
     double t_c = - get_time();
     assert(! data_compressed_);
 
-    size_t data_size = data_size_;
-    curr_gpu_buff_ = shared_gpu_buff_->get_buffer();
-    uint8_t * bitmap = get_gpu_bitmap(curr_gpu_buff_);
-    DataType * non_zero_elements = get_gpu_non_zero_elements(curr_gpu_buff_);
+    if (! disable_compression_) {
+        size_t data_size = data_size_;
+        curr_gpu_buff_ = shared_gpu_buff_->get_buffer();
+        uint8_t * bitmap = get_gpu_bitmap(curr_gpu_buff_);
+        DataType * non_zero_elements = get_gpu_non_zero_elements(curr_gpu_buff_);
 
-    // compress the data
-    float * end_ptx = thrust::copy_if(
-            thrust::cuda::par, data, data + data_size,
-            non_zero_elements, non_zero_functor()
-            );
-    // get the number of non-zero elements
-    uint64_t start_ptx_int = (uint64_t) non_zero_elements;
-    uint64_t end_ptx_int = (uint64_t) end_ptx;
-    assert(start_ptx_int <= end_ptx_int);
-    assert((end_ptx_int - start_ptx_int) % sizeof(DataType) == 0);
-    size_t num_non_zero_elements = (end_ptx_int - start_ptx_int) / sizeof(DataType);
+        // compress the data
+        float * end_ptx = thrust::copy_if(
+                thrust::cuda::par, data, data + data_size,
+                non_zero_elements, non_zero_functor()
+                );
+        // get the number of non-zero elements
+        uint64_t start_ptx_int = (uint64_t) non_zero_elements;
+        uint64_t end_ptx_int = (uint64_t) end_ptx;
+        assert(start_ptx_int <= end_ptx_int);
+        assert((end_ptx_int - start_ptx_int) % sizeof(DataType) == 0);
+        size_t num_non_zero_elements = (end_ptx_int - start_ptx_int) / sizeof(DataType);
 
-    // generate the bitmap
-    size_t bitmap_size = data_size / 8 + 1;
-    int block_size = BLOCK_SIZE;
-    int num_blocks = (bitmap_size + block_size - 1) / block_size;
-    gen_bitmap_kernel<<<num_blocks, block_size>>>(data, bitmap, data_size);
-    cudaStreamSynchronize(0);
+        // generate the bitmap
+        size_t bitmap_size = data_size / 8 + 1;
+        int block_size = BLOCK_SIZE;
+        int num_blocks = (bitmap_size + block_size - 1) / block_size;
+        gen_bitmap_kernel<<<num_blocks, block_size>>>(data, bitmap, data_size);
+        cudaStreamSynchronize(0);
+
+        // calculate the size of the compressed data
+        compressed_data_size_ = (data_size / 32 + 1) * sizeof(uint32_t)
+            + sizeof(DataType) * num_non_zero_elements;
+    } else {
+        curr_gpu_buff_ = shared_gpu_buff_->get_buffer();
+        compressed_data_size_ = sizeof(DataType) * data_size_;
+        checkCUDA(cudaMemcpy(
+                    curr_gpu_buff_, data, sizeof(DataType) * data_size_,
+                    cudaMemcpyDeviceToDevice
+                    ));
+    }
 
     t_c += get_time();
-
-    // calculate the size of the compressed data
-    compressed_data_size_ = (data_size / 32 + 1) * sizeof(uint32_t)
-        + sizeof(DataType) * num_non_zero_elements;
 
     data_compressed_ = true;
     compressed_data_on_cpu_ = false;
@@ -329,24 +338,33 @@ void DataDecompressor::decompress_data(DataType * data) {
 
     size_t data_size = data_size_;
 
-    assert(compressed_data_size_ >= (data_size / 32 + 1) * sizeof(uint32_t));
-    size_t num_non_zero_elements = compressed_data_size_ - (data_size / 32 + 1) * sizeof(uint32_t);
-    assert(num_non_zero_elements % sizeof(DataType) == 0);
-    num_non_zero_elements /= sizeof(DataType);
-    assert(curr_gpu_buff_);
-    uint8_t * bitmap = get_gpu_bitmap(curr_gpu_buff_);
-    DataType * non_zero_elements = get_gpu_non_zero_elements(curr_gpu_buff_);
-    assert(curr_index_buff_);
-    uint32_t * decompression_index = curr_index_buff_;
+    if (! disable_compression_) {
+        assert(compressed_data_size_ >= (data_size / 32 + 1) * sizeof(uint32_t));
+        size_t num_non_zero_elements = compressed_data_size_ - (data_size / 32 + 1) * sizeof(uint32_t);
+        assert(num_non_zero_elements % sizeof(DataType) == 0);
+        num_non_zero_elements /= sizeof(DataType);
+        assert(curr_gpu_buff_);
+        uint8_t * bitmap = get_gpu_bitmap(curr_gpu_buff_);
+        DataType * non_zero_elements = get_gpu_non_zero_elements(curr_gpu_buff_);
+        assert(curr_index_buff_);
+        uint32_t * decompression_index = curr_index_buff_;
 
-    size_t bitmap_size = data_size / 8 + 1;
-    int block_size = BLOCK_SIZE;
-    int num_blocks = (bitmap_size + block_size - 1) / block_size;
-    gen_decompression_index_kernel_v2<<<num_blocks, block_size>>>(bitmap, decompression_index, data_size);
-    thrust::exclusive_scan(thrust::cuda::par, decompression_index, decompression_index + bitmap_size, decompression_index);
+        size_t bitmap_size = data_size / 8 + 1;
+        int block_size = BLOCK_SIZE;
+        int num_blocks = (bitmap_size + block_size - 1) / block_size;
+        gen_decompression_index_kernel_v2<<<num_blocks, block_size>>>(bitmap, decompression_index, data_size);
+        thrust::exclusive_scan(thrust::cuda::par, decompression_index, decompression_index + bitmap_size, decompression_index);
 
-    num_blocks = (data_size + block_size - 1) / block_size;
-    decompress_data_kernel_v3<<<num_blocks, block_size>>>(decompression_index, non_zero_elements, data, bitmap, data_size, bitmap_size);
+        num_blocks = (data_size + block_size - 1) / block_size;
+        decompress_data_kernel_v3<<<num_blocks, block_size>>>(decompression_index, non_zero_elements, data, bitmap, data_size, bitmap_size);
+    } else {
+        checkCUDA(
+                cudaMemcpyAsync(
+                    data, curr_gpu_buff_, sizeof(DataType) * data_size,
+                    cudaMemcpyDeviceToDevice
+                    )
+                );
+    }
 
     compressed_data_set_ = false;
 }

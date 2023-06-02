@@ -1,5 +1,5 @@
-g002.anvil.rcac.purdue.edu
-Fri Jun  2 11:00:37 2023       
+g004.anvil.rcac.purdue.edu
+Fri Jun  2 15:36:15 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -7,8 +7,8 @@ Fri Jun  2 11:00:37 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  NVIDIA A100-SXM...  On   | 00000000:41:00.0 Off |                    0 |
-| N/A   28C    P0    52W / 400W |      0MiB / 40960MiB |      0%      Default |
+|   0  NVIDIA A100-SXM...  On   | 00000000:81:00.0 Off |                    0 |
+| N/A   28C    P0    54W / 400W |      0MiB / 40960MiB |      0%      Default |
 |                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -29,37 +29,45 @@ Currently Loaded Modules:
  
 
 [ 11%] Built target context
-[ 44%] Built target core
+[ 22%] Building CXX object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o
+[ 38%] Built target core
+[ 41%] Linking CXX static library libcudahelp.a
 [ 77%] Built target cudahelp
-[ 83%] Built target estimate_comm_volume
-[ 97%] Built target OSDI2023_MULTI_NODES_graphsage
+[ 80%] Linking CXX executable estimate_comm_volume
+[ 86%] Linking CXX executable gcn
+[ 88%] Linking CXX executable gcnii
+[ 88%] Linking CXX executable graphsage
+[ 91%] Built target estimate_comm_volume
+[ 94%] Built target OSDI2023_MULTI_NODES_graphsage
+[ 97%] Built target OSDI2023_MULTI_NODES_gcnii
 [100%] Built target OSDI2023_MULTI_NODES_gcn
-[100%] Built target OSDI2023_MULTI_NODES_gcnii
-Initialized node 2 on machine g005.anvil.rcac.purdue.edu
-Initialized node 0 on machine g002.anvil.rcac.purdue.edu
-Initialized node 1 on machine g004.anvil.rcac.purdue.edu
+Initialized node 1 on machine g006.anvil.rcac.purdue.edu
+Initialized node 2 on machine g007.anvil.rcac.purdue.edu
+Initialized node 0 on machine g004.anvil.rcac.purdue.edu
 Building the CSR structure...
 Building the CSR structure...
 Building the CSR structure...
-        It takes 1.906 seconds.
+        It takes 1.913 seconds.
 Building the CSC structure...
-        It takes 1.945 seconds.
+        It takes 1.921 seconds.
 Building the CSC structure...
-        It takes 1.956 seconds.
+        It takes 2.019 seconds.
 Building the CSC structure...
-        It takes 1.917 seconds.
-        It takes 1.957 seconds.
-        It takes 1.966 seconds.
+        It takes 1.858 seconds.
+        It takes 1.881 seconds.
+        It takes 2.001 seconds.
 Building the Feature Vector...
 Building the Feature Vector...
 Building the Feature Vector...
-        It takes 0.633 seconds.
+        It takes 0.715 seconds.
 Building the Label Vector...
-        It takes 0.627 seconds.
+        It takes 0.760 seconds.
 Building the Label Vector...
-        It takes 0.632 seconds.
+        It takes 0.681 seconds.
 Building the Label Vector...
-        It takes 0.344 seconds.
+        It takes 0.392 seconds.
+        It takes 0.346 seconds.
+        It takes 0.479 seconds.
 The graph dataset locates at /anvil/projects/x-cis220117/gnn_datasets/partitioned_graphs/ogbn_products/16_parts
 The number of GCNII layers: 3
 The number of hidden units: 256
@@ -73,18 +81,34 @@ Number of classes: 47
 Number of feature dimensions: 100
 Number of vertices: 2449029
 Number of GPUs: 3
-        It takes 0.340 seconds.
-        It takes 0.345 seconds.
+GPU 0, layer [0, 1)
+GPU 1, layer [1, 2)
+GPU 2, layer [2, 3)
+*** Node 2, starting model training...
+Node 2, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 2, Pipeline Output Tensor: NULL
+*** Node 2 owns the model-level partition [18, 25)
+*** Node 2, constructing the helper classes...
+WARNING: the current version only applies to linear GNN models!
+WARNING: the current version only applies to linear GNN models!
+GPU 0, layer [0, 1)
+GPU 1, layer [1, 2)
+GPU 2, layer [2, 3)
+*** Node 1, starting model training...
+Node 1, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 1, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 1 owns the model-level partition [10, 18)
+*** Node 1, constructing the helper classes...
 train nodes 196615, valid nodes 39323, test nodes 2213091
 GPU 0, layer [0, 1)
 GPU 1, layer [1, 2)
 GPU 2, layer [2, 3)
+WARNING: the current version only applies to linear GNN models!
 *** Node 0, starting model training...
 Node 0, Pipeline Input Tensor: NULL
 Node 0, Pipeline Output Tensor: OPERATOR_DROPOUT
 *** Node 0 owns the model-level partition [0, 10)
 *** Node 0, constructing the helper classes...
-WARNING: the current version only applies to linear GNN models!
 Operators:
     Op 0: type OPERATOR_INPUT, output tensors: 0
     Op 1: type OPERATOR_DROPOUT, output tensors: 1
@@ -112,24 +136,6 @@ Operators:
     Op 23: type OPERATOR_ADD, output tensors: 23
     Op 24: type OPERATOR_SOFTMAX, output tensors: 24
 Chunks (number of global chunks: 16): 0-[0, 157663) 1-[157663, 315326) 2-[315326, 466495) 3-[466495, 624158) 4-[624158, 781821) 5-[781821, 939484) 6-[939484, 1092356) 7-[1092356, 1247314) 8-[1247314, 1395913) ... 15-[2298008, 2449029)
-WARNING: the current version only applies to linear GNN models!
-GPU 0, layer [0, 1)
-GPU 1, layer [1, 2)
-GPU 2, layer [2, 3)
-*** Node 2, starting model training...
-Node 2, Pipeline Input Tensor: OPERATOR_DROPOUT
-Node 2, Pipeline Output Tensor: NULL
-*** Node 2 owns the model-level partition [18, 25)
-*** Node 2, constructing the helper classes...
-WARNING: the current version only applies to linear GNN models!
-GPU 0, layer [0, 1)
-GPU 1, layer [1, 2)
-GPU 2, layer [2, 3)
-*** Node 1, starting model training...
-Node 1, Pipeline Input Tensor: OPERATOR_DROPOUT
-Node 1, Pipeline Output Tensor: OPERATOR_DROPOUT
-*** Node 1 owns the model-level partition [10, 18)
-*** Node 1, constructing the helper classes...
 2449029, 126167053, 126167053
 Number of vertices per chunk: 153065
 2449029, 126167053, 126167053
@@ -139,14 +145,14 @@ Number of vertices per chunk: 153065
 csr in-out ready !*** Node 0, setting up some other necessary information...
 csr in-out ready !*** Node 1, setting up some other necessary information...
 csr in-out ready !*** Node 2, setting up some other necessary information...
-*** Node 2, starting the helper threads...
-+++++++++ Node 2 initializing the weights for op[18, 25)...
-+++++++++ Node 2, mapping weight op 18
-+++++++++ Node 2, mapping weight op 21
 *** Node 0, starting the helper threads...
+*** Node 2, starting the helper threads...
 +++++++++ Node 0 initializing the weights for op[0, 10)...
 +++++++++ Node 0, mapping weight op 2
 +++++++++ Node 0, mapping weight op 4
++++++++++ Node 2 initializing the weights for op[18, 25)...
++++++++++ Node 2, mapping weight op 18
++++++++++ Node 2, mapping weight op 21
 *** Node 1, starting the helper threads...
 +++++++++ Node 1 initializing the weights for op[10, 18)...
 +++++++++ Node 1, mapping weight op 10
@@ -154,10 +160,9 @@ csr in-out ready !*** Node 2, setting up some other necessary information...
 Node 0, discovering the vertices that will be sent across graph boundary...
 Node 1, discovering the vertices that will be sent across graph boundary...
 Node 2, discovering the vertices that will be sent across graph boundary...
+Node 0, discovering the vertices that will be received across the graph boundary.
 Node 2, discovering the vertices that will be received across the graph boundary.
 Node 1, discovering the vertices that will be received across the graph boundary.
-Node 0, discovering the vertices that will be received across the graph boundary.
-*** Node 2, starting task scheduling...
 *** Node 0, starting task scheduling...
 
 
@@ -165,55 +170,56 @@ Node 0, discovering the vertices that will be received across the graph boundary
 The learning rate specified by the user: 0.003000000
 *** Node 1, starting task scheduling...
 The learning rate specified by the user: 0.003000000
+*** Node 2, starting task scheduling...
 The learning rate specified by the user: 0.003000000
-	Epoch 10:	Loss 1.2722	TrainAcc 0.7740	ValidAcc 0.7681	BestValid 0.7681
-	Epoch 20:	Loss 0.7515	TrainAcc 0.8493	ValidAcc 0.8409	BestValid 0.8409
-	Epoch 30:	Loss 0.5857	TrainAcc 0.8697	ValidAcc 0.8629	BestValid 0.8629
-	Epoch 40:	Loss 0.5124	TrainAcc 0.8814	ValidAcc 0.8734	BestValid 0.8734
-	Epoch 50:	Loss 0.4652	TrainAcc 0.8870	ValidAcc 0.8797	BestValid 0.8797
-	Epoch 60:	Loss 0.4353	TrainAcc 0.8917	ValidAcc 0.8845	BestValid 0.8845
-	Epoch 70:	Loss 0.4140	TrainAcc 0.8953	ValidAcc 0.8883	BestValid 0.8883
-	Epoch 80:	Loss 0.3998	TrainAcc 0.8987	ValidAcc 0.8913	BestValid 0.8913
-	Epoch 90:	Loss 0.3866	TrainAcc 0.9005	ValidAcc 0.8937	BestValid 0.8937
-Node 0, Layer-level comm throughput (grad): 10.460 GBps
+	Epoch 10:	Loss 1.2723
+	Epoch 20:	Loss 0.7515
+	Epoch 30:	Loss 0.5857
+	Epoch 40:	Loss 0.5124
+	Epoch 50:	Loss 0.4652
+	Epoch 60:	Loss 0.4353
+	Epoch 70:	Loss 0.4140
+	Epoch 80:	Loss 0.3998
+	Epoch 90:	Loss 0.3865
 Node 0, Layer-level comm throughput (act): -nan GBps
-Node 1, Layer-level comm throughput (grad): 11.283 GBps
+Node 1, Layer-level comm throughput (act): 10.258 GBps
+Node 2, Layer-level comm throughput (act): 11.317 GBps
 Node 2, Layer-level comm throughput (grad): -nan GBps
-Node 1, Layer-level comm throughput (act): 10.710 GBps
-Node 2, Layer-level comm throughput (act): 11.259 GBps
-	Epoch 100:	Loss 0.3783	TrainAcc 0.9027	ValidAcc 0.8955	BestValid 0.8955
-Node 0, GPU memory consumption: 15.718 GB
-Node 0, compression time: 0.934s, compression size: 303.625GB, throughput: 324.923GBps
-Node 0, decompression time: 2.587s, compression size: 303.625GB, throughput: 90.279GBps
-Node 0, pure compute time: 29.325 s, total compute time: 32.846 s
-Node 0, wait_for_task_time: 18.963 s, wait_for_other_gpus_time: 0.002 s
-------------------------node id 0,  per-epoch time: 0.570434 s---------------
+Node 1, Layer-level comm throughput (grad): 11.270 GBps
+Node 0, Layer-level comm throughput (grad): 10.404 GBps
+	Epoch 100:	Loss 0.3783
+Node 0, GPU memory consumption: 15.720 GB
+Node 0, compression time: 0.709s, compression size: 233.558GB, throughput: 329.439GBps
+Node 0, decompression time: 2.568s, compression size: 233.558GB, throughput: 90.944GBps
+Node 0, pure compute time: 23.306 s, total compute time: 26.584 s
+Node 0, wait_for_task_time: 18.841 s, wait_for_other_gpus_time: 0.002 s
+------------------------node id 0,  per-epoch time: 0.501211 s---------------
 Node 1, GPU memory consumption: 13.589 GB
-Node 1, compression time: 2.174s, compression size: 537.182GB, throughput: 247.042GBps
-Node 1, decompression time: 11.707s, compression size: 537.182GB, throughput: 45.887GBps
-Node 1, pure compute time: 34.572 s, total compute time: 48.453 s
-Node 1, wait_for_task_time: 3.867 s, wait_for_other_gpus_time: 0.002 s
-------------------------node id 1,  per-epoch time: 0.570434 s---------------
+Node 1, compression time: 1.958s, compression size: 467.115GB, throughput: 238.580GBps
+Node 1, decompression time: 5.009s, compression size: 467.115GB, throughput: 93.256GBps
+Node 1, pure compute time: 31.741 s, total compute time: 38.708 s
+Node 1, wait_for_task_time: 3.276 s, wait_for_other_gpus_time: 0.001 s
+------------------------node id 1,  per-epoch time: 0.501212 s---------------
 Node 2, GPU memory consumption: 13.132 GB
-Node 2, compression time: 1.273s, compression size: 233.558GB, throughput: 183.447GBps
-Node 2, decompression time: 2.519s, compression size: 233.558GB, throughput: 120.521GBps
-Node 2, pure compute time: 19.018 s, total compute time: 22.810 s
-Node 2, wait_for_task_time: 13.195 s, wait_for_other_gpus_time: 0.002 s
-------------------------node id 2,  per-epoch time: 0.570434 s---------------
+Node 2, compression time: 1.272s, compression size: 233.558GB, throughput: 183.600GBps
+Node 2, decompression time: 1.694s, compression size: 233.558GB, throughput: 137.863GBps
+Node 2, pure compute time: 17.155 s, total compute time: 20.121 s
+Node 2, wait_for_task_time: 9.424 s, wait_for_other_gpus_time: 0.001 s
+------------------------node id 2,  per-epoch time: 0.501212 s---------------
 ************ Profiling Results ************
-	Bubble: 23.938180 (s) (33.02 percentage)
-	Compute: 36.880962 (s) (50.87 percentage)
-	GradSync: 0.242014 (s) (0.33 percentage)
-	GraphComm: 0.005165 (s) (0.01 percentage)
-	Imbalance: 7.779427 (s) (10.73 percentage)
-	LayerComm: 3.649679 (s) (5.03 percentage)
-	Layer-level communication (cluster-wide, per-epoch): 2.419 GB
+	Bubble: 23.032039 (s) (34.94 percentage)
+	Compute: 33.172342 (s) (50.32 percentage)
+	GradSync: 0.232415 (s) (0.35 percentage)
+	GraphComm: 0.003642 (s) (0.01 percentage)
+	Imbalance: 6.417103 (s) (9.73 percentage)
+	LayerComm: 3.067613 (s) (4.65 percentage)
+	Layer-level communication (cluster-wide, per-epoch): 1.882 GB
 	Graph-level communication (cluster-wide, per-epoch): 0.000 GB
 	Weight-sync communication (cluster-wide, per-epoch): 0.002 GB
-	Total communication (cluster-wide, per-epoch): 2.422 GB
-Highest valid_acc: 0.8955
-Target test_acc: 0.7349
-Epoch to reach the target acc: 100
-[MPI Rank 2] Success 
+	Total communication (cluster-wide, per-epoch): 1.885 GB
+Highest valid_acc: 0.0000
+Target test_acc: 0.0455
+Epoch to reach the target acc: 0
 [MPI Rank 1] Success 
 [MPI Rank 0] Success 
+[MPI Rank 2] Success 

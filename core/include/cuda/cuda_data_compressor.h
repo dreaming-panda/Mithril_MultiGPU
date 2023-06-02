@@ -92,6 +92,8 @@ class DataDecompressor {
 
         cudaStream_t cuda_stream_;
 
+        bool disable_compression_ = false;
+
         inline uint8_t * get_gpu_bitmap(uint8_t * gpu_buff) {
             uint8_t * gpu_bitmap = &gpu_buff[0];
             return gpu_bitmap;
@@ -110,6 +112,8 @@ class DataDecompressor {
         void move_compressed_data_to_gpu_async();
         void wait_for_data_movement();
         void release_gpu_buffers();
+
+        void disable_compression() { disable_compression_ = true; }
 };
 
 #endif
