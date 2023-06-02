@@ -81,7 +81,6 @@ DataCompressor::DataCompressor(size_t data_size, SharedDataBuffer * shared_gpu_b
     shared_gpu_buff_ = shared_gpu_buff;
 
     data_compressed_ = false;
-    compressed_data_on_cpu_ = false;
     // allocate the GPU buffer
     data_size_ = data_size;
     gpu_buff_size_ = (data_size / 32 + 1) * sizeof(uint32_t) 
@@ -132,7 +131,7 @@ __global__ void gen_bitmap_kernel(DataType * data, uint8_t * bitmap, size_t data
     }
 }
 
-void DataCompressor::compress_data(DataType * data, bool send_to_cpu) {
+void DataCompressor::compress_data(DataType * data) {
     double t_c = - get_time();
     assert(! data_compressed_);
 
@@ -167,19 +166,15 @@ void DataCompressor::compress_data(DataType * data, bool send_to_cpu) {
         + sizeof(DataType) * num_non_zero_elements;
 
     data_compressed_ = true;
-    compressed_data_on_cpu_ = send_to_cpu;
+    compressed_data_on_cpu_ = false;
 }
 
 void DataCompressor::get_compressed_data(DataType * &buff, size_t &buff_size) {
     assert(data_compressed_);
+    assert(compressed_data_on_cpu_);
 
-    if (compressed_data_on_cpu_) {
-        buff = (DataType*) cpu_buff_;
-        buff_size = compressed_data_size_;
-    } else {
-        buff = (DataType*) curr_gpu_buff_;
-        buff_size = compressed_data_size_;
-    }
+    buff = (DataType*) cpu_buff_;
+    buff_size = compressed_data_size_;
 
     data_compressed_ = false;
     compressed_data_on_cpu_ = false;
@@ -192,6 +187,7 @@ void DataCompressor::move_compressed_data_to_cpu() {
     // release the shared buffer
     shared_gpu_buff_->free_buffer(curr_gpu_buff_);
     curr_gpu_buff_ = NULL;
+    compressed_data_on_cpu_ = true;
 }
 
 DataDecompressor::DataDecompressor(size_t data_size, SharedDataBuffer * shared_gpu_buff, SharedDataBuffer * shared_index_buff) {
@@ -200,7 +196,6 @@ DataDecompressor::DataDecompressor(size_t data_size, SharedDataBuffer * shared_g
 
     data_size_ = data_size;
     compressed_data_set_ = false;
-    compressed_data_on_cpu_ = false;
 
     gpu_buff_size_ = (data_size_ / 32 + 1) * sizeof(uint32_t)
         + sizeof(DataType) * data_size;
@@ -223,11 +218,9 @@ DataDecompressor::~DataDecompressor() {
     checkCUDA(cudaStreamDestroy(cuda_stream_));
 }
 
-void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data, bool recv_on_cpu) {
+void DataDecompressor::receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data) {
     assert(! compressed_data_set_);
-    compressed_data_on_cpu_ = recv_on_cpu;
 
-    assert(recv_on_cpu);
     double t_network = - get_time();
     compressed_data_size_ = recv_data(cpu_buff_, cpu_buff_size_);
     t_network += get_time();
@@ -356,7 +349,6 @@ void DataDecompressor::decompress_data(DataType * data) {
     decompress_data_kernel_v3<<<num_blocks, block_size>>>(decompression_index, non_zero_elements, data, bitmap, data_size, bitmap_size);
 
     compressed_data_set_ = false;
-    compressed_data_on_cpu_ = false;
 }
 
 void DataDecompressor::get_cpu_buff(uint8_t * &buff, size_t &buff_size) {

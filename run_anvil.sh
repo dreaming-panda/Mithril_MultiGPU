@@ -20,17 +20,17 @@ make -j
 # arxiv: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.3}
 # reddit: {"hunit": 256, "lr": 0.003, "decay": 0, "dropout": 0.5}
 
-num_layers=6
+num_layers=3
 hunits=256
 lr=3e-3
-graph=reddit
+graph=ogbn_products
 epoch=100
 decay=0
 chunks=16
 dropout=0.5
 seed=1
-model=gcn
-eval_freq=-1
+model=graphsage
+eval_freq=10
 exact_inference=0
 num_dp_ways=1
 

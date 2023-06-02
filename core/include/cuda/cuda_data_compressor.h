@@ -49,6 +49,8 @@ class DataCompressor {
 
         cudaStream_t cuda_stream_;
 
+        bool disable_compression_ = false;
+
         inline uint8_t * get_gpu_bitmap(uint8_t * gpu_buff) {
             uint8_t * gpu_bitmap = &gpu_buff[0];
             return gpu_bitmap;
@@ -67,9 +69,10 @@ class DataCompressor {
 
         DataCompressor(size_t data_size, SharedDataBuffer * shared_gpu_buff);
         ~DataCompressor();
-        void compress_data(DataType * data, bool send_to_cpu); // the main thread invoke this function
+        void compress_data(DataType * data); // the main thread invoke this function
         void get_compressed_data(DataType * &buff, size_t &buff_size); // the communication thread invoke this function
         void move_compressed_data_to_cpu();
+        void disable_compression() { disable_compression_ = true; }
 };
 
 class DataDecompressor {
@@ -77,7 +80,6 @@ class DataDecompressor {
         size_t data_size_; // unit: floats
         size_t compressed_data_size_;
         bool compressed_data_set_;
-        bool compressed_data_on_cpu_;
         // the GPU buffer
         size_t gpu_buff_size_; // unit: bytes
         SharedDataBuffer * shared_gpu_buff_;
@@ -101,7 +103,7 @@ class DataDecompressor {
 
         DataDecompressor(size_t data_size, SharedDataBuffer * shared_gpu_buff, SharedDataBuffer * shared_index_buff);
         ~DataDecompressor();
-        void receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data, bool recv_on_cpu); // invoked by ccommunication threads
+        void receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data); // invoked by ccommunication threads
         void decompress_data(DataType * data); // invoked by the main thread
         void get_cpu_buff(uint8_t * &buff, size_t &buff_size);
         void move_compressed_data_to_gpu();

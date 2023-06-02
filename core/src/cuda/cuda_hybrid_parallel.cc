@@ -832,7 +832,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
 #endif
                         comm += compressed_data_size;
                         return compressed_data_size;
-                        }, true
+                        }
                 );
                 // receive the shared tensor data if applicable
                 if (engine_->global_shared_tensor_ != NULL) {
@@ -1014,7 +1014,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
 #endif
                         comm += compressed_data_size;
                         return compressed_data_size;
-                        }, true // buff in CPU
+                        }
                         );
                 // receive h0
                 if (engine_->global_shared_tensor_) {
@@ -1430,7 +1430,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 for (int epoch_id = 0; epoch_id < num_epoch + engine_->total_num_inference_runs_; ++ epoch_id) {
                     for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
                         act_gpu2cpu_queue->pop_blocking(task);
-                        //if (node_id < num_nodes - 1) {
                         if (! engine_->is_last_stage()) {
                             engine_->data_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
                         }
@@ -1445,7 +1444,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 for (int epoch_id = 0; epoch_id < num_epoch; ++ epoch_id) {
                     for (int num_processed_chunks = 0; num_processed_chunks < num_local_chunks; ++ num_processed_chunks) {
                         grad_gpu2cpu_queue->pop_blocking(task);
-                        //if (node_id > 0) {
                         if (! engine_->is_first_stage()) {
                             engine_->grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
                         }
@@ -2861,7 +2859,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
         assert(data);
         assert(num_elements_this_chunk);
         // compress the activation
-        data_compressors_[chunk_id]->compress_data(data, true);
+        data_compressors_[chunk_id]->compress_data(data);
         compression_time_ += get_time();
         compression_size_ += sizeof(DataType) * num_elements_this_chunk;
     }
@@ -3133,7 +3131,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         assert(num_elements_this_chunk);
         // compress the gradients
         zero_out_unnecessary_grad(grad, data, num_elements_this_chunk);
-        grad_compressors_[chunk_id]->compress_data(grad, true);
+        grad_compressors_[chunk_id]->compress_data(grad);
         compression_time_ += get_time();
         compression_size_ += sizeof(DataType) * num_elements_this_chunk;
     }
