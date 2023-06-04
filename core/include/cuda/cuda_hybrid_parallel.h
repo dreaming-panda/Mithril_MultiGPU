@@ -622,6 +622,11 @@ class CUDAVertexTensorDataGradManager {
             VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(vid_begin);
             VertexId local_vid_end = vid_translation_->get_local_vid_master_vertex(vid_end);
             auto p = local_tensors_.find(tensor);
+            if (p == local_tensors_.end()) {
+                printf("Node %d, %s\n", 
+                        DistributedSys::get_instance()->get_node_id(),
+                        get_op_type_str(tensor->op->get_type()).c_str());
+            }
             assert(p != local_tensors_.end());
             LocalVertexTensor local_tensor = p->second;
             data = local_tensor.data + local_vid_begin * local_tensor.num_elements_per_vertex;
@@ -1332,6 +1337,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         friend class CUDAPIPParallelParameterServer;
         friend class CUDAPIPWeightAggregator;
         friend class GraphDataPropagator;
+        friend class CUDAVertexTensorDataGradManager;
 
     public:
         DistributedPIPHybridParallelExecutionEngineGPU();

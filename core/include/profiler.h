@@ -26,12 +26,16 @@ enum ProfilerEventType {
     CoreBackwardComputationCompleteEvent,
     SideComputationStartEvent,
     SideComputationCompleteEvent,
-    DeviceHostCommunicationStartEvent,
-    DeviceHostCommunicationCompleteEvent,
+    LayerDeviceHostCommunicationStartEvent,
+    LayerDeviceHostCommunicationCompleteEvent,
     WeightOptimizationStartEvent,
     WeightOptimizationCompleteEvent,
     CompressionRelatedStartEvent,
     CompressionRelatedCompleteEvent,
+    GraphDeviceHostCommunicationStartEvent,
+    GraphDeviceHostCommunicationCompleteEvent,
+    GraphNetworkCommunicationStartEvent,
+    GraphNetworkCommunicationCompleteEvent,
 
     // events on the forward task dispatcher
     ForwardDispatcherStartWaitForNewTask,

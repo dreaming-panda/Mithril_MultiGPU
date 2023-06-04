@@ -98,7 +98,8 @@ int main(int argc, char ** argv) {
         ("exact_inference", po::value<int>()->default_value(0), "1: always using exact inference to select the optimal weights (might be slower, only used for convergence analysis), 0: using approximate inference during the training.")
         ("feature_pre", po::value<int>()->default_value(0), "1: preprocess features by row-based normalization, 0: no feature preprocessing")
         ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
-        ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.");
+        ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.")
+        ("enable_compression", po::value<int>()->default_value(1), "1/0: Enable/Disable data compression for communication.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -129,6 +130,7 @@ int main(int argc, char ** argv) {
     double always_exact_inference = vm["exact_inference"].as<int>() == 1;
     int num_dp_ways = vm["num_dp_ways"].as<int>();
     FeaturePreprocessingMethod feature_preprocessing = NoFeaturePreprocessing;
+    bool enable_compression = vm["enable_compression"].as<int>() == 1;
     if (vm["feature_pre"].as<int>() == 1) {
         feature_preprocessing = RowNormalizationPreprocessing;
     }
@@ -224,6 +226,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_weight_initialization_method(weight_init);
     execution_engine->set_num_dp_ways(num_dp_ways);
     execution_engine->set_chunk_boundary_file(graph_path + "/partitions.txt");
+    execution_engine->set_enable_compression(enable_compression);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {

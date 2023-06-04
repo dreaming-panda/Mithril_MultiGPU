@@ -64,8 +64,10 @@ void Profiler::breakdown_analysis() {
     assert(num_forward_task_dispatcher_events % 2 == 0);
     assert(num_backward_task_dispatcher_events % 2 == 0);
     // performance metrics
-    double graph_comm_time = 0;
-    double layer_comm_time = 0;
+    double graph_comm_net_time = 0;
+    double graph_comm_pcie_time = 0;
+    double layer_comm_net_time = 0;
+    double layer_comm_pcie_time = 0;
     double bubble_time = 0;
     double compute_time = 0;
     double optimization_time = 0;
@@ -135,16 +137,8 @@ void Profiler::breakdown_analysis() {
             }
         }
         assert(delta_layer_comm_time <= (end - start) * 1.05);
-        layer_comm_time += std::min(delta_layer_comm_time, end - start);
+        layer_comm_net_time += std::min(delta_layer_comm_time, end - start);
         bubble_time += std::max(end - start - delta_layer_comm_time, 0.);
-        //if (num_forward_task_dispatcher_events > 0 ||
-        //        num_backward_task_dispatcher_events > 0) {
-        //    double s = delta_layer_comm_time + delta_bubble_time;
-        //    if (s > 0) {
-        //        layer_comm_time += delta_layer_comm_time / s * (end - start);
-        //        bubble_time += delta_bubble_time / s * (end - start);
-        //    }
-        //}
     };
 
     for (; main_thread_event_idx < num_main_thread_events; main_thread_event_idx += 2) {
@@ -170,41 +164,25 @@ void Profiler::breakdown_analysis() {
         } else if (event_type == SideComputationStartEvent) {
             assert(next_event_type == SideComputationCompleteEvent);
             other_time += interval;
-        } else if (event_type == DeviceHostCommunicationStartEvent) {
-            assert(next_event_type == DeviceHostCommunicationCompleteEvent);
-            layer_comm_time += interval;
+        } else if (event_type == LayerDeviceHostCommunicationStartEvent) {
+            assert(next_event_type == LayerDeviceHostCommunicationCompleteEvent);
+            layer_comm_pcie_time += interval;
         } else if (event_type == WeightOptimizationStartEvent) {
             assert(next_event_type == WeightOptimizationCompleteEvent);
             optimization_time += interval;
         } else if (event_type == CompressionRelatedStartEvent) {
             assert(next_event_type == CompressionRelatedCompleteEvent);
             compression_time += interval;
+        } else if (event_type == GraphDeviceHostCommunicationStartEvent) {
+            assert(next_event_type == GraphDeviceHostCommunicationCompleteEvent);
+            graph_comm_pcie_time += interval;
+        } else if (event_type == GraphNetworkCommunicationStartEvent) {
+            assert(next_event_type == GraphNetworkCommunicationCompleteEvent);
+            graph_comm_net_time += interval;
         } else {
             fprintf(stderr, "ERROR: Unsupported event type!\n");
             exit(-1);
         }
-        //if (event.get_type() == CrossEpochSyncStartEvent) {
-        //    assert(next_event.get_type() == CrossEpochSyncCompleteEvent);
-        //    graph_comm_time += next_event.get_time() - event.get_time();
-        //} else if (event.get_type() == ForwardTaskStartEvent) {
-        //    assert(next_event.get_type() == ForwardTaskCompleteEvent);
-        //    compute_time += next_event.get_time() - event.get_time();
-        //} else if (event.get_type() == BackwardTaskStartEvent) {
-        //    assert(next_event.get_type() == BackwardTaskCompleteEvent);
-        //    compute_time += next_event.get_time() - event.get_time();
-        //} else if (event.get_type() == GradSyncStartEvent) {
-        //    assert(next_event.get_type() == GradSyncCompleteEvent);
-        //    grad_sync_time += next_event.get_time() - event.get_time();
-        //} else if (event.get_type() == AccuracyCalculationTaskStartEvent) {
-        //    assert(next_event.get_type() == AccuracyCalculationTaskCompleteEvent);
-        //    compute_time += next_event.get_time() - event.get_time();
-        //} else if (event.get_type() == GPUSyncStartEvent) {
-        //    assert(next_event.get_type() == GPUSynCompleteEvent);
-        //    imbalance_time += next_event.get_time() - event.get_time();
-        //} else {
-        //    fprintf(stderr, "ERROR: Unsupported event type!\n");
-        //    exit(-1);
-        //}
         
         // update last_simulated time
         last_simulated_time = next_event.get_time();
@@ -212,8 +190,10 @@ void Profiler::breakdown_analysis() {
     process_idle_time_range(last_simulated_time, end_time);
 
     RuntimeBreakdownManager breakdown_manager;
-    breakdown_manager.add_breakdown("GraphComm", graph_comm_time);
-    breakdown_manager.add_breakdown("LayerComm", layer_comm_time);
+    breakdown_manager.add_breakdown("GraphCommNetwork", graph_comm_net_time);
+    breakdown_manager.add_breakdown("GraphCommGPUCPU", graph_comm_pcie_time);
+    breakdown_manager.add_breakdown("LayerCommNetwork", layer_comm_net_time);
+    breakdown_manager.add_breakdown("LayerCommGPUCPU", layer_comm_pcie_time);
     breakdown_manager.add_breakdown("Bubble", bubble_time);
     breakdown_manager.add_breakdown("Compute", compute_time);
     breakdown_manager.add_breakdown("Compression", compression_time);

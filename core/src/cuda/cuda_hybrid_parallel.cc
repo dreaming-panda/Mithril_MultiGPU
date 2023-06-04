@@ -525,6 +525,7 @@ void GraphDataPropagator::put_graph_data(
     }
     assert(gpu_data && embedding_size);
 
+    Profiler::submit_main_thread_event(GraphDeviceHostCommunicationStartEvent);
     for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id;
             dst_node = (dst_node + num_stages) % num_nodes) {
         int remote_way_id = dst_node / num_stages;
@@ -566,7 +567,9 @@ void GraphDataPropagator::put_graph_data(
         trailer->checksum = get_checksum((uint8_t*) header, sizeof(RecvBuffHeader));
     }
     cudaStreamSynchronize(0);
+    Profiler::submit_main_thread_event(GraphDeviceHostCommunicationCompleteEvent);
 
+    Profiler::submit_main_thread_event(GraphNetworkCommunicationStartEvent);
     std::vector<MPI_Request> requests;
     for (int dst_node = (node_id + num_stages) % num_nodes; dst_node != node_id;
             dst_node = (dst_node + num_stages) % num_nodes) {
@@ -606,9 +609,12 @@ void GraphDataPropagator::put_graph_data(
         MPI_Status status;
         MPI_Wait(&request, &status);
     }
+    Profiler::submit_main_thread_event(GraphNetworkCommunicationCompleteEvent);
 }
 
 void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
+    Profiler::submit_main_thread_event(GraphDeviceHostCommunicationStartEvent);
+
     int num_ways = engine_->get_num_dp_ways();
     int stage_id = engine_->get_stage_id();
     int num_stages = engine_->get_num_stages();
@@ -680,6 +686,7 @@ void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
     }
 
     checkCUDA(cudaStreamSynchronize(0));
+    Profiler::submit_main_thread_event(GraphDeviceHostCommunicationCompleteEvent);
 }
 
 void GraphDataPropagator::propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
@@ -2624,7 +2631,7 @@ DistributedPIPHybridParallelExecutionEngineGPU::~DistributedPIPHybridParallelExe
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPIPForwardTask task) {
     // move the data received to the GPU
     if (! is_first_stage()) {
-        Profiler::submit_main_thread_event(DeviceHostCommunicationStartEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
         data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
         //data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
         if (global_shared_tensor_ != NULL) {
@@ -2644,7 +2651,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
             checkCUDA(cudaMemcpyAsync(gpu_data, cpu_data, sizeof(DataType) * num_elements,
                         cudaMemcpyHostToDevice));
         }
-        Profiler::submit_main_thread_event(DeviceHostCommunicationCompleteEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
     }
 
     // pull the latest weights from the parameter servers and stash them 
@@ -2703,7 +2710,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 {
                     // graph data propagation
                     Tensor * tensor = op->get_input_tensor(0);
+                    Profiler::submit_main_thread_event(CoreForwardComputationCompleteEvent);
                     graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true);
+                    Profiler::submit_main_thread_event(CoreForwardComputationStartEvent);
                     // do the actual computation
                     executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 }
@@ -2733,14 +2742,14 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
         data_compressors_[chunk_id]->compress_data(data);
         Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
 
-        Profiler::submit_main_thread_event(DeviceHostCommunicationStartEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
         // move the activation to CPU
         data_compressors_[chunk_id]->move_compressed_data_to_cpu();
-        Profiler::submit_main_thread_event(DeviceHostCommunicationCompleteEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
     }
 
     if (stage_id == 0 && global_shared_tensor_) {
-        Profiler::submit_main_thread_event(DeviceHostCommunicationStartEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
         int num_elements_per_vertex = global_shared_tensor_->dims[1];
         VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
         VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
@@ -2757,7 +2766,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                 cudaMemcpy(cpu_data, gpu_data, sizeof(DataType) * num_elements,
                     cudaMemcpyDeviceToHost)
                 );
-        Profiler::submit_main_thread_event(DeviceHostCommunicationCompleteEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
     }
 
     if (! is_first_stage()) {
@@ -2767,8 +2776,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
 
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAPIPBackwardTask task) {
     if (! is_last_stage()) {
-        Profiler::submit_main_thread_event(DeviceHostCommunicationStartEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
         grad_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
+
         if (global_shared_tensor_) {
             int num_elements_per_vertex = global_shared_tensor_->dims[1];
             VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
@@ -2790,7 +2800,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                         )
                     );
         }
-        Profiler::submit_main_thread_event(DeviceHostCommunicationCompleteEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
     }
 
     int chunk_id = task.chunk_id;
@@ -2950,7 +2960,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                 {
                     // graph data propagation
                     Tensor * tensor = op->get_output_tensor(0);
+                    Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
                     graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
+                    Profiler::submit_main_thread_event(CoreBackwardComputationStartEvent);
                     // do the actual computation
                     executor_->aggregation_backward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 }
@@ -2967,7 +2979,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
 
     if (stage_id > 0 && global_shared_tensor_) {
-        Profiler::submit_main_thread_event(DeviceHostCommunicationStartEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
         int num_elements_per_vertex = global_shared_tensor_->dims[1];
         VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
         VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
@@ -2986,7 +2998,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                     cudaMemcpyDeviceToHost
                     )
                 );
-        Profiler::submit_main_thread_event(DeviceHostCommunicationCompleteEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
     }
 
     // scale the gradients for unbaised estimation
@@ -3049,10 +3061,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
         //compression_size_ += sizeof(DataType) * num_elements_this_chunk;
         Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
 
-        Profiler::submit_main_thread_event(DeviceHostCommunicationStartEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
         // move the gradients to CPU
         grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
-        Profiler::submit_main_thread_event(DeviceHostCommunicationCompleteEvent);
+        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
     }
 
     if (! is_last_stage()) {
@@ -3509,7 +3521,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
             partitioning.partition_op_begin[stage_id], partitioning.partition_op_end[stage_id],
             max_chunk_size, application->get_output_tensor()
             );
-
 
     CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_);
     lgraph->InitMemory();

@@ -61,6 +61,8 @@ class GraphSage: public AbstractApplication {
                 Tensor * t_0 = fc(t, output_size, "None", true);
                 // the aggregated results
                 if (i == 0) {
+                    // reduce the dimension first to reduce 
+                    // computation cost
                     t = fc(t, output_size, "None", true);
                     t = aggregation(t, MEAN, true);
                 } else {

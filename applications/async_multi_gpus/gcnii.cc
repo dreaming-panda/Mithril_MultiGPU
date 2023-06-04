@@ -31,12 +31,12 @@
 
 // TODO
 // [x] allowed inference directly on this code base
-// [ ] allowed compression or not configuration
+// [x] allowed compression or not configuration
 // [x] allowed initialization method conf
 // [x] allowed feature preprocessing conf
-// [ ] collecting the mirror data
-// [ ] transferring the mirror data to remote nodes with RDMA
-// [ ] updating the received graph data
+// [x] collecting the mirror data
+// [x] transferring the mirror data to remote nodes with RDMA
+// [x] updating the received graph data
 
 class GCNII: public AbstractApplication {
     private:
@@ -78,13 +78,12 @@ class GCNII: public AbstractApplication {
             Tensor * h0 = t;
             set_global_shared_tensor(h0); // the tensor that is shared across all GPUs
             t = dropout(t, dropout_rate_, enable_recomputation_);
-            next_layer();
             // L-layer GCNII convolutions
             for (int i = 0; i < num_layers_; ++ i) {
+                next_layer();
                 t = graph_convolution(t, h0, i + 1);
                 t = relu(t, enable_recomputation_);
                 t = dropout(t, dropout_rate_, enable_recomputation_);
-                next_layer();
             }
             // classification
             t = fc(t, num_classes_, "None", true);
@@ -118,7 +117,8 @@ int main(int argc, char ** argv) {
         ("exact_inference", po::value<int>()->default_value(0), "1: always using exact inference to select the optimal weights (might be slower, only used for convergence analysis), 0: using approximate inference during the training.")
         ("feature_pre", po::value<int>()->default_value(0), "1: preprocess features by row-based normalization, 0: no feature preprocessing")
         ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
-        ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.");
+        ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.")
+        ("enable_compression", po::value<int>()->default_value(1), "1/0: Enable/Disable data compression for communication.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -151,6 +151,7 @@ int main(int argc, char ** argv) {
     double always_exact_inference = vm["exact_inference"].as<int>() == 1;
     int num_dp_ways = vm["num_dp_ways"].as<int>();
     FeaturePreprocessingMethod feature_preprocessing = NoFeaturePreprocessing;
+    bool enable_compression = vm["enable_compression"].as<int>() == 1;
     if (vm["feature_pre"].as<int>() == 1) {
         feature_preprocessing = RowNormalizationPreprocessing;
     }
@@ -249,6 +250,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_weight_initialization_method(weight_init);
     execution_engine->set_num_dp_ways(num_dp_ways);
     execution_engine->set_chunk_boundary_file(graph_path + "/partitions.txt");
+    execution_engine->set_enable_compression(enable_compression);
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {
@@ -256,13 +258,13 @@ int main(int argc, char ** argv) {
         exit(-1);
     } else if (partition_strategy == "model") {
         std::vector<double> cost_each_layer;
-        for (int i = 0; i < num_layers + 2; ++ i) {
+        for (int i = 0; i < num_layers + 1; ++ i) {
             // assumed that the cost of each layer is the same
             cost_each_layer.push_back(1.);
         }
         int num_stages = execution_engine->get_num_stages();
         CUDAModelPartitioning partition = ModelPartitioner::get_model_parallel_partition(
-                gcn, num_stages, num_layers + 2, cost_each_layer, num_vertices
+                gcn, num_stages, num_layers + 1, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
     } else {
