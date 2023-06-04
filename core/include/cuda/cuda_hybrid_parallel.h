@@ -1147,12 +1147,6 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         int user_specified_num_chunks_ = 128;
 
-        double compression_time_;
-        double decompression_time_;
-        size_t compression_size_;
-        size_t decompression_size_;
-        double compute_time_;
-
         LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue_;
 
         // the threads responsible for communication and computation
@@ -1313,7 +1307,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void set_up_tensor_resourses();
         void release_resources();
 
-        void calculate_accuracy(double &train_acc, double &valid_acc, double &test_acc);
+        //void calculate_accuracy(double &train_acc, double &valid_acc, double &test_acc);
         DataType calculate_prediction_hits_with_mask(VertexId vbegin, VertexId vend, int * mask);
         DataType calculate_train_prediction_hits(VertexId vbegin, VertexId vend);
         DataType calculate_valid_prediction_hits(VertexId vbegin, VertexId vend);

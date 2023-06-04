@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "distributed_sys.h"
+#include "cuda/cuda_utils.h"
 
 // obtain the trace of the execution first
 // and analyze the trace to obtain detailed
@@ -19,23 +20,25 @@
 
 enum ProfilerEventType {
     // events on the main thread
-    CrossEpochSyncStartEvent,
-    CrossEpochSyncCompleteEvent,
-    ForwardTaskStartEvent,
-    ForwardTaskCompleteEvent,
-    BackwardTaskStartEvent,
-    BackwardTaskCompleteEvent,
-    GradSyncStartEvent,
-    GradSyncCompleteEvent,
-    AccuracyCalculationTaskStartEvent,
-    AccuracyCalculationTaskCompleteEvent,
-    GPUSyncStartEvent,
-    GPUSynCompleteEvent,
+    CoreForwardComputationStartEvent,
+    CoreForwardComputationCompleteEvent,
+    CoreBackwardComputationStartEvent,
+    CoreBackwardComputationCompleteEvent,
+    SideComputationStartEvent,
+    SideComputationCompleteEvent,
+    DeviceHostCommunicationStartEvent,
+    DeviceHostCommunicationCompleteEvent,
+    WeightOptimizationStartEvent,
+    WeightOptimizationCompleteEvent,
+    CompressionRelatedStartEvent,
+    CompressionRelatedCompleteEvent,
+
     // events on the forward task dispatcher
     ForwardDispatcherStartWaitForNewTask,
     ForwardDispatcherCompleteWaitForNewTask,
     ForwardDispatcherStartReceiveData,
     ForwardDispatcherCompleteReceiveData,
+
     // events on the backward task dispatcher
     BackwardDispatcherStartWaitForNewTask,
     BackwardDispatcherCompleteWaitForNewTask,

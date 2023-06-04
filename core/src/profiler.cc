@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include <vector>
+#include <sstream>
 
 #include "profiler.h"
 #include "utilities.h"
@@ -43,6 +44,7 @@ void Profiler::end_profiling() {
 }
 
 void Profiler::submit_main_thread_event(ProfilerEventType type) {
+    checkCUDA(cudaStreamSynchronize(0));
     main_thread_events.push_back(ProfilerEvent(type, get_time()));
 }
 
@@ -66,8 +68,9 @@ void Profiler::breakdown_analysis() {
     double layer_comm_time = 0;
     double bubble_time = 0;
     double compute_time = 0;
-    double imbalance_time = 0;
-    double grad_sync_time = 0;
+    double optimization_time = 0;
+    double other_time = 0;
+    double compression_time = 0;
     // start simulation to collect performance metrics
     size_t main_thread_event_idx = 0;
     size_t forward_task_dispatcher_event_idx = 0;
@@ -147,33 +150,62 @@ void Profiler::breakdown_analysis() {
     for (; main_thread_event_idx < num_main_thread_events; main_thread_event_idx += 2) {
         ProfilerEvent event = main_thread_events[main_thread_event_idx];
         ProfilerEvent next_event = main_thread_events[main_thread_event_idx + 1];
+
         // obtain the idle time range
         double idle_time_start = last_simulated_time;
         double idle_time_end = event.get_time();
         process_idle_time_range(idle_time_start, idle_time_end);
+
         // process the event
-        if (event.get_type() == CrossEpochSyncStartEvent) {
-            assert(next_event.get_type() == CrossEpochSyncCompleteEvent);
-            graph_comm_time += next_event.get_time() - event.get_time();
-        } else if (event.get_type() == ForwardTaskStartEvent) {
-            assert(next_event.get_type() == ForwardTaskCompleteEvent);
-            compute_time += next_event.get_time() - event.get_time();
-        } else if (event.get_type() == BackwardTaskStartEvent) {
-            assert(next_event.get_type() == BackwardTaskCompleteEvent);
-            compute_time += next_event.get_time() - event.get_time();
-        } else if (event.get_type() == GradSyncStartEvent) {
-            assert(next_event.get_type() == GradSyncCompleteEvent);
-            grad_sync_time += next_event.get_time() - event.get_time();
-        } else if (event.get_type() == AccuracyCalculationTaskStartEvent) {
-            assert(next_event.get_type() == AccuracyCalculationTaskCompleteEvent);
-            compute_time += next_event.get_time() - event.get_time();
-        } else if (event.get_type() == GPUSyncStartEvent) {
-            assert(next_event.get_type() == GPUSynCompleteEvent);
-            imbalance_time += next_event.get_time() - event.get_time();
+        ProfilerEventType event_type = event.get_type();
+        ProfilerEventType next_event_type = next_event.get_type();
+        double interval = next_event.get_time() - event.get_time();
+
+        if (event_type == CoreForwardComputationStartEvent) {
+            assert(next_event_type == CoreForwardComputationCompleteEvent);
+            compute_time += interval;
+        } else if (event_type == CoreBackwardComputationStartEvent) {
+            assert(next_event_type == CoreBackwardComputationCompleteEvent);
+            compute_time += interval;
+        } else if (event_type == SideComputationStartEvent) {
+            assert(next_event_type == SideComputationCompleteEvent);
+            other_time += interval;
+        } else if (event_type == DeviceHostCommunicationStartEvent) {
+            assert(next_event_type == DeviceHostCommunicationCompleteEvent);
+            layer_comm_time += interval;
+        } else if (event_type == WeightOptimizationStartEvent) {
+            assert(next_event_type == WeightOptimizationCompleteEvent);
+            optimization_time += interval;
+        } else if (event_type == CompressionRelatedStartEvent) {
+            assert(next_event_type == CompressionRelatedCompleteEvent);
+            compression_time += interval;
         } else {
             fprintf(stderr, "ERROR: Unsupported event type!\n");
             exit(-1);
         }
+        //if (event.get_type() == CrossEpochSyncStartEvent) {
+        //    assert(next_event.get_type() == CrossEpochSyncCompleteEvent);
+        //    graph_comm_time += next_event.get_time() - event.get_time();
+        //} else if (event.get_type() == ForwardTaskStartEvent) {
+        //    assert(next_event.get_type() == ForwardTaskCompleteEvent);
+        //    compute_time += next_event.get_time() - event.get_time();
+        //} else if (event.get_type() == BackwardTaskStartEvent) {
+        //    assert(next_event.get_type() == BackwardTaskCompleteEvent);
+        //    compute_time += next_event.get_time() - event.get_time();
+        //} else if (event.get_type() == GradSyncStartEvent) {
+        //    assert(next_event.get_type() == GradSyncCompleteEvent);
+        //    grad_sync_time += next_event.get_time() - event.get_time();
+        //} else if (event.get_type() == AccuracyCalculationTaskStartEvent) {
+        //    assert(next_event.get_type() == AccuracyCalculationTaskCompleteEvent);
+        //    compute_time += next_event.get_time() - event.get_time();
+        //} else if (event.get_type() == GPUSyncStartEvent) {
+        //    assert(next_event.get_type() == GPUSynCompleteEvent);
+        //    imbalance_time += next_event.get_time() - event.get_time();
+        //} else {
+        //    fprintf(stderr, "ERROR: Unsupported event type!\n");
+        //    exit(-1);
+        //}
+        
         // update last_simulated time
         last_simulated_time = next_event.get_time();
     }
@@ -184,8 +216,9 @@ void Profiler::breakdown_analysis() {
     breakdown_manager.add_breakdown("LayerComm", layer_comm_time);
     breakdown_manager.add_breakdown("Bubble", bubble_time);
     breakdown_manager.add_breakdown("Compute", compute_time);
-    breakdown_manager.add_breakdown("Imbalance", imbalance_time);
-    breakdown_manager.add_breakdown("GradSync", grad_sync_time);
+    breakdown_manager.add_breakdown("Compression", compression_time);
+    breakdown_manager.add_breakdown("Optimization", optimization_time);
+    breakdown_manager.add_breakdown("Other", other_time);
 
     int node_id = DistributedSys::get_instance()->get_node_id(); 
     if (breakdown_manager.get_breakdown_sum() / (end_time - start_time) <= 0.9) {
