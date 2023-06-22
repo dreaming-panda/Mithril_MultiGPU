@@ -1,6 +1,7 @@
 set(CUDA_HINTS
    /opt/apps/cuda/11.3/
    /usr/local/cuda-11.6/
+   /usr/local/cuda
 )
 set(CUDAPATHS
   /opt/apps/cuda/11.3/

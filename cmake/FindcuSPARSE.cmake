@@ -25,6 +25,7 @@
 set(CUSPARSE_HINTS
   /opt/apps/cuda/11.3/
   /usr/local/cuda-11.6/
+  /usr/local/cuda
 )
 set(CUSPARSE_PATHS
   /opt/apps/cuda/11.3/
