@@ -18,6 +18,7 @@ limitations under the License.
 #define DISTRIBUTED_SYS_H
 
 #include <mpi.h>
+#include <nccl.h>
 
 #include <iostream>
 #include <type_traits>
@@ -33,6 +34,8 @@ class DistributedSys {
 
 	    int node_id_;
 	    int num_nodes_;
+        ncclComm_t nccl_handle_;
+        ncclUniqueId nccl_id_;
 
 	    DistributedSys();
 
@@ -44,6 +47,7 @@ class DistributedSys {
 	    inline int get_node_id() {return node_id_;}
 	    inline int get_num_nodes() {return num_nodes_;}
         inline bool is_master_node() {return node_id_ == 0;}
+        inline ncclComm_t get_nccl_handle() {return nccl_handle_;}
 
 	    template<typename T>
 	        static MPI_Datatype get_mpi_data_type() {

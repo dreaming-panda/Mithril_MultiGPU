@@ -1,6 +1,4 @@
 #include <algorithm>
-
-finalize_chunk_ordering_generator();
 #include <random>
 
 #include <math.h>
@@ -1321,42 +1319,37 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
 }
 
 CUDAAbstractPIPScheduler::CUDAAbstractPIPScheduler(
-        DistributedPIPHybridParallelExecutionEngineGPU * engine,
-        CUDAPIPForwardTaskDispatcher * forward_task_dispatcher,
-        CUDAPIPForwardTaskCommitter * forward_task_committer,
-        CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher,
-        CUDAPIPBackwardTaskCommitter * backward_task_committer,
-        pthread_barrier_t * barrier
+        DistributedPIPHybridParallelExecutionEngineGPU * engine
         ) {
     assert(engine != NULL);
-    assert(forward_task_dispatcher != NULL);
-    assert(forward_task_committer != NULL);
-    assert(backward_task_dispatcher != NULL);
-    assert(backward_task_committer != NULL);
-    assert(barrier != NULL);
+    //assert(forward_task_dispatcher != NULL);
+    //assert(forward_task_committer != NULL);
+    //assert(backward_task_dispatcher != NULL);
+    //assert(backward_task_committer != NULL);
+    //assert(barrier != NULL);
     engine_ = engine;
-    forward_task_dispatcher_ = forward_task_dispatcher;
-    forward_task_committer_ = forward_task_committer;
-    backward_task_dispatcher_ = backward_task_dispatcher;
-    backward_task_committer_ = backward_task_committer;
-    barrier_ = barrier;
+    //forward_task_dispatcher_ = forward_task_dispatcher;
+    //forward_task_committer_ = forward_task_committer;
+    //backward_task_dispatcher_ = backward_task_dispatcher;
+    //backward_task_committer_ = backward_task_committer;
+    //barrier_ = barrier;
 }
 
 CUDAAbstractPIPScheduler::~CUDAAbstractPIPScheduler() {
 }
 
 CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(
-        DistributedPIPHybridParallelExecutionEngineGPU * engine,
-        CUDAPIPForwardTaskDispatcher * forward_task_dispatcher,
-        CUDAPIPForwardTaskCommitter * forward_task_committer,
-        CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher,
-        CUDAPIPBackwardTaskCommitter * backward_task_committer,
-        pthread_barrier_t * barrier
+        DistributedPIPHybridParallelExecutionEngineGPU * engine
+        //CUDAPIPForwardTaskDispatcher * forward_task_dispatcher,
+        //CUDAPIPForwardTaskCommitter * forward_task_committer,
+        //CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher,
+        //CUDAPIPBackwardTaskCommitter * backward_task_committer,
+        //pthread_barrier_t * barrier
         ): CUDAAbstractPIPScheduler(
-            engine, 
-            forward_task_dispatcher, forward_task_committer,
-            backward_task_dispatcher, backward_task_committer,
-            barrier
+            engine
+            //forward_task_dispatcher, forward_task_committer,
+            //backward_task_dispatcher, backward_task_committer,
+            //barrier
             ) {
         }
 
@@ -1518,111 +1511,65 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
         Profiler::submit_main_thread_event(SideComputationCompleteEvent);
 
-        // keep poping dispatched tasks
-        int num_scheduled_forward_tasks = 0;
-        int num_scheduled_backward_tasks = 0;
-        bool success;
-        double slowest_chunk = 0;
-        double fastest_chunk = 1e100;
-        bool has_prev_task = false;
-        CUDAPIPForwardTask prev_task;
+        // obtain the chunk ordering in this epoch
+        int forward_chunks[num_local_chunks];
+        int num_forward_chunks = -1;
+        if (in_training_mode) {
+            engine_->get_training_epoch_chunk_ordering(forward_chunks, &num_forward_chunks);
+        } else {
+            engine_->get_inference_epoch_chunk_ordering(forward_chunks, &num_forward_chunks);
+        }
+        assert(num_forward_chunks > 0);
+        assert(num_forward_chunks == num_local_chunks);
 
-        std::vector<CUDAPIPBackwardTask> backward_tasks;
-        backward_tasks.clear();
+        for (int c_i = 0; c_i < num_forward_chunks; ++ c_i) {
+            // co-ordination free task dispatching
+            CUDAPIPForwardTask task;
+            task.epoch_id = epoch_id;
+            task.chunk_id = forward_chunks[c_i];
 
-        while (num_scheduled_forward_tasks < num_local_chunks) {
-#ifdef BOOST_ARCH_X86
-            __asm volatile ("pause" ::: "memory");
-#endif
-
-            if (num_scheduled_forward_tasks < num_local_chunks) {
-                CUDAPIPForwardTask task;
-                //wait_for_task_time -= get_time();
-                forward_task_dispatcher_queue_->pop_blocking(task);
-                //wait_for_task_time += get_time();
-
-                {
-                    double t = - get_time();
-                    assert(task.epoch_id == epoch_id);
 #ifdef SHOW_SCHEDULE_DETAILS
-                    if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
-                        double time_elapsed = (get_time() - start_time) * 1000;    
-                        printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
-                                time_elapsed, node_id, num_scheduled_forward_tasks);
-                    }
-#endif
-                    engine_->perform_forward_task(task);
-#ifdef SHOW_SCHEDULE_DETAILS
-                    if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
-                        double time_elapsed = (get_time() - start_time) * 1000;    
-                        printf("%.3f ms: Node %d, done executing the forwarding task of chunk %d\n",
-                                time_elapsed, node_id, num_scheduled_forward_tasks);
-                    }
-#endif
-
-                    has_prev_task = true;
-                    prev_task = task;
-                    forward_task_committer_queue_->push(task);
-                    if (is_bottommost_node) {
-                        CUDAPIPBackwardTask back_task;
-                        back_task.epoch_id = task.epoch_id;
-                        back_task.chunk_id = task.chunk_id;
-                        backward_tasks.push_back(back_task);
-                    }
-                    ++ num_scheduled_forward_tasks;
-                    t += get_time();
-                    slowest_chunk = std::max(slowest_chunk, t);
-                    fastest_chunk = std::min(fastest_chunk, t);
-                }
+            cudaStreamSynchronize(0);
+            if (node_id <= 3) {
+                double time_elapsed = (get_time() - start_time) * 1000;    
+                printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
+                        time_elapsed, node_id, task.chunk_id);
             }
+#endif
+            engine_->perform_forward_task(task);
+#ifdef SHOW_SCHEDULE_DETAILS
+            if (node_id <= 3) {
+                double time_elapsed = (get_time() - start_time) * 1000;    
+                printf("%.3f ms: Node %d, done executing the forwarding task of chunk %d\n",
+                        time_elapsed, node_id, task.chunk_id);
+            }
+#endif
         }
 
-        // no need to do the backward in inference mode
         if (in_training_mode) {
+            // the backward ordering is the reverse of the forward ordering 
+            for (int c_i = num_forward_chunks - 1; c_i >= 0; -- c_i) {
+                // construct the backwarding task
+                CUDAPIPBackwardTask task;
+                task.epoch_id = epoch_id;
+                task.chunk_id = forward_chunks[c_i];
+#ifdef SHOW_SCHEDULE_DETAILS
+                if (node_id <= 3) {
+                    double time_elapsed = (get_time() - start_time) * 1000;    
+                    printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
+                            time_elapsed, node_id, task.chunk_id);
+                }
+#endif
+                engine_->perform_backward_task(task);
+#ifdef SHOW_SCHEDULE_DETAILS
+                if (node_id <= 3) {
+                    double time_elapsed = (get_time() - start_time) * 1000;    
+                    printf("%.3f ms: Node %d, done executing the backwarding task of chunk %d\n",
+                            time_elapsed, node_id, task.chunk_id);
+                }
+#endif
+            }
 
-            if (is_bottommost_node) {
-                for (int i = (int) backward_tasks.size() - 1; i >= 0; -- i) {
-                    CUDAPIPBackwardTask task = backward_tasks[i];
-                    backward_task_dispatcher_->insert_new_task(task);
-                }
-            }
-    
-            while (num_scheduled_backward_tasks < num_local_chunks) { 
-#ifdef BOOST_ARCH_X86
-                __asm volatile ("pause" ::: "memory");
-#endif
-    
-                if (num_scheduled_backward_tasks < num_local_chunks) {
-                    CUDAPIPBackwardTask task;
-                    //wait_for_task_time -= get_time();
-                    backward_task_dispatcher_queue_->pop_blocking(task);
-                    //wait_for_task_time += get_time();
-                    {
-                        assert(task.epoch_id == epoch_id);
-    
-#ifdef SHOW_SCHEDULE_DETAILS
-                        if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
-                            double time_elapsed = (get_time() - start_time) * 1000;    
-                            printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
-                                    time_elapsed, node_id, num_scheduled_backward_tasks);
-                        }
-#endif
-                        engine_->perform_backward_task(task); 
-    
-#ifdef SHOW_SCHEDULE_DETAILS
-                        if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
-                            double time_elapsed = (get_time() - start_time) * 1000;    
-                            printf("%.3f ms: Node %d, done executing the backwarding task of chunk %d\n",
-                                    time_elapsed, node_id, num_scheduled_backward_tasks);
-                        }
-#endif
-    
-                        backward_task_committer_queue_->push(task);
-                        ++ num_scheduled_backward_tasks;
-                    }
-                }
-            }
-    
             Profiler::submit_main_thread_event(SideComputationStartEvent);
             int num_aggr_ops = aggr_ops.size();
             for (int i = 0; i < num_aggr_ops; ++ i) {
@@ -1636,8 +1583,128 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 checkCUDA(cudaMemset(grad, 0, sizeof(DataType) * num_elements));
             }
             Profiler::submit_main_thread_event(SideComputationCompleteEvent);
-
         }
+
+//        // keep poping dispatched tasks
+//        int num_scheduled_forward_tasks = 0;
+//        int num_scheduled_backward_tasks = 0;
+//        bool success;
+//        double slowest_chunk = 0;
+//        double fastest_chunk = 1e100;
+//        bool has_prev_task = false;
+//        CUDAPIPForwardTask prev_task;
+//
+//        std::vector<CUDAPIPBackwardTask> backward_tasks;
+//        backward_tasks.clear();
+//
+//        while (num_scheduled_forward_tasks < num_local_chunks) {
+//#ifdef BOOST_ARCH_X86
+//            __asm volatile ("pause" ::: "memory");
+//#endif
+//
+//            if (num_scheduled_forward_tasks < num_local_chunks) {
+//                CUDAPIPForwardTask task;
+//                //wait_for_task_time -= get_time();
+//                forward_task_dispatcher_queue_->pop_blocking(task);
+//                //wait_for_task_time += get_time();
+//
+//                {
+//                    double t = - get_time();
+//                    assert(task.epoch_id == epoch_id);
+//#ifdef SHOW_SCHEDULE_DETAILS
+//                    if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
+//                        double time_elapsed = (get_time() - start_time) * 1000;    
+//                        printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
+//                                time_elapsed, node_id, num_scheduled_forward_tasks);
+//                    }
+//#endif
+//                    engine_->perform_forward_task(task);
+//#ifdef SHOW_SCHEDULE_DETAILS
+//                    if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
+//                        double time_elapsed = (get_time() - start_time) * 1000;    
+//                        printf("%.3f ms: Node %d, done executing the forwarding task of chunk %d\n",
+//                                time_elapsed, node_id, num_scheduled_forward_tasks);
+//                    }
+//#endif
+//
+//                    has_prev_task = true;
+//                    prev_task = task;
+//                    forward_task_committer_queue_->push(task);
+//                    if (is_bottommost_node) {
+//                        CUDAPIPBackwardTask back_task;
+//                        back_task.epoch_id = task.epoch_id;
+//                        back_task.chunk_id = task.chunk_id;
+//                        backward_tasks.push_back(back_task);
+//                    }
+//                    ++ num_scheduled_forward_tasks;
+//                    t += get_time();
+//                    slowest_chunk = std::max(slowest_chunk, t);
+//                    fastest_chunk = std::min(fastest_chunk, t);
+//                }
+//            }
+//        }
+
+//        // no need to do the backward in inference mode
+//        if (in_training_mode) {
+//
+//            if (is_bottommost_node) {
+//                for (int i = (int) backward_tasks.size() - 1; i >= 0; -- i) {
+//                    CUDAPIPBackwardTask task = backward_tasks[i];
+//                    backward_task_dispatcher_->insert_new_task(task);
+//                }
+//            }
+//    
+//            while (num_scheduled_backward_tasks < num_local_chunks) { 
+//#ifdef BOOST_ARCH_X86
+//                __asm volatile ("pause" ::: "memory");
+//#endif
+//    
+//                if (num_scheduled_backward_tasks < num_local_chunks) {
+//                    CUDAPIPBackwardTask task;
+//                    //wait_for_task_time -= get_time();
+//                    backward_task_dispatcher_queue_->pop_blocking(task);
+//                    //wait_for_task_time += get_time();
+//                    {
+//                        assert(task.epoch_id == epoch_id);
+//    
+//#ifdef SHOW_SCHEDULE_DETAILS
+//                        if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
+//                            double time_elapsed = (get_time() - start_time) * 1000;    
+//                            printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
+//                                    time_elapsed, node_id, num_scheduled_backward_tasks);
+//                        }
+//#endif
+//                        engine_->perform_backward_task(task); 
+//    
+//#ifdef SHOW_SCHEDULE_DETAILS
+//                        if (node_id == 2 || node_id == 1 || node_id == 0 || node_id == 3) {
+//                            double time_elapsed = (get_time() - start_time) * 1000;    
+//                            printf("%.3f ms: Node %d, done executing the backwarding task of chunk %d\n",
+//                                    time_elapsed, node_id, num_scheduled_backward_tasks);
+//                        }
+//#endif
+//    
+//                        backward_task_committer_queue_->push(task);
+//                        ++ num_scheduled_backward_tasks;
+//                    }
+//                }
+//            }
+//    
+//            Profiler::submit_main_thread_event(SideComputationStartEvent);
+//            int num_aggr_ops = aggr_ops.size();
+//            for (int i = 0; i < num_aggr_ops; ++ i) {
+//                Operator * op = aggr_ops[i];
+//                Tensor * tensor = op->get_output_tensor(0);
+//                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+//                size_t num_elements_per_vertex = tensor->dims[1];
+//                size_t num_elements = num_vertices * num_elements_per_vertex;
+//                DataType * data = resource->get_gpu_data();
+//                DataType * grad = resource->get_gpu_grad();
+//                checkCUDA(cudaMemset(grad, 0, sizeof(DataType) * num_elements));
+//            }
+//            Profiler::submit_main_thread_event(SideComputationCompleteEvent);
+//
+//        }
 
         //// calculate the loss if necessary
         //if (engine_->is_bottommost_node_ && in_training_mode) {
@@ -1799,16 +1866,17 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     Profiler::breakdown_analysis();
 
-    forward_task_dispatcher_->wait_for_termination();
-    forward_task_committer_->wait_for_termination();
-    backward_task_dispatcher_->wait_for_termination();
-    backward_task_committer_->wait_for_termination();
+    //forward_task_dispatcher_->wait_for_termination();
+    //forward_task_committer_->wait_for_termination();
+    //backward_task_dispatcher_->wait_for_termination();
+    //backward_task_committer_->wait_for_termination();
 
     //move_act_gpu2cpu_thread.join();
     //move_grad_gpu2cpu_thread.join();
 
-    double layer_comm = forward_task_dispatcher_->get_comm() 
-        + backward_task_dispatcher_->get_comm();
+    double layer_comm = 0; // TODO
+    //double layer_comm = forward_task_dispatcher_->get_comm() 
+    //    + backward_task_dispatcher_->get_comm();
     double avg_layer_comm;
     MPI_Allreduce(
             &layer_comm, &avg_layer_comm, 1,
@@ -2621,35 +2689,10 @@ DistributedPIPHybridParallelExecutionEngineGPU::~DistributedPIPHybridParallelExe
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPIPForwardTask task) {
-    // move the data received to the GPU
-    if (! is_first_stage()) {
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
-        data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
-        //data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
-        if (global_shared_tensor_ != NULL) {
-            size_t num_elements_per_vertex = global_shared_tensor_->dims[1];
-            VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
-            VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
-            size_t num_elements = (right - left) * num_elements_per_vertex;
-            DataType * cpu_data = global_shared_tensor_data_ + left * num_elements_per_vertex;
-            DataType * gpu_data = NULL;
-            size_t num_elements_gpu = 0;
-            get_vertex_tensor_data_by_chunk(
-                    global_shared_tensor_, task.chunk_id, 
-                    gpu_data, num_elements_gpu
-                    );
-            assert(gpu_data);
-            assert(num_elements_gpu == num_elements);
-            checkCUDA(cudaMemcpyAsync(gpu_data, cpu_data, sizeof(DataType) * num_elements,
-                        cudaMemcpyHostToDevice));
-        }
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
-    }
-
-    // pull the latest weights from the parameter servers and stash them 
+    ncclComm_t nccl_handle = DistributedSys::get_instance()->get_nccl_handle();
     int chunk_id = task.chunk_id;
-
     int stage_id = get_stage_id();
+    int node_id = DistributedSys::get_instance()->get_node_id();
     VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
     VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
     VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
@@ -2657,22 +2700,93 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     int op_idx_begin = partitioning_.partition_op_begin[stage_id];
     int op_idx_end = partitioning_.partition_op_end[stage_id];
 
-    if (pipeline_input_tensor_ != NULL) {
-        Profiler::submit_main_thread_event(CompressionRelatedStartEvent);
-        //decompression_time_ -= get_time();
-        // decompress the activation if necessary
+    //// move the data received to the GPU
+    //if (! is_first_stage()) {
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
+    //    data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
+    //    //data_decompressors_[task.chunk_id]->move_compressed_data_to_gpu();
+    //    if (global_shared_tensor_ != NULL) {
+    //        size_t num_elements_per_vertex = global_shared_tensor_->dims[1];
+    //        VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
+    //        VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
+    //        size_t num_elements = (right - left) * num_elements_per_vertex;
+    //        DataType * cpu_data = global_shared_tensor_data_ + left * num_elements_per_vertex;
+    //        DataType * gpu_data = NULL;
+    //        size_t num_elements_gpu = 0;
+    //        get_vertex_tensor_data_by_chunk(
+    //                global_shared_tensor_, task.chunk_id, 
+    //                gpu_data, num_elements_gpu
+    //                );
+    //        assert(gpu_data);
+    //        assert(num_elements_gpu == num_elements);
+    //        checkCUDA(cudaMemcpyAsync(gpu_data, cpu_data, sizeof(DataType) * num_elements,
+    //                    cudaMemcpyHostToDevice));
+    //    }
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
+    //}
+
+    auto send_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
+        assert(tensor);
         DataType * data = NULL;
         size_t num_elements_this_chunk = 0;
         get_vertex_tensor_data_by_chunk(
-                pipeline_input_tensor_, chunk_id, data, num_elements_this_chunk
+                tensor, chunk_id, data, num_elements_this_chunk
                 );
         assert(data);
         assert(num_elements_this_chunk);
-        data_decompressors_[chunk_id]->decompress_data(data);
-        //decompression_time_ += get_time();
-        //decompression_size_ += sizeof(DataType) * num_elements_this_chunk;
-        Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
+        checkNCCL(ncclSend(
+                    data, sizeof(DataType) * num_elements_this_chunk, 
+                    ncclInt8, remote_node, nccl_handle, 0
+                    ));
+    };
+
+    auto recv_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
+        assert(tensor);
+        DataType * data = NULL;
+        size_t num_elements_this_chunk = 0;
+        get_vertex_tensor_data_by_chunk(
+                tensor, chunk_id, data, num_elements_this_chunk
+                );
+        assert(data);
+        assert(num_elements_this_chunk);
+        checkNCCL(ncclRecv(
+                    data, sizeof(DataType) * num_elements_this_chunk, 
+                    ncclInt8, remote_node, nccl_handle, 0
+                    ));
+    };
+
+    if (! is_first_stage()) {
+        int remote_node = node_id - 1;
+        // TODO: submit profiler event
+        recv_tensor_data(
+                pipeline_input_tensor_, chunk_id, remote_node
+                );
+        if (global_shared_tensor_) {
+            recv_tensor_data(
+                    global_shared_tensor_, chunk_id, remote_node
+                    );
+        }
     }
+
+    //if (enable_compression_) {
+    //    assert(false); // NOT SUPPORTED YET
+    //    if (pipeline_input_tensor_ != NULL) {
+    //        Profiler::submit_main_thread_event(CompressionRelatedStartEvent);
+    //        //decompression_time_ -= get_time();
+    //        // decompress the activation if necessary
+    //        DataType * data = NULL;
+    //        size_t num_elements_this_chunk = 0;
+    //        get_vertex_tensor_data_by_chunk(
+    //                pipeline_input_tensor_, chunk_id, data, num_elements_this_chunk
+    //                );
+    //        assert(data);
+    //        assert(num_elements_this_chunk);
+    //        data_decompressors_[chunk_id]->decompress_data(data);
+    //        //decompression_time_ += get_time();
+    //        //decompression_size_ += sizeof(DataType) * num_elements_this_chunk;
+    //        Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
+    //    }
+    //}
 
     //compute_time_ -= get_time();
     Profiler::submit_main_thread_event(CoreForwardComputationStartEvent);
@@ -2720,81 +2834,89 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     Profiler::submit_main_thread_event(CoreForwardComputationCompleteEvent);
     //compute_time_ += get_time();
 
-    if (pipeline_output_tensor_ != NULL) {
-        Profiler::submit_main_thread_event(CompressionRelatedStartEvent);
-        //compression_time_ -= get_time();
-        DataType * data = NULL;
-        size_t num_elements_this_chunk = 0;
-        get_vertex_tensor_data_by_chunk(
-                pipeline_output_tensor_, chunk_id, data, num_elements_this_chunk
-                );
-        assert(data);
-        assert(num_elements_this_chunk);
-        // compress the activation
-        data_compressors_[chunk_id]->compress_data(data);
-        Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
+    //if (enable_compression_) {
+    //    assert(false);
+    //    if (pipeline_output_tensor_ != NULL) {
+    //        Profiler::submit_main_thread_event(CompressionRelatedStartEvent);
+    //        //compression_time_ -= get_time();
+    //        DataType * data = NULL;
+    //        size_t num_elements_this_chunk = 0;
+    //        get_vertex_tensor_data_by_chunk(
+    //                pipeline_output_tensor_, chunk_id, data, num_elements_this_chunk
+    //                );
+    //        assert(data);
+    //        assert(num_elements_this_chunk);
+    //        // compress the activation
+    //        data_compressors_[chunk_id]->compress_data(data);
+    //        Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
 
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
-        // move the activation to CPU
-        data_compressors_[chunk_id]->move_compressed_data_to_cpu();
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
+    //        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
+    //        // move the activation to CPU
+    //        data_compressors_[chunk_id]->move_compressed_data_to_cpu();
+    //        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
+    //    }
+    //} else {
+    //    // directly send the activation to the next stage
+    //    if (pipeline_output_tensor_ != NULL) {
+    //        // TODO: submit the profiling event
+    //        DataType * data = NULL;
+    //        size_t num_elements_this_chunk = 0;
+    //        get_vertex_tensor_data_by_chunk(
+    //                pipeline_output_tensor_, chunk_id, data, num_elements_this_chunk
+    //                );
+    //        assert(data);
+    //        assert(num_elements_this_chunk);
+    //        int remote_node = node_id + 1;
+    //        checkNCCL(
+    //                ncclSend(
+    //                    data, sizeof(DataType) * num_elements_this_chunk,
+    //                    ncclInt8, remote_node, nccl_handle, 0
+    //                    )
+    //                );
+    //    }
+    //}
+
+    if (! is_last_stage()) {
+        int remote_node = node_id + 1;
+        send_tensor_data(
+                pipeline_output_tensor_, chunk_id, remote_node
+                );
+        if (global_shared_tensor_) {
+            send_tensor_data(
+                    global_shared_tensor_, chunk_id, remote_node
+                    );
+        }
     }
 
-    if (stage_id == 0 && global_shared_tensor_) {
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
-        int num_elements_per_vertex = global_shared_tensor_->dims[1];
-        VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
-        VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
-        DataType * cpu_data = global_shared_tensor_data_ + left * num_elements_per_vertex;
-        DataType * gpu_data = NULL;
-        size_t num_elements = 0;
-        get_vertex_tensor_data_by_chunk(
-                global_shared_tensor_, task.chunk_id,
-                gpu_data, num_elements
-                );
-        assert(gpu_data);
-        assert(num_elements == (right - left) * num_elements_per_vertex);
-        checkCUDA(
-                cudaMemcpy(cpu_data, gpu_data, sizeof(DataType) * num_elements,
-                    cudaMemcpyDeviceToHost)
-                );
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
-    }
 
-    if (! is_first_stage()) {
-        data_decompressors_[task.chunk_id]->release_gpu_buffers();
-    }
+    //if (stage_id == 0 && global_shared_tensor_) {
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
+    //    int num_elements_per_vertex = global_shared_tensor_->dims[1];
+    //    VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
+    //    VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
+    //    DataType * cpu_data = global_shared_tensor_data_ + left * num_elements_per_vertex;
+    //    DataType * gpu_data = NULL;
+    //    size_t num_elements = 0;
+    //    get_vertex_tensor_data_by_chunk(
+    //            global_shared_tensor_, task.chunk_id,
+    //            gpu_data, num_elements
+    //            );
+    //    assert(gpu_data);
+    //    assert(num_elements == (right - left) * num_elements_per_vertex);
+    //    checkCUDA(
+    //            cudaMemcpy(cpu_data, gpu_data, sizeof(DataType) * num_elements,
+    //                cudaMemcpyDeviceToHost)
+    //            );
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
+    //}
+
+    //if (! is_first_stage()) {
+    //    data_decompressors_[task.chunk_id]->release_gpu_buffers();
+    //}
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAPIPBackwardTask task) {
-    if (! is_last_stage()) {
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
-        grad_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
-
-        if (global_shared_tensor_) {
-            int num_elements_per_vertex = global_shared_tensor_->dims[1];
-            VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
-            VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
-            size_t num_elements_cpu = num_elements_per_vertex * (right - left);
-            DataType * grad_cpu = global_shared_tensor_grad_ + left * num_elements_per_vertex;
-            DataType * grad_gpu = NULL;
-            size_t num_elements_gpu = 0;
-            get_vertex_tensor_grad_by_chunk(
-                    global_shared_tensor_, task.chunk_id,
-                    grad_gpu, num_elements_gpu
-                    );
-            assert(grad_gpu);
-            assert(num_elements_cpu == num_elements_gpu);
-            checkCUDA(
-                    cudaMemcpyAsync(
-                        grad_gpu, grad_cpu, sizeof(DataType) * num_elements_cpu, 
-                        cudaMemcpyHostToDevice
-                        )
-                    );
-        }
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
-    }
-
+    ncclComm_t nccl_handle = DistributedSys::get_instance()->get_nccl_handle();
     int chunk_id = task.chunk_id;
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
@@ -2808,24 +2930,95 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     int op_idx_begin = partitioning_.partition_op_begin[stage_id];
     int op_idx_end = partitioning_.partition_op_end[stage_id];
 
-    // decompress the gradients if necessary
-    if (pipeline_output_tensor_ != NULL) {
-        Profiler::submit_main_thread_event(CompressionRelatedStartEvent);
-        //decompression_time_ -= get_time();
+    auto send_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
+        assert(tensor);
         DataType * grad = NULL;
         size_t num_elements_this_chunk = 0;
         get_vertex_tensor_grad_by_chunk(
-                pipeline_output_tensor_, chunk_id, 
-                grad, num_elements_this_chunk
+                tensor, chunk_id, grad, num_elements_this_chunk
                 );
         assert(grad);
         assert(num_elements_this_chunk);
-        //grad_decompressors_[chunk_id]->move_compressed_data_to_gpu();
-        grad_decompressors_[chunk_id]->decompress_data(grad);
-        //decompression_time_ += get_time();
-        //decompression_size_ += sizeof(DataType) * num_elements_this_chunk;
-        Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
+        checkNCCL(ncclSend(
+                    grad, sizeof(DataType) * num_elements_this_chunk,
+                    ncclInt8, remote_node, nccl_handle, 0
+                    ));
+    };
+    auto recv_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
+        assert(tensor);
+        DataType * grad = NULL;
+        size_t num_elements_this_chunk = 0;
+        get_vertex_tensor_grad_by_chunk(
+                tensor, chunk_id, grad, num_elements_this_chunk
+                );
+        assert(grad);
+        assert(num_elements_this_chunk);
+        checkNCCL(ncclRecv(
+                    grad, sizeof(DataType) * num_elements_this_chunk, 
+                    ncclInt8, remote_node, nccl_handle, 0
+                    ));
+    };
+
+    if (! is_last_stage()) {
+        // TODO: submit profiling event
+        int remote_node = node_id + 1;
+        recv_tensor_grad(
+                pipeline_output_tensor_, chunk_id, remote_node
+                );
+        if (global_shared_tensor_) {
+            recv_tensor_grad(
+                    global_shared_tensor_, chunk_id, remote_node
+                    );
+        }
     }
+
+    //if (! is_last_stage()) {
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
+    //    grad_decompressors_[task.chunk_id]->move_compressed_data_to_gpu_async();
+
+    //    if (global_shared_tensor_) {
+    //        int num_elements_per_vertex = global_shared_tensor_->dims[1];
+    //        VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
+    //        VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
+    //        size_t num_elements_cpu = num_elements_per_vertex * (right - left);
+    //        DataType * grad_cpu = global_shared_tensor_grad_ + left * num_elements_per_vertex;
+    //        DataType * grad_gpu = NULL;
+    //        size_t num_elements_gpu = 0;
+    //        get_vertex_tensor_grad_by_chunk(
+    //                global_shared_tensor_, task.chunk_id,
+    //                grad_gpu, num_elements_gpu
+    //                );
+    //        assert(grad_gpu);
+    //        assert(num_elements_cpu == num_elements_gpu);
+    //        checkCUDA(
+    //                cudaMemcpyAsync(
+    //                    grad_gpu, grad_cpu, sizeof(DataType) * num_elements_cpu, 
+    //                    cudaMemcpyHostToDevice
+    //                    )
+    //                );
+    //    }
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
+    //}
+
+
+    //// decompress the gradients if necessary
+    //if (pipeline_output_tensor_ != NULL) {
+    //    Profiler::submit_main_thread_event(CompressionRelatedStartEvent);
+    //    //decompression_time_ -= get_time();
+    //    DataType * grad = NULL;
+    //    size_t num_elements_this_chunk = 0;
+    //    get_vertex_tensor_grad_by_chunk(
+    //            pipeline_output_tensor_, chunk_id, 
+    //            grad, num_elements_this_chunk
+    //            );
+    //    assert(grad);
+    //    assert(num_elements_this_chunk);
+    //    //grad_decompressors_[chunk_id]->move_compressed_data_to_gpu();
+    //    grad_decompressors_[chunk_id]->decompress_data(grad);
+    //    //decompression_time_ += get_time();
+    //    //decompression_size_ += sizeof(DataType) * num_elements_this_chunk;
+    //    Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
+    //}
 
     Profiler::submit_main_thread_event(CoreBackwardComputationStartEvent);
 
@@ -2970,28 +3163,40 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     //compute_time_ += get_time();
     Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
 
-    if (stage_id > 0 && global_shared_tensor_) {
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
-        int num_elements_per_vertex = global_shared_tensor_->dims[1];
-        VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
-        VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
-        DataType * cpu_grad = global_shared_tensor_grad_ + left * num_elements_per_vertex;
-        DataType * gpu_grad = NULL;
-        size_t num_elements = 0;
-        get_vertex_tensor_grad_by_chunk(
-                global_shared_tensor_, task.chunk_id,
-                gpu_grad, num_elements
+    if (! is_first_stage()) {
+        int remote_node = node_id - 1;
+        send_tensor_grad(
+                pipeline_input_tensor_, chunk_id, remote_node
                 );
-        assert(gpu_grad);
-        assert(num_elements == (right - left) * num_elements_per_vertex);
-        checkCUDA(
-                cudaMemcpy(
-                    cpu_grad, gpu_grad, sizeof(DataType) * num_elements,
-                    cudaMemcpyDeviceToHost
-                    )
-                );
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
+        if (global_shared_tensor_) {
+            send_tensor_grad(
+                    global_shared_tensor_, chunk_id, remote_node
+                    );
+        }
     }
+
+    //if (stage_id > 0 && global_shared_tensor_) {
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
+    //    int num_elements_per_vertex = global_shared_tensor_->dims[1];
+    //    VertexId left = chunk_manager_->get_chunk_begin(task.chunk_id);
+    //    VertexId right = chunk_manager_->get_chunk_end(task.chunk_id);
+    //    DataType * cpu_grad = global_shared_tensor_grad_ + left * num_elements_per_vertex;
+    //    DataType * gpu_grad = NULL;
+    //    size_t num_elements = 0;
+    //    get_vertex_tensor_grad_by_chunk(
+    //            global_shared_tensor_, task.chunk_id,
+    //            gpu_grad, num_elements
+    //            );
+    //    assert(gpu_grad);
+    //    assert(num_elements == (right - left) * num_elements_per_vertex);
+    //    checkCUDA(
+    //            cudaMemcpy(
+    //                cpu_grad, gpu_grad, sizeof(DataType) * num_elements,
+    //                cudaMemcpyDeviceToHost
+    //                )
+    //            );
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
+    //}
 
     // scale the gradients for unbaised estimation
     Profiler::submit_main_thread_event(SideComputationStartEvent);
@@ -3027,41 +3232,41 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     }
     Profiler::submit_main_thread_event(SideComputationCompleteEvent);
 
-    // compress the gradients if necessary
-    if (pipeline_input_tensor_ != NULL) {
-        Profiler::submit_main_thread_event(CompressionRelatedStartEvent);
-        //compression_time_ -= get_time();
-        DataType * grad = NULL;
-        DataType * data = NULL;
-        size_t num_elements_this_chunk = 0;
-        get_vertex_tensor_grad_by_chunk(
-                pipeline_input_tensor_, chunk_id, 
-                grad, num_elements_this_chunk
-                );
-        assert(grad);
-        assert(num_elements_this_chunk);
-        get_vertex_tensor_data_by_chunk(
-                pipeline_input_tensor_, chunk_id,
-                data, num_elements_this_chunk
-                );
-        assert(data);
-        assert(num_elements_this_chunk);
-        // compress the gradients
-        zero_out_unnecessary_grad(grad, data, num_elements_this_chunk);
-        grad_compressors_[chunk_id]->compress_data(grad);
-        //compression_time_ += get_time();
-        //compression_size_ += sizeof(DataType) * num_elements_this_chunk;
-        Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
+    //// compress the gradients if necessary
+    //if (pipeline_input_tensor_ != NULL) {
+    //    Profiler::submit_main_thread_event(CompressionRelatedStartEvent);
+    //    //compression_time_ -= get_time();
+    //    DataType * grad = NULL;
+    //    DataType * data = NULL;
+    //    size_t num_elements_this_chunk = 0;
+    //    get_vertex_tensor_grad_by_chunk(
+    //            pipeline_input_tensor_, chunk_id, 
+    //            grad, num_elements_this_chunk
+    //            );
+    //    assert(grad);
+    //    assert(num_elements_this_chunk);
+    //    get_vertex_tensor_data_by_chunk(
+    //            pipeline_input_tensor_, chunk_id,
+    //            data, num_elements_this_chunk
+    //            );
+    //    assert(data);
+    //    assert(num_elements_this_chunk);
+    //    // compress the gradients
+    //    zero_out_unnecessary_grad(grad, data, num_elements_this_chunk);
+    //    grad_compressors_[chunk_id]->compress_data(grad);
+    //    //compression_time_ += get_time();
+    //    //compression_size_ += sizeof(DataType) * num_elements_this_chunk;
+    //    Profiler::submit_main_thread_event(CompressionRelatedCompleteEvent);
 
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
-        // move the gradients to CPU
-        grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
-        Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
-    }
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
+    //    // move the gradients to CPU
+    //    grad_compressors_[task.chunk_id]->move_compressed_data_to_cpu();
+    //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
+    //}
 
-    if (! is_last_stage()) {
-        grad_decompressors_[task.chunk_id]->release_gpu_buffers();
-    }
+    //if (! is_last_stage()) {
+    //    grad_decompressors_[task.chunk_id]->release_gpu_buffers();
+    //}
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::generate_backward_operator_mask(
@@ -3434,6 +3639,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     if (always_exact_inferences_) {
         evaluation_frequency_ = -1;
         fprintf(stderr, "WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 10 epoches.\n");
+    }
+
+    if (enable_compression_) {
+        fprintf(stderr, "Currently not support communication compression yet.\n");
+        exit(-1);
     }
 
     application_ = application;

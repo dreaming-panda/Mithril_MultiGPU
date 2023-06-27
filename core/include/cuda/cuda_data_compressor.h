@@ -106,6 +106,7 @@ class DataDecompressor {
         DataDecompressor(size_t data_size, SharedDataBuffer * shared_gpu_buff, SharedDataBuffer * shared_index_buff);
         ~DataDecompressor();
         void receive_compressed_data(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data); // invoked by ccommunication threads
+        void receive_compressed_data_directly_to_gpu(std::function<size_t(uint8_t * buff, size_t buff_size)> recv_data);
         void decompress_data(DataType * data); // invoked by the main thread
         void get_cpu_buff(uint8_t * &buff, size_t &buff_size);
         void move_compressed_data_to_gpu();

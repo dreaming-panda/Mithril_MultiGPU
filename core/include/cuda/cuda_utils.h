@@ -42,6 +42,15 @@
     }                                                                  \
 } while(0)
 
+#define checkNCCL(cmd) do {                         \
+    ncclResult_t r = cmd;                             \
+    if (r!= ncclSuccess) {                            \
+        printf("Failed, NCCL error %s:%d '%s'\n",             \
+                __FILE__,__LINE__,ncclGetErrorString(r));   \
+        exit(EXIT_FAILURE);                             \
+    }                                                 \
+} while(0)
+
 template <typename T>
 void AllocateCUDAMemory(T** out_ptr, size_t size, const char* file, const int line) {
     void* tmp_ptr = nullptr;
@@ -221,15 +230,6 @@ class CUDAVector {
     if( e != cudaSuccess ) {                          \
         printf("Failed: Cuda error %s:%d '%s'\n",             \
                 __FILE__,__LINE__,cudaGetErrorString(e));   \
-        exit(EXIT_FAILURE);                             \
-    }                                                 \
-} while(0)
-
-#define NCCLCHECK(cmd) do {                         \
-    ncclResult_t r = cmd;                             \
-    if (r!= ncclSuccess) {                            \
-        printf("Failed, NCCL error %s:%d '%s'\n",             \
-                __FILE__,__LINE__,ncclGetErrorString(r));   \
         exit(EXIT_FAILURE);                             \
     }                                                 \
 } while(0)

@@ -15,13 +15,16 @@ limitations under the License.
 */
 
 #include "distributed_sys.h"
+#include "cuda/cuda_utils.h"
 
 #include <mpi.h>
 #include <assert.h>
+#include <nccl.h>
 
 #include <iostream>
 #include <type_traits>
 #include <cuda_runtime.h>
+
 // DistributedSys
 static uint64_t getHostHash(const char* string) {
   // Based on DJB2a, result = result * 33 ^ char
@@ -55,8 +58,13 @@ DistributedSys::DistributedSys() {
     MPI_Get_processor_name(host_name, &host_name_len);
     host_name[host_name_len] = 0;
     printf("Initialized node %d on machine %s\n", node_id_, host_name);
-    cudaSetDevice(node_id_ % 4);
-  // cudaSetDevice(3);
+    cudaSetDevice(node_id_ % 4); // FIXME: with a strong assumption that each node has 4 gpus
+    // NCCL intialization
+    if (node_id_ == 0) {
+        ncclGetUniqueId(&nccl_id_);
+    }
+    MPI_Bcast((void*) &nccl_id_, sizeof(nccl_id_), MPI_CHAR, 0, MPI_COMM_WORLD);
+    checkNCCL(ncclCommInitRank(&nccl_handle_, num_nodes_, nccl_id_, node_id_));
 }
 
 void DistributedSys::init_distributed_sys() {
@@ -66,6 +74,7 @@ void DistributedSys::init_distributed_sys() {
 
 void DistributedSys::finalize_distributed_sys() {
     if (instance_ != nullptr) {
+        checkNCCL(ncclCommDestroy(instance_->nccl_handle_));
         MPI_Barrier(MPI_COMM_WORLD);
 	    MPI_Finalize();
     }
