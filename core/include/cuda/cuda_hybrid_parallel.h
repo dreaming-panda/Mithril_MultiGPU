@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <utility>
+#include <random>
 
 #include "engine.h"
 #include "application.h"
@@ -369,28 +370,23 @@ class CUDAPIPBackwardTaskCommitter: public CUDAAbstractTaskCommitter<CUDAPIPBack
 
 class CUDAAbstractPIPScheduler {
     protected:
-        // the dispatchers
-        CUDAPIPForwardTaskDispatcher * forward_task_dispatcher_;
-        CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher_;
+        //// the dispatchers
+        //CUDAPIPForwardTaskDispatcher * forward_task_dispatcher_;
+        //CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher_;
 
-        // the committers
-        CUDAPIPForwardTaskCommitter * forward_task_committer_;
-        CUDAPIPBackwardTaskCommitter * backward_task_committer_;
+        //// the committers
+        //CUDAPIPForwardTaskCommitter * forward_task_committer_;
+        //CUDAPIPBackwardTaskCommitter * backward_task_committer_;
 
         // the executione engine
         DistributedPIPHybridParallelExecutionEngineGPU * engine_;
 
-        // the barrier used to sync. with help threads
-        pthread_barrier_t * barrier_;
+        //// the barrier used to sync. with help threads
+        //pthread_barrier_t * barrier_;
 
     public:
         CUDAAbstractPIPScheduler(
-                DistributedPIPHybridParallelExecutionEngineGPU * engine,
-                CUDAPIPForwardTaskDispatcher * forward_task_dispatcher,
-                CUDAPIPForwardTaskCommitter * forward_task_committer,
-                CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher,
-                CUDAPIPBackwardTaskCommitter * backward_task_committer,
-                pthread_barrier_t * barrier
+                DistributedPIPHybridParallelExecutionEngineGPU * engine
                 );
         ~CUDAAbstractPIPScheduler();
         virtual void schedule_task() = 0;
@@ -399,12 +395,7 @@ class CUDAAbstractPIPScheduler {
 class CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler: public CUDAAbstractPIPScheduler {
     public:
         CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(
-                DistributedPIPHybridParallelExecutionEngineGPU * engine,
-                CUDAPIPForwardTaskDispatcher * forward_task_dispatcher,
-                CUDAPIPForwardTaskCommitter * forward_task_committer,
-                CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher,
-                CUDAPIPBackwardTaskCommitter * backward_task_committer,
-                pthread_barrier_t * barrier
+                DistributedPIPHybridParallelExecutionEngineGPU * engine
                 );
         ~CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler();
         void schedule_task();
@@ -1154,13 +1145,14 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue_;
 
-        // the threads responsible for communication and computation
-        pthread_barrier_t barrier_;
-        CUDAPIPForwardTaskDispatcher * forward_task_dispatcher_;
-        CUDAPIPForwardTaskCommitter * forward_task_committer_;
-        CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher_;
-        CUDAPIPBackwardTaskCommitter * backward_task_committer_;
-        int num_helper_threads_;
+        //// the threads responsible for communication and computation
+        //pthread_barrier_t barrier_;
+        //CUDAPIPForwardTaskDispatcher * forward_task_dispatcher_;
+        //CUDAPIPForwardTaskCommitter * forward_task_committer_;
+        //CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher_;
+        //CUDAPIPBackwardTaskCommitter * backward_task_committer_;
+        //int num_helper_threads_;
+
         //masks
         int * local_training_mask_;
         int * local_gpu_training_mask_;
@@ -1322,6 +1314,20 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         void run_exact_inference(double &train_acc, double &valid_acc, double &test_acc,
                 const std::map<WeightOperator*, DataType*>& weight_data);
+
+        // the chunk ordering generator
+        std::default_random_engine * training_random_gen_;
+        std::default_random_engine * inference_random_gen_;
+        int num_local_chunks_;
+        int * training_chunk_ordering_;
+        int * inference_chunk_ordering_;
+        MPI_Comm mpi_group_same_way_;
+        void init_chunk_ordering_generator();
+        void finalize_chunk_ordering_generator();
+        void gen_training_epoch_chunk_ordering();
+        void get_training_epoch_chunk_ordering(int * chunks, int * num_chunks);
+        void gen_inference_epoch_chunk_ordering();
+        void get_inference_epoch_chunk_ordering(int * chunks, int * num_chunks );
 
         friend class CUDAPIPForwardTaskDispatcher;
         friend class CUDAPIPBackwardTaskDispatcher;

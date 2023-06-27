@@ -1,4 +1,6 @@
 #include <algorithm>
+
+finalize_chunk_ordering_generator();
 #include <random>
 
 #include <math.h>
@@ -870,7 +872,7 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
 
     usleep(1e6);
     printf("Node %d, Layer-level comm throughput (act): %.3f GBps\n",
-            node_id, comm * 1. / comm_time / 1024. / 1024. / 1024.);
+            node_id, comm * 1. / comm_time / 1e9);
 }
 
 CUDAPIPBackwardTaskDispatcher::CUDAPIPBackwardTaskDispatcher(
@@ -1051,7 +1053,7 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
 
     usleep(1e6);
     printf("Node %d, Layer-level comm throughput (grad): %.3f GBps\n",
-            node_id, comm * 1. / comm_time / 1024. / 1024. / 1024.);
+            node_id, comm * 1. / comm_time / 1e9);
 }
 
 CUDAPIPForwardTaskCommitter::CUDAPIPForwardTaskCommitter(
@@ -1366,20 +1368,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int stage_id = engine_->get_stage_id();
 
-    LockFreeQueue<CUDAPIPForwardTask> * forward_task_dispatcher_queue_ = forward_task_dispatcher_->get_task_queue();
-    LockFreeQueue<CUDAPIPForwardTask> * forward_task_committer_queue_ = forward_task_committer_->get_task_queue();
-    LockFreeQueue<CUDAPIPBackwardTask> * backward_task_dispatcher_queue_ = backward_task_dispatcher_->get_task_queue();
-    LockFreeQueue<CUDAPIPBackwardTask> * backward_task_committer_queue_ = backward_task_committer_->get_task_queue();
+    //LockFreeQueue<CUDAPIPForwardTask> * forward_task_dispatcher_queue_ = forward_task_dispatcher_->get_task_queue();
+    //LockFreeQueue<CUDAPIPForwardTask> * forward_task_committer_queue_ = forward_task_committer_->get_task_queue();
+    //LockFreeQueue<CUDAPIPBackwardTask> * backward_task_dispatcher_queue_ = backward_task_dispatcher_->get_task_queue();
+    //LockFreeQueue<CUDAPIPBackwardTask> * backward_task_committer_queue_ = backward_task_committer_->get_task_queue();
 
-    assert(forward_task_dispatcher_queue_ != NULL);
-    assert(forward_task_committer_queue_ != NULL);
-    assert(backward_task_dispatcher_queue_ != NULL);
-    assert(backward_task_committer_queue_ != NULL);
+    //assert(forward_task_dispatcher_queue_ != NULL);
+    //assert(forward_task_committer_queue_ != NULL);
+    //assert(backward_task_dispatcher_queue_ != NULL);
+    //assert(backward_task_committer_queue_ != NULL);
 
-    forward_task_dispatcher_->start_task_dispatching();
-    forward_task_committer_->start_task_committing();
-    backward_task_dispatcher_->start_task_dispatching();
-    backward_task_committer_->start_task_committing();
+    //forward_task_dispatcher_->start_task_dispatching();
+    //forward_task_committer_->start_task_committing();
+    //backward_task_dispatcher_->start_task_dispatching();
+    //backward_task_committer_->start_task_committing();
 
     const std::vector<int>& local_chunk_ids = engine_->get_local_chunk_ids();
     int num_local_chunks = local_chunk_ids.size();
@@ -1387,11 +1389,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     int num_epoch = engine_->get_num_epoch();
     VertexId num_vertices = engine_->graph_structure_->get_num_global_vertices();
 
-    LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(
-            num_local_chunks * (num_epoch + engine_->total_num_inference_runs_));
-    LockFreeQueue<CUDAPIPBackwardTask> * grad_gpu2cpu_queue = new LockFreeQueue<CUDAPIPBackwardTask>(
-            num_local_chunks * (num_epoch + engine_->total_num_inference_runs_));
-    engine_->act_gpu2cpu_queue_ = act_gpu2cpu_queue;
+    //LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue = new LockFreeQueue<CUDAPIPForwardTask>(
+    //        num_local_chunks * (num_epoch + engine_->total_num_inference_runs_));
+    //LockFreeQueue<CUDAPIPBackwardTask> * grad_gpu2cpu_queue = new LockFreeQueue<CUDAPIPBackwardTask>(
+    //        num_local_chunks * (num_epoch + engine_->total_num_inference_runs_));
+    //engine_->act_gpu2cpu_queue_ = act_gpu2cpu_queue;
 
     // task scheduling 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1477,9 +1479,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         //wait_for_other_gpus_time -= get_time();
         MPI_Barrier(MPI_COMM_WORLD);
         //wait_for_other_gpus_time += get_time();
-        pthread_barrier_wait(barrier_);
-        MPI_Barrier(MPI_COMM_WORLD);
-        pthread_barrier_wait(barrier_);
+        //pthread_barrier_wait(barrier_);
+        //MPI_Barrier(MPI_COMM_WORLD);
+        //pthread_barrier_wait(barrier_);
         double start_time = get_time();
 
         Profiler::submit_main_thread_event(SideComputationStartEvent);
@@ -1789,16 +1791,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     checkCUDA(cudaMemGetInfo(&free_mem_size, &total_mem_size));
     printf("Node %d, GPU memory consumption: %.3f GB\n", node_id, (total_mem_size - free_mem_size) / 1024. / 1024. / 1024.);
 
-    //printf("Node %d, compression time: %.3fs, compression size: %.3fGB, throughput: %.3fGBps\n", 
-    //        node_id, engine_->compression_time_, engine_->compression_size_ / 1024. / 1024. / 1024.,
-    //        engine_->compression_size_ / engine_->compression_time_ / 1024. / 1024. / 1024.);
-    //printf("Node %d, decompression time: %.3fs, compression size: %.3fGB, throughput: %.3fGBps\n", 
-    //        node_id, engine_->decompression_time_, engine_->compression_size_ / 1024. / 1024. / 1024.,
-    //        engine_->decompression_size_ / engine_->decompression_time_ / 1024. / 1024. / 1024.);
-    //printf("Node %d, pure compute time: %.3f s, total compute time: %.3f s\n", 
-    //        node_id, engine_->compute_time_, engine_->compute_time_ + engine_->compression_time_ + engine_->decompression_time_);
-    //printf("Node %d, wait_for_task_time: %.3f s, wait_for_other_gpus_time: %.3f s\n",
-    //        node_id, wait_for_task_time, wait_for_other_gpus_time);
     printf("------------------------node id %d,  per-epoch time: %f s---------------\n", 
             node_id, all_epoches_time / (num_epoch - warmup_epoches));
 
@@ -3701,29 +3693,31 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         assert(global_shared_tensor_grad_);
     }
 
-    // create the helper threads 
-    printf("*** Node %d, starting the helper threads...\n", node_id);
-    int num_helper_threads_ = 4; 
-    assert(pthread_barrier_init(&barrier_, NULL, num_helper_threads_ + 1) == 0);
-    int num_local_chunks = local_chunk_ids_.size();
-    int total_num_forwarding_tasks = (num_epoch + total_num_inference_runs_) * num_local_chunks;
-    int total_num_backwarding_tasks = (num_epoch + total_num_inference_runs_) * num_local_chunks;
+    //// create the helper threads 
+    //printf("*** Node %d, starting the helper threads...\n", node_id);
+    //int num_helper_threads_ = 0; 
+    //assert(pthread_barrier_init(&barrier_, NULL, num_helper_threads_ + 1) == 0);
+    //int num_local_chunks = local_chunk_ids_.size();
+    //int total_num_forwarding_tasks = (num_epoch + total_num_inference_runs_) * num_local_chunks;
+    //int total_num_backwarding_tasks = (num_epoch + total_num_inference_runs_) * num_local_chunks;
+
+    init_chunk_ordering_generator();
  
-    forward_task_dispatcher_ = new CUDAPIPForwardTaskDispatcher(total_num_forwarding_tasks, &barrier_);
-    forward_task_committer_ = new CUDAPIPForwardTaskCommitter(total_num_forwarding_tasks, &barrier_);
+    //forward_task_dispatcher_ = new CUDAPIPForwardTaskDispatcher(total_num_forwarding_tasks, &barrier_);
+    //forward_task_committer_ = new CUDAPIPForwardTaskCommitter(total_num_forwarding_tasks, &barrier_);
 
-    backward_task_dispatcher_ = new CUDAPIPBackwardTaskDispatcher(total_num_backwarding_tasks, &barrier_);
-    backward_task_committer_ = new CUDAPIPBackwardTaskCommitter(total_num_backwarding_tasks, &barrier_);
+    //backward_task_dispatcher_ = new CUDAPIPBackwardTaskDispatcher(total_num_backwarding_tasks, &barrier_);
+    //backward_task_committer_ = new CUDAPIPBackwardTaskCommitter(total_num_backwarding_tasks, &barrier_);
 
-    assert(forward_task_dispatcher_ != NULL);
-    assert(forward_task_committer_ != NULL);
-    assert(backward_task_dispatcher_ != NULL);
-    assert(backward_task_committer_ != NULL);
+    //assert(forward_task_dispatcher_ != NULL);
+    //assert(forward_task_committer_ != NULL);
+    //assert(backward_task_dispatcher_ != NULL);
+    //assert(backward_task_committer_ != NULL);
 
-    forward_task_dispatcher_->set_engine(this);
-    forward_task_committer_->set_engine(this);
-    backward_task_dispatcher_->set_engine(this);
-    backward_task_committer_->set_engine(this);
+    //forward_task_dispatcher_->set_engine(this);
+    //forward_task_committer_->set_engine(this);
+    //backward_task_dispatcher_->set_engine(this);
+    //backward_task_committer_->set_engine(this);
 
     // some necessary initialization
 
@@ -3784,15 +3778,14 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     assert(graph_data_propagator_);
 
     // start task scheduling
-    scheduler_ = new CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(
-            this, forward_task_dispatcher_, forward_task_committer_,
-            backward_task_dispatcher_, backward_task_committer_, &barrier_
-            );
+    scheduler_ = new CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler(this);
     assert(scheduler_ != NULL);
     scheduler_->schedule_task();
     delete scheduler_;
 
     release_resources();
+
+    finalize_chunk_ordering_generator();
 
     delete graph_data_propagator_;
 
@@ -3839,12 +3832,12 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
         checkCUDA(cudaFreeHost(global_shared_tensor_grad_));
     }
 
-    // destroy the threads
-    delete forward_task_dispatcher_;
-    delete forward_task_committer_;
-    delete backward_task_dispatcher_;
-    delete backward_task_committer_;
-    assert(pthread_barrier_destroy(&barrier_) == 0);
+    //// destroy the threads
+    //delete forward_task_dispatcher_;
+    //delete forward_task_committer_;
+    //delete backward_task_dispatcher_;
+    //delete backward_task_committer_;
+    //assert(pthread_barrier_destroy(&barrier_) == 0);
 
     delete op_ten_manager_;
     delete vid_translation_;
@@ -4087,6 +4080,86 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
     MPI_Bcast(&train_acc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&valid_acc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&test_acc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::init_chunk_ordering_generator() {
+    int random_seed = RandomNumberManager::get_random_seed();
+    training_random_gen_ = new std::default_random_engine(random_seed);
+    inference_random_gen_ = new std::default_random_engine(random_seed + 1);
+    assert(training_random_gen_ && inference_random_gen_);
+    const std::vector<int> &local_chunk_ids_vec = get_local_chunk_ids();
+    num_local_chunks_ = local_chunk_ids_vec.size();
+    for (int i = 0; i < num_local_chunks_; ++ i) {
+        training_chunk_ordering_[i] = local_chunk_ids_vec[i];
+        inference_chunk_ordering_[i] = local_chunk_ids_vec[i];
+    }
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int way_id = get_dp_way_id();
+    MPI_Comm_split(MPI_COMM_WORLD, way_id, node_id, &mpi_group_same_way_);
+    int max_num_local_chunks = 0;
+    MPI_Allreduce(
+            &num_local_chunks_, &max_num_local_chunks, 1, 
+            MPI_INT, MPI_SUM, mpi_group_same_way_
+            );
+    assert(max_num_local_chunks == num_local_chunks_);
+
+    gen_training_epoch_chunk_ordering();
+    gen_inference_epoch_chunk_ordering();
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::finalize_chunk_ordering_generator() {
+    delete training_random_gen_;
+    delete inference_random_gen_;
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::gen_training_epoch_chunk_ordering() {
+    std::shuffle(
+            training_chunk_ordering_,
+            training_chunk_ordering_ + num_local_chunks_,
+            *training_random_gen_
+            );
+    // make sure that the data seen by all processes in the same way is consistent
+    int max_value[num_local_chunks_];
+    MPI_Allreduce(
+            training_chunk_ordering_, max_value, num_local_chunks_,
+            MPI_INT, MPI_SUM, mpi_group_same_way_
+            );
+    for (int i = 0; i < num_local_chunks_; ++ i) {
+        assert(training_chunk_ordering_[i] == max_value[i]);
+    }
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::get_training_epoch_chunk_ordering(int * chunks, int * num_chunks) {
+    *num_chunks = num_local_chunks_;
+    memcpy(
+            chunks, training_chunk_ordering_, 
+            sizeof(int) * num_local_chunks_
+            );
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::gen_inference_epoch_chunk_ordering() {
+    std::shuffle(
+            inference_chunk_ordering_,
+            inference_chunk_ordering_ + num_local_chunks_,
+            *inference_random_gen_
+            );
+    // make sure that the data seen by all processes in the same way is consistent
+    int max_value[num_local_chunks_];
+    MPI_Allreduce(
+            inference_chunk_ordering_, max_value, num_local_chunks_,
+            MPI_INT, MPI_SUM, mpi_group_same_way_
+            );
+    for (int i = 0; i < num_local_chunks_; ++ i) {
+        assert(inference_chunk_ordering_[i] == max_value[i]);
+    }
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::get_inference_epoch_chunk_ordering(int * chunks, int * num_chunks) {
+    *num_chunks = num_local_chunks_;
+    memcpy(
+            chunks, inference_chunk_ordering_, 
+            sizeof(int) * num_local_chunks_
+          );
 }
 
 
