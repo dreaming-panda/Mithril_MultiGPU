@@ -4299,6 +4299,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::init_chunk_ordering_generat
     assert(training_random_gen_ && inference_random_gen_);
     const std::vector<int> &local_chunk_ids_vec = get_local_chunk_ids();
     num_local_chunks_ = local_chunk_ids_vec.size();
+    training_chunk_ordering_ = new int [num_local_chunks_];
+    inference_chunk_ordering_ = new int [num_local_chunks_];
+    assert(training_chunk_ordering_ && inference_chunk_ordering_);
     for (int i = 0; i < num_local_chunks_; ++ i) {
         training_chunk_ordering_[i] = local_chunk_ids_vec[i];
         inference_chunk_ordering_[i] = local_chunk_ids_vec[i];
@@ -4309,7 +4312,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::init_chunk_ordering_generat
     int max_num_local_chunks = 0;
     MPI_Allreduce(
             &num_local_chunks_, &max_num_local_chunks, 1, 
-            MPI_INT, MPI_SUM, mpi_group_same_way_
+            MPI_INT, MPI_MAX, mpi_group_same_way_
             );
     assert(max_num_local_chunks == num_local_chunks_);
 
@@ -4320,6 +4323,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::init_chunk_ordering_generat
 void DistributedPIPHybridParallelExecutionEngineGPU::finalize_chunk_ordering_generator() {
     delete training_random_gen_;
     delete inference_random_gen_;
+    delete [] training_chunk_ordering_;
+    delete [] inference_chunk_ordering_;
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::gen_training_epoch_chunk_ordering() {
@@ -4332,7 +4337,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_training_epoch_chunk_or
     int max_value[num_local_chunks_];
     MPI_Allreduce(
             training_chunk_ordering_, max_value, num_local_chunks_,
-            MPI_INT, MPI_SUM, mpi_group_same_way_
+            MPI_INT, MPI_MAX, mpi_group_same_way_
             );
     for (int i = 0; i < num_local_chunks_; ++ i) {
         assert(training_chunk_ordering_[i] == max_value[i]);
@@ -4357,7 +4362,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_inference_epoch_chunk_o
     int max_value[num_local_chunks_];
     MPI_Allreduce(
             inference_chunk_ordering_, max_value, num_local_chunks_,
-            MPI_INT, MPI_SUM, mpi_group_same_way_
+            MPI_INT, MPI_MAX, mpi_group_same_way_
             );
     for (int i = 0; i < num_local_chunks_; ++ i) {
         assert(inference_chunk_ordering_[i] == max_value[i]);

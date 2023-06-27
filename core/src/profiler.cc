@@ -44,7 +44,7 @@ void Profiler::end_profiling() {
 }
 
 void Profiler::submit_main_thread_event(ProfilerEventType type) {
-    checkCUDA(cudaStreamSynchronize(0));
+    //checkCUDA(cudaStreamSynchronize(0));
     main_thread_events.push_back(ProfilerEvent(type, get_time()));
 }
 
