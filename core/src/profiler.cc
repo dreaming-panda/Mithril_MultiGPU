@@ -44,7 +44,7 @@ void Profiler::end_profiling() {
 }
 
 void Profiler::submit_main_thread_event(ProfilerEventType type) {
-    //checkCUDA(cudaStreamSynchronize(0));
+    checkCUDA(cudaStreamSynchronize(0));
     main_thread_events.push_back(ProfilerEvent(type, get_time()));
 }
 
@@ -179,6 +179,12 @@ void Profiler::breakdown_analysis() {
         } else if (event_type == GraphNetworkCommunicationStartEvent) {
             assert(next_event_type == GraphNetworkCommunicationCompleteEvent);
             graph_comm_net_time += interval;
+        } else if (event_type == LayerNCCLCommunicationStartEvent) {
+            assert(next_event_type == LayerNCCLCommunicationCompleteEvent);
+            layer_comm_net_time += interval;
+        } else if (event_type == AdjacentGPUSyncStartEvent) {
+            assert(next_event_type == AdjacentGPUSyncCompleteEvent);
+            bubble_time += interval;
         } else {
             fprintf(stderr, "ERROR: Unsupported event type!\n");
             exit(-1);
@@ -193,7 +199,7 @@ void Profiler::breakdown_analysis() {
     breakdown_manager.add_breakdown("GraphCommNetwork", graph_comm_net_time);
     breakdown_manager.add_breakdown("GraphCommGPUCPU", graph_comm_pcie_time);
     breakdown_manager.add_breakdown("LayerCommNetwork", layer_comm_net_time);
-    breakdown_manager.add_breakdown("LayerCommGPUCPU", layer_comm_pcie_time);
+    //breakdown_manager.add_breakdown("LayerCommGPUCPU", layer_comm_pcie_time);
     breakdown_manager.add_breakdown("Bubble", bubble_time);
     breakdown_manager.add_breakdown("Compute", compute_time);
     breakdown_manager.add_breakdown("Compression", compression_time);

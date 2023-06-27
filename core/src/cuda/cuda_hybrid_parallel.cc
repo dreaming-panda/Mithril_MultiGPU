@@ -1515,8 +1515,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         int forward_chunks[num_local_chunks];
         int num_forward_chunks = -1;
         if (in_training_mode) {
+            engine_->gen_training_epoch_chunk_ordering();
             engine_->get_training_epoch_chunk_ordering(forward_chunks, &num_forward_chunks);
         } else {
+            engine_->gen_inference_epoch_chunk_ordering();
             engine_->get_inference_epoch_chunk_ordering(forward_chunks, &num_forward_chunks);
         }
         assert(num_forward_chunks > 0);
@@ -2755,9 +2757,32 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                     ));
     };
 
+    auto send_one_byte = [&](int remote_node) {
+        uint8_t test = 0;
+        MPI_Send(
+                &test, 1, MPI_CHAR, remote_node,
+                ForwardActivationPassing, MPI_COMM_WORLD
+                );
+    };
+
+    auto recv_one_byte = [&](int remote_node) {
+        uint8_t test = 0;
+        MPI_Status status;
+        MPI_Recv(
+                &test, 1, MPI_CHAR, remote_node, 
+                ForwardActivationPassing, MPI_COMM_WORLD,
+                &status
+                );
+    };
+
     if (! is_first_stage()) {
         int remote_node = node_id - 1;
-        // TODO: submit profiler event
+
+        Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+        recv_one_byte(remote_node);
+        Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+
+        Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
         recv_tensor_data(
                 pipeline_input_tensor_, chunk_id, remote_node
                 );
@@ -2766,6 +2791,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                     global_shared_tensor_, chunk_id, remote_node
                     );
         }
+        Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
     }
 
     //if (enable_compression_) {
@@ -2878,6 +2904,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
 
     if (! is_last_stage()) {
         int remote_node = node_id + 1;
+
+        Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+        send_one_byte(remote_node);
+        Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+
+        Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
         send_tensor_data(
                 pipeline_output_tensor_, chunk_id, remote_node
                 );
@@ -2886,6 +2918,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
                     global_shared_tensor_, chunk_id, remote_node
                     );
         }
+        Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
     }
 
 
@@ -2944,6 +2977,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                     ncclInt8, remote_node, nccl_handle, 0
                     ));
     };
+
     auto recv_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
         assert(tensor);
         DataType * grad = NULL;
@@ -2959,9 +2993,32 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                     ));
     };
 
+    auto send_one_byte = [&](int remote_node) {
+        uint8_t test = 0;
+        MPI_Send(
+                &test, 1, MPI_CHAR, remote_node,
+                BackwardGradientPassing, MPI_COMM_WORLD
+                );
+    };
+
+    auto recv_one_byte = [&](int remote_node) {
+        uint8_t test = 0;
+        MPI_Status status;
+        MPI_Recv(
+                &test, 1, MPI_CHAR, remote_node, 
+                BackwardGradientPassing, MPI_COMM_WORLD,
+                &status
+                );
+    };
+
     if (! is_last_stage()) {
-        // TODO: submit profiling event
         int remote_node = node_id + 1;
+
+        Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+        recv_one_byte(remote_node);
+        Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+
+        Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
         recv_tensor_grad(
                 pipeline_output_tensor_, chunk_id, remote_node
                 );
@@ -2970,6 +3027,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                     global_shared_tensor_, chunk_id, remote_node
                     );
         }
+        Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
     }
 
     //if (! is_last_stage()) {
@@ -3165,6 +3223,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
 
     if (! is_first_stage()) {
         int remote_node = node_id - 1;
+
+        Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+        send_one_byte(remote_node);
+        Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+
+        Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
         send_tensor_grad(
                 pipeline_input_tensor_, chunk_id, remote_node
                 );
@@ -3173,6 +3237,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
                     global_shared_tensor_, chunk_id, remote_node
                     );
         }
+        Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
     }
 
     //if (stage_id > 0 && global_shared_tensor_) {
@@ -4295,7 +4360,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
 void DistributedPIPHybridParallelExecutionEngineGPU::init_chunk_ordering_generator() {
     int random_seed = RandomNumberManager::get_random_seed();
     training_random_gen_ = new std::default_random_engine(random_seed);
-    inference_random_gen_ = new std::default_random_engine(random_seed + 1);
+    inference_random_gen_ = new std::default_random_engine(random_seed);
     assert(training_random_gen_ && inference_random_gen_);
     const std::vector<int> &local_chunk_ids_vec = get_local_chunk_ids();
     num_local_chunks_ = local_chunk_ids_vec.size();
@@ -4315,9 +4380,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::init_chunk_ordering_generat
             MPI_INT, MPI_MAX, mpi_group_same_way_
             );
     assert(max_num_local_chunks == num_local_chunks_);
-
     gen_training_epoch_chunk_ordering();
-    gen_inference_epoch_chunk_ordering();
+    //gen_inference_epoch_chunk_ordering();
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::finalize_chunk_ordering_generator() {

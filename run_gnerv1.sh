@@ -17,11 +17,11 @@ decay=1e-5
 chunks=16
 dropout=0.5
 seed=5
-model=gcnii
+model=gcn
 eval_freq=10
 exact_inference=0
 num_dp_ways=1
 enable_compression=0
 
-mpirun -n $num_gpus --map-by node:PE=8 -host gnerv1:4,gnerv2:4 ./applications/async_multi_gpus/$model --graph $dataset_path/partitioned_graphs/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression
+mpirun -n $num_gpus --map-by node:PE=8 --host gnerv1:4,gnerv2:4 ./applications/async_multi_gpus/$model --graph $dataset_path/partitioned_graphs/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression
 

@@ -177,7 +177,7 @@ int main(int argc, char ** argv) {
 
     if (! node_id) {
         printf("The graph dataset locates at %s\n", graph_path.c_str());
-        printf("The number of GCNII layers: %d\n", num_layers);
+        printf("The number of GCN layers: %d\n", num_layers);
         printf("The number of hidden units: %d\n", num_hidden_units);
         printf("The number of training epoches: %d\n", num_epoch);
         printf("Learning rate: %.6f\n", learning_rate);
