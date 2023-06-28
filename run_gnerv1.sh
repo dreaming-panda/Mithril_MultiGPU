@@ -7,7 +7,7 @@ cd build
 make -j
 
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets
-num_gpus=4
+num_gpus=8
 num_layers=8
 hunits=128
 lr=1e-3

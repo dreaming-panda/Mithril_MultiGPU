@@ -1358,6 +1358,7 @@ CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::~CUDAPIP1Forward1BackwardPri
 
 void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     ncclComm_t nccl_handle = DistributedSys::get_instance()->get_nccl_handle();
+    double layer_comm = 0;
 
     // a few useful helper threads
     auto send_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
@@ -1373,6 +1374,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     data, sizeof(DataType) * num_elements_this_chunk, 
                     ncclInt8, remote_node, nccl_handle, 0
                     ));
+        layer_comm += sizeof(DataType) * num_elements_this_chunk;
     };
 
     auto recv_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
@@ -1403,6 +1405,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     grad, sizeof(DataType) * num_elements_this_chunk,
                     ncclInt8, remote_node, nccl_handle, 0
                     ));
+        layer_comm += sizeof(DataType) * num_elements_this_chunk;
     };
 
     auto recv_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
@@ -2102,7 +2105,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     //move_act_gpu2cpu_thread.join();
     //move_grad_gpu2cpu_thread.join();
 
-    double layer_comm = 0; // TODO
     //double layer_comm = forward_task_dispatcher_->get_comm() 
     //    + backward_task_dispatcher_->get_comm();
     double avg_layer_comm;
