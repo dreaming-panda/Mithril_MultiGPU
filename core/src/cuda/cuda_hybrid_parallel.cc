@@ -1357,6 +1357,89 @@ CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::~CUDAPIP1Forward1BackwardPri
 }
 
 void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
+    ncclComm_t nccl_handle = DistributedSys::get_instance()->get_nccl_handle();
+
+    // a few useful helper threads
+    auto send_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
+        assert(tensor);
+        DataType * data = NULL;
+        size_t num_elements_this_chunk = 0;
+        engine_->get_vertex_tensor_data_by_chunk(
+                tensor, chunk_id, data, num_elements_this_chunk
+                );
+        assert(data);
+        assert(num_elements_this_chunk);
+        checkNCCL(ncclSend(
+                    data, sizeof(DataType) * num_elements_this_chunk, 
+                    ncclInt8, remote_node, nccl_handle, 0
+                    ));
+    };
+
+    auto recv_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
+        assert(tensor);
+        DataType * data = NULL;
+        size_t num_elements_this_chunk = 0;
+        engine_->get_vertex_tensor_data_by_chunk(
+                tensor, chunk_id, data, num_elements_this_chunk
+                );
+        assert(data);
+        assert(num_elements_this_chunk);
+        checkNCCL(ncclRecv(
+                    data, sizeof(DataType) * num_elements_this_chunk, 
+                    ncclInt8, remote_node, nccl_handle, 0
+                    ));
+    };
+
+    auto send_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
+        assert(tensor);
+        DataType * grad = NULL;
+        size_t num_elements_this_chunk = 0;
+        engine_->get_vertex_tensor_grad_by_chunk(
+                tensor, chunk_id, grad, num_elements_this_chunk
+                );
+        assert(grad);
+        assert(num_elements_this_chunk);
+        checkNCCL(ncclSend(
+                    grad, sizeof(DataType) * num_elements_this_chunk,
+                    ncclInt8, remote_node, nccl_handle, 0
+                    ));
+    };
+
+    auto recv_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
+        assert(tensor);
+        DataType * grad = NULL;
+        size_t num_elements_this_chunk = 0;
+        engine_->get_vertex_tensor_grad_by_chunk(
+                tensor, chunk_id, grad, num_elements_this_chunk
+                );
+        assert(grad);
+        assert(num_elements_this_chunk);
+        checkNCCL(ncclRecv(
+                    grad, sizeof(DataType) * num_elements_this_chunk, 
+                    ncclInt8, remote_node, nccl_handle, 0
+                    ));
+    };
+
+
+    auto send_one_byte = [&](int remote_node) {
+        uint8_t test = 0;
+        MPI_Send(
+                &test, 1, MPI_CHAR, remote_node,
+                ForwardActivationPassing, MPI_COMM_WORLD
+                );
+    };
+
+    auto recv_one_byte = [&](int remote_node) {
+        uint8_t test = 0;
+        MPI_Status status;
+        MPI_Recv(
+                &test, 1, MPI_CHAR, remote_node, 
+                ForwardActivationPassing, MPI_COMM_WORLD,
+                &status
+                );
+    };
+
+
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int stage_id = engine_->get_stage_id();
@@ -1538,7 +1621,79 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         time_elapsed, node_id, task.chunk_id);
             }
 #endif
+
+            // using this to distinguish the pipeline bubble cost 
+            // with the communication cost
+            Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+            if (! engine_->is_first_stage()) {
+                // the previous stage is ready to send the data
+                recv_one_byte(node_id - 1);
+            }
+            if (! engine_->is_last_stage() && c_i > 0) {
+                // tell the next stage that the data is ready to send
+                send_one_byte(node_id + 1);
+            }
+            Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+
+            Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+            // sync the pipeline-boundary tensor
+            // using NCCL group to parallelize send and recv
+            assert(engine_->pipeline_input_tensor_ != engine_->pipeline_output_tensor_);
+            checkNCCL(ncclGroupStart());
+            if (! engine_->is_first_stage()) {
+                // receive the data of the current chunk from a previous stage
+                recv_tensor_data(
+                        engine_->pipeline_input_tensor_, forward_chunks[c_i], node_id - 1
+                        );
+            }
+            if (! engine_->is_last_stage() && c_i > 0) {
+                // send the data of the previous chunk to a next stage 
+                send_tensor_data(
+                        engine_->pipeline_output_tensor_, forward_chunks[c_i - 1], node_id + 1
+                        );
+            }
+            checkNCCL(ncclGroupEnd());
+            // sync the globally shared tensor
+            if (engine_->global_shared_tensor_ != NULL) {
+                checkNCCL(ncclGroupStart());
+                if (! engine_->is_first_stage()) {
+                    // receive the data of the current chunk from a previous stage
+                    recv_tensor_data(
+                            engine_->global_shared_tensor_, forward_chunks[c_i], node_id - 1
+                            );
+                }
+                if (! engine_->is_last_stage() && c_i > 0) {
+                    // send the data of the previous chunk to a next stage 
+                    send_tensor_data(
+                            engine_->global_shared_tensor_, forward_chunks[c_i - 1], node_id + 1
+                            );
+                }
+                checkNCCL(ncclGroupEnd());
+            }
+            Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+
+            // do the computation
             engine_->perform_forward_task(task);
+
+            // the last send cannot be fused with a receive 
+            if (! engine_->is_last_stage() && c_i == num_forward_chunks - 1) {
+                Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+                // tell the next stage that the data is ready to send
+                send_one_byte(node_id + 1);
+                Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+
+                Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+                send_tensor_data(
+                        engine_->pipeline_output_tensor_, forward_chunks[c_i], node_id + 1
+                        );
+                if (engine_->global_shared_tensor_ != NULL) {
+                    send_tensor_data(
+                            engine_->global_shared_tensor_, forward_chunks[c_i], node_id + 1
+                            );
+                }
+                Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+            }
+
 #ifdef SHOW_SCHEDULE_DETAILS
             if (node_id <= 3) {
                 double time_elapsed = (get_time() - start_time) * 1000;    
@@ -1562,7 +1717,78 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                             time_elapsed, node_id, task.chunk_id);
                 }
 #endif
+
+                // propagate the gradients in a reverse order in the pipeline
+                Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+                if (! engine_->is_last_stage()) {
+                    // the previous stage is ready to send the grad
+                    recv_one_byte(node_id + 1);
+                }
+                if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
+                    // tell the next stage that the grad is ready to send
+                    send_one_byte(node_id - 1);
+                }
+                Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+
+                // fuse the send and recv with the NCCL group mechanism
+                Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+                // sync the pipeline-boundary tensor
+                assert(engine_->pipeline_input_tensor_ != engine_->pipeline_output_tensor_);
+                checkNCCL(ncclGroupStart());
+                if (! engine_->is_last_stage()) {
+                    // receive the gradients of the current chunk from a previous stage
+                    recv_tensor_grad(
+                            engine_->pipeline_output_tensor_, forward_chunks[c_i], node_id + 1
+                            );
+                }
+                if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
+                    send_tensor_grad(
+                            engine_->pipeline_input_tensor_, forward_chunks[c_i + 1], node_id - 1
+                            );
+                }
+                checkNCCL(ncclGroupEnd());
+                // sync the globally shared tensor
+                if (engine_->global_shared_tensor_ != NULL) {
+                    checkNCCL(ncclGroupStart());
+                    if (! engine_->is_last_stage()) {
+                        // receive the gradients of the current chunk from a previous stage
+                        recv_tensor_grad(
+                                engine_->global_shared_tensor_, forward_chunks[c_i], node_id + 1
+                                );
+                    }
+                    if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
+                        send_tensor_grad(
+                                engine_->global_shared_tensor_, forward_chunks[c_i + 1], node_id - 1
+                                );
+                    }
+                    checkNCCL(ncclGroupEnd());
+                }
+                Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+
+                // do the computation
                 engine_->perform_backward_task(task);
+
+                // the last send cannot be fused with a receive
+                if (! engine_->is_first_stage() && c_i == 0) {
+                    Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+                    // tell the next stage that the grad is ready to send
+                    send_one_byte(node_id - 1);
+                    Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+                    // send the grad with NCCL
+                    Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+                    // sync the boundary tensor
+                    send_tensor_grad(
+                            engine_->pipeline_input_tensor_, forward_chunks[c_i], node_id - 1
+                            );
+                    // sync the globally shared tensor
+                    if (engine_->global_shared_tensor_ != NULL) {
+                        send_tensor_grad(
+                                engine_->global_shared_tensor_, forward_chunks[c_i], node_id - 1
+                                );
+                    }
+                    Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+                }
+
 #ifdef SHOW_SCHEDULE_DETAILS
                 if (node_id <= 3) {
                     double time_elapsed = (get_time() - start_time) * 1000;    
@@ -2045,7 +2271,8 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
         CUDAOperatorsAndTensorsManager * op_ten_manager, 
         CUDAVertexIdTranslationTable * vid_translation,
         int local_op_begin_idx, int local_op_end_idx,
-        VertexId max_chunk_size, Tensor * output_tensor
+        VertexId max_chunk_size, Tensor * output_tensor,
+        Tensor * global_shared_tensor
         ): op_ten_manager_(op_ten_manager), vid_translation_(vid_translation), max_chunk_size_(max_chunk_size) {
     // locate all local vertex tensors first
     local_tensors_.clear();
@@ -2147,7 +2374,8 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
             // 3) the tensor is NOT the input to a aggregation operator
             if (lvt.tensor->op->get_is_transient() &&   
                     lvt.is_mirror_tensor == false && 
-                    lvt.tensor != output_tensor) {
+                    lvt.tensor != output_tensor && 
+                    lvt.tensor != global_shared_tensor) {
                 // only allocate the memory sufficient to store a chunk (rather than for all vertices)
                 num_elements = lvt.num_elements_per_vertex * max_chunk_size_;
                 // also mark the tensor 
@@ -2160,7 +2388,8 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
         }
 
         // allocate memory for the gradient data
-        if ((lvt.type & OutputFromAggregation) != 0) {
+        if ((lvt.type & OutputFromAggregation) != 0 || 
+                lvt.tensor == global_shared_tensor) {
             // mirror grad is needed
             size_t num_elements = lvt.num_elements_per_vertex * (
                     num_master_vertices + num_outgoing_mirror_vertices
@@ -2727,72 +2956,72 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationCompleteEvent);
     //}
 
-    auto send_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
-        assert(tensor);
-        DataType * data = NULL;
-        size_t num_elements_this_chunk = 0;
-        get_vertex_tensor_data_by_chunk(
-                tensor, chunk_id, data, num_elements_this_chunk
-                );
-        assert(data);
-        assert(num_elements_this_chunk);
-        checkNCCL(ncclSend(
-                    data, sizeof(DataType) * num_elements_this_chunk, 
-                    ncclInt8, remote_node, nccl_handle, 0
-                    ));
-    };
+    //auto send_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
+    //    assert(tensor);
+    //    DataType * data = NULL;
+    //    size_t num_elements_this_chunk = 0;
+    //    get_vertex_tensor_data_by_chunk(
+    //            tensor, chunk_id, data, num_elements_this_chunk
+    //            );
+    //    assert(data);
+    //    assert(num_elements_this_chunk);
+    //    checkNCCL(ncclSend(
+    //                data, sizeof(DataType) * num_elements_this_chunk, 
+    //                ncclInt8, remote_node, nccl_handle, 0
+    //                ));
+    //};
 
-    auto recv_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
-        assert(tensor);
-        DataType * data = NULL;
-        size_t num_elements_this_chunk = 0;
-        get_vertex_tensor_data_by_chunk(
-                tensor, chunk_id, data, num_elements_this_chunk
-                );
-        assert(data);
-        assert(num_elements_this_chunk);
-        checkNCCL(ncclRecv(
-                    data, sizeof(DataType) * num_elements_this_chunk, 
-                    ncclInt8, remote_node, nccl_handle, 0
-                    ));
-    };
+    //auto recv_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
+    //    assert(tensor);
+    //    DataType * data = NULL;
+    //    size_t num_elements_this_chunk = 0;
+    //    get_vertex_tensor_data_by_chunk(
+    //            tensor, chunk_id, data, num_elements_this_chunk
+    //            );
+    //    assert(data);
+    //    assert(num_elements_this_chunk);
+    //    checkNCCL(ncclRecv(
+    //                data, sizeof(DataType) * num_elements_this_chunk, 
+    //                ncclInt8, remote_node, nccl_handle, 0
+    //                ));
+    //};
 
-    auto send_one_byte = [&](int remote_node) {
-        uint8_t test = 0;
-        MPI_Send(
-                &test, 1, MPI_CHAR, remote_node,
-                ForwardActivationPassing, MPI_COMM_WORLD
-                );
-    };
+    //auto send_one_byte = [&](int remote_node) {
+    //    uint8_t test = 0;
+    //    MPI_Send(
+    //            &test, 1, MPI_CHAR, remote_node,
+    //            ForwardActivationPassing, MPI_COMM_WORLD
+    //            );
+    //};
 
-    auto recv_one_byte = [&](int remote_node) {
-        uint8_t test = 0;
-        MPI_Status status;
-        MPI_Recv(
-                &test, 1, MPI_CHAR, remote_node, 
-                ForwardActivationPassing, MPI_COMM_WORLD,
-                &status
-                );
-    };
+    //auto recv_one_byte = [&](int remote_node) {
+    //    uint8_t test = 0;
+    //    MPI_Status status;
+    //    MPI_Recv(
+    //            &test, 1, MPI_CHAR, remote_node, 
+    //            ForwardActivationPassing, MPI_COMM_WORLD,
+    //            &status
+    //            );
+    //};
 
-    if (! is_first_stage()) {
-        int remote_node = node_id - 1;
+    //if (! is_first_stage()) {
+    //    int remote_node = node_id - 1;
 
-        Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-        recv_one_byte(remote_node);
-        Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+    //    Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+    //    recv_one_byte(remote_node);
+    //    Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
 
-        Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-        recv_tensor_data(
-                pipeline_input_tensor_, chunk_id, remote_node
-                );
-        if (global_shared_tensor_) {
-            recv_tensor_data(
-                    global_shared_tensor_, chunk_id, remote_node
-                    );
-        }
-        Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-    }
+    //    Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+    //    recv_tensor_data(
+    //            pipeline_input_tensor_, chunk_id, remote_node
+    //            );
+    //    if (global_shared_tensor_) {
+    //        recv_tensor_data(
+    //                global_shared_tensor_, chunk_id, remote_node
+    //                );
+    //    }
+    //    Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+    //}
 
     //if (enable_compression_) {
     //    assert(false); // NOT SUPPORTED YET
@@ -2902,24 +3131,24 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(CUDAPI
     //    }
     //}
 
-    if (! is_last_stage()) {
-        int remote_node = node_id + 1;
+    //if (! is_last_stage()) {
+    //    int remote_node = node_id + 1;
 
-        Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-        send_one_byte(remote_node);
-        Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+    //    Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+    //    send_one_byte(remote_node);
+    //    Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
 
-        Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-        send_tensor_data(
-                pipeline_output_tensor_, chunk_id, remote_node
-                );
-        if (global_shared_tensor_) {
-            send_tensor_data(
-                    global_shared_tensor_, chunk_id, remote_node
-                    );
-        }
-        Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-    }
+    //    Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+    //    send_tensor_data(
+    //            pipeline_output_tensor_, chunk_id, remote_node
+    //            );
+    //    if (global_shared_tensor_) {
+    //        send_tensor_data(
+    //                global_shared_tensor_, chunk_id, remote_node
+    //                );
+    //    }
+    //    Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+    //}
 
 
     //if (stage_id == 0 && global_shared_tensor_) {
@@ -2963,72 +3192,72 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     int op_idx_begin = partitioning_.partition_op_begin[stage_id];
     int op_idx_end = partitioning_.partition_op_end[stage_id];
 
-    auto send_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
-        assert(tensor);
-        DataType * grad = NULL;
-        size_t num_elements_this_chunk = 0;
-        get_vertex_tensor_grad_by_chunk(
-                tensor, chunk_id, grad, num_elements_this_chunk
-                );
-        assert(grad);
-        assert(num_elements_this_chunk);
-        checkNCCL(ncclSend(
-                    grad, sizeof(DataType) * num_elements_this_chunk,
-                    ncclInt8, remote_node, nccl_handle, 0
-                    ));
-    };
+    //auto send_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
+    //    assert(tensor);
+    //    DataType * grad = NULL;
+    //    size_t num_elements_this_chunk = 0;
+    //    get_vertex_tensor_grad_by_chunk(
+    //            tensor, chunk_id, grad, num_elements_this_chunk
+    //            );
+    //    assert(grad);
+    //    assert(num_elements_this_chunk);
+    //    checkNCCL(ncclSend(
+    //                grad, sizeof(DataType) * num_elements_this_chunk,
+    //                ncclInt8, remote_node, nccl_handle, 0
+    //                ));
+    //};
 
-    auto recv_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
-        assert(tensor);
-        DataType * grad = NULL;
-        size_t num_elements_this_chunk = 0;
-        get_vertex_tensor_grad_by_chunk(
-                tensor, chunk_id, grad, num_elements_this_chunk
-                );
-        assert(grad);
-        assert(num_elements_this_chunk);
-        checkNCCL(ncclRecv(
-                    grad, sizeof(DataType) * num_elements_this_chunk, 
-                    ncclInt8, remote_node, nccl_handle, 0
-                    ));
-    };
+    //auto recv_tensor_grad = [&](Tensor * tensor, int chunk_id, int remote_node) {
+    //    assert(tensor);
+    //    DataType * grad = NULL;
+    //    size_t num_elements_this_chunk = 0;
+    //    get_vertex_tensor_grad_by_chunk(
+    //            tensor, chunk_id, grad, num_elements_this_chunk
+    //            );
+    //    assert(grad);
+    //    assert(num_elements_this_chunk);
+    //    checkNCCL(ncclRecv(
+    //                grad, sizeof(DataType) * num_elements_this_chunk, 
+    //                ncclInt8, remote_node, nccl_handle, 0
+    //                ));
+    //};
 
-    auto send_one_byte = [&](int remote_node) {
-        uint8_t test = 0;
-        MPI_Send(
-                &test, 1, MPI_CHAR, remote_node,
-                BackwardGradientPassing, MPI_COMM_WORLD
-                );
-    };
+    //auto send_one_byte = [&](int remote_node) {
+    //    uint8_t test = 0;
+    //    MPI_Send(
+    //            &test, 1, MPI_CHAR, remote_node,
+    //            BackwardGradientPassing, MPI_COMM_WORLD
+    //            );
+    //};
 
-    auto recv_one_byte = [&](int remote_node) {
-        uint8_t test = 0;
-        MPI_Status status;
-        MPI_Recv(
-                &test, 1, MPI_CHAR, remote_node, 
-                BackwardGradientPassing, MPI_COMM_WORLD,
-                &status
-                );
-    };
+    //auto recv_one_byte = [&](int remote_node) {
+    //    uint8_t test = 0;
+    //    MPI_Status status;
+    //    MPI_Recv(
+    //            &test, 1, MPI_CHAR, remote_node, 
+    //            BackwardGradientPassing, MPI_COMM_WORLD,
+    //            &status
+    //            );
+    //};
 
-    if (! is_last_stage()) {
-        int remote_node = node_id + 1;
+    //if (! is_last_stage()) {
+    //    int remote_node = node_id + 1;
 
-        Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-        recv_one_byte(remote_node);
-        Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+    //    Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+    //    recv_one_byte(remote_node);
+    //    Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
 
-        Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-        recv_tensor_grad(
-                pipeline_output_tensor_, chunk_id, remote_node
-                );
-        if (global_shared_tensor_) {
-            recv_tensor_grad(
-                    global_shared_tensor_, chunk_id, remote_node
-                    );
-        }
-        Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-    }
+    //    Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+    //    recv_tensor_grad(
+    //            pipeline_output_tensor_, chunk_id, remote_node
+    //            );
+    //    if (global_shared_tensor_) {
+    //        recv_tensor_grad(
+    //                global_shared_tensor_, chunk_id, remote_node
+    //                );
+    //    }
+    //    Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+    //}
 
     //if (! is_last_stage()) {
     //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
@@ -3221,24 +3450,24 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(CUDAP
     //compute_time_ += get_time();
     Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
 
-    if (! is_first_stage()) {
-        int remote_node = node_id - 1;
+    //if (! is_first_stage()) {
+    //    int remote_node = node_id - 1;
 
-        Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-        send_one_byte(remote_node);
-        Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+    //    Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
+    //    send_one_byte(remote_node);
+    //    Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
 
-        Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-        send_tensor_grad(
-                pipeline_input_tensor_, chunk_id, remote_node
-                );
-        if (global_shared_tensor_) {
-            send_tensor_grad(
-                    global_shared_tensor_, chunk_id, remote_node
-                    );
-        }
-        Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-    }
+    //    Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+    //    send_tensor_grad(
+    //            pipeline_input_tensor_, chunk_id, remote_node
+    //            );
+    //    if (global_shared_tensor_) {
+    //        send_tensor_grad(
+    //                global_shared_tensor_, chunk_id, remote_node
+    //                );
+    //    }
+    //    Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+    //}
 
     //if (stage_id > 0 && global_shared_tensor_) {
     //    Profiler::submit_main_thread_event(LayerDeviceHostCommunicationStartEvent);
@@ -3786,7 +4015,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(Abstr
     vtensor_manager_ = new CUDAVertexTensorDataGradManager(
             op_ten_manager_, vid_translation_,
             partitioning.partition_op_begin[stage_id], partitioning.partition_op_end[stage_id],
-            max_chunk_size, application->get_output_tensor()
+            max_chunk_size, application->get_output_tensor(),
+            application->get_global_shared_tensor()
             );
 
     CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_);

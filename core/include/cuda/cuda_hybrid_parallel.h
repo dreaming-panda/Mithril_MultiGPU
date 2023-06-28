@@ -595,7 +595,8 @@ class CUDAVertexTensorDataGradManager {
                 CUDAOperatorsAndTensorsManager * op_ten_manager, 
                 CUDAVertexIdTranslationTable * vid_translation,
                 int local_op_begin_idx, int local_op_end_idx,
-                VertexId max_chunk_size, Tensor * output_tensor
+                VertexId max_chunk_size, Tensor * output_tensor,
+                Tensor * global_shared_tensor
                 );
         ~CUDAVertexTensorDataGradManager();
 
