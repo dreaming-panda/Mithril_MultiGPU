@@ -1359,6 +1359,7 @@ CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::~CUDAPIP1Forward1BackwardPri
 void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     ncclComm_t nccl_handle = DistributedSys::get_instance()->get_nccl_handle();
     double layer_comm = 0;
+    double layer_comm_time = 0;
 
     // a few useful helper threads
     auto send_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
@@ -1375,6 +1376,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     ncclInt8, remote_node, nccl_handle, 0
                     ));
         layer_comm += sizeof(DataType) * num_elements_this_chunk;
+        //printf("MSG SIZE: %.3f MB\n", sizeof(DataType) * num_elements_this_chunk / 1024. / 1024.);
     };
 
     auto recv_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
@@ -1445,6 +1447,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_stages = engine_->get_num_stages();
     int stage_id = engine_->get_stage_id();
 
     //LockFreeQueue<CUDAPIPForwardTask> * forward_task_dispatcher_queue_ = forward_task_dispatcher_->get_task_queue();
@@ -1609,6 +1612,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
         assert(num_forward_chunks > 0);
         assert(num_forward_chunks == num_local_chunks);
+        
+        for (int i = 0; i < stage_id; ++ i) {
+            MPI_Barrier(engine_->mpi_group_same_way_);
+        }
 
         for (int c_i = 0; c_i < num_forward_chunks; ++ c_i) {
             // co-ordination free task dispatching
@@ -1628,17 +1635,19 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             // using this to distinguish the pipeline bubble cost 
             // with the communication cost
             Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-            if (! engine_->is_first_stage()) {
-                // the previous stage is ready to send the data
-                recv_one_byte(node_id - 1);
-            }
-            if (! engine_->is_last_stage() && c_i > 0) {
-                // tell the next stage that the data is ready to send
-                send_one_byte(node_id + 1);
-            }
+            MPI_Barrier(engine_->mpi_group_same_way_);
+            //if (! engine_->is_first_stage()) {
+            //    // the previous stage is ready to send the data
+            //    recv_one_byte(node_id - 1);
+            //}
+            //if (! engine_->is_last_stage() && c_i > 0) {
+            //    // tell the next stage that the data is ready to send
+            //    send_one_byte(node_id + 1);
+            //}
             Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
 
             Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+            layer_comm_time -= get_time();
             // sync the pipeline-boundary tensor
             // using NCCL group to parallelize send and recv
             assert(engine_->pipeline_input_tensor_ != engine_->pipeline_output_tensor_);
@@ -1674,18 +1683,22 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 checkNCCL(ncclGroupEnd());
             }
             Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+            layer_comm_time += get_time();
 
             // do the computation
             engine_->perform_forward_task(task);
 
             // the last send cannot be fused with a receive 
-            if (! engine_->is_last_stage() && c_i == num_forward_chunks - 1) {
+            if (c_i == num_forward_chunks - 1) {
                 Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
                 // tell the next stage that the data is ready to send
-                send_one_byte(node_id + 1);
+                //send_one_byte(node_id + 1);
+                MPI_Barrier(engine_->mpi_group_same_way_);
                 Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
-
+            }
+            if (! engine_->is_last_stage() && c_i == num_forward_chunks - 1) {
                 Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+                layer_comm_time -= get_time();
                 send_tensor_data(
                         engine_->pipeline_output_tensor_, forward_chunks[c_i], node_id + 1
                         );
@@ -1695,6 +1708,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                             );
                 }
                 Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+                layer_comm_time += get_time();
             }
 
 #ifdef SHOW_SCHEDULE_DETAILS
@@ -1706,7 +1720,15 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 #endif
         }
 
+        for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
+            MPI_Barrier(engine_->mpi_group_same_way_);
+        }
+
         if (in_training_mode) {
+            for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
+                MPI_Barrier(engine_->mpi_group_same_way_);
+            }
+
             // the backward ordering is the reverse of the forward ordering 
             for (int c_i = num_forward_chunks - 1; c_i >= 0; -- c_i) {
                 // construct the backwarding task
@@ -1723,18 +1745,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
                 // propagate the gradients in a reverse order in the pipeline
                 Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-                if (! engine_->is_last_stage()) {
-                    // the previous stage is ready to send the grad
-                    recv_one_byte(node_id + 1);
-                }
-                if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
-                    // tell the next stage that the grad is ready to send
-                    send_one_byte(node_id - 1);
-                }
+                MPI_Barrier(engine_->mpi_group_same_way_);
+                //if (! engine_->is_last_stage()) {
+                //    // the previous stage is ready to send the grad
+                //    recv_one_byte(node_id + 1);
+                //}
+                //if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
+                //    // tell the next stage that the grad is ready to send
+                //    send_one_byte(node_id - 1);
+                //}
                 Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
 
                 // fuse the send and recv with the NCCL group mechanism
                 Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+                layer_comm_time -= get_time();
                 // sync the pipeline-boundary tensor
                 assert(engine_->pipeline_input_tensor_ != engine_->pipeline_output_tensor_);
                 checkNCCL(ncclGroupStart());
@@ -1767,18 +1791,23 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     checkNCCL(ncclGroupEnd());
                 }
                 Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+                layer_comm_time += get_time();
 
                 // do the computation
                 engine_->perform_backward_task(task);
 
                 // the last send cannot be fused with a receive
-                if (! engine_->is_first_stage() && c_i == 0) {
+                if (c_i == 0) {
                     Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
                     // tell the next stage that the grad is ready to send
-                    send_one_byte(node_id - 1);
+                    //send_one_byte(node_id - 1);
+                    MPI_Barrier(engine_->mpi_group_same_way_);
                     Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
+                }
+                if (! engine_->is_first_stage() && c_i == 0) {
                     // send the grad with NCCL
                     Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
+                    layer_comm_time -= get_time();
                     // sync the boundary tensor
                     send_tensor_grad(
                             engine_->pipeline_input_tensor_, forward_chunks[c_i], node_id - 1
@@ -1790,6 +1819,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                                 );
                     }
                     Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
+                    layer_comm_time += get_time();
                 }
 
 #ifdef SHOW_SCHEDULE_DETAILS
@@ -1799,6 +1829,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                             time_elapsed, node_id, task.chunk_id);
                 }
 #endif
+            }
+
+            for (int i = 0; i < stage_id; ++ i) {
+                MPI_Barrier(engine_->mpi_group_same_way_);
             }
 
             Profiler::submit_main_thread_event(SideComputationStartEvent);
@@ -2104,6 +2138,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     //move_act_gpu2cpu_thread.join();
     //move_grad_gpu2cpu_thread.join();
+
+    double layer_comm_throughput = layer_comm / layer_comm_time * 8. / 1e9;
+    printf("Node %d, Layer-Level Communication Throughput: %.3f Gbps, Time %.3f ms\n",
+            node_id, layer_comm_throughput, layer_comm_time / num_epoch * 1e3);
 
     //double layer_comm = forward_task_dispatcher_->get_comm() 
     //    + backward_task_dispatcher_->get_comm();
