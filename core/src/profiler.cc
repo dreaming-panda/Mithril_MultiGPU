@@ -65,7 +65,7 @@ void Profiler::breakdown_analysis(int num_epoch) {
     assert(num_backward_task_dispatcher_events % 2 == 0);
     // performance metrics
     double graph_comm_net_time = 0;
-    double graph_comm_pcie_time = 0;
+    //double graph_comm_pcie_time = 0;
     double layer_comm_net_time = 0;
     //double layer_comm_pcie_time = 0;
     double bubble_time = 0;
@@ -168,9 +168,9 @@ void Profiler::breakdown_analysis(int num_epoch) {
         } else if (event_type == WeightOptimizationStartEvent) {
             assert(next_event_type == WeightOptimizationCompleteEvent);
             optimization_time += interval;
-        } else if (event_type == GraphDeviceHostCommunicationStartEvent) {
-            assert(next_event_type == GraphDeviceHostCommunicationCompleteEvent);
-            graph_comm_pcie_time += interval;
+        //} else if (event_type == GraphDeviceHostCommunicationStartEvent) {
+        //    assert(next_event_type == GraphDeviceHostCommunicationCompleteEvent);
+        //    graph_comm_pcie_time += interval;
         } else if (event_type == GraphNetworkCommunicationStartEvent) {
             assert(next_event_type == GraphNetworkCommunicationCompleteEvent);
             graph_comm_net_time += interval;
@@ -192,7 +192,7 @@ void Profiler::breakdown_analysis(int num_epoch) {
 
     RuntimeBreakdownManager breakdown_manager;
     breakdown_manager.add_breakdown("GraphCommNetwork", graph_comm_net_time, num_epoch);
-    breakdown_manager.add_breakdown("GraphCommGPUCPU", graph_comm_pcie_time, num_epoch);
+    //breakdown_manager.add_breakdown("GraphCommGPUCPU", graph_comm_pcie_time, num_epoch);
     breakdown_manager.add_breakdown("LayerCommNetwork", layer_comm_net_time, num_epoch);
     breakdown_manager.add_breakdown("Bubble", bubble_time, num_epoch);
     breakdown_manager.add_breakdown("Compute", compute_time, num_epoch);

@@ -203,6 +203,8 @@ class GraphDataPropagator {
         // DEPRECATED
         void retrieve_graph_data_to_gpu(bool propagate_act);
         // using NCCL to exchange graph data
+        void gather_vertices_embeddings_into_nccl_buffers(Tensor * tensor, int chunk_id, bool propagate_act);
+        void scatter_vertices_embeddings_from_nccl_buffers(Tensor * tensor, int chunk_id, bool propagate_act, RecvBuffHeader * headers);
         void exchange_graph_data_nccl(Tensor * tensor, int chunk_id, bool propagate_act);
 
     public:

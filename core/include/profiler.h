@@ -40,8 +40,8 @@ enum ProfilerEventType {
     //GraphDeviceHostCommunicationCompleteEvent,
     GraphNetworkCommunicationStartEvent,
     GraphNetworkCommunicationCompleteEvent,
-    GraphCommunicationPreparationStartEvent,
-    GraphCommunicationPreparationCompleteEvent,
+    GraphCommunicationSideComputationStartEvent,
+    GraphCommunicationSideComputationCompleteEvent,
 
     // events on the forward task dispatcher
     ForwardDispatcherStartWaitForNewTask,
