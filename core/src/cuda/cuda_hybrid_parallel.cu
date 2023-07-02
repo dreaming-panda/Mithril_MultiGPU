@@ -189,14 +189,11 @@ __global__ void gather_vertices_embeddings_kernel(
     if (idx < boundary) {
         int vidx = idx / embedding_size;
         int eidx = idx % embedding_size;
-        assert(vidx >= 0 && vidx < num_vertices);
-        assert(eidx >= 0 && eidx < embedding_size);
+        //assert(vidx >= 0 && vidx < num_vertices);
+        //assert(eidx >= 0 && eidx < embedding_size);
         VertexId vertex = vertices[vidx];
-        vertices[vidx] = vertex + 1; // FIXME
-        //DataType data = src_data[vertex * embedding_size + eidx];
-        //src_data[vertex * embedding_size + eidx] = data + 1;
-        //DataType data = 0;
-        //dst_data[vidx * embedding_size + eidx] = data;
+        DataType data = src_data[vertex * embedding_size + eidx];
+        dst_data[vidx * embedding_size + eidx] = data;
     }
 }
 

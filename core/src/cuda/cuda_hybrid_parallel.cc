@@ -264,6 +264,8 @@ GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEn
         checkCUDA(cudaMalloc(&nccl_send_buff_[i], nccl_send_buff_size_per_way_));
         checkCUDA(cudaMalloc(&nccl_recv_buff_[i], nccl_recv_buff_size_per_way_));
         assert(nccl_send_buff_[i] && nccl_recv_buff_[i]);
+        checkCUDA(cudaMemset(nccl_send_buff_[i], 0, nccl_send_buff_size_per_way_));
+        checkCUDA(cudaMemset(nccl_recv_buff_[i], 0, nccl_recv_buff_size_per_way_));
     }
 
     // setting up the comm 
@@ -352,7 +354,7 @@ void GraphDataPropagator::setup_mirror_vertices() {
     printf("Node %d, discovering the vertices that will be sent across graph boundary...\n",
             node_id);
     // find out which vertices need to be sent
-#pragma omp parallel for 
+//#pragma omp parallel for 
     for (int i = 0; i < num_local_chunks; ++ i) {
         int chunk_id = local_chunks[i];
 
@@ -386,6 +388,7 @@ void GraphDataPropagator::setup_mirror_vertices() {
                 VertexId * gpu_vertices = NULL;
                 checkCUDA(cudaMalloc(&gpu_vertices, sizeof(VertexId) * num_vertices_to_send));
                 assert(gpu_vertices);
+                checkCUDA(cudaMemset(gpu_vertices, 0, sizeof(VertexId) * num_vertices_to_send));
                 checkCUDA(cudaMemcpy(
                             gpu_vertices, vertices_to_send, sizeof(VertexId) * num_vertices_to_send,
                             cudaMemcpyHostToDevice
@@ -429,7 +432,7 @@ void GraphDataPropagator::setup_mirror_vertices() {
     // find out which vertices need to be received
     printf("Node %d, discovering the vertices that will be received across the graph boundary.\n",
             node_id);
-#pragma omp parallel for 
+//#pragma omp parallel for 
     for (int chunk_id = 0; chunk_id < num_chunks; ++ chunk_id) {
         if (chunk2wayid[chunk_id] == way_id) {
             continue;
@@ -752,7 +755,7 @@ void GraphDataPropagator::gather_vertices_embeddings_into_nccl_buffers(
             mirror_vertices = vertices_to_send_backward_[chunk_id][remote_way_id];
             num_mirror_vertices = num_vertices_to_send_backward_[chunk_id][remote_way_id];
         }
-        printf("Num Mirror Vertices: %u\n", num_mirror_vertices);
+        //printf("Num Mirror Vertices: %u\n", num_mirror_vertices);
         // collecting the mirrors to be sent
         assert(nccl_send_buff_[remote_way_id]);
         assert(nccl_send_buff_size_per_way_ >= sizeof(DataType) * num_mirror_vertices * embedding_size);
@@ -760,8 +763,7 @@ void GraphDataPropagator::gather_vertices_embeddings_into_nccl_buffers(
                 mirror_vertices, num_mirror_vertices, embedding_size,
                 gpu_data, sizeof(DataType) * embedding_size * engine_->graph_structure_->get_num_global_vertices(),
                 (DataType*) nccl_send_buff_[remote_way_id], nccl_send_buff_size_per_way_,
-                //(DataType*) tmp_buff_, tmp_buff_size_,
-                true // FIXME
+                false
                 );
     }
     Profiler::submit_main_thread_event(GraphCommunicationSideComputationCompleteEvent);
@@ -820,7 +822,7 @@ void GraphDataPropagator::scatter_vertices_embeddings_from_nccl_buffers(
                 mirror_vertices, num_mirror_vertices, embedding_size,
                 (DataType*) nccl_recv_buff_[remote_way_id], header->payload_size,
                 gpu_data, sizeof(DataType) * embedding_size * engine_->graph_structure_->get_num_global_vertices(),
-                true // FIXME
+                false 
                 );
     }
 
@@ -845,7 +847,6 @@ void GraphDataPropagator::exchange_graph_data_nccl(
     gather_vertices_embeddings_into_nccl_buffers(
             tensor, chunk_id, propagate_act
             );
-    return ;
 
     Profiler::submit_main_thread_event(GraphNetworkCommunicationStartEvent);
 
@@ -934,7 +935,8 @@ void GraphDataPropagator::exchange_graph_data_nccl(
 void GraphDataPropagator::propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
     //put_graph_data(tensor, chunk_id, propagate_act);
     //retrieve_graph_data_to_gpu(propagate_act);
-    exchange_graph_data_nccl(tensor, chunk_id, propagate_act);
+
+    //exchange_graph_data_nccl(tensor, chunk_id, propagate_act);
 }
 
 CUDAPIPForwardTaskDispatcher::CUDAPIPForwardTaskDispatcher(
