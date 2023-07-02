@@ -5,6 +5,7 @@
 #include <thrust/reduce.h>
 
 #include "cuda/cuda_hybrid_parallel.h"
+#include "cuda/cuda_utils.h"
 
 __global__ void element_wise_add_kernel(
         DataType * src_0, DataType * src_1, DataType * dst,
@@ -188,9 +189,14 @@ __global__ void gather_vertices_embeddings_kernel(
     if (idx < boundary) {
         int vidx = idx / embedding_size;
         int eidx = idx % embedding_size;
+        assert(vidx >= 0 && vidx < num_vertices);
+        assert(eidx >= 0 && eidx < embedding_size);
         VertexId vertex = vertices[vidx];
-        DataType data = src_data[vertex * embedding_size + eidx];
-        dst_data[vidx * embedding_size + eidx] = data;
+        vertices[vidx] = vertex + 1; // FIXME
+        //DataType data = src_data[vertex * embedding_size + eidx];
+        //src_data[vertex * embedding_size + eidx] = data + 1;
+        //DataType data = 0;
+        //dst_data[vidx * embedding_size + eidx] = data;
     }
 }
 
@@ -218,6 +224,12 @@ void GraphDataPropagator::gather_vertices_embeddings(
         DataType * dst_data, size_t dst_data_size,
         bool sync
         ) {
+    assert(vertices);
+    assert(num_vertices);
+    assert(embedding_size);
+    assert(src_data && src_data_size);
+    assert(dst_data && dst_data_size);
+
     int data_size = embedding_size * num_vertices;
     int block_size = 1024;
     int num_blocks = (data_size + block_size - 1) / block_size;
@@ -226,7 +238,7 @@ void GraphDataPropagator::gather_vertices_embeddings(
             vertices, num_vertices, embedding_size
             );
     if (sync) {
-        cudaStreamSynchronize(0);
+        checkCUDA(cudaStreamSynchronize(0));
     }
 }
 
@@ -236,6 +248,12 @@ void GraphDataPropagator::scatter_vertices_embeddings(
         DataType * dst_data, size_t dst_data_size,
         bool sync
         ) {
+    assert(vertices);
+    assert(num_vertices);
+    assert(embedding_size);
+    assert(src_data && src_data_size);
+    assert(dst_data && dst_data_size);
+
     int data_size = embedding_size * num_vertices;
     int block_size = 1024;
     int num_blocks = (data_size + block_size - 1) / block_size;

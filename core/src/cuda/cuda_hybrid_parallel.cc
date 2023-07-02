@@ -752,6 +752,7 @@ void GraphDataPropagator::gather_vertices_embeddings_into_nccl_buffers(
             mirror_vertices = vertices_to_send_backward_[chunk_id][remote_way_id];
             num_mirror_vertices = num_vertices_to_send_backward_[chunk_id][remote_way_id];
         }
+        printf("Num Mirror Vertices: %u\n", num_mirror_vertices);
         // collecting the mirrors to be sent
         assert(nccl_send_buff_[remote_way_id]);
         assert(nccl_send_buff_size_per_way_ >= sizeof(DataType) * num_mirror_vertices * embedding_size);
@@ -760,9 +761,8 @@ void GraphDataPropagator::gather_vertices_embeddings_into_nccl_buffers(
                 gpu_data, sizeof(DataType) * embedding_size * engine_->graph_structure_->get_num_global_vertices(),
                 (DataType*) nccl_send_buff_[remote_way_id], nccl_send_buff_size_per_way_,
                 //(DataType*) tmp_buff_, tmp_buff_size_,
-                false
+                true // FIXME
                 );
-        checkCUDA(cudaStreamSynchronize(0));
     }
     Profiler::submit_main_thread_event(GraphCommunicationSideComputationCompleteEvent);
 }
@@ -820,7 +820,7 @@ void GraphDataPropagator::scatter_vertices_embeddings_from_nccl_buffers(
                 mirror_vertices, num_mirror_vertices, embedding_size,
                 (DataType*) nccl_recv_buff_[remote_way_id], header->payload_size,
                 gpu_data, sizeof(DataType) * embedding_size * engine_->graph_structure_->get_num_global_vertices(),
-                false
+                true // FIXME
                 );
     }
 
@@ -845,6 +845,7 @@ void GraphDataPropagator::exchange_graph_data_nccl(
     gather_vertices_embeddings_into_nccl_buffers(
             tensor, chunk_id, propagate_act
             );
+    return ;
 
     Profiler::submit_main_thread_event(GraphNetworkCommunicationStartEvent);
 
