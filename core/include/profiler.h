@@ -30,16 +30,18 @@ enum ProfilerEventType {
     LayerNCCLCommunicationCompleteEvent,
     AdjacentGPUSyncStartEvent,
     AdjacentGPUSyncCompleteEvent,
-    LayerDeviceHostCommunicationStartEvent,
-    LayerDeviceHostCommunicationCompleteEvent,
+    //LayerDeviceHostCommunicationStartEvent,
+    //LayerDeviceHostCommunicationCompleteEvent,
     WeightOptimizationStartEvent,
     WeightOptimizationCompleteEvent,
-    CompressionRelatedStartEvent,
-    CompressionRelatedCompleteEvent,
-    GraphDeviceHostCommunicationStartEvent,
-    GraphDeviceHostCommunicationCompleteEvent,
+    //CompressionRelatedStartEvent,
+    //CompressionRelatedCompleteEvent,
+    //GraphDeviceHostCommunicationStartEvent,
+    //GraphDeviceHostCommunicationCompleteEvent,
     GraphNetworkCommunicationStartEvent,
     GraphNetworkCommunicationCompleteEvent,
+    GraphCommunicationPreparationStartEvent,
+    GraphCommunicationPreparationCompleteEvent,
 
     // events on the forward task dispatcher
     ForwardDispatcherStartWaitForNewTask,
@@ -75,7 +77,7 @@ class RuntimeBreakdownManager {
         std::map<std::string, double> breakdowns_;
     public:
         RuntimeBreakdownManager() {}
-        void add_breakdown(std::string name, double t) {
+        void add_breakdown(std::string name, double t, int num_epoch) {
             int node_id = DistributedSys::get_instance()->get_node_id();
             //printf("Node %d, reported breakdown %s: %.3f s\n", node_id, name.c_str(), t);
             double avg;
@@ -85,6 +87,7 @@ class RuntimeBreakdownManager {
                     );
             int num_nodes = DistributedSys::get_instance()->get_num_nodes();
             avg /= double(num_nodes);
+            avg /= double(num_epoch);
             breakdowns_[name] = avg;
         }
         double get_breakdown_sum() {
@@ -104,8 +107,8 @@ class RuntimeBreakdownManager {
             for (std::pair<std::string, double> i: breakdowns_) {
                 std::string name = i.first;
                 double time = i.second;
-                printf("\t%s: %.6f (s) (%.2f percentage)\n",
-                        name.c_str(), time, time * 100. / sum);
+                printf("\t%s: %.6f (ms) (%.2f percentage)\n",
+                        name.c_str(), time * 1e3, time * 100. / sum);
             }
         }
 };
@@ -126,7 +129,7 @@ class Profiler {
         static void submit_forward_task_dispatcher_event(ProfilerEventType type);
         static void submit_backward_task_dispatcher_event(ProfilerEventType type);
         // various performance analysis
-        static void breakdown_analysis();
+        static void breakdown_analysis(int num_epoch);
 };
 
 #endif

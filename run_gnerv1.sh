@@ -8,7 +8,7 @@ make -j
 
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets
 num_gpus=8
-num_layers=8
+num_layers=32
 hunits=128
 lr=1e-3
 graph=reddit
@@ -17,7 +17,7 @@ decay=1e-5
 chunks=32
 dropout=0.5
 seed=5
-model=gcn
+model=gcnii
 eval_freq=10
 exact_inference=0
 num_dp_ways=1

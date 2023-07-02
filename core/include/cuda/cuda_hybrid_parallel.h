@@ -142,9 +142,18 @@ class GraphDataPropagator {
         uint8_t * send_buff_;
         size_t send_buff_size_;
         size_t send_buff_size_per_way_;
+        // some helper GPU buffer
+        uint8_t * tmp_buff_;
+        size_t tmp_buff_size_;
 
         MPI_Comm peer_group_;
         size_t comm_volume_;
+
+        // NCCL buffers
+        uint8_t * nccl_send_buff_[MAX_NUM_WAYS];
+        uint8_t * nccl_recv_buff_[MAX_NUM_WAYS];
+        size_t nccl_send_buff_size_per_way_;
+        size_t nccl_recv_buff_size_per_way_;
 
         VertexId * vertices_to_send_forward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS]; // [chunk_id][way_id]
         VertexId num_vertices_to_send_forward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS];
@@ -155,9 +164,6 @@ class GraphDataPropagator {
         VertexId num_vertices_to_send_backward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS];
         VertexId * vertices_to_recv_backward_[MAX_NUM_CHUNKS];
         VertexId num_vertices_to_recv_backward_[MAX_NUM_CHUNKS];
-
-        uint8_t * tmp_buff_;
-        size_t tmp_buff_size_;
 
         struct RecvBuffHeader {
             int chunk_id;
@@ -189,11 +195,15 @@ class GraphDataPropagator {
 
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
+        // DEPRECATED
         void put_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
         // move the received graph data to the GPU
         // propagate_act: true propagating the activation, 
         // otherwise: propagate the gradients
+        // DEPRECATED
         void retrieve_graph_data_to_gpu(bool propagate_act);
+        // using NCCL to exchange graph data
+        void exchange_graph_data_nccl(Tensor * tensor, int chunk_id, bool propagate_act);
 
     public:
         GraphDataPropagator(DistributedPIPHybridParallelExecutionEngineGPU * engine);

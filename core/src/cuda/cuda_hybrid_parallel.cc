@@ -256,6 +256,15 @@ GraphDataPropagator::GraphDataPropagator(DistributedPIPHybridParallelExecutionEn
     checkCUDA(cudaMallocHost(&send_buff_, send_buff_size_));
     memset(send_buff_, 0, send_buff_size_);
 
+    // setting up the NCCL sender/receiver buffer
+    nccl_send_buff_size_per_way_ = num_vertices_per_way * max_embedding_dimension * sizeof(DataType);
+    nccl_recv_buff_size_per_way_ = num_vertices_per_way * max_embedding_dimension * sizeof(DataType);
+    for (int i = 0; i < num_ways; ++ i) {
+        checkCUDA(cudaMalloc(&nccl_send_buff_[i], nccl_send_buff_size_per_way_));
+        checkCUDA(cudaMalloc(&nccl_recv_buff_[i], nccl_recv_buff_size_per_way_));
+        assert(nccl_send_buff_[i] && nccl_recv_buff_[i]);
+    }
+
     // setting up the comm 
     MPI_Comm_split(MPI_COMM_WORLD, stage_id, node_id, &peer_group_);
     int group_size;
@@ -277,6 +286,7 @@ GraphDataPropagator::~GraphDataPropagator() {
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int num_stages = engine_->get_num_stages();
     int stage_id = engine_->get_stage_id();
+    int num_ways = engine_->get_num_dp_ways();
 
     // free the buffers
     checkCUDA(cudaFreeHost(recv_buff_));
@@ -285,6 +295,13 @@ GraphDataPropagator::~GraphDataPropagator() {
     free_mirror_vertices();
 
     checkCUDA(cudaFree(tmp_buff_));
+
+    for (int i = 0; i < num_ways; ++ i) {
+        checkCUDA(cudaFree(nccl_send_buff_[i]));
+        checkCUDA(cudaFree(nccl_recv_buff_[i]));
+        nccl_send_buff_[i] = NULL;
+        nccl_recv_buff_[i] = NULL;
+    }
 
     //printf("Node %d, sent %.3f MB data\n", 
     //        node_id, comm_volume_ / 1024. / 1024.);
@@ -687,6 +704,74 @@ void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
 
     checkCUDA(cudaStreamSynchronize(0));
     Profiler::submit_main_thread_event(GraphDeviceHostCommunicationCompleteEvent);
+}
+
+void GraphDataPropagator::exchange_graph_data_nccl(
+        Tensor * tensor, 
+        int chunk_id, 
+        bool propagate_act) {
+    assert(tensor);
+
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_stages = engine_->get_num_stages();
+    int stage_id = engine_->get_stage_id();
+    int way_id = engine_->get_dp_way_id();
+    int num_ways = engine_->get_num_dp_ways();
+
+    // obtain the tensor data
+    DataType * gpu_data = NULL;
+    size_t embedding_size = tensor->dims[1];
+    if (propagate_act) {
+        assert(! tensor->is_data_transient);
+        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        assert(resource);
+        gpu_data = resource->get_gpu_data();
+    } else {
+        assert(! tensor->is_grad_transient);
+        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+        assert(resource);
+        gpu_data = resource->get_gpu_grad();
+    }
+    assert(gpu_data && embedding_size);
+
+    // gather the mirror data into a compact buffer for communication
+    Profiler::submit_main_thread_event(GraphCommunicationPreparationStartEvent);
+    for (int remote_way_id = 0; remote_way_id < num_ways; ++ remote_way_id) {
+        if (remote_way_id == way_id) {
+            continue;
+        }
+        // decided the type of mirror vertices
+        VertexId * mirror_vertices = NULL;
+        VertexId num_mirror_vertices = 0;
+        if (propagate_act) {
+            mirror_vertices = vertices_to_send_forward_[chunk_id][remote_way_id];
+            num_mirror_vertices = num_vertices_to_send_forward_[chunk_id][remote_way_id];
+        } else {
+            mirror_vertices = vertices_to_send_backward_[chunk_id][remote_way_id];
+            num_mirror_vertices = num_vertices_to_send_backward_[chunk_id][remote_way_id];
+        }
+        // collecting the mirrors to be sent
+        assert(nccl_send_buff_[remote_way_id]);
+        assert(nccl_send_buff_size_per_way_ <= sizeof(DataType) * num_mirror_vertices * embedding_size);
+        gather_vertices_embeddings(
+                mirror_vertices, num_mirror_vertices, embedding_size,
+                gpu_data, sizeof(DataType) * embedding_size * engine_->graph_structure_->get_num_global_vertices(),
+                (DataType*) nccl_send_buff_[remote_way_id], nccl_send_buff_size_per_way_,
+                false
+                );
+    }
+    Profiler::submit_main_thread_event(GraphCommunicationPreparationCompleteEvent);
+
+    Profiler::submit_main_thread_event(GraphNetworkCommunicationStartEvent);
+
+    // exchange the meta information with MPI
+    RecvBuffHeader headers_received[num_ways];
+    for (int disp = 0; disp < num_ways - 1; ++ disp) {
+        // TODO
+    }
+
+    Profiler::submit_main_thread_event(GraphNetworkCommunicationCompleteEvent);
 }
 
 void GraphDataPropagator::propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act) {
@@ -2122,14 +2207,27 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     size_t total_mem_size = 0;
     checkCUDA(cudaMemGetInfo(&free_mem_size, &total_mem_size));
     printf("Node %d, GPU memory consumption: %.3f GB\n", node_id, (total_mem_size - free_mem_size) / 1024. / 1024. / 1024.);
+    fflush(stdout);
+    usleep(1e5);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    double layer_comm_throughput = layer_comm / layer_comm_time * 8. / 1e9;
+    printf("Node %d, Layer-Level Communication Throughput: %.3f Gbps, Time %.3f ms\n",
+            node_id, layer_comm_throughput, layer_comm_time / num_epoch * 1e3);
+    fflush(stdout);
+    usleep(1e5);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     printf("------------------------node id %d,  per-epoch time: %f s---------------\n", 
             node_id, all_epoches_time / (num_epoch - warmup_epoches));
+    fflush(stdout);
+    usleep(1e5);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // check the consistency of the distributed weights
     engine_->weight_aggregator_->check_weights_consistency();
 
-    Profiler::breakdown_analysis();
+    Profiler::breakdown_analysis(num_epoch);
 
     //forward_task_dispatcher_->wait_for_termination();
     //forward_task_committer_->wait_for_termination();
@@ -2138,10 +2236,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     //move_act_gpu2cpu_thread.join();
     //move_grad_gpu2cpu_thread.join();
-
-    double layer_comm_throughput = layer_comm / layer_comm_time * 8. / 1e9;
-    printf("Node %d, Layer-Level Communication Throughput: %.3f Gbps, Time %.3f ms\n",
-            node_id, layer_comm_throughput, layer_comm_time / num_epoch * 1e3);
 
     //double layer_comm = forward_task_dispatcher_->get_comm() 
     //    + backward_task_dispatcher_->get_comm();

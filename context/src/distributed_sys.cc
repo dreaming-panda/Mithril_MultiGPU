@@ -117,7 +117,7 @@ void DistributedSys::finalize_distributed_sys() {
     if (instance_ != nullptr) {
         checkNCCL(ncclCommDestroy(instance_->nccl_handle_));
         MPI_Barrier(MPI_COMM_WORLD);
-	    MPI_Finalize();
+	    //MPI_Finalize();
     }
 }
 
