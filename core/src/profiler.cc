@@ -65,9 +65,8 @@ void Profiler::breakdown_analysis(int num_epoch) {
     assert(num_backward_task_dispatcher_events % 2 == 0);
     // performance metrics
     double graph_comm_net_time = 0;
-    //double graph_comm_pcie_time = 0;
+    double graph_comm_comp_overhead_time = 0;
     double layer_comm_net_time = 0;
-    //double layer_comm_pcie_time = 0;
     double bubble_time = 0;
     double compute_time = 0;
     double optimization_time = 0;
@@ -84,62 +83,6 @@ void Profiler::breakdown_analysis(int num_epoch) {
             return ;
         }
         bubble_time += (end - start);
-        //double delta_layer_comm_time = 0;
-        //double delta_bubble_time = 0;
-        //// find out the source of the idle time
-        //if (num_forward_task_dispatcher_events > 0) {
-        //    while (forward_task_dispatcher_event_idx < num_forward_task_dispatcher_events) {
-        //        // find out wether there is some intersection
-        //        ProfilerEvent event = forward_task_dispatcher_events[forward_task_dispatcher_event_idx];
-        //        ProfilerEvent next_event = forward_task_dispatcher_events[forward_task_dispatcher_event_idx + 1];
-        //        if (! (start >= next_event.get_time() || end <= event.get_time())) {
-        //            double overlapped_begin = std::max(start, event.get_time());
-        //            double overlapped_end = std::min(end, next_event.get_time());
-        //            if (event.get_type() == ForwardDispatcherStartWaitForNewTask) {
-        //                assert(next_event.get_type() == ForwardDispatcherCompleteWaitForNewTask);
-        //                delta_bubble_time += overlapped_end - overlapped_begin;
-        //            } else if (event.get_type() == ForwardDispatcherStartReceiveData) {
-        //                assert(next_event.get_type() == ForwardDispatcherCompleteReceiveData);
-        //                delta_layer_comm_time += overlapped_end - overlapped_begin;
-        //            } else {
-        //                fprintf(stderr, "ERROR: Unsupported event type.\n");
-        //            }
-        //        }
-        //        if (next_event.get_time() <= end) {
-        //            forward_task_dispatcher_event_idx += 2;
-        //        } else {
-        //            break;
-        //        }
-        //    }
-        //}
-        //if (num_backward_task_dispatcher_events > 0) { 
-        //    while (backward_task_dispatcher_event_idx < num_backward_task_dispatcher_events) {
-        //        // find out wether there is some intersection
-        //        ProfilerEvent event = backward_task_dispatcher_events[backward_task_dispatcher_event_idx];
-        //        ProfilerEvent next_event = backward_task_dispatcher_events[backward_task_dispatcher_event_idx + 1];
-        //        if (! (start >= next_event.get_time() || end <= event.get_time())) {
-        //            double overlapped_begin = std::max(start, event.get_time());
-        //            double overlapped_end = std::min(end, next_event.get_time());
-        //            if (event.get_type() == BackwardDispatcherStartWaitForNewTask) {
-        //                assert(next_event.get_type() == BackwardDispatcherCompleteWaitForNewTask);
-        //                delta_bubble_time += overlapped_end - overlapped_begin;
-        //            } else if (event.get_type() == BackwardDispatcherStartReceiveData) {
-        //                assert(next_event.get_type() == BackwardDispatcherCompleteReceiveData);
-        //                delta_layer_comm_time += overlapped_end - overlapped_begin;
-        //            } else {
-        //                fprintf(stderr, "ERROR: Unsupported event type.\n");
-        //            }
-        //        }
-        //        if (next_event.get_time() <= end) {
-        //            backward_task_dispatcher_event_idx += 2;
-        //        } else {
-        //            break;
-        //        }
-        //    }
-        //}
-        //assert(delta_layer_comm_time <= (end - start) * 1.05);
-        //layer_comm_net_time += std::min(delta_layer_comm_time, end - start);
-        //bubble_time += std::max(end - start - delta_layer_comm_time, 0.);
     };
 
     for (; main_thread_event_idx < num_main_thread_events; main_thread_event_idx += 2) {
@@ -168,9 +111,9 @@ void Profiler::breakdown_analysis(int num_epoch) {
         } else if (event_type == WeightOptimizationStartEvent) {
             assert(next_event_type == WeightOptimizationCompleteEvent);
             optimization_time += interval;
-        //} else if (event_type == GraphDeviceHostCommunicationStartEvent) {
-        //    assert(next_event_type == GraphDeviceHostCommunicationCompleteEvent);
-        //    graph_comm_pcie_time += interval;
+        } else if (event_type == GraphCommunicationSideComputationStartEvent) {
+            assert(next_event_type == GraphCommunicationSideComputationCompleteEvent);
+            graph_comm_comp_overhead_time += interval;
         } else if (event_type == GraphNetworkCommunicationStartEvent) {
             assert(next_event_type == GraphNetworkCommunicationCompleteEvent);
             graph_comm_net_time += interval;
@@ -192,7 +135,7 @@ void Profiler::breakdown_analysis(int num_epoch) {
 
     RuntimeBreakdownManager breakdown_manager;
     breakdown_manager.add_breakdown("GraphCommNetwork", graph_comm_net_time, num_epoch);
-    //breakdown_manager.add_breakdown("GraphCommGPUCPU", graph_comm_pcie_time, num_epoch);
+    breakdown_manager.add_breakdown("GraphCommComputeOverhead", graph_comm_comp_overhead_time, num_epoch);
     breakdown_manager.add_breakdown("LayerCommNetwork", layer_comm_net_time, num_epoch);
     breakdown_manager.add_breakdown("Bubble", bubble_time, num_epoch);
     breakdown_manager.add_breakdown("Compute", compute_time, num_epoch);

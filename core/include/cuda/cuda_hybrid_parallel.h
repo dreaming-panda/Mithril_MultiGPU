@@ -148,6 +148,7 @@ class GraphDataPropagator {
 
         MPI_Comm peer_group_;
         size_t comm_volume_;
+        double comm_time_;
 
         // NCCL buffers
         uint8_t * nccl_send_buff_[MAX_NUM_WAYS];
@@ -164,6 +165,9 @@ class GraphDataPropagator {
         VertexId num_vertices_to_send_backward_[MAX_NUM_CHUNKS][MAX_NUM_WAYS];
         VertexId * vertices_to_recv_backward_[MAX_NUM_CHUNKS];
         VertexId num_vertices_to_recv_backward_[MAX_NUM_CHUNKS];
+
+        cudaStream_t send_streams_[MAX_NUM_WAYS];
+        cudaStream_t recv_streams_[MAX_NUM_WAYS];
 
         struct RecvBuffHeader {
             int chunk_id;
@@ -217,7 +221,7 @@ class GraphDataPropagator {
         void propagate_graph_data(Tensor * tensor, int chunk_id, bool propagate_act); 
         inline MPI_Comm get_peer_group() {return peer_group_;}
 
-        inline size_t get_comm() {
+        inline size_t get_aggr_comm() {
             size_t aggr_comm = 0;
             MPI_Allreduce(
                     &comm_volume_, &aggr_comm, 1,
@@ -225,6 +229,12 @@ class GraphDataPropagator {
                     MPI_SUM, MPI_COMM_WORLD
                     );
             return aggr_comm;
+        }
+        inline size_t get_comm() {
+            return comm_volume_;
+        }
+        inline double get_comm_time() {
+            return comm_time_;
         }
 };
 
