@@ -49,6 +49,7 @@ class GCN: public AbstractApplication {
         ~GCN() {}
 
         Tensor * forward(Tensor * input) {
+            int layer_type = 0;
             Tensor * t = input;
             for (int i = 0; i < num_layers_; ++ i) {
                 int output_size = num_hidden_units_;
@@ -70,7 +71,18 @@ class GCN: public AbstractApplication {
                     t = relu(t, true); // enable recomputation for relu
                     t = dropout(t, dropout_rate_, true);  // enable recomputation for dropout
                 }
-                next_layer();
+
+                // the layer of the same type should have the 
+                // same performance characteristics
+                int layer_type = -1;
+                if (i == 0) {
+                    layer_type = 0;
+                } else if (i == num_layers_ - 1) {
+                    layer_type = 2;
+                } else {
+                    layer_type = 1;
+                }
+                next_layer(layer_type);
             }
             return t;
         }

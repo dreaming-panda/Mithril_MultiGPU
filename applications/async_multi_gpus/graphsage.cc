@@ -78,7 +78,14 @@ class GraphSage: public AbstractApplication {
                     t = relu(t, enable_recomputation_);
                     t = dropout(t, dropout_rate_, enable_recomputation_);
                 }
-                next_layer();
+
+                if (i == 0) {
+                    next_layer(0);
+                } else if (i == num_layers_ - 1) {
+                    next_layer(2);
+                } else {
+                    next_layer(1);
+                }
             }
             return t;
         }

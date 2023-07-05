@@ -145,6 +145,7 @@ AbstractApplication::AbstractApplication(int num_features): num_features_(num_fe
     output_tensor_ = NULL;
     is_computation_graph_ready_ = false;
     operator_range_each_layer_.clear();
+    layer_types_.clear();
     prev_layer_boundary_ = 0;
 }
 
@@ -154,11 +155,12 @@ AbstractApplication::~AbstractApplication() {
     }
 }
 
-void AbstractApplication::next_layer() {
+void AbstractApplication::next_layer(int prev_layer_type) {
     int num_operators = operators_.size();
     std::pair<int, int> range = std::make_pair(prev_layer_boundary_, num_operators);
     operator_range_each_layer_.push_back(range);
     prev_layer_boundary_ = num_operators;
+    layer_types_.push_back(prev_layer_type);
 }
 
 const std::vector<std::pair<int, int>>& AbstractApplication::get_operator_range_each_layer() {
@@ -174,4 +176,9 @@ Tensor * AbstractApplication::get_global_shared_tensor() {
         construct_computation_graph();
     }
     return global_shared_tensor_;
+}
+
+int AbstractApplication::get_num_layers() {
+    assert(operator_range_each_layer_.size() == layer_types_.size());
+    return (int) operator_range_each_layer_.size();
 }

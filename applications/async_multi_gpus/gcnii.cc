@@ -80,7 +80,11 @@ class GCNII: public AbstractApplication {
             t = dropout(t, dropout_rate_, enable_recomputation_);
             // L-layer GCNII convolutions
             for (int i = 0; i < num_layers_; ++ i) {
-                next_layer();
+                if (i == 0) {
+                    next_layer(0);
+                } else {
+                    next_layer(1);
+                }
                 t = graph_convolution(t, h0, i + 1);
                 t = relu(t, enable_recomputation_);
                 t = dropout(t, dropout_rate_, enable_recomputation_);
@@ -89,7 +93,7 @@ class GCNII: public AbstractApplication {
             t = fc(t, num_classes_, "None", true);
             //t = log_softmax(t, enable_recomputation_);
             t = softmax(t, enable_recomputation_);
-            next_layer();
+            next_layer(2);
             return t;
         }
 };

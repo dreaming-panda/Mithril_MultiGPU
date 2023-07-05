@@ -37,6 +37,7 @@
 #define LOW_LEARNING_RATE (0)
 #define MAX_NUM_CHUNKS (256)
 #define MAX_NUM_WAYS (64)
+#define MAX_NUM_LAYERS (4096)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDAShadowGradientsMasterVertices;
@@ -1140,6 +1141,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         int num_chunks_;
         CUDAModelPartitioning partitioning_;
         AbstractApplication * application_;
+        int num_layers_;
 
         CUDAOperatorsAndTensorsManager * op_ten_manager_;
         CUDAVertexIdTranslationTable * vid_translation_;
@@ -1221,6 +1223,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         std::string chunk_boundary_file_ = "NONE";
 
         bool enable_compression_ = true;
+
+        // the cost model
+        double estimated_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];
 
         inline int get_num_epoch() {
             return num_epoch_;
@@ -1314,6 +1319,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
 
         // invoke by the scheduler
+        void propagate_activation(int op_begin, int op_end, int chunk_id, bool profiling_mode = false);
+        void propagate_gradient(int op_begin, int op_end, int chunk_id, bool profiling_mode = false);
+        void perform_forward_task(CUDAPIPForwardTask task, int op_begin, int op_end);
+        void perform_backward_task(CUDAPIPBackwardTask task, int op_begin, int op_end);
         void perform_forward_task(CUDAPIPForwardTask task);
         void perform_backward_task(CUDAPIPBackwardTask task);
         //void add_white_noise();
@@ -1351,6 +1360,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void get_training_epoch_chunk_ordering(int * chunks, int * num_chunks);
         void gen_inference_epoch_chunk_ordering();
         void get_inference_epoch_chunk_ordering(int * chunks, int * num_chunks );
+
+        // the cost model
+        void gen_profiling_results(AbstractApplication * application);
+        double estimate_cost(int layer_begin, int layer_end, int chunk_id);
 
         friend class CUDAPIPForwardTaskDispatcher;
         friend class CUDAPIPBackwardTaskDispatcher;

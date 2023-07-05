@@ -39,6 +39,7 @@ class AbstractApplication {
         Tensor * output_tensor_;
         bool is_computation_graph_ready_;
         std::vector<std::pair<int,int>> operator_range_each_layer_;
+        std::vector<int> layer_types_;
         int prev_layer_boundary_;
         Tensor * global_shared_tensor_ = NULL;
 
@@ -49,6 +50,12 @@ class AbstractApplication {
         Tensor * get_input_tensor();
         Tensor * get_output_tensor();
         int get_num_features();
+        int get_num_layers();
+        inline int get_layer_type(int layer) {return layer_types_[layer];}
+        inline void get_op_range(int layer, int *op_begin, int *op_end) {
+            *op_begin = operator_range_each_layer_[layer].first;
+            *op_end = operator_range_each_layer_[layer].second;
+        }
 
         friend class SingleNodeExecutionEngineCPU;
         friend class SingleNodeExecutionEngineGPU;
@@ -79,7 +86,7 @@ class AbstractApplication {
         Tensor * aggregation(Tensor * t, AggregationType type, bool is_transient = false);
         Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient = false);
         Tensor * dropout(Tensor * a, double dropout_rate, bool is_transient = false);
-        void next_layer();
+        void next_layer(int prev_layer_type = 0);
         void set_global_shared_tensor(Tensor * tensor);
 
     public:
