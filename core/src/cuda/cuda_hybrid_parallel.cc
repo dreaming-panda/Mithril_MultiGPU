@@ -3030,7 +3030,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                 exit(-1);
         }
     }
-
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_forward_task(
@@ -3589,7 +3588,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
     // obtained the profiling results
     gen_profiling_results(application);
 
-    return 0; // FIXME
+    RandomNumberManager::reset();
 
     application_ = application;
     num_epoch_ = num_epoch;
@@ -4259,203 +4258,283 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
         ) {
     printf("Start Cost Model Initialization...\n");
     int node_id = DistributedSys::get_instance()->get_node_id();
-    if (node_id != 0) {
-        MPI_Barrier(MPI_COMM_WORLD);
-        return ;
-    }
-
-    assert(application);
-    assert(chunk_manager_);
-    assert(executor_);
-
-    std::map<Tensor*, bool> saved_is_data_transient;
-    std::map<Tensor*, bool> saved_is_grad_transient;
-    std::map<Tensor*, TensorResourceGPU*> saved_resources;
-    std::set<Tensor*> inputs_to_aggr;
-    std::set<Tensor*> outputs_from_aggr;
-    VertexId num_vertices = graph_structure_->get_num_global_vertices();
-    VertexId max_cunk_size = chunk_manager_->get_max_chunk_size();
-
-    // allocate the necessary resource for a tensor
-    auto map_tensor = [&](Tensor * tensor) {
-        assert(chunk_manager_);
-
-        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-        saved_resources[tensor] = resource;
-        resource = new TensorResourceGPU(
-                tensor, num_vertices
-                );
-        assert(resource);
-
-        saved_is_data_transient[tensor] = tensor->is_data_transient;
-        saved_is_grad_transient[tensor] = tensor->is_grad_transient;
-        size_t num_data_elements = 0;
-        size_t num_grad_elements = 0;
-        // determine whether the data could be transient
-        if (tensor->type == NORMAL_TENSOR) {
-            tensor->is_data_transient = false;
-            tensor->is_grad_transient = false;
-            num_data_elements = resource->get_num_elements();
-            num_grad_elements = resource->get_num_elements();
-        } else {
-            assert(tensor->type == VERTEX_TENSOR);
-            // if a tensor is the input of a aggr
-            // the activation cannot be transient
-            if (inputs_to_aggr.find(tensor) != inputs_to_aggr.end()) {
-                tensor->is_data_transient = false;
-                num_data_elements = resource->get_num_elements();
-            } else {
-                tensor->is_data_transient = true;
-                num_data_elements = (size_t) tensor->dims[1] * max_cunk_size;
-            }
-            // if a tensor is the ouput of a aggr
-            // the gradients cannot be transient
-            if (outputs_from_aggr.find(tensor) != outputs_from_aggr.end()) {
-                tensor->is_grad_transient = false;
-                num_grad_elements = resource->get_num_elements();
-            } else {
-                tensor->is_grad_transient = true;
-                num_grad_elements = (size_t) tensor->dims[1] * max_cunk_size;
-            }
-        }
-
-        DataType * gpu_data = NULL;
-        DataType * gpu_grad = NULL;
-        assert(num_data_elements && num_grad_elements);
-        checkCUDA(cudaMalloc(&gpu_data, sizeof(DataType) * num_data_elements));
-        checkCUDA(cudaMalloc(&gpu_grad, sizeof(DataType) * num_grad_elements));
-        assert(gpu_data && gpu_grad);
-
-        resource->set_gpu_data_from_gpu(gpu_data);
-        resource->set_gpu_grad_from_gpu(gpu_grad);
-        tensor->resource = resource;
-    };
-
-    auto unmap_tensor = [&](Tensor * tensor) {
-        // release the resource
-        TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-        assert(resource);
-        DataType * gpu_data = resource->get_gpu_data();
-        DataType * gpu_grad = resource->get_gpu_grad();
-        assert(gpu_data);
-        assert(gpu_grad);
-        checkCUDA(cudaFree(gpu_data));
-        checkCUDA(cudaFree(gpu_grad));
-        resource->set_gpu_data_from_gpu(NULL);
-        resource->set_gpu_grad_from_gpu(NULL);
-        delete resource;
-        tensor->resource = saved_resources[tensor];
-        tensor->is_data_transient = saved_is_data_transient[tensor];
-        tensor->is_grad_transient = saved_is_grad_transient[tensor];
-    };
-    
-    // set up inputs_to_aggr and outputs_from_aggr
-    const std::vector<Operator*> operators = application->get_operators();
-    int num_operators = (int) operators.size();
-    assert(num_operators > 0);
-    for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
-        Operator * op = operators[op_idx];
-        assert(op);
-        if (op->get_type() == OPERATOR_AGGREGATION) {
-            int num_input_tensors = op->get_num_input_tensors();
-            for (int i = 0; i < num_input_tensors; ++ i) {
-                Tensor * tensor = op->get_input_tensor(i);
-                assert(tensor);
-                inputs_to_aggr.insert(tensor);
-            }
-            int num_output_tensors = op->get_num_output_tensors();
-            for (int i = 0; i < num_output_tensors; ++ i) {
-                Tensor * tensor = op->get_output_tensor(i);
-                assert(tensor);
-                outputs_from_aggr.insert(tensor);
-            }
-        }
-    }
-
-    // start profiling the performances of each layer
     int num_layers = application->get_num_layers();
-    std::map<int, double*> cached_runtimes;
     std::vector<int> chunks;
     chunk_manager_->get_local_chunk_ids(chunks);
     int num_chunks = (int) chunks.size();
-    const int count = 5;
 
-    for (int layer = 0; layer < num_layers; ++ layer) {
-        int layer_type = application->get_layer_type(layer);
-        if (cached_runtimes.find(layer_type) != cached_runtimes.end()) {
-            // a layer with the same type have been profiled before
-            double * runtimes = cached_runtimes[layer_type];
-            for (int chunk: chunks) {
-                estimated_runtime_[layer][chunk] = runtimes[chunk];
+    if (node_id == 0) {
+        assert(application);
+        assert(chunk_manager_);
+        assert(executor_);
+    
+        std::map<Tensor*, bool> saved_is_data_transient;
+        std::map<Tensor*, bool> saved_is_grad_transient;
+        std::map<Tensor*, TensorResourceGPU*> saved_resources;
+        std::set<Tensor*> inputs_to_aggr;
+        std::set<Tensor*> outputs_from_aggr;
+        VertexId num_vertices = graph_structure_->get_num_global_vertices();
+        VertexId max_cunk_size = chunk_manager_->get_max_chunk_size();
+    
+        // allocate the necessary resource for a tensor
+        auto map_tensor = [&](Tensor * tensor) {
+            assert(chunk_manager_);
+    
+            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+            saved_resources[tensor] = resource;
+            resource = new TensorResourceGPU(
+                    tensor, num_vertices
+                    );
+            assert(resource);
+    
+            saved_is_data_transient[tensor] = tensor->is_data_transient;
+            saved_is_grad_transient[tensor] = tensor->is_grad_transient;
+            size_t num_data_elements = 0;
+            size_t num_grad_elements = 0;
+            // determine whether the data could be transient
+            if (tensor->type == NORMAL_TENSOR) {
+                tensor->is_data_transient = false;
+                tensor->is_grad_transient = false;
+                num_data_elements = resource->get_num_elements();
+                num_grad_elements = resource->get_num_elements();
+            } else {
+                assert(tensor->type == VERTEX_TENSOR);
+                // if a tensor is the input of a aggr
+                // the activation cannot be transient
+                if (inputs_to_aggr.find(tensor) != inputs_to_aggr.end()) {
+                    tensor->is_data_transient = false;
+                    num_data_elements = resource->get_num_elements();
+                } else {
+                    tensor->is_data_transient = true;
+                    num_data_elements = (size_t) tensor->dims[1] * max_cunk_size;
+                }
+                // if a tensor is the ouput of a aggr
+                // the gradients cannot be transient
+                if (outputs_from_aggr.find(tensor) != outputs_from_aggr.end()) {
+                    tensor->is_grad_transient = false;
+                    num_grad_elements = resource->get_num_elements();
+                } else {
+                    tensor->is_grad_transient = true;
+                    num_grad_elements = (size_t) tensor->dims[1] * max_cunk_size;
+                }
             }
-            continue;
-        }
-        int op_begin, op_end;
-        application->get_op_range(layer, &op_begin, &op_end);
-        assert(op_begin < op_end);
-        assert(op_begin >= 0 && op_end <= num_operators);
-        // map the tensors
-        std::set<Tensor*> tensors;
-        for (int op_idx = op_begin; op_idx < op_end; ++ op_idx) {
+    
+            DataType * gpu_data = NULL;
+            DataType * gpu_grad = NULL;
+            assert(num_data_elements && num_grad_elements);
+            checkCUDA(cudaMalloc(&gpu_data, sizeof(DataType) * num_data_elements));
+            checkCUDA(cudaMalloc(&gpu_grad, sizeof(DataType) * num_grad_elements));
+            assert(gpu_data && gpu_grad);
+    
+            resource->set_gpu_data_from_gpu(gpu_data);
+            resource->set_gpu_grad_from_gpu(gpu_grad);
+            tensor->resource = resource;
+        };
+    
+        auto unmap_tensor = [&](Tensor * tensor) {
+            // release the resource
+            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+            assert(resource);
+            DataType * gpu_data = resource->get_gpu_data();
+            DataType * gpu_grad = resource->get_gpu_grad();
+            assert(gpu_data);
+            assert(gpu_grad);
+            checkCUDA(cudaFree(gpu_data));
+            checkCUDA(cudaFree(gpu_grad));
+            resource->set_gpu_data_from_gpu(NULL);
+            resource->set_gpu_grad_from_gpu(NULL);
+            delete resource;
+            tensor->resource = saved_resources[tensor];
+            tensor->is_data_transient = saved_is_data_transient[tensor];
+            tensor->is_grad_transient = saved_is_grad_transient[tensor];
+        };
+        
+        // set up inputs_to_aggr and outputs_from_aggr
+        const std::vector<Operator*> operators = application->get_operators();
+        int num_operators = (int) operators.size();
+        assert(num_operators > 0);
+        for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
             Operator * op = operators[op_idx];
             assert(op);
-            int num_input_tensors = op->get_num_input_tensors();
-            for (int i = 0; i < num_input_tensors; ++ i) {
-                Tensor * tensor = op->get_input_tensor(i);
-                assert(tensor);
-                tensors.insert(tensor);
-            }
-            int num_output_tensors = op->get_num_output_tensors();
-            for (int i = 0; i < num_output_tensors; ++ i) {
-                Tensor * tensor = op->get_output_tensor(i);
-                assert(tensor);
-                tensors.insert(tensor);
+            if (op->get_type() == OPERATOR_AGGREGATION) {
+                int num_input_tensors = op->get_num_input_tensors();
+                for (int i = 0; i < num_input_tensors; ++ i) {
+                    Tensor * tensor = op->get_input_tensor(i);
+                    assert(tensor);
+                    inputs_to_aggr.insert(tensor);
+                }
+                int num_output_tensors = op->get_num_output_tensors();
+                for (int i = 0; i < num_output_tensors; ++ i) {
+                    Tensor * tensor = op->get_output_tensor(i);
+                    assert(tensor);
+                    outputs_from_aggr.insert(tensor);
+                }
             }
         }
-        for (Tensor * tensor: tensors) {
-            map_tensor(tensor);
-        }
-        // measurement
-        double * runtimes = new double [num_chunks];
-        assert(runtimes);
-        for (int chunk: chunks) { 
-            checkCUDA(cudaStreamSynchronize(0));
-            double t = - get_time();
-            for (int i = 0; i < count; ++ i) {
-                propagate_activation(op_begin, op_end, chunk, true);
+    
+        // start profiling the performances of each layer
+        std::map<int, double*> cached_runtimes;
+        const int count = 5;
+    
+        for (int layer = 0; layer < num_layers; ++ layer) {
+            int layer_type = application->get_layer_type(layer);
+            if (cached_runtimes.find(layer_type) != cached_runtimes.end()) {
+                // a layer with the same type have been profiled before
+                double * runtimes = cached_runtimes[layer_type];
+                for (int chunk: chunks) {
+                    estimated_runtime_[layer][chunk] = runtimes[chunk];
+                }
+                continue;
             }
-            //for (int i = 0; i < count; ++ i) {
-            //    propagate_gradient(op_begin, op_end, chunk, true); FIXME
-            //}
-            checkCUDA(cudaStreamSynchronize(0));
-            t += get_time();
-            t /= count;
-            runtimes[chunk] = t;
-            estimated_runtime_[layer][chunk] = t;
+            int op_begin, op_end;
+            application->get_op_range(layer, &op_begin, &op_end);
+            assert(op_begin < op_end);
+            assert(op_begin >= 0 && op_end <= num_operators);
+            // map the tensors
+            std::set<Tensor*> tensors;
+            for (int op_idx = op_begin; op_idx < op_end; ++ op_idx) {
+                Operator * op = operators[op_idx];
+                assert(op);
+                int num_input_tensors = op->get_num_input_tensors();
+                for (int i = 0; i < num_input_tensors; ++ i) {
+                    Tensor * tensor = op->get_input_tensor(i);
+                    assert(tensor);
+                    tensors.insert(tensor);
+                }
+                int num_output_tensors = op->get_num_output_tensors();
+                for (int i = 0; i < num_output_tensors; ++ i) {
+                    Tensor * tensor = op->get_output_tensor(i);
+                    assert(tensor);
+                    tensors.insert(tensor);
+                }
+            }
+            for (Tensor * tensor: tensors) {
+                map_tensor(tensor);
+            }
+            if (layer == 0) {
+                // warmining up
+                for (int chunk: chunks) { 
+                    for (int i = 0; i < count; ++ i) {
+                        propagate_activation(op_begin, op_end, chunk, true);
+                    }
+                    for (int i = 0; i < count; ++ i) {
+                        propagate_gradient(op_begin, op_end, chunk, true); 
+                    }
+                }
+            }
+            // measurement
+            double * runtimes = new double [num_chunks];
+            assert(runtimes);
+            for (int chunk: chunks) { 
+                checkCUDA(cudaStreamSynchronize(0));
+                double t = - get_time();
+                for (int i = 0; i < count; ++ i) {
+                    propagate_activation(op_begin, op_end, chunk, true);
+                }
+                for (int i = 0; i < count; ++ i) {
+                    propagate_gradient(op_begin, op_end, chunk, true); 
+                }
+                checkCUDA(cudaStreamSynchronize(0));
+                t += get_time();
+                t /= count;
+                runtimes[chunk] = t;
+                estimated_runtime_[layer][chunk] = t;
+            }
+            cached_runtimes[layer_type] = runtimes;
+            // unmap the tensors
+            for (Tensor * tensor: tensors) {
+                unmap_tensor(tensor);
+            }
         }
-        cached_runtimes[layer_type] = runtimes;
-        if (! node_id) {
-            printf("%6d", layer_type);
-            for (int chunk: chunks) {
-                printf("%6.02fms", runtimes[chunk] * 1e3);
+    
+        // output the profiling results
+        std::vector<int> layer_types;
+        printf("%6s", "LType");
+        for (std::pair<int, double*> p: cached_runtimes) {
+            layer_types.push_back(p.first);
+            std::string layer_name = "LT" + std::to_string(p.first);
+            printf("%6s", layer_name.c_str());
+        }
+        printf("\n");
+        for (int chunk: chunks) {
+            std::string chunk_name = "chk_" + std::to_string(chunk);
+            printf("%6s", chunk_name.c_str());
+            for (int layer_type: layer_types) {
+                double t = cached_runtimes[layer_type][chunk];
+                printf("%6.2fms", t * 1e3);
             }
             printf("\n");
         }
-        // unmap the tensors
-        for (Tensor * tensor: tensors) {
-            unmap_tensor(tensor);
+        // calculate some statistics per LType
+        std::vector<double> avg_t_vec;
+        std::vector<double> max_t_vec;
+        std::vector<double> min_t_vec;
+        std::vector<double> var_t_vec;
+        for (int layer_type: layer_types) {
+            double avg_t = 0;
+            double max_t = 0;
+            double min_t = 0x7fffffff;
+            for (int chunk: chunks) {
+                double t = cached_runtimes[layer_type][chunk] * 1e3;
+                avg_t += t;
+                max_t = std::max(max_t, t);
+                min_t = std::min(min_t, t);
+            }
+            avg_t /= double(chunks.size());
+            double var_t = 0;
+            for (int chunk: chunks) {
+                double t = cached_runtimes[layer_type][chunk] * 1e3;
+                var_t += (t - avg_t) * (t - avg_t);
+            }
+            var_t /= double(chunks.size()); // biased variance
+            avg_t_vec.push_back(avg_t);
+            max_t_vec.push_back(max_t);
+            min_t_vec.push_back(min_t);
+            var_t_vec.push_back(var_t);
         }
+        printf("%6s", "Avg");
+        for (int i = 0; i < layer_types.size(); ++ i) {
+            printf("%6.2f", avg_t_vec[i]);
+        }
+        printf("\n");
+        printf("%6s", "Max");
+        for (int i = 0; i < layer_types.size(); ++ i) {
+            printf("%6.2f", max_t_vec[i]);
+        }
+        printf("\n");
+        printf("%6s", "Min");
+        for (int i = 0; i < layer_types.size(); ++ i) {
+            printf("%6.2f", min_t_vec[i]);
+        }
+        printf("\n");
+        printf("%6s", "Ratio");
+        for (int i = 0; i < layer_types.size(); ++ i) {
+            printf("%6.2f", max_t_vec[i] / min_t_vec[i]);
+        }
+        printf("\n");
+        printf("%6s", "Var");
+        for (int i = 0; i < layer_types.size(); ++ i) {
+            printf("%6.2f", var_t_vec[i]);
+        }
+        printf("\n");
+    
+        // free the cache
+        for (std::pair<int, double*> p: cached_runtimes) {
+            assert(p.second);
+            delete [] p.second;
+        }
+        cached_runtimes.clear();
     }
 
-    // free the cache
-    for (std::pair<int, double*> p: cached_runtimes) {
-        assert(p.second);
-        delete [] p.second;
-    }
-    cached_runtimes.clear();
-
+    usleep(1e5);
     MPI_Barrier(MPI_COMM_WORLD);
-    printf("Done Cost Model Initialization.\n");
+    for (int layer = 0; layer < num_layers; ++ layer) {
+        MPI_Bcast(
+                (void*) estimated_runtime_[layer],
+                num_chunks, MPI_DOUBLE, 
+                0, MPI_COMM_WORLD
+                );
+    }
 }
 
 double DistributedPIPHybridParallelExecutionEngineGPU::estimate_cost(

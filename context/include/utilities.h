@@ -112,6 +112,10 @@ class RandomNumberManager {
             RandomNumberManager * mgr = get_instance(seed);
             assert(mgr);
         }
+        static inline void reset() {
+            assert(instance);
+            srand(instance->seed_);
+        }
         // random integer 
         static inline int get_random_number() {
             // for thread safety
