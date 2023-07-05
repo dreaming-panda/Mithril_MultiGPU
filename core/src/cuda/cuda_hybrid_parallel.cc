@@ -2979,12 +2979,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
         int chunk_id,
         bool profiling_mode
         ) {
+    assert(chunk_manager_);
+    assert(op_ten_manager_);
+
     int op_idx_begin = op_begin;
     int op_idx_end = op_end;
-    VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
-    VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
-    VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
-    VertexId local_vid_end = vid_translation_->get_local_vid_master_vertex(global_vid_end);
+    VertexId local_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
+    VertexId local_vid_end = chunk_manager_->get_chunk_end(chunk_id);
 
     for (int op_idx = op_idx_begin; op_idx < op_idx_end; op_idx ++) {
         Operator * op = op_ten_manager_->get_operator(op_idx);
@@ -3017,7 +3018,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                         graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true);
                         Profiler::submit_main_thread_event(CoreForwardComputationStartEvent);
                     }
-                    // do the actual computation
+                    // do the actual computation 
                     executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 }
                 break;
@@ -3053,10 +3054,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
         int chunk_id,
         bool profiling_mode
         ) {
-    VertexId global_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
-    VertexId global_vid_end = chunk_manager_->get_chunk_end(chunk_id);
-    VertexId local_vid_begin = vid_translation_->get_local_vid_master_vertex(global_vid_begin);
-    VertexId local_vid_end = vid_translation_->get_local_vid_master_vertex(global_vid_end);
+    assert(chunk_manager_);
+
+    VertexId local_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
+    VertexId local_vid_end = chunk_manager_->get_chunk_end(chunk_id);
     int op_idx_begin = op_begin;
     int op_idx_end = op_end;
 
@@ -3095,7 +3096,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
                         graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
                         Profiler::submit_main_thread_event(CoreBackwardComputationStartEvent);
                     }
-                    // do the actual computation
+                    // do the actual computation 
                     executor_->aggregation_backward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 }
                 break;
@@ -3565,18 +3566,38 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
             );
     VertexId max_chunk_size = chunk_manager_->get_max_chunk_size();
 
+    const std::vector<Operator*> operators = application->get_operators();
+    op_ten_manager_ = new CUDAOperatorsAndTensorsManager(operators);
+
+    VertexId num_global_vertices = graph_structure_->get_num_global_vertices();
+    vid_translation_ = new CUDAVertexIdTranslationTable(
+            graph_structure_, 0, num_global_vertices
+            );
+
+    CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_);
+    lgraph->InitMemory();
+    lgraph->InitCsr(aggregation_type_);
+    local_graph_ = lgraph;
+
+    OperatorExecutorGPUV2 * executor = (OperatorExecutorGPUV2*) executor_;
+    //executor->set_graph(local_graph_);
+    executor->set_csr(lgraph->get_cuda_csrColIn_In(),lgraph->get_cuda_csrValue_In(),lgraph->get_cuda_csrRowOffsets_In(),lgraph->get_nnz_in(),
+            lgraph->get_cuda_csrColIn_Out(),lgraph->get_cuda_csrValue_Out(),lgraph->get_cuda_csrRowOffsets_Out(),lgraph->get_nnz_out(),
+            lgraph->get_num_master_vertices(),lgraph->get_inMatrixSize(),lgraph->get_outMatrixSize());
+    executor->set_cpu_csr(lgraph->get_host_csrRowOffsets_In(), lgraph->get_host_csrRowOffsets_Out());
+
     // obtained the profiling results
     gen_profiling_results(application);
 
+    return 0; // FIXME
+
     application_ = application;
     num_epoch_ = num_epoch;
-    const std::vector<Operator*> operators = application->get_operators();
     int num_operators = operators.size();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
     int node_id = DistributedSys::get_instance()->get_node_id();
     int stage_id = get_stage_id();
     int num_stages = get_num_stages();
-    VertexId num_global_vertices = graph_structure_->get_num_global_vertices();
     total_num_inference_runs_ = 0;
     if (evaluation_frequency_ != -1) {
         assert(evaluation_frequency_ > 0);
@@ -3629,10 +3650,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
 
     // construct the helper classes
     printf("*** Node %d, constructing the helper classes...\n", node_id);
-    op_ten_manager_ = new CUDAOperatorsAndTensorsManager(operators);
-    vid_translation_ = new CUDAVertexIdTranslationTable(
-            graph_structure_, 0, num_global_vertices
-            );
 
     vtensor_manager_ = new CUDAVertexTensorDataGradManager(
             op_ten_manager_, vid_translation_,
@@ -3640,10 +3657,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
             max_chunk_size, application->get_output_tensor(),
             application->get_global_shared_tensor()
             );
-
-    CUDABPIPLocalGraph * lgraph = new CUDABPIPLocalGraph(graph_structure_, vid_translation_, user_specified_num_chunks_);
-    lgraph->InitMemory();
-    lgraph->InitCsr(aggregation_type_);
 
     std::vector<WeightOperator*> weight_ops;
     for (Operator * op: operators) {
@@ -3655,7 +3668,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
             num_epoch / EVAL_FREQUENCY + 1, weight_file_, weight_ops
             );
 
-    local_graph_ = lgraph;
     weight_aggregator_ = new CUDAPIPWeightAggregator(op_ten_manager_, optimizer_->get_lower_level_optimizer(), this, weight_dumper);
 
     assert(op_ten_manager_ != NULL);
@@ -3832,12 +3844,6 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
     //printf("Node %d, TEST\n", node_id);
 
     accum_loss_ = 0.;
-    OperatorExecutorGPUV2 * executor = (OperatorExecutorGPUV2*) executor_;
-    //executor->set_graph(local_graph_);
-    executor->set_csr(lgraph->get_cuda_csrColIn_In(),lgraph->get_cuda_csrValue_In(),lgraph->get_cuda_csrRowOffsets_In(),lgraph->get_nnz_in(),
-            lgraph->get_cuda_csrColIn_Out(),lgraph->get_cuda_csrValue_Out(),lgraph->get_cuda_csrRowOffsets_Out(),lgraph->get_nnz_out(),
-            lgraph->get_num_master_vertices(),lgraph->get_inMatrixSize(),lgraph->get_outMatrixSize());
-    executor->set_cpu_csr(lgraph->get_host_csrRowOffsets_In(), lgraph->get_host_csrRowOffsets_Out());
     local_ntrain = 0;
     local_nvalid = 0;
     local_ntest = 0;
@@ -4251,9 +4257,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::get_inference_epoch_chunk_o
 void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
         AbstractApplication * application
         ) {
+    printf("Start Cost Model Initialization...\n");
     int node_id = DistributedSys::get_instance()->get_node_id();
     if (node_id != 0) {
-        break;
+        MPI_Barrier(MPI_COMM_WORLD);
+        return ;
     }
 
     assert(application);
@@ -4333,6 +4341,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
         assert(gpu_grad);
         checkCUDA(cudaFree(gpu_data));
         checkCUDA(cudaFree(gpu_grad));
+        resource->set_gpu_data_from_gpu(NULL);
+        resource->set_gpu_grad_from_gpu(NULL);
         delete resource;
         tensor->resource = saved_resources[tensor];
         tensor->is_data_transient = saved_is_data_transient[tensor];
@@ -4408,15 +4418,15 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
         // measurement
         double * runtimes = new double [num_chunks];
         assert(runtimes);
-        for (int chunk: chunks) {
+        for (int chunk: chunks) { 
             checkCUDA(cudaStreamSynchronize(0));
             double t = - get_time();
             for (int i = 0; i < count; ++ i) {
-                propagate_activation(op_begin, op_end, chunk);
+                propagate_activation(op_begin, op_end, chunk, true);
             }
-            for (int i = 0; i < count; ++ i) {
-                propagate_gradient(op_begin, op_end, chunk);
-            }
+            //for (int i = 0; i < count; ++ i) {
+            //    propagate_gradient(op_begin, op_end, chunk, true); FIXME
+            //}
             checkCUDA(cudaStreamSynchronize(0));
             t += get_time();
             t /= count;
@@ -4424,6 +4434,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
             estimated_runtime_[layer][chunk] = t;
         }
         cached_runtimes[layer_type] = runtimes;
+        if (! node_id) {
+            printf("%6d", layer_type);
+            for (int chunk: chunks) {
+                printf("%6.02fms", runtimes[chunk] * 1e3);
+            }
+            printf("\n");
+        }
         // unmap the tensors
         for (Tensor * tensor: tensors) {
             unmap_tensor(tensor);
@@ -4436,6 +4453,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
         delete [] p.second;
     }
     cached_runtimes.clear();
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Done Cost Model Initialization.\n");
 }
 
 double DistributedPIPHybridParallelExecutionEngineGPU::estimate_cost(
