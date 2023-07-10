@@ -1655,23 +1655,23 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     };
 
 
-    auto send_one_byte = [&](int remote_node) {
-        uint8_t test = 0;
-        MPI_Send(
-                &test, 1, MPI_CHAR, remote_node,
-                ForwardActivationPassing, MPI_COMM_WORLD
-                );
-    };
+    //auto send_one_byte = [&](int remote_node) {
+    //    uint8_t test = 0;
+    //    MPI_Send(
+    //            &test, 1, MPI_CHAR, remote_node,
+    //            ForwardActivationPassing, MPI_COMM_WORLD
+    //            );
+    //};
 
-    auto recv_one_byte = [&](int remote_node) {
-        uint8_t test = 0;
-        MPI_Status status;
-        MPI_Recv(
-                &test, 1, MPI_CHAR, remote_node, 
-                ForwardActivationPassing, MPI_COMM_WORLD,
-                &status
-                );
-    };
+    //auto recv_one_byte = [&](int remote_node) {
+    //    uint8_t test = 0;
+    //    MPI_Status status;
+    //    MPI_Recv(
+    //            &test, 1, MPI_CHAR, remote_node, 
+    //            ForwardActivationPassing, MPI_COMM_WORLD,
+    //            &status
+    //            );
+    //};
 
 
     int node_id = DistributedSys::get_instance()->get_node_id();
@@ -2309,7 +2309,7 @@ void CUDAOperatorsAndTensorsManager::build_ordered_tensor_list() {
         int num_operators = ordered_operator_list_.size();
         for (int op_idx = 0; op_idx < num_operators; ++ op_idx) {
             Operator * op = ordered_operator_list_[op_idx];
-            printf("    Op %d: type %s, output tensors:", op_idx, get_op_type_str(op->get_type()).c_str());
+            //printf("    Op %d: type %s, output tensors:", op_idx, get_op_type_str(op->get_type()).c_str());
             int num_output_tensors = op->get_num_output_tensors();
             for (int i = 0; i < num_output_tensors; ++ i) {
                 Tensor * tensor = op->get_output_tensor(i);
@@ -3340,8 +3340,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::init_weights() {
 
     // initialize the weight tensors
     for (WeightOperator * weight_op: local_weight_ops_) {
-        printf("+++++++++ Node %d, mapping weight op %d\n", 
-                node_id, op_ten_manager_->get_operator_index(weight_op));
+        //printf("+++++++++ Node %d, mapping weight op %d\n", 
+        //        node_id, op_ten_manager_->get_operator_index(weight_op));
         assert(weight_op->get_num_output_tensors() == 1);
         Tensor * tensor = weight_op->get_output_tensor(0);
         assert(tensor != NULL);
@@ -3587,8 +3587,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
 
     // obtained the profiling results
     gen_profiling_results(application);
+    execution_plan_generation(application);
 
-    return 0;
+    //return 0;
 
     RandomNumberManager::reset();
 
@@ -4588,6 +4589,149 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimate_cost(
     }
     return cost;
 }
+
+
+void DistributedPIPHybridParallelExecutionEngineGPU::layer_level_partitioning(
+        const std::vector<double> &costs_per_layer, 
+        std::vector<std::pair<int, int>> &optimal_partitioning, 
+        int num_partitions
+        ) {
+    assert(num_partitions >= 1);
+    int num_layers = (int) costs_per_layer.size();
+    assert(num_layers >= 1);
+    // a dynamic programming algorithm
+    // min_max_cost[i][j]: 
+    // the minimum max-single-stage cost when partitioning
+    // layer [0,i) into j partitions
+    double min_max_cost[num_layers + 1][num_partitions + 1];
+    int opt_desicion[num_layers + 1][num_partitions + 1];
+    min_max_cost[0][1] = 0;
+    for (int i = 0; i < num_layers; ++ i) {
+        min_max_cost[i + 1][1] = min_max_cost[i][1] + costs_per_layer[i];
+        opt_desicion[i + 1][1] = 0;
+    }
+    // for easy range sum calculation
+    std::vector<double> prefix_sum;
+    prefix_sum.push_back(0);
+    double running_sum = 0;
+    for (int i = 0; i < num_layers; ++ i) {
+        running_sum += costs_per_layer[i];
+        prefix_sum.push_back(running_sum);
+    }
+    // DP
+    const double INF = 1e100;
+    for (int j = 2; j <= num_partitions; ++ j) {
+        for (int i = 1; i <= num_layers; ++ i) {
+            min_max_cost[i][j] = INF;
+            opt_desicion[i][j] = -1;
+            for (int k = 1; k < i; ++ k) {
+                double cost = std::max(min_max_cost[k][j - 1],
+                    prefix_sum[i] - prefix_sum[k]);
+                //printf("cost = %.3f\n", cost);
+                if (cost < min_max_cost[i][j]) {
+                    opt_desicion[i][j] = k;
+                    min_max_cost[i][j] = cost;
+                }
+            }
+            //printf("OPT[%d][%d] = %.3f ms\n",
+            //        i, j, min_max_cost[i][j]);
+        }
+    }
+    if (min_max_cost[num_layers][num_partitions] >= INF) {
+        optimal_partitioning.clear();
+        return ;
+    }
+    printf("The bottleneck stage in the optimal plan: %.3f ms\n",
+            min_max_cost[num_layers][num_partitions]);
+    std::vector<int> boundaries;
+    boundaries.push_back(num_layers);
+    int boundary = num_layers;
+    for (int j = num_partitions; j >= 1; -- j) {
+        boundary = opt_desicion[boundary][j];
+        //printf("j = %d, boundary = %d\n", j, boundary);
+        assert(boundary != -1);
+        boundaries.push_back(boundary);
+    }
+    assert(boundary == 0);
+    std::reverse(boundaries.begin(), boundaries.end());
+    optimal_partitioning.clear();
+    for (int i = 0; i < num_partitions; ++ i) {
+        int begin = boundaries[i];
+        int end = boundaries[i + 1];
+        optimal_partitioning.push_back(
+                std::make_pair(begin, end)
+                );
+        double cost = 0;
+        for (int j = begin; j < end; ++ j) {
+            cost += costs_per_layer[j];
+        }
+        printf("Partition %d [%d, %d) has cost: %.3f ms\n",
+                i, begin, end, cost);
+    }
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
+        AbstractApplication * application
+        ) {
+    int num_layers = application->get_num_layers();
+    int num_gpus = DistributedSys::get_instance()->get_num_nodes();
+    int node_id = DistributedSys::get_instance()->get_node_id();
+
+    partitioning_.num_partitions = num_gpus;
+    partitioning_.partition_op_begin = new int [num_gpus];
+    partitioning_.partition_op_end = new int [num_gpus];
+
+    if (node_id == 0) {
+        std::vector<double> costs_per_layer;
+        std::vector<int> chunks;
+        chunk_manager_->get_local_chunk_ids(chunks);
+        int num_chunks = (int) chunks.size();
+
+        for (int layer = 0; layer < num_layers; ++ layer) {
+            double cost = 0;
+            for (int chunk: chunks) {
+                cost += estimated_runtime_[layer][chunk];
+            }
+            cost *= 1e3;
+            costs_per_layer.push_back(cost);
+            //printf("Layer %d Cost %.2f ms\n",
+            //        layer, cost);
+        }
+
+        std::vector<std::pair<int, int>> optimal_partitioning;
+        layer_level_partitioning(
+                costs_per_layer, 
+                optimal_partitioning,
+                num_gpus
+                );
+        assert(optimal_partitioning.size() > 0);
+
+        printf("The optimal partitioning:\n");
+        for (auto p: optimal_partitioning) {
+            printf("[%d, %d)\n", p.first, p.second);
+        }
+
+        for (int i = 0; i < num_gpus; ++ i) {
+            auto p = optimal_partitioning[i];
+            int op_begin = -1;
+            int op_end = -1;
+            application->get_op_range(p.first, &op_begin, &op_end);
+            partitioning_.partition_op_begin[i] = op_begin;
+            application->get_op_range(p.second - 1, &op_begin, &op_end);
+            partitioning_.partition_op_end[i] = op_end;
+        }
+    }
+
+    MPI_Bcast(
+            partitioning_.partition_op_begin, 
+            num_gpus, MPI_INT, 0, MPI_COMM_WORLD
+            );
+    MPI_Bcast(
+            partitioning_.partition_op_end, 
+            num_gpus, MPI_INT, 0, MPI_COMM_WORLD
+            );
+}
+
 
 
 

@@ -1,6 +1,7 @@
 import numpy as np
 import pymetis
 import os
+import random
 
 def load_graph():
     with open("./tmp/graph.txt", "r") as f:
@@ -28,8 +29,14 @@ def load_graph():
 
 def partition_graph(graph, num_parts, vweights):
     print("Partitioning the graph...")
+    #shuffle_factor = 1
     n_cuts, membership = pymetis.part_graph(num_parts, adjacency=graph, vweights=vweights)
     return membership
+    #mapping = [i for i in range(num_parts * shuffle_factor)]
+    #random.shuffle(mapping)
+    #for i in range(len(membership)):
+    #    membership[i] = mapping[membership[i]] // shuffle_factor
+    #return membership
 
 def dump_parts(membership, num_parts):
     print("Dumping the partitions...")

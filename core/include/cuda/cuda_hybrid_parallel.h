@@ -1364,6 +1364,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         // the cost model
         void gen_profiling_results(AbstractApplication * application);
         double estimate_cost(int layer_begin, int layer_end, int chunk_id);
+        void layer_level_partitioning(const std::vector<double> &costs_per_layer, std::vector<std::pair<int, int>> &optimal_partitioning, int num_partitions);
+        void execution_plan_generation(AbstractApplication * application);
 
         friend class CUDAPIPForwardTaskDispatcher;
         friend class CUDAPIPBackwardTaskDispatcher;
