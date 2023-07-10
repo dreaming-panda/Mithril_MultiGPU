@@ -12,6 +12,6 @@ if __name__ == "__main__":
             line = line.split()
             edges.append(float(line[-1][:-1]))
             runtimes.append(float(line[2][:-2]))
-    plt.plot(edges, runtimes)
+    plt.plot(edges, runtimes, "*")
     plt.savefig("analyze_chunk.pdf")
 
