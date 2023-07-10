@@ -9,6 +9,7 @@ def load_graph():
         num_vertices = int(line.strip().split(" ")[0])
         print("Going to load the graph with %s vertices" % (num_vertices))
         graph = []
+        vweights = []
         for i in range(num_vertices):
             line = f.readline()
             assert(line != None and len(line) > 0)
@@ -20,13 +21,14 @@ def load_graph():
             if i < 10 or num_vertices - i < 10:
                 print(i, nbrs)
             graph.append(np.array(nbrs))
+            vweights.append(50 + len(nbrs))
             #if (i + 1) % (num_vertices / 100) == 0:
             #    print("\tLoading progress %.2f", (i + 1) * 1. / num_vertices)
-        return graph
+        return graph, vweights
 
-def partition_graph(graph, num_parts):
+def partition_graph(graph, num_parts, vweights):
     print("Partitioning the graph...")
-    n_cuts, membership = pymetis.part_graph(num_parts, adjacency=graph)
+    n_cuts, membership = pymetis.part_graph(num_parts, adjacency=graph, vweights=vweights)
     return membership
 
 def dump_parts(membership, num_parts):
@@ -38,7 +40,8 @@ def dump_parts(membership, num_parts):
 
 if __name__ == "__main__":
     print("Going to partition the graph with METIS...\n")
-    graph = load_graph()
+    graph, vweights = load_graph()
+    print(vweights[:10])
 
     num_partitions = []
     with open("./tmp/num_partitions.txt", "r") as f:
@@ -50,7 +53,7 @@ if __name__ == "__main__":
 
     for num_parts in num_partitions:
         print("\n\n\nNumPartitions = %s" % (num_parts))
-        membership = partition_graph(graph, num_parts)
+        membership = partition_graph(graph, num_parts, vweights)
         dump_parts(membership, num_parts)
 
 
