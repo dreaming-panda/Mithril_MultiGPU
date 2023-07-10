@@ -3018,7 +3018,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                         graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true);
                         Profiler::submit_main_thread_event(CoreForwardComputationStartEvent);
                     }
-                    // do the actual computation 
+                    // do the actual computation  
                     executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 }
                 break;
@@ -3095,7 +3095,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
                         graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
                         Profiler::submit_main_thread_event(CoreBackwardComputationStartEvent);
                     }
-                    // do the actual computation 
+                    // do the actual computation  
                     executor_->aggregation_backward((AggregationOperator*) op, local_vid_begin, local_vid_end);
                 }
                 break;
@@ -3587,6 +3587,8 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
 
     // obtained the profiling results
     gen_profiling_results(application);
+
+    return 0;
 
     RandomNumberManager::reset();
 
@@ -4264,9 +4266,26 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
     int num_chunks = (int) chunks.size();
 
     if (node_id == 0) {
+        double start_time = get_time();
+
         assert(application);
         assert(chunk_manager_);
         assert(executor_);
+
+        std::vector<VertexId> vertices_per_chunk;
+        std::vector<EdgeId> edges_per_chunk;
+        for (int chunk: chunks) {
+            VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk);
+            VertexId chunk_end = chunk_manager_->get_chunk_end(chunk);
+            assert(chunk_begin <= chunk_end);
+            vertices_per_chunk.push_back(chunk_end - chunk_begin);
+            EdgeId degree_sum = 0;
+            for (VertexId v_i = chunk_begin; v_i < chunk_end; ++ v_i) {
+                EdgeId degree = (EdgeId) graph_structure_->get_in_degree(v_i);
+                degree_sum += degree;
+            }
+            edges_per_chunk.push_back(degree_sum);
+        }
     
         std::map<Tensor*, bool> saved_is_data_transient;
         std::map<Tensor*, bool> saved_is_grad_transient;
@@ -4374,7 +4393,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
     
         // start profiling the performances of each layer
         std::map<int, double*> cached_runtimes;
-        const int count = 5;
+        const int count = 16;
     
         for (int layer = 0; layer < num_layers; ++ layer) {
             int layer_type = application->get_layer_type(layer);
@@ -4411,23 +4430,21 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
             for (Tensor * tensor: tensors) {
                 map_tensor(tensor);
             }
-            if (layer == 0) {
-                // warmining up
-                for (int chunk: chunks) { 
-                    for (int i = 0; i < count; ++ i) {
-                        propagate_activation(op_begin, op_end, chunk, true);
-                    }
-                    for (int i = 0; i < count; ++ i) {
-                        propagate_gradient(op_begin, op_end, chunk, true); 
-                    }
-                }
-            }
+            //if (layer == 0) {
+            //    for (int chunk: chunks) { 
+            //        for (int i = 0; i < count; ++ i) {
+            //            propagate_activation(op_begin, op_end, chunk, true);
+            //        }
+            //        for (int i = 0; i < count; ++ i) {
+            //            propagate_gradient(op_begin, op_end, chunk, true); 
+            //        }
+            //    }
+            //}
             // measurement
             double * runtimes = new double [num_chunks];
             assert(runtimes);
             for (int chunk: chunks) { 
-                checkCUDA(cudaStreamSynchronize(0));
-                double t = - get_time();
+                // warmining up
                 for (int i = 0; i < count; ++ i) {
                     propagate_activation(op_begin, op_end, chunk, true);
                 }
@@ -4435,7 +4452,17 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
                     propagate_gradient(op_begin, op_end, chunk, true); 
                 }
                 checkCUDA(cudaStreamSynchronize(0));
-                t += get_time();
+                uint64_t start_cycle = get_cycle();
+                for (int i = 0; i < count; ++ i) {
+                    propagate_activation(op_begin, op_end, chunk, true);
+                }
+                for (int i = 0; i < count; ++ i) {
+                    propagate_gradient(op_begin, op_end, chunk, true); 
+                }
+                checkCUDA(cudaStreamSynchronize(0));
+                uint64_t end_cycle = get_cycle();
+                assert(end_cycle >= start_cycle);
+                double t = (end_cycle - start_cycle) / 3e9; // approximate 3Ghz
                 t /= count;
                 runtimes[chunk] = t;
                 estimated_runtime_[layer][chunk] = t;
@@ -4455,15 +4482,21 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
             std::string layer_name = "LT" + std::to_string(p.first);
             printf("%6s", layer_name.c_str());
         }
-        printf("\n");
+        printf("%6s%6s%6s\n", "Ratio", "VSum", "ESum");
         for (int chunk: chunks) {
             std::string chunk_name = "chk_" + std::to_string(chunk);
             printf("%6s", chunk_name.c_str());
+            double min_t = 0x7fffffff;
+            double max_t = 0;
             for (int layer_type: layer_types) {
                 double t = cached_runtimes[layer_type][chunk];
+                min_t = std::min(min_t, t);
+                max_t = std::max(max_t, t);
                 printf("%6.2fms", t * 1e3);
             }
-            printf("\n");
+            printf("%6.2f%6.2fK%6.2fM\n", 
+                    max_t / min_t, vertices_per_chunk[chunk] / 1e3,
+                    edges_per_chunk[chunk] / 1e6);
         }
         // calculate some statistics per LType
         std::vector<double> avg_t_vec;
@@ -4524,6 +4557,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
             delete [] p.second;
         }
         cached_runtimes.clear();
+
+        double end_time = get_time();
+        printf("Profiling takes %.3f s\n", end_time - start_time);
     }
 
     usleep(1e5);
