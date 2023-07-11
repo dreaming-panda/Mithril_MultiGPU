@@ -77,7 +77,7 @@ void CopyFromCUDADeviceToHost(T* dst_ptr, const T* src_ptr, size_t size, const c
     void* void_dst_ptr = reinterpret_cast<void*>(dst_ptr);
     const void* void_src_ptr = reinterpret_cast<const void*>(src_ptr);
     size_t size_in_bytes = size * sizeof(T);
-    cudaMemcpy(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToHost);
+    checkCUDA(cudaMemcpy(void_dst_ptr, void_src_ptr, size_in_bytes, cudaMemcpyDeviceToHost));
 }
 
 template <typename T>

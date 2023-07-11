@@ -428,6 +428,8 @@ double CrossEntropyLossGPU::get_loss(Tensor * output_tensor, Tensor * std_tensor
 
     DataType * d_output_data = output_resource->get_gpu_data();
     DataType * d_std_data = std_resource->get_gpu_data();
+    assert(d_output_data);
+    assert(d_std_data);
 
     VertexId num_vertices = output_resource->get_num_vertices();
     int output_size = output_tensor->dims[1];

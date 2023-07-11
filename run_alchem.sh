@@ -8,17 +8,17 @@ make -j
 
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_partitioned_graphs
 num_gpus=8
-num_layers=32
-hunits=128
+num_layers=64
+hunits=256
 lr=1e-3
 graph=reddit
-epoch=50
+epoch=30
 decay=1e-5
-chunks=64
+chunks=48
 dropout=0.5
 seed=5
-model=gcn
-eval_freq=10
+model=graphsage
+eval_freq=-1
 exact_inference=0
 num_dp_ways=1
 enable_compression=0

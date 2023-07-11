@@ -180,7 +180,7 @@ __global__ void CalculateLossMaskKernel(
     if(nid_end >= num_vertices)nid_end = num_vertices;
     for(int i = nid_start; i < nid_end; ++i){
         loss_data[i] = 0.0f;
-        if(mask[i] == 0)continue;
+        if(mask[i] == 0)continue; 
         DataType * o = &output_data[i * outputsize];
         DataType * s = &std_data[i * outputsize];
         double delta = 0.;
@@ -278,6 +278,12 @@ double CrossEntropyLossGPU::LaunchGetLossMaskWithStart(DataType * std_data, Data
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
+    assert(loss_data_);
+    assert(std_data);
+    assert(output_data);
+    assert(gpu_training_mask_);
+    assert(gpu_valid_mask_);
+    assert(gpu_test_mask_);
     if(type == 0)
     {
         CalculateLossMaskKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, loss_data_ + start,gpu_training_mask_ + start,epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
@@ -288,7 +294,7 @@ double CrossEntropyLossGPU::LaunchGetLossMaskWithStart(DataType * std_data, Data
     }else {
         assert(false);
     }
-    cudaStreamSynchronize(0);
+    checkCUDA(cudaStreamSynchronize(0));
 
     const float alpha = 1.0f;
     const float beta = 0.0f;
@@ -319,13 +325,16 @@ double CrossEntropyLossGPU::LaunchGetLossWithStart(DataType * std_data, DataType
     const int ThreadNumber = 1024;
     const int BlockNumber =  (num_vertices + ThreadNumber - 1)/ThreadNumber;
     int per_thread_nodes = num_vertices / (ThreadNumber * BlockNumber) + 1;
+    assert(loss_data_);
     CalculateLossKernel<<<BlockNumber, ThreadNumber>>>(std_data, output_data, loss_data_ + start, epsilon_,num_vertices, outputsize, ThreadNumber, BlockNumber, per_thread_nodes);
-    cudaStreamSynchronize(0);
+    checkCUDA(cudaStreamSynchronize(0));
 
     const float alpha = 1.0f;
     const float beta = 0.0f; 
     cudnnCreateTensorDescriptor(&data_descriptor);
     cudnnSetTensor4dDescriptor(data_descriptor, CUDNN_TENSOR_NCHW,CUDNN_DATA_FLOAT, num_vertices, 1, 1, 1);
+    assert(loss_);
+    assert(d_inter_);
     cudnnReduceTensor(
             cudnn_,MeanDesc,nullptr,0,d_inter_, sizeof(DataType) * num_vertices,&alpha,
             data_descriptor,loss_data_ + start,&beta,loss_descriptor,loss_

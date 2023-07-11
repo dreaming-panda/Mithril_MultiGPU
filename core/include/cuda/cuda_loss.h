@@ -79,6 +79,7 @@ class CrossEntropyLossGPU:public CrossEntropyLossCPU
         CrossEntropyLossGPU(){
             loss_data_ = nullptr;
             loss_ = nullptr;
+            d_inter_ = nullptr;
             epsilon_ = 1e-12;
             usingsplit = false;
             cudnnCreate(&cudnn_);

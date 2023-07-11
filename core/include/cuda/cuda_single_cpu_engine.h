@@ -58,6 +58,12 @@ class SingleNodeExecutionEngineGPU: public AbstractExecutionEngine {
     public:
         SingleNodeExecutionEngineGPU() {
             lr_scheduler_ = nullptr;
+            training_mask_ = nullptr;
+            gpu_training_mask_ = nullptr;
+            valid_mask_ = nullptr;
+            gpu_valid_mask_ = nullptr;
+            test_mask_ = nullptr;
+            gpu_test_mask_ = nullptr;
         }
         ~SingleNodeExecutionEngineGPU() {
             DeallocateCUDAMemory<DataType>(&d_hit_, __FILE__, __LINE__);
