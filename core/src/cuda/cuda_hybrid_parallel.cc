@@ -19,7 +19,7 @@
 #define EVAL_FREQUENCY (10)
 #define NUM_GPUS_PER_NODE (4)
 #define NUM_INFERNECE_RUNS (3)
-#define NCCL_FUSED_COMMUNICATION (false)
+#define NCCL_FUSED_COMMUNICATION (true)
 
 //#define SHOW_SCHEDULE_DETAILS
 
@@ -2034,28 +2034,26 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         communication_events.push_back(std::make_pair(start_event, end_event));
     };
 
-    auto rearrange_chunk = [&]() {
-        std::sort(
-                forward_chunks, forward_chunks + num_forward_chunks,
-                [&](int a, int b) {
-                    return engine_->estimated_chunk_cost_[a] > engine_->estimated_chunk_cost_[b];
-                }
-                );
-        for (int i = 1; i < num_forward_chunks; ++ i) {
-            assert(engine_->estimated_chunk_cost_[forward_chunks[i - 1]]
-                    >= engine_->estimated_chunk_cost_[forward_chunks[i]]);
-        }
-        int sorted_chunks[num_forward_chunks];
-        for (int i = 0; i < num_forward_chunks / 2; ++ i) {
-            sorted_chunks[i * 2] = forward_chunks[i];
-            sorted_chunks[i * 2 + 1] = forward_chunks[num_forward_chunks - i - 1];
-            double cost = engine_->estimated_chunk_cost_[sorted_chunks[i * 2]]
-                + engine_->estimated_chunk_cost_[sorted_chunks[i * 2 + 1]];
-            //printf("Super Chunk %d, Cost %.3f ms\n", 
-            //        i, cost * 1e3);
-        }
-        memcpy(forward_chunks, sorted_chunks, sizeof(int) * num_forward_chunks);
-    };
+    //auto rearrange_chunk = [&]() {
+    //    std::sort(
+    //            forward_chunks, forward_chunks + num_forward_chunks,
+    //            [&](int a, int b) {
+    //                return engine_->estimated_chunk_cost_[a] > engine_->estimated_chunk_cost_[b];
+    //            }
+    //            );
+    //    for (int i = 1; i < num_forward_chunks; ++ i) {
+    //        assert(engine_->estimated_chunk_cost_[forward_chunks[i - 1]]
+    //                >= engine_->estimated_chunk_cost_[forward_chunks[i]]);
+    //    }
+    //    int sorted_chunks[num_forward_chunks];
+    //    for (int i = 0; i < num_forward_chunks / 2; ++ i) {
+    //        sorted_chunks[i * 2] = forward_chunks[i];
+    //        sorted_chunks[i * 2 + 1] = forward_chunks[num_forward_chunks - i - 1];
+    //        double cost = engine_->estimated_chunk_cost_[sorted_chunks[i * 2]]
+    //            + engine_->estimated_chunk_cost_[sorted_chunks[i * 2 + 1]];
+    //    }
+    //    memcpy(forward_chunks, sorted_chunks, sizeof(int) * num_forward_chunks);
+    //};
 
     double pre_pipelining_t = 0.;
     double post_pipelining_t = 0.;
@@ -2064,8 +2062,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double layer_comm_t = 0.;
     double compute_t = 0.;
 
-    const int super_chunk_size = 2;
-    assert(num_local_chunks % super_chunk_size == 0);
+    //const int super_chunk_size = 2;
+    //assert(num_local_chunks % super_chunk_size == 0);
 
     auto run_training_epoch = [&]() {
         // some cuda events for performance analysis
@@ -2098,7 +2096,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         engine_->get_training_epoch_chunk_ordering(
                 forward_chunks, &num_forward_chunks
                 );
-        //rearrange_chunk();
         assert(num_forward_chunks == num_local_chunks);
         checkCUDA(cudaEventRecord(pre_pipelining_complete_event));
 
@@ -2109,19 +2106,17 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         for (int c_i = 0; c_i < num_forward_chunks; c_i += 1) {
             CUDAPIPForwardTask task;
             task.epoch_id = epoch_id;
-            task.chunk_id = c_i; // FIXME
+            task.chunk_id = forward_chunks[c_i];
 
             cudaEvent_t start_event;
             cudaEvent_t end_event;
             checkCUDA(cudaEventCreate(&start_event));
             checkCUDA(cudaEventCreate(&end_event));
 
-            //// FIXME note that the pipeline tensor cannot be transient
-            //pre_data_communication(0);
-            //pre_data_communication(0);
-
             checkCUDA(cudaStreamSynchronize(0));
             MPI_Barrier(engine_->mpi_group_same_way_);
+
+            pre_data_communication(c_i);
 
             if (c_i == 0) {
                 checkCUDA(cudaEventRecord(scheduled_first_forward_task_event));
@@ -2129,90 +2124,80 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
             checkCUDA(cudaEventRecord(start_event));
 
-
-            //usleep(1e3 * 20);
             engine_->perform_forward_task(task);
-            //task.chunk_id = forward_chunks[0];
-            //engine_->perform_forward_task(task);
 
             checkCUDA(cudaEventRecord(end_event));
             computation_events.push_back(
                     std::make_pair(start_event, end_event)
                     );
 
-            //post_data_communication(0);
-            //post_data_communication(0);
+            post_data_communication(c_i);
         }
         checkCUDA(cudaEventRecord(complete_forward_pipelining_event));
-        double barrier_t = - get_time() * 1e3;
         for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
             MPI_Barrier(engine_->mpi_group_same_way_);
         }
+
+        // start the backwarding pipelining
+        for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
+            MPI_Barrier(engine_->mpi_group_same_way_);
+        }
+        for (int c_i = num_forward_chunks - 1; c_i >= 0; c_i -= 1) {
+            CUDAPIPBackwardTask task;
+            task.epoch_id = epoch_id;
+            task.chunk_id = forward_chunks[c_i];
+
+            cudaEvent_t start_event;
+            cudaEvent_t end_event;
+            checkCUDA(cudaEventCreate(&start_event));
+            checkCUDA(cudaEventCreate(&end_event));
+
+            checkCUDA(cudaStreamSynchronize(0));
+            MPI_Barrier(engine_->mpi_group_same_way_);
+
+            pre_grad_communication(c_i);
+
+            if (c_i == num_forward_chunks - 1) {
+                checkCUDA(cudaEventRecord(schedule_first_backward_task_event));
+            }
+
+            checkCUDA(cudaEventRecord(start_event));
+
+            engine_->perform_backward_task(task);
+
+            checkCUDA(cudaEventRecord(end_event));
+            computation_events.push_back(
+                    std::make_pair(start_event, end_event)
+                    );
+
+            post_grad_communication(c_i);
+        }
+        checkCUDA(cudaEventRecord(complete_backward_pipelining_event));
+
+        double barrier_t = - get_time() * 1e3;
+        for (int i = 0; i < stage_id; ++ i) {
+            MPI_Barrier(engine_->mpi_group_same_way_);
+        }
         barrier_t += get_time() * 1e3;
-
-        ////// start the backwarding pipelining
-        //for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
-        //    MPI_Barrier(engine_->mpi_group_same_way_);
-        //}
-        //for (int c_i = num_forward_chunks - 1; c_i >= 0; c_i -= 1) {
-        //    CUDAPIPBackwardTask task;
-        //    task.epoch_id = epoch_id;
-        //    task.chunk_id = c_i; // FIXME
-
-        //    cudaEvent_t start_event;
-        //    cudaEvent_t end_event;
-        //    checkCUDA(cudaEventCreate(&start_event));
-        //    checkCUDA(cudaEventCreate(&end_event));
-
-        //    //pre_grad_communication(0);
-        //    //pre_grad_communication(0);
-        //    
-        //    checkCUDA(cudaStreamSynchronize(0));
-        //    MPI_Barrier(engine_->mpi_group_same_way_);
-
-        //    if (c_i == num_forward_chunks - 1) {
-        //        checkCUDA(cudaEventRecord(schedule_first_backward_task_event));
-        //    }
-
-        //    checkCUDA(cudaEventRecord(start_event));
-
-        //    //usleep(1e3 * 20);
-        //    engine_->perform_backward_task(task);
-        //    //task.chunk_id = forward_chunks[0];
-        //    //engine_->perform_backward_task(task);
-
-        //    checkCUDA(cudaEventRecord(end_event));
-        //    computation_events.push_back(
-        //            std::make_pair(start_event, end_event)
-        //            );
-
-        //    //post_grad_communication(0);
-        //    //post_grad_communication(0);
-        //}
-        //checkCUDA(cudaEventRecord(complete_backward_pipelining_event));
 
         checkCUDA(cudaStreamSynchronize(0));
 
         // post-pipelining computation
         double post_t = - get_time() * 1e3;
-        //calculate_loss(); TODO
-        //clear_historical_grad();
-        //if ((epoch_id + 1) % REVERSE_PERIOD == 0) {
-        //    backup_activation();
-        //}
+        calculate_loss(); 
         post_t += get_time() * 1e3;
 
-        //double barrier_t = - get_time() * 1e3;
-        //for (int i = 0; i < stage_id; ++ i) {
-        //    MPI_Barrier(engine_->mpi_group_same_way_);
-        //}
-        //MPI_Barrier(MPI_COMM_WORLD);
-        //aggregate_loss();
-        //barrier_t += get_time() * 1e3;
+        barrier_t -= get_time() * 1e3;
+        aggregate_loss();
+        barrier_t += get_time() * 1e3;
 
         post_t -= get_time() * 1e3;
-        //engine_->weight_aggregator_->commit_grad();
-        //engine_->weight_aggregator_->clear_gradients();
+        clear_historical_grad();
+        if ((epoch_id + 1) % REVERSE_PERIOD == 0) {
+            backup_activation();
+        }
+        engine_->weight_aggregator_->commit_grad();
+        engine_->weight_aggregator_->clear_gradients();
         post_t += get_time() * 1e3;
 
         if (epoch_id % EVAL_FREQUENCY == 0) {
@@ -2231,8 +2216,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             checkCUDA(cudaEventQuery(pre_pipelining_complete_event));
             checkCUDA(cudaEventQuery(scheduled_first_forward_task_event));
             checkCUDA(cudaEventQuery(complete_forward_pipelining_event));
-            //checkCUDA(cudaEventQuery(schedule_first_backward_task_event));
-            //checkCUDA(cudaEventQuery(complete_backward_pipelining_event));
+            checkCUDA(cudaEventQuery(schedule_first_backward_task_event));
+            checkCUDA(cudaEventQuery(complete_backward_pipelining_event));
 
             checkCUDA(cudaEventElapsedTime(
                         &t, 
@@ -2252,18 +2237,18 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         complete_forward_pipelining_event
                         ));
             core_t += t;
-            //checkCUDA(cudaEventElapsedTime(
-            //            &t, 
-            //            complete_forward_pipelining_event,
-            //            schedule_first_backward_task_event
-            //            ));
-            //bubble_t += t;
-            //checkCUDA(cudaEventElapsedTime(
-            //            &t, 
-            //            schedule_first_backward_task_event,
-            //            complete_backward_pipelining_event
-            //            ));
-            //core_t += t;
+            checkCUDA(cudaEventElapsedTime(
+                        &t, 
+                        complete_forward_pipelining_event,
+                        schedule_first_backward_task_event
+                        ));
+            bubble_t += t;
+            checkCUDA(cudaEventElapsedTime(
+                        &t, 
+                        schedule_first_backward_task_event,
+                        complete_backward_pipelining_event
+                        ));
+            core_t += t;
 
             bubble_t += barrier_t;
             post_pipelining_t += post_t;
@@ -2332,6 +2317,30 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     fflush(stdout);
     usleep(1e5);
 
+    auto aggregate_and_report_metrics = [&](
+            std::string name, double value
+            ) {
+        double avg_value;
+        MPI_Allreduce(
+                &value, &avg_value, 1,
+                MPI_DOUBLE, MPI_SUM,
+                MPI_COMM_WORLD
+                );
+        avg_value /= double(num_nodes);
+        if (node_id == 0) {
+            printf("Cluster-Wide Average, %s: %.3f ms\n",
+                    name.c_str(), value);
+        }
+        fflush(stdout);
+        usleep(1e5);
+    };
+    aggregate_and_report_metrics("Pre-Pipelining Overhead", pre_pipelining_t);
+    aggregate_and_report_metrics("Post-Pipelining Overhead", post_pipelining_t);
+    aggregate_and_report_metrics("Bubble", bubble_t);
+    aggregate_and_report_metrics("Compute", compute_t);
+    aggregate_and_report_metrics("Communication", layer_comm_t);
+    aggregate_and_report_metrics("Imbalance", core_t - compute_t - layer_comm_t);
+
     double train_acc, valid_acc, test_acc;
     //engine_->run_exact_inference(train_acc, valid_acc, test_acc, 
     //        engine_->weight_aggregator_->get_optimal_weights()
@@ -2370,7 +2379,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     // check the consistency of the distributed weights
     engine_->weight_aggregator_->check_weights_consistency();
 
-    Profiler::breakdown_analysis(num_epoch);
+    //Profiler::breakdown_analysis(num_epoch);
 
     double avg_layer_comm;
     MPI_Allreduce(
@@ -3157,7 +3166,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                 executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
                 break;
             case OPERATOR_AGGREGATION:
-                {
+                { 
                     if (! profiling_mode) {
                         // graph data propagation
                         Tensor * tensor = op->get_input_tensor(0);
@@ -4624,23 +4633,17 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
                 for (int i = 0; i < count; ++ i) {
                     checkCUDA(cudaEventRecord(events[i]));
                     propagate_activation(op_begin, op_end, chunk, true);
-                    //recomputation(op_begin, op_end, chunk); FIXME
-                    //propagate_gradient(op_begin, op_end, chunk, true);  
+                    recomputation(op_begin, op_end, chunk);
+                    propagate_gradient(op_begin, op_end, chunk, true);  
                 }
                 checkCUDA(cudaEventRecord(events[count]));
                 checkCUDA(cudaStreamSynchronize(0));
-                //float t = 0;
-                //uint64_t end_cycle = get_cycle();
-                //assert(end_cycle >= start_cycle);
-                //double t = (end_cycle - start_cycle) / 3e9; // approximate 3Ghz
-                //t /= count;
                 for (int i = 0; i <= count; ++ i) {
                     assert(cudaEventQuery(events[i]) == cudaSuccess);
                 }
                 for (int i = 0; i < count; ++ i) {
                     float t = 0;
                     checkCUDA(cudaEventElapsedTime(&t, events[i], events[i + 1]));
-                    //printf("Count %d, Runtime = %.3f ms\n", i, t);
                 }
                 float t = 0;
                 checkCUDA(cudaEventElapsedTime(&t, events[0], events[count]));
@@ -4913,8 +4916,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
         }
 
         // estimated the pipelining cost
-        double estimated_costs[num_gpus][num_chunks];
+        double * estimated_costs[num_gpus];
         for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+            estimated_costs[gpu] = new double [num_chunks];
             auto p = optimal_partitioning[gpu];
             for (int chunk = 0; chunk < num_chunks; ++ chunk) {
                 estimated_costs[gpu][chunk] = 0;
@@ -4923,43 +4927,40 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
                 }
             }
         }
-        // simulate the pipelining
-        double bubble_t[num_gpus];
-        double compute_t[num_gpus];
-        double imbalance_t[num_gpus];
-        memset(bubble_t, 0, sizeof(bubble_t));
-        memset(compute_t, 0, sizeof(compute_t));
-        memset(imbalance_t, 0, sizeof(imbalance_t));
-        double total_t = 0;
-        int num_time_slots = num_chunks + num_gpus - 1;
-        for (int time_slot = 0; time_slot < num_time_slots; ++ time_slot) {
-            // determine the slowest GPU for the current slot
-            double slowest_t = 0;
-            for (int gpu = 0; gpu < num_gpus; ++ gpu) {
-                int chunk = time_slot - gpu;
-                if (chunk >= 0 && chunk < num_chunks) {
-                    slowest_t = std::max(slowest_t, estimated_costs[gpu][chunk]);
-                }
-            }
-            printf("Time Slot %d, Slowest Stage: %.3f ms\n", 
-                    time_slot, slowest_t);
-            total_t += slowest_t;
-            for (int gpu = 0; gpu < num_gpus; ++ gpu) {
-                int chunk = time_slot - gpu;
-                if (chunk >= 0 && chunk < num_chunks) {
-                    double local_cost = estimated_costs[gpu][chunk];
-                    compute_t[gpu] += local_cost;
-                    imbalance_t[gpu] += slowest_t - local_cost;
-                } else {
-                    bubble_t[gpu] += slowest_t;
-                }
-            }
-        }
-        printf("Simulation Results: Total Runtime: %.3f ms\n",
-                total_t * 1e3);
+        simulate_pipeline_performance(num_chunks, num_gpus, estimated_costs);
+
+        //// verifying the idea of chunk pairing
+        //int sorted_chunks[num_chunks];
+        //for (int i = 0; i < num_chunks; ++ i) {
+        //    sorted_chunks[i] = i;
+        //}
+        //std::sort(
+        //        sorted_chunks, sorted_chunks + num_chunks,
+        //        [&](int a, int b) {
+        //            return estimated_chunk_cost_[a] > estimated_chunk_cost_[b];
+        //        }
+        //        );
+        //assert(num_chunks % 2 == 0);
+        //int num_super_chunks = num_chunks / 2;
+        //for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+        //    auto p = optimal_partitioning[gpu];
+        //    for (int chunk = 0; chunk < num_super_chunks; ++ chunk) {
+        //        estimated_costs[gpu][chunk] = 0;
+        //        for (int layer = p.first; layer < p.second; ++ layer) {
+        //            int subchunk_0 = sorted_chunks[chunk];
+        //            int subchunk_1 = sorted_chunks[num_chunks - chunk - 1];
+        //            estimated_costs[gpu][chunk] += estimated_runtime_[layer][subchunk_0];
+        //            estimated_costs[gpu][chunk] += estimated_runtime_[layer][subchunk_1];
+        //        }
+        //        printf("%6.2f", estimated_costs[gpu][chunk] * 1e3);
+        //    }
+        //    printf("\n");
+        //}
+        //printf("************** WITH CHUNK PAIRING ****************\n");
+        //simulate_pipeline_performance(num_chunks / 2, num_gpus, estimated_costs);
+
         for (int gpu = 0; gpu < num_gpus; ++ gpu) {
-            printf("GPU %d, Compute Time: %.3f ms, Bubble Time: %.3f ms, Imbalance Overhead: %.3f ms\n",
-                    gpu, compute_t[gpu] * 1e3, bubble_t[gpu] * 1e3, imbalance_t[gpu] * 1e3);
+            delete [] estimated_costs[gpu];
         }
     }
 
@@ -4972,6 +4973,53 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
             num_gpus, MPI_INT, 0, MPI_COMM_WORLD
             );
 }
+
+
+void DistributedPIPHybridParallelExecutionEngineGPU::simulate_pipeline_performance(
+        int num_chunks, 
+        int num_gpus,
+        double ** estimated_costs
+        ) {
+    // simulate the pipelining
+    double bubble_t[num_gpus];
+    double compute_t[num_gpus];
+    double imbalance_t[num_gpus];
+    memset(bubble_t, 0, sizeof(bubble_t));
+    memset(compute_t, 0, sizeof(compute_t));
+    memset(imbalance_t, 0, sizeof(imbalance_t));
+    double total_t = 0;
+    int num_time_slots = num_chunks + num_gpus - 1;
+    for (int time_slot = 0; time_slot < num_time_slots; ++ time_slot) {
+        // determine the slowest GPU for the current slot
+        double slowest_t = 0;
+        for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+            int chunk = time_slot - gpu;
+            if (chunk >= 0 && chunk < num_chunks) {
+                slowest_t = std::max(slowest_t, estimated_costs[gpu][chunk]);
+            }
+        }
+        //printf("Time Slot %d, Slowest Stage: %.3f ms\n", 
+        //        time_slot, slowest_t * 1e3);
+        total_t += slowest_t;
+        for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+            int chunk = time_slot - gpu;
+            if (chunk >= 0 && chunk < num_chunks) {
+                double local_cost = estimated_costs[gpu][chunk];
+                compute_t[gpu] += local_cost;
+                imbalance_t[gpu] += slowest_t - local_cost;
+            } else {
+                bubble_t[gpu] += slowest_t;
+            }
+        }
+    }
+    printf("Simulation Results: Total Runtime: %.3f ms\n",
+            total_t * 1e3);
+    for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+        printf("GPU %d, Compute Time: %.3f ms, Bubble Time: %.3f ms, Imbalance Overhead: %.3f ms\n",
+                gpu, compute_t[gpu] * 1e3, bubble_t[gpu] * 1e3, imbalance_t[gpu] * 1e3);
+    }
+}
+
 
 
 

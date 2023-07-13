@@ -6,14 +6,15 @@ nvidia-smi
 cd build
 make -j
 
-dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_partitioned_graphs 
+#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_partitioned_graphs 
+dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
 #dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 num_gpus=8
-num_layers=48
-hunits=512
+num_layers=32
+hunits=256
 lr=1e-3
 graph=reddit
-epoch=20
+epoch=30
 decay=1e-5
 chunks=128
 dropout=0.5
