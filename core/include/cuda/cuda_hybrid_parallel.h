@@ -36,6 +36,7 @@
 
 #define LOW_LEARNING_RATE (0)
 #define MAX_NUM_CHUNKS (256)
+#define MAX_SUPER_CHUNK_SIZE (8)
 #define MAX_NUM_WAYS (64)
 #define MAX_NUM_LAYERS (4096)
 
@@ -1224,8 +1225,16 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         bool enable_compression_ = true;
 
+        //// using just-in-time chunk batching 
+        //const int super_chunk_size = 2;
+        //struct SuperChunk {
+        //    int chunk_ids[MAX_SUPER_CHUNK_SIZE];
+        //};
+        //std::vector<SuperChunk>
+
         // the cost model
         double estimated_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];
+        double estimated_chunk_cost_[MAX_NUM_CHUNKS];
 
         inline int get_num_epoch() {
             return num_epoch_;
@@ -1320,6 +1329,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         // invoke by the scheduler
         void propagate_activation(int op_begin, int op_end, int chunk_id, bool profiling_mode = false);
+        void recomputation(int op_begin, int op_end, int chunk_id);
         void propagate_gradient(int op_begin, int op_end, int chunk_id, bool profiling_mode = false);
         void perform_forward_task(CUDAPIPForwardTask task, int op_begin, int op_end);
         void perform_backward_task(CUDAPIPBackwardTask task, int op_begin, int op_end);

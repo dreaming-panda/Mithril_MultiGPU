@@ -19,6 +19,7 @@
 #define EVAL_FREQUENCY (10)
 #define NUM_GPUS_PER_NODE (4)
 #define NUM_INFERNECE_RUNS (3)
+#define NCCL_FUSED_COMMUNICATION (false)
 
 //#define SHOW_SCHEDULE_DETAILS
 
@@ -938,6 +939,10 @@ void GraphDataPropagator::propagate_graph_data(Tensor * tensor, int chunk_id, bo
     //put_graph_data(tensor, chunk_id, propagate_act);
     //retrieve_graph_data_to_gpu(propagate_act);
 
+    if (engine_->get_num_dp_ways() == 1) {
+        return ;
+    }
+
     exchange_graph_data_nccl(tensor, chunk_id, propagate_act);
 }
 
@@ -1590,11 +1595,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double layer_comm = 0;
     double layer_comm_time = 0;
     
-    //cudaStream_t stream_send_;
-    //cudaStream_t stream_recv_;
-    //checkCUDA(cudaStreamCreate(&stream_send_));
-    //checkCUDA(cudaStreamCreate(&stream_recv_));
-
     // a few useful helper threads
     auto send_tensor_data = [&](Tensor * tensor, int chunk_id, int remote_node) {
         assert(tensor);
@@ -1658,26 +1658,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     ncclInt8, remote_node, nccl_handle, 0
                     ));
     };
-
-
-    //auto send_one_byte = [&](int remote_node) {
-    //    uint8_t test = 0;
-    //    MPI_Send(
-    //            &test, 1, MPI_CHAR, remote_node,
-    //            ForwardActivationPassing, MPI_COMM_WORLD
-    //            );
-    //};
-
-    //auto recv_one_byte = [&](int remote_node) {
-    //    uint8_t test = 0;
-    //    MPI_Status status;
-    //    MPI_Recv(
-    //            &test, 1, MPI_CHAR, remote_node, 
-    //            ForwardActivationPassing, MPI_COMM_WORLD,
-    //            &status
-    //            );
-    //};
-
 
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
@@ -1744,6 +1724,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     int epoch_id = 0;
     int remained_inference_runs = 0;
+    int forward_chunks[num_local_chunks];
+    int num_forward_chunks = -1;
 
     MPI_Barrier(MPI_COMM_WORLD);
     Profiler::start_profiling();
@@ -1843,10 +1825,247 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
     };
 
+    std::vector<std::pair<cudaEvent_t, cudaEvent_t>> communication_events;
+    std::vector<std::pair<cudaEvent_t, cudaEvent_t>> computation_events;
+
+    auto pre_data_communication = [&](int c_i) {
+        cudaEvent_t start_event;
+        cudaEvent_t end_event;
+        checkCUDA(cudaEventCreate(&start_event));
+        checkCUDA(cudaEventCreate(&end_event));
+        checkCUDA(cudaEventRecord(start_event));
+
+        if (NCCL_FUSED_COMMUNICATION) {
+            checkNCCL(ncclGroupStart());
+            if (! engine_->is_last_stage() && c_i > 0) {
+                // send the data of the previous chunk to a next stage 
+                send_tensor_data(
+                        engine_->pipeline_output_tensor_, 
+                        forward_chunks[c_i - 1], node_id + 1
+                        );
+            }
+            if (! engine_->is_first_stage()) {
+                assert(engine_->pipeline_input_tensor_ != engine_->pipeline_output_tensor_);
+                // receive the data of the current chunk from a previous stage
+                recv_tensor_data(
+                        engine_->pipeline_input_tensor_, 
+                        forward_chunks[c_i], node_id - 1
+                        );
+            }
+            checkNCCL(ncclGroupEnd());
+            // sync the globally shared tensor
+            if (engine_->global_shared_tensor_ != NULL) {
+                checkNCCL(ncclGroupStart());
+                if (! engine_->is_first_stage()) {
+                    // receive the data of the current chunk from a previous stage
+                    recv_tensor_data(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i], node_id - 1
+                            );
+                }
+                if (! engine_->is_last_stage() && c_i > 0) {
+                    // send the data of the previous chunk to a next stage 
+                    send_tensor_data(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i - 1], node_id + 1
+                            );
+                }
+                checkNCCL(ncclGroupEnd());
+            }
+        } else {
+            if (! engine_->is_first_stage()) {
+                recv_tensor_data(
+                        engine_->pipeline_input_tensor_, 
+                        forward_chunks[c_i], node_id - 1
+                        );
+                if (engine_->global_shared_tensor_ != NULL) {
+                    recv_tensor_data(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i], node_id - 1
+                            );
+                }
+            }
+        }
+
+        checkCUDA(cudaEventRecord(end_event));
+        communication_events.push_back(std::make_pair(start_event, end_event));
+    };
+
+    auto post_data_communication = [&](int c_i) {
+        cudaEvent_t start_event;
+        cudaEvent_t end_event;
+        checkCUDA(cudaEventCreate(&start_event));
+        checkCUDA(cudaEventCreate(&end_event));
+        checkCUDA(cudaEventRecord(start_event));
+
+        if (NCCL_FUSED_COMMUNICATION) {
+            if (! engine_->is_last_stage() && c_i == num_forward_chunks - 1) {
+                send_tensor_data(
+                        engine_->pipeline_output_tensor_, 
+                        forward_chunks[c_i], node_id + 1
+                        );
+                if (engine_->global_shared_tensor_ != NULL) {
+                    send_tensor_data(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i], node_id + 1
+                            );
+                }
+            }
+        } else {
+            if (! engine_->is_last_stage()) {
+                send_tensor_data(
+                        engine_->pipeline_output_tensor_, 
+                        forward_chunks[c_i], node_id + 1
+                        );
+                if (engine_->global_shared_tensor_ != NULL) {
+                    send_tensor_data(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i], node_id + 1
+                            );
+                }
+            }
+        }
+
+        checkCUDA(cudaEventRecord(end_event));
+        communication_events.push_back(std::make_pair(start_event, end_event));
+    };
+
+    auto pre_grad_communication = [&](int c_i) {
+        cudaEvent_t start_event;
+        cudaEvent_t end_event;
+        checkCUDA(cudaEventCreate(&start_event));
+        checkCUDA(cudaEventCreate(&end_event));
+        checkCUDA(cudaEventRecord(start_event));
+
+        if (NCCL_FUSED_COMMUNICATION) {
+            checkNCCL(ncclGroupStart());
+            if (! engine_->is_last_stage()) {
+                assert(engine_->pipeline_input_tensor_ != engine_->pipeline_output_tensor_);
+                // receive the gradients of the current chunk from a previous stage
+                recv_tensor_grad(
+                        engine_->pipeline_output_tensor_, 
+                        forward_chunks[c_i], node_id + 1
+                        );
+            }
+            if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
+                send_tensor_grad(
+                        engine_->pipeline_input_tensor_, 
+                        forward_chunks[c_i + 1], node_id - 1
+                        );
+            }
+            checkNCCL(ncclGroupEnd());
+            // sync the globally shared tensor
+            if (engine_->global_shared_tensor_ != NULL) {
+                checkNCCL(ncclGroupStart());
+                if (! engine_->is_last_stage()) {
+                    // receive the gradients of the current chunk from a previous stage
+                    recv_tensor_grad(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i], node_id + 1
+                            );
+                }
+                if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
+                    send_tensor_grad(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i + 1], node_id - 1
+                            );
+                }
+                checkNCCL(ncclGroupEnd());
+            }
+        } else {
+            if (! engine_->is_last_stage()) {
+                recv_tensor_grad(
+                        engine_->pipeline_output_tensor_, 
+                        forward_chunks[c_i], node_id + 1
+                        );
+                if (engine_->global_shared_tensor_ != NULL) {
+                    recv_tensor_grad(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i], node_id + 1
+                            );
+                }
+            }
+        }
+
+        checkCUDA(cudaEventRecord(end_event));
+        communication_events.push_back(std::make_pair(start_event, end_event));
+    };
+
+    auto post_grad_communication = [&](int c_i) {
+        cudaEvent_t start_event;
+        cudaEvent_t end_event;
+        checkCUDA(cudaEventCreate(&start_event));
+        checkCUDA(cudaEventCreate(&end_event));
+        checkCUDA(cudaEventRecord(start_event));
+
+        if (NCCL_FUSED_COMMUNICATION) {
+            if (! engine_->is_first_stage() && c_i == 0) {
+                // sync the boundary tensor
+                send_tensor_grad(
+                        engine_->pipeline_input_tensor_, 
+                        forward_chunks[c_i], node_id - 1
+                        );
+                // sync the globally shared tensor
+                if (engine_->global_shared_tensor_ != NULL) {
+                    send_tensor_grad(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i], node_id - 1
+                            );
+                }
+            }
+        } else {
+            if (! engine_->is_first_stage()) {
+                // sync the boundary tensor
+                send_tensor_grad(
+                        engine_->pipeline_input_tensor_, 
+                        forward_chunks[c_i], node_id - 1
+                        );
+                // sync the globally shared tensor
+                if (engine_->global_shared_tensor_ != NULL) {
+                    send_tensor_grad(
+                            engine_->global_shared_tensor_, 
+                            forward_chunks[c_i], node_id - 1
+                            );
+                }
+            }
+        }
+
+        checkCUDA(cudaEventRecord(end_event));
+        communication_events.push_back(std::make_pair(start_event, end_event));
+    };
+
+    auto rearrange_chunk = [&]() {
+        std::sort(
+                forward_chunks, forward_chunks + num_forward_chunks,
+                [&](int a, int b) {
+                    return engine_->estimated_chunk_cost_[a] > engine_->estimated_chunk_cost_[b];
+                }
+                );
+        for (int i = 1; i < num_forward_chunks; ++ i) {
+            assert(engine_->estimated_chunk_cost_[forward_chunks[i - 1]]
+                    >= engine_->estimated_chunk_cost_[forward_chunks[i]]);
+        }
+        int sorted_chunks[num_forward_chunks];
+        for (int i = 0; i < num_forward_chunks / 2; ++ i) {
+            sorted_chunks[i * 2] = forward_chunks[i];
+            sorted_chunks[i * 2 + 1] = forward_chunks[num_forward_chunks - i - 1];
+            double cost = engine_->estimated_chunk_cost_[sorted_chunks[i * 2]]
+                + engine_->estimated_chunk_cost_[sorted_chunks[i * 2 + 1]];
+            //printf("Super Chunk %d, Cost %.3f ms\n", 
+            //        i, cost * 1e3);
+        }
+        memcpy(forward_chunks, sorted_chunks, sizeof(int) * num_forward_chunks);
+    };
+
     double pre_pipelining_t = 0.;
     double post_pipelining_t = 0.;
     double bubble_t = 0.;
     double core_t = 0.; // computation + communication
+    double layer_comm_t = 0.;
+    double compute_t = 0.;
+
+    const int super_chunk_size = 2;
+    assert(num_local_chunks % super_chunk_size == 0);
 
     auto run_training_epoch = [&]() {
         // some cuda events for performance analysis
@@ -1863,6 +2082,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         checkCUDA(cudaEventCreate(&complete_forward_pipelining_event));
         checkCUDA(cudaEventCreate(&schedule_first_backward_task_event));
         checkCUDA(cudaEventCreate(&complete_backward_pipelining_event));
+
+        communication_events.clear();
+        computation_events.clear();
         
         // some pre-pipelining preparation
         checkCUDA(cudaEventRecord(pre_pipelining_start_event));
@@ -1872,101 +2094,125 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         }
         pull_weights();
         // coordination-free chunk scheduling
-        int forward_chunks[num_local_chunks];
-        int num_forward_chunks = -1;
         engine_->gen_training_epoch_chunk_ordering();
         engine_->get_training_epoch_chunk_ordering(
                 forward_chunks, &num_forward_chunks
                 );
+        //rearrange_chunk();
         assert(num_forward_chunks == num_local_chunks);
         checkCUDA(cudaEventRecord(pre_pipelining_complete_event));
 
         // start the forwarding pipelining
-        for (int c_i = 0; c_i < num_forward_chunks; ++ c_i) {
+        for (int i = 0; i < stage_id; ++ i) {
+            MPI_Barrier(engine_->mpi_group_same_way_);
+        }
+        for (int c_i = 0; c_i < num_forward_chunks; c_i += 1) {
             CUDAPIPForwardTask task;
             task.epoch_id = epoch_id;
-            task.chunk_id = forward_chunks[c_i];
+            task.chunk_id = c_i; // FIXME
 
-            if (! engine_->is_first_stage()) {
-                recv_tensor_data(
-                        engine_->pipeline_input_tensor_, 
-                        task.chunk_id, node_id - 1
-                        );
-                if (c_i > 0 && ! engine_->is_last_stage()) {
-                    checkNCCL(ncclGroupEnd());
-                }
-            }
+            cudaEvent_t start_event;
+            cudaEvent_t end_event;
+            checkCUDA(cudaEventCreate(&start_event));
+            checkCUDA(cudaEventCreate(&end_event));
+
+            //// FIXME note that the pipeline tensor cannot be transient
+            //pre_data_communication(0);
+            //pre_data_communication(0);
+
+            checkCUDA(cudaStreamSynchronize(0));
+            MPI_Barrier(engine_->mpi_group_same_way_);
 
             if (c_i == 0) {
                 checkCUDA(cudaEventRecord(scheduled_first_forward_task_event));
             }
 
-            engine_->perform_forward_task(task);
+            checkCUDA(cudaEventRecord(start_event));
 
-            if (! engine_->is_last_stage()) {
-                if (c_i < num_forward_chunks - 1 && ! engine_->is_first_stage()) {
-                    checkNCCL(ncclGroupStart());
-                }
-                send_tensor_data(
-                        engine_->pipeline_output_tensor_, 
-                        task.chunk_id, node_id + 1
-                        );
-            }
+
+            //usleep(1e3 * 20);
+            engine_->perform_forward_task(task);
+            //task.chunk_id = forward_chunks[0];
+            //engine_->perform_forward_task(task);
+
+            checkCUDA(cudaEventRecord(end_event));
+            computation_events.push_back(
+                    std::make_pair(start_event, end_event)
+                    );
+
+            //post_data_communication(0);
+            //post_data_communication(0);
         }
         checkCUDA(cudaEventRecord(complete_forward_pipelining_event));
-
-        // start the backwarding pipelining
-        for (int c_i = num_forward_chunks - 1; c_i >= 0; -- c_i) {
-            CUDAPIPBackwardTask task;
-            task.epoch_id = epoch_id;
-            task.chunk_id = forward_chunks[c_i];
-
-            if (! engine_->is_last_stage()) {
-                recv_tensor_grad(
-                        engine_->pipeline_output_tensor_,
-                        forward_chunks[c_i],
-                        node_id + 1
-                        );
-                if (c_i < num_forward_chunks - 1 && ! engine_->is_first_stage()) {
-                    checkNCCL(ncclGroupEnd());
-                }
-            }
-
-            if (c_i == num_forward_chunks - 1) {
-                checkCUDA(cudaEventRecord(schedule_first_backward_task_event));
-            }
-
-            engine_->perform_backward_task(task);
-
-            if (! engine_->is_first_stage()) {
-                if (c_i > 0 && ! engine_->is_last_stage()) {
-                    checkNCCL(ncclGroupStart());
-                }
-                send_tensor_grad(
-                        engine_->pipeline_input_tensor_,
-                        forward_chunks[c_i],
-                        node_id - 1
-                        );
-            }
+        double barrier_t = - get_time() * 1e3;
+        for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
+            MPI_Barrier(engine_->mpi_group_same_way_);
         }
-        checkCUDA(cudaEventRecord(complete_backward_pipelining_event));
+        barrier_t += get_time() * 1e3;
+
+        ////// start the backwarding pipelining
+        //for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
+        //    MPI_Barrier(engine_->mpi_group_same_way_);
+        //}
+        //for (int c_i = num_forward_chunks - 1; c_i >= 0; c_i -= 1) {
+        //    CUDAPIPBackwardTask task;
+        //    task.epoch_id = epoch_id;
+        //    task.chunk_id = c_i; // FIXME
+
+        //    cudaEvent_t start_event;
+        //    cudaEvent_t end_event;
+        //    checkCUDA(cudaEventCreate(&start_event));
+        //    checkCUDA(cudaEventCreate(&end_event));
+
+        //    //pre_grad_communication(0);
+        //    //pre_grad_communication(0);
+        //    
+        //    checkCUDA(cudaStreamSynchronize(0));
+        //    MPI_Barrier(engine_->mpi_group_same_way_);
+
+        //    if (c_i == num_forward_chunks - 1) {
+        //        checkCUDA(cudaEventRecord(schedule_first_backward_task_event));
+        //    }
+
+        //    checkCUDA(cudaEventRecord(start_event));
+
+        //    //usleep(1e3 * 20);
+        //    engine_->perform_backward_task(task);
+        //    //task.chunk_id = forward_chunks[0];
+        //    //engine_->perform_backward_task(task);
+
+        //    checkCUDA(cudaEventRecord(end_event));
+        //    computation_events.push_back(
+        //            std::make_pair(start_event, end_event)
+        //            );
+
+        //    //post_grad_communication(0);
+        //    //post_grad_communication(0);
+        //}
+        //checkCUDA(cudaEventRecord(complete_backward_pipelining_event));
 
         checkCUDA(cudaStreamSynchronize(0));
 
         // post-pipelining computation
         double post_t = - get_time() * 1e3;
-        calculate_loss();
-        clear_historical_grad();
+        //calculate_loss(); TODO
+        //clear_historical_grad();
+        //if ((epoch_id + 1) % REVERSE_PERIOD == 0) {
+        //    backup_activation();
+        //}
         post_t += get_time() * 1e3;
 
-        double barrier_t = - get_time() * 1e3;
-        MPI_Barrier(MPI_COMM_WORLD);
-        aggregate_loss();
-        barrier_t += get_time() * 1e3;
+        //double barrier_t = - get_time() * 1e3;
+        //for (int i = 0; i < stage_id; ++ i) {
+        //    MPI_Barrier(engine_->mpi_group_same_way_);
+        //}
+        //MPI_Barrier(MPI_COMM_WORLD);
+        //aggregate_loss();
+        //barrier_t += get_time() * 1e3;
 
         post_t -= get_time() * 1e3;
-        engine_->weight_aggregator_->commit_grad();
-        engine_->weight_aggregator_->clear_gradients();
+        //engine_->weight_aggregator_->commit_grad();
+        //engine_->weight_aggregator_->clear_gradients();
         post_t += get_time() * 1e3;
 
         if (epoch_id % EVAL_FREQUENCY == 0) {
@@ -1974,6 +2220,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 report_loss();
             } else {
                 // FIXME
+                assert(false);
             }
         }
 
@@ -1984,8 +2231,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             checkCUDA(cudaEventQuery(pre_pipelining_complete_event));
             checkCUDA(cudaEventQuery(scheduled_first_forward_task_event));
             checkCUDA(cudaEventQuery(complete_forward_pipelining_event));
-            checkCUDA(cudaEventQuery(schedule_first_backward_task_event));
-            checkCUDA(cudaEventQuery(complete_backward_pipelining_event));
+            //checkCUDA(cudaEventQuery(schedule_first_backward_task_event));
+            //checkCUDA(cudaEventQuery(complete_backward_pipelining_event));
 
             checkCUDA(cudaEventElapsedTime(
                         &t, 
@@ -2005,21 +2252,54 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         complete_forward_pipelining_event
                         ));
             core_t += t;
-            checkCUDA(cudaEventElapsedTime(
-                        &t, 
-                        complete_forward_pipelining_event,
-                        schedule_first_backward_task_event
-                        ));
-            bubble_t += t;
-            checkCUDA(cudaEventElapsedTime(
-                        &t, 
-                        schedule_first_backward_task_event,
-                        complete_backward_pipelining_event
-                        ));
-            core_t += t;
+            //checkCUDA(cudaEventElapsedTime(
+            //            &t, 
+            //            complete_forward_pipelining_event,
+            //            schedule_first_backward_task_event
+            //            ));
+            //bubble_t += t;
+            //checkCUDA(cudaEventElapsedTime(
+            //            &t, 
+            //            schedule_first_backward_task_event,
+            //            complete_backward_pipelining_event
+            //            ));
+            //core_t += t;
 
             bubble_t += barrier_t;
             post_pipelining_t += post_t;
+
+            for (auto p: communication_events) {
+                checkCUDA(cudaEventQuery(p.first));
+                checkCUDA(cudaEventQuery(p.second));
+                checkCUDA(cudaEventElapsedTime(
+                        &t, p.first, p.second
+                        ));
+                layer_comm_t += t;
+            }
+            for (auto p: computation_events) {
+                checkCUDA(cudaEventQuery(p.first));
+                checkCUDA(cudaEventQuery(p.second));
+                checkCUDA(cudaEventElapsedTime(
+                            &t, p.first, p.second
+                            ));
+                compute_t += t;
+            }
+        }
+
+        checkCUDA(cudaEventDestroy(pre_pipelining_start_event));
+        checkCUDA(cudaEventDestroy(pre_pipelining_complete_event));
+        checkCUDA(cudaEventDestroy(scheduled_first_forward_task_event));
+        checkCUDA(cudaEventDestroy(complete_forward_pipelining_event));
+        checkCUDA(cudaEventDestroy(schedule_first_backward_task_event));
+        checkCUDA(cudaEventDestroy(complete_backward_pipelining_event));
+
+        for (auto p: communication_events) {
+            checkCUDA(cudaEventDestroy(p.first));
+            checkCUDA(cudaEventDestroy(p.second));
+        }
+        for (auto p: computation_events) {
+            checkCUDA(cudaEventDestroy(p.first));
+            checkCUDA(cudaEventDestroy(p.second));
         }
     };
 
@@ -2030,532 +2310,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         // schedule a training epoch
         run_training_epoch();
-
-        if ((epoch_id + 1) % REVERSE_PERIOD == 0) {
-            backup_activation();
-        }
     }
 
-
-//    while (epoch_id < num_epoch || remained_inference_runs > 0) {
-//        if (epoch_id == warmup_epoches) {
-//            all_epoches_time = - get_time();
-//        }
-//
-//        bool in_training_mode = true;
-//        if (remained_inference_runs > 0) {
-//            in_training_mode = false;
-//        }
-//
-//        if (in_training_mode) {
-//            engine_->executor_->disable_inference_mode();
-//        } else {
-//            engine_->executor_->enable_inference_mode();
-//        }
-//
-//        double fastest_forward_chunk = 0x7fffffff;
-//        double slowest_forward_chunk = 0;
-//        double fastest_backward_chunk = 0x7fffffff;
-//        double slowest_backward_chunk = 0;
-//
-//        Profiler::submit_main_thread_event(SideComputationStartEvent);
-//        if (in_training_mode && epoch_id % REVERSE_PERIOD != 0) {
-//            // restore the activation
-//            for (int i = 0; i < aggr_ops.size(); ++ i) {
-//                Operator * op = aggr_ops[i];
-//                DataType * h_data = historical_data[i];
-//                Tensor * tensor = op->get_input_tensor(0);
-//                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-//                DataType * data = resource->get_gpu_data();
-//                size_t num_elements = (size_t) num_vertices * tensor->dims[1];
-//                checkCUDA(cudaMemcpy(data, h_data, sizeof(DataType) * num_elements,
-//                            cudaMemcpyDeviceToDevice));
-//            }
-//        }
-//
-//        // pull the latest weights
-//        for (WeightOperator * op: engine_->local_weight_ops_) {
-//            assert(op != NULL);
-//            assert(op->get_num_output_tensors() == 1);
-//            Tensor * tensor = op->get_output_tensor(0);
-//            assert(tensor != NULL);
-//            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-//            assert(resource != NULL);
-//            DataType * data = resource->get_gpu_data();
-//            assert(data != NULL);
-//            engine_->weight_aggregator_->pull_weights(op, data);
-//            // clear the weight gradients 
-//            DataType * grad = resource->get_gpu_grad();
-//            assert(grad != NULL);
-//            size_t num_elements = resource->get_num_elements();
-//            checkCUDA(cudaMemset(grad, 0, sizeof(DataType) * num_elements));
-//        }
-//
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        double start_time = get_time();
-//
-//        // obtain the chunk ordering in this epoch
-//        int forward_chunks[num_local_chunks];
-//        int num_forward_chunks = -1;
-//        if (in_training_mode) {
-//            engine_->gen_training_epoch_chunk_ordering();
-//            engine_->get_training_epoch_chunk_ordering(forward_chunks, &num_forward_chunks);
-//        } else {
-//            engine_->gen_inference_epoch_chunk_ordering();
-//            engine_->get_inference_epoch_chunk_ordering(forward_chunks, &num_forward_chunks);
-//        }
-//        assert(num_forward_chunks > 0);
-//        assert(num_forward_chunks == num_local_chunks);
-//        Profiler::submit_main_thread_event(SideComputationCompleteEvent);
-//        
-//        /*
-//        for (int i = 0; i < stage_id; ++ i) {
-//            MPI_Barrier(engine_->mpi_group_same_way_);
-//        }
-//
-//        for (int c_i = 0; c_i < num_forward_chunks; ++ c_i) {
-//            // co-ordination free task dispatching
-//            CUDAPIPForwardTask task;
-//            task.epoch_id = epoch_id;
-//            task.chunk_id = forward_chunks[c_i];
-//
-//#ifdef SHOW_SCHEDULE_DETAILS
-//            cudaStreamSynchronize(0);
-//            if (node_id <= 3) {
-//                double time_elapsed = (get_time() - start_time) * 1000;    
-//                printf("%.3f ms: Node %d, scheduled a forwarding task of chunk %d\n",
-//                        time_elapsed, node_id, task.chunk_id);
-//            }
-//#endif
-//
-//            // using this to distinguish the pipeline bubble cost 
-//            // with the communication cost
-//            Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-//            double wait_time = - get_time();
-//            MPI_Barrier(engine_->mpi_group_same_way_);
-//            wait_time += get_time();
-//            Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
-//
-//            Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-//            layer_comm_time -= get_time();
-//            // sync the pipeline-boundary tensor
-//            // using NCCL group to parallelize send and recv
-//            checkNCCL(ncclGroupStart());
-//            if (! engine_->is_last_stage() && c_i > 0) {
-//                // send the data of the previous chunk to a next stage 
-//                send_tensor_data(
-//                        engine_->pipeline_output_tensor_, forward_chunks[c_i - 1], node_id + 1
-//                        );
-//            }
-//            if (! engine_->is_first_stage()) {
-//                assert(engine_->pipeline_input_tensor_ != engine_->pipeline_output_tensor_);
-//                // receive the data of the current chunk from a previous stage
-//                recv_tensor_data(
-//                        engine_->pipeline_input_tensor_, forward_chunks[c_i], node_id - 1
-//                        );
-//            }
-//            checkNCCL(ncclGroupEnd());
-//            // sync the globally shared tensor
-//            if (engine_->global_shared_tensor_ != NULL) {
-//                checkNCCL(ncclGroupStart());
-//                if (! engine_->is_first_stage()) {
-//                    // receive the data of the current chunk from a previous stage
-//                    recv_tensor_data(
-//                            engine_->global_shared_tensor_, forward_chunks[c_i], node_id - 1
-//                            );
-//                }
-//                if (! engine_->is_last_stage() && c_i > 0) {
-//                    // send the data of the previous chunk to a next stage 
-//                    send_tensor_data(
-//                            engine_->global_shared_tensor_, forward_chunks[c_i - 1], node_id + 1
-//                            );
-//                }
-//                checkNCCL(ncclGroupEnd());
-//            }
-//            //cudaStreamSynchronize(stream_send_);
-//            //cudaStreamSynchronize(stream_recv_);
-//            Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-//            layer_comm_time += get_time();
-//
-//            // do the computation
-//            double chunk_time = - get_time();
-//            engine_->perform_forward_task(task);
-//            chunk_time += get_time();
-//            //printf("Node %d %d-th chunk spent %.3f ms for synchronization while the computation takes %.3f ms (ratio: %.3f)\n",
-//            //        node_id, c_i, wait_time * 1e3, chunk_time * 1e3, wait_time / chunk_time);
-//            slowest_forward_chunk = std::max(slowest_forward_chunk, chunk_time);
-//            fastest_forward_chunk = std::min(fastest_forward_chunk, chunk_time);
-//            //if (task.chunk_id == 0) {
-//            //    printf("Epoch %d, Node %d, Forward Chunk %d Time: %.3f (ms)\n",
-//            //            epoch_id, node_id, task.chunk_id, chunk_time * 1e3);
-//            //}
-//
-//            // the last send cannot be fused with a receive 
-//            if (c_i == num_forward_chunks - 1) {
-//                Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-//                // tell the next stage that the data is ready to send
-//                //send_one_byte(node_id + 1);
-//                MPI_Barrier(engine_->mpi_group_same_way_);
-//                Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
-//            }
-//            if (! engine_->is_last_stage() && c_i == num_forward_chunks - 1) {
-//                Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-//                layer_comm_time -= get_time();
-//                send_tensor_data(
-//                        engine_->pipeline_output_tensor_, forward_chunks[c_i], node_id + 1
-//                        );
-//                if (engine_->global_shared_tensor_ != NULL) {
-//                    send_tensor_data(
-//                            engine_->global_shared_tensor_, forward_chunks[c_i], node_id + 1
-//                            );
-//                }
-//                Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-//                layer_comm_time += get_time();
-//            }
-//
-//#ifdef SHOW_SCHEDULE_DETAILS
-//            if (node_id <= 3) {
-//                double time_elapsed = (get_time() - start_time) * 1000;    
-//                printf("%.3f ms: Node %d, done executing the forwarding task of chunk %d\n",
-//                        time_elapsed, node_id, task.chunk_id);
-//            }
-//#endif
-//        }
-//
-//        for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
-//            MPI_Barrier(engine_->mpi_group_same_way_);
-//        }
-//        */
-//
-//        cudaEvent_t before_pipeline_start;
-//        cudaEvent_t start_event;
-//        cudaEvent_t end_event;
-//        checkCUDA(cudaEventCreate(&start_event));
-//        checkCUDA(cudaEventCreate(&end_event));
-//        checkCUDA(cudaEventCreate(&before_pipeline_start));
-//
-//        checkCUDA(cudaEventRecord(before_pipeline_start));
-//        for (int c_i = 0; c_i < num_forward_chunks; ++ c_i) {
-//            CUDAPIPForwardTask task;
-//            task.epoch_id = epoch_id;
-//            task.chunk_id = forward_chunks[c_i];
-//
-//            if (! engine_->is_first_stage()) {
-//                //Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-//                recv_tensor_data(
-//                        engine_->pipeline_input_tensor_, 
-//                        task.chunk_id, node_id - 1
-//                        );
-//                //Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-//                if (c_i > 0 && ! engine_->is_last_stage()) {
-//                    checkNCCL(ncclGroupEnd());
-//                }
-//            }
-//
-//            if (c_i == 0) {
-//                checkCUDA(cudaEventRecord(start_event));
-//            }
-//
-//            engine_->perform_forward_task(task);
-//
-//            if (! engine_->is_last_stage()) {
-//                if (c_i < num_forward_chunks - 1 && ! engine_->is_first_stage()) {
-//                    checkNCCL(ncclGroupStart());
-//                }
-//                //Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-//                send_tensor_data(
-//                        engine_->pipeline_output_tensor_, 
-//                        task.chunk_id, node_id + 1
-//                        );
-//                //Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-//            }
-//        }
-//        checkCUDA(cudaEventRecord(end_event));
-//        checkCUDA(cudaStreamSynchronize(0));
-//        checkCUDA(cudaEventQuery(start_event));
-//        checkCUDA(cudaEventQuery(end_event));
-//        checkCUDA(cudaEventQuery(before_pipeline_start));
-//        float t = 0;
-//        checkCUDA(cudaEventElapsedTime(&t, start_event, end_event));
-//        float wait_t = 0;
-//        checkCUDA(cudaEventElapsedTime(&wait_t, before_pipeline_start, start_event));
-//
-//        if (epoch_id == 15) {
-//            printf("Epoch %d, node %d, it takes %.3f ms to wait for the 1-st task and takes %.3f ms to finish all tasks\n",
-//                    epoch_id, node_id, wait_t, t);
-//        }
-//
-//        /*
-//        if (in_training_mode) {
-//            for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
-//                MPI_Barrier(engine_->mpi_group_same_way_);
-//            }
-//
-//            // the backward ordering is the reverse of the forward ordering 
-//            for (int c_i = num_forward_chunks - 1; c_i >= 0; -- c_i) {
-//                // construct the backwarding task
-//                CUDAPIPBackwardTask task;
-//                task.epoch_id = epoch_id;
-//                task.chunk_id = forward_chunks[c_i];
-//#ifdef SHOW_SCHEDULE_DETAILS
-//                if (node_id <= 3) {
-//                    double time_elapsed = (get_time() - start_time) * 1000;    
-//                    printf("%.3f ms: Node %d, scheduled a backwarding task of chunk %d\n",
-//                            time_elapsed, node_id, task.chunk_id);
-//                }
-//#endif
-//
-//                // propagate the gradients in a reverse order in the pipeline
-//                Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-//                MPI_Barrier(engine_->mpi_group_same_way_);
-//                Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
-//
-//                // fuse the send and recv with the NCCL group mechanism
-//                Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-//                layer_comm_time -= get_time();
-//                // sync the pipeline-boundary tensor
-//                checkNCCL(ncclGroupStart());
-//                if (! engine_->is_last_stage()) {
-//                    assert(engine_->pipeline_input_tensor_ != engine_->pipeline_output_tensor_);
-//                    // receive the gradients of the current chunk from a previous stage
-//                    recv_tensor_grad(
-//                            engine_->pipeline_output_tensor_, forward_chunks[c_i], node_id + 1
-//                            );
-//                }
-//                if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
-//                    send_tensor_grad(
-//                            engine_->pipeline_input_tensor_, forward_chunks[c_i + 1], node_id - 1
-//                            );
-//                }
-//                checkNCCL(ncclGroupEnd());
-//                // sync the globally shared tensor
-//                if (engine_->global_shared_tensor_ != NULL) {
-//                    checkNCCL(ncclGroupStart());
-//                    if (! engine_->is_last_stage()) {
-//                        // receive the gradients of the current chunk from a previous stage
-//                        recv_tensor_grad(
-//                                engine_->global_shared_tensor_, forward_chunks[c_i], node_id + 1
-//                                );
-//                    }
-//                    if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
-//                        send_tensor_grad(
-//                                engine_->global_shared_tensor_, forward_chunks[c_i + 1], node_id - 1
-//                                );
-//                    }
-//                    checkNCCL(ncclGroupEnd());
-//                }
-//                Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-//                layer_comm_time += get_time();
-//
-//                // do the computation
-//                double chunk_time = - get_time();
-//                engine_->perform_backward_task(task);
-//                chunk_time += get_time();
-//                slowest_backward_chunk = std::max(slowest_backward_chunk, chunk_time);
-//                fastest_backward_chunk = std::min(fastest_backward_chunk, chunk_time);
-//                //if (task.chunk_id == 0) {
-//                //    printf("Epoch %d, Node %d, Backward Chunk %d Time: %.3f (ms)\n",
-//                //            epoch_id, node_id, task.chunk_id, chunk_time * 1e3);
-//                //}
-//
-//                // the last send cannot be fused with a receive
-//                if (c_i == 0) {
-//                    Profiler::submit_main_thread_event(AdjacentGPUSyncStartEvent);
-//                    // tell the next stage that the grad is ready to send
-//                    //send_one_byte(node_id - 1);
-//                    MPI_Barrier(engine_->mpi_group_same_way_);
-//                    Profiler::submit_main_thread_event(AdjacentGPUSyncCompleteEvent);
-//                }
-//                if (! engine_->is_first_stage() && c_i == 0) {
-//                    // send the grad with NCCL
-//                    Profiler::submit_main_thread_event(LayerNCCLCommunicationStartEvent);
-//                    layer_comm_time -= get_time();
-//                    // sync the boundary tensor
-//                    send_tensor_grad(
-//                            engine_->pipeline_input_tensor_, forward_chunks[c_i], node_id - 1
-//                            );
-//                    // sync the globally shared tensor
-//                    if (engine_->global_shared_tensor_ != NULL) {
-//                        send_tensor_grad(
-//                                engine_->global_shared_tensor_, forward_chunks[c_i], node_id - 1
-//                                );
-//                    }
-//                    Profiler::submit_main_thread_event(LayerNCCLCommunicationCompleteEvent);
-//                    layer_comm_time += get_time();
-//                }
-//
-//#ifdef SHOW_SCHEDULE_DETAILS
-//                if (node_id <= 3) {
-//                    double time_elapsed = (get_time() - start_time) * 1000;    
-//                    printf("%.3f ms: Node %d, done executing the backwarding task of chunk %d\n",
-//                            time_elapsed, node_id, task.chunk_id);
-//                }
-//#endif
-//            }
-//
-//            for (int i = 0; i < stage_id; ++ i) {
-//                MPI_Barrier(engine_->mpi_group_same_way_);
-//            }
-//
-//            Profiler::submit_main_thread_event(SideComputationStartEvent);
-//            int num_aggr_ops = aggr_ops.size();
-//            for (int i = 0; i < num_aggr_ops; ++ i) {
-//                Operator * op = aggr_ops[i];
-//                Tensor * tensor = op->get_output_tensor(0);
-//                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-//                size_t num_elements_per_vertex = tensor->dims[1];
-//                size_t num_elements = num_vertices * num_elements_per_vertex;
-//                DataType * data = resource->get_gpu_data();
-//                DataType * grad = resource->get_gpu_grad();
-//                checkCUDA(cudaMemset(grad, 0, sizeof(DataType) * num_elements));
-//            }
-//            Profiler::submit_main_thread_event(SideComputationCompleteEvent);
-//        }*/
-//
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        double core_time = get_time() - start_time;
-//        if (epoch_id == 15) {
-//            printf("It takes node %d %.3f ms to finish the pipeline.\n",
-//                    node_id, core_time * 1e3);
-//        }
-//
-//        if (in_training_mode) { 
-//            Profiler::submit_main_thread_event(SideComputationStartEvent); 
-//            if (engine_->is_bottommost_node_) {
-//                double t = - get_time();
-//                engine_->accum_loss_ = 0;
-//                for (int chunk_id: local_chunk_ids) {
-//                    VertexId vid_begin = engine_->chunk_manager_->get_chunk_begin(chunk_id);
-//                    VertexId vid_end = engine_->chunk_manager_->get_chunk_end(chunk_id);
-//                    engine_->accum_loss_ += engine_->loss_->get_loss(
-//                            engine_->output_tensor_, engine_->std_tensor_,
-//                            vid_begin, vid_end
-//                            );
-//                }
-//                t += get_time();
-//                if (epoch_id == 15) {
-//                    printf("It takes the last node %.3f ms to calculate the loss\n", 
-//                            t * 1e3);
-//                }
-//            } else {
-//                engine_->accum_loss_ = 0;
-//            }
-//            MPI_Allreduce(
-//                    MPI_IN_PLACE, &engine_->accum_loss_, 1, 
-//                    MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD
-//                    );
-//            Profiler::submit_main_thread_event(SideComputationCompleteEvent);
-//        }
-//
-//        Profiler::submit_main_thread_event(WeightOptimizationStartEvent);
-//        if (in_training_mode) {
-//            engine_->weight_aggregator_->commit_grad();
-//        }
-//        engine_->weight_aggregator_->clear_gradients();
-//        Profiler::submit_main_thread_event(WeightOptimizationCompleteEvent);
-//
-//        if (in_training_mode) {
-//            assert(remained_inference_runs == 0);
-//            ++ epoch_id;
-//            if (engine_->evaluation_frequency_ != -1 &&
-//                    epoch_id % engine_->evaluation_frequency_ == 0) {
-//                remained_inference_runs = NUM_INFERNECE_RUNS;
-//            }
-//        } else {
-//            assert(remained_inference_runs > 0);
-//            -- remained_inference_runs;
-//        }
-//
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        Profiler::submit_main_thread_event(SideComputationStartEvent);
-//        if (engine_->evaluation_frequency_ == -1) {
-//            // the evaluation is disabled
-//            if (epoch_id % EVAL_FREQUENCY == 0) {
-//                if (node_id == 0) {
-//                    if (! engine_->always_exact_inferences_) {
-//                        printf("\tEpoch %d:\tLoss %.4f\n", epoch_id, engine_->accum_loss_);
-//                        fflush(stdout);
-//                    } else {
-//                        double train_acc, valid_acc, test_acc;
-//                        engine_->run_exact_inference(
-//                                train_acc, valid_acc, test_acc,
-//                                engine_->weight_aggregator_->get_curr_weights()
-//                                );
-//                        if (valid_acc > highest_valid_acc) {
-//                            highest_valid_acc = valid_acc;
-//                            //target_test_acc = test_acc;
-//                            epoch_to_reach_target_acc = epoch_id;
-//                            engine_->weight_aggregator_->update_optimal_weights();
-//                        }
-//                        if (node_id == 0) {
-//                            printf("\tEpoch %d:\tLoss %.4f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\tBestValid %.4f\n",
-//                                    epoch_id, engine_->accum_loss_, train_acc, valid_acc, test_acc, highest_valid_acc);
-//                            fflush(stdout);
-//                        }
-//                    }
-//                }
-//            }
-//        } else {
-//            assert(! engine_->always_exact_inferences_);
-//            // the evaluation is enabled
-//            assert(engine_->evaluation_frequency_ > 0);
-//            if (!in_training_mode && remained_inference_runs == 0) {
-//                DataType train_hits = 0;
-//                DataType valid_hits = 0;
-//                if (engine_->is_bottommost_node_) {
-//                    for (int i: local_chunk_ids) {
-//                        VertexId chunk_begin = engine_->chunk_manager_->get_chunk_begin(i);
-//                        VertexId chunk_end = engine_->chunk_manager_->get_chunk_end(i);
-//                        train_hits += engine_->calculate_train_prediction_hits(chunk_begin, chunk_end);
-//                        valid_hits += engine_->calculate_valid_prediction_hits(chunk_begin, chunk_end);
-//                    }
-//                }
-//                MPI_Allreduce(
-//                        MPI_IN_PLACE, &train_hits, 1, 
-//                        DistributedSys::get_mpi_data_type<DataType>(),
-//                        MPI_SUM, MPI_COMM_WORLD
-//                        );
-//                MPI_Allreduce(
-//                        MPI_IN_PLACE, &valid_hits, 1, 
-//                        DistributedSys::get_mpi_data_type<DataType>(),
-//                        MPI_SUM, MPI_COMM_WORLD
-//                        );
-//                double train_acc = train_hits / double(engine_->ntrain);
-//                double valid_acc = valid_hits / double(engine_->nvalid);
-//
-//                if (valid_acc > highest_valid_acc) {
-//                    highest_valid_acc = valid_acc;
-//                    epoch_to_reach_target_acc = epoch_id;
-//                    engine_->weight_aggregator_->update_optimal_weights();
-//                }
-//                if (node_id == 0) {
-//                    printf("\tEpoch %d:\tLoss %.4f\tTrainAcc %.4f\tValidAcc %.4f\tBestValid %.4f\n",
-//                            epoch_id, engine_->accum_loss_, train_acc, valid_acc, highest_valid_acc);
-//                    fflush(stdout);
-//                }
-//            }
-//        }
-//
-//        //printf("Node %d, Epoch %d, Slowest/Fastest Chunk (forward): %.3f / %.3f (ms), Slowest/Fastest Chunk (backward): %.3f / %.3f (ms)\n",
-//        //        node_id, epoch_id, slowest_forward_chunk * 1e3, fastest_forward_chunk * 1e3,  
-//        //        slowest_backward_chunk * 1e3, fastest_backward_chunk * 1e3);
-//
-//        if (in_training_mode && (epoch_id + 1) % REVERSE_PERIOD == 0) {
-//            // backup the activation
-//            for (int i = 0; i < aggr_ops.size(); ++ i) {
-//                Operator * op = aggr_ops[i];
-//                DataType * h_data = historical_data[i];
-//                Tensor * tensor = op->get_input_tensor(0);
-//                TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
-//                DataType * data = resource->get_gpu_data();
-//                size_t num_elements = (size_t) num_vertices * tensor->dims[1];
-//                checkCUDA(cudaMemcpy(h_data, data, sizeof(DataType) * num_elements,
-//                            cudaMemcpyDeviceToDevice));
-//            }
-//        }
-//        MPI_Barrier(MPI_COMM_WORLD);
-//        Profiler::submit_main_thread_event(SideComputationCompleteEvent);
-//    }
     Profiler::end_profiling();
 
     t += get_time();
@@ -2565,9 +2321,14 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     bubble_t /= double(num_epoch - warmup_epoches);
     core_t /= double(num_epoch - warmup_epoches);
     post_pipelining_t /= double(num_epoch - warmup_epoches);
+    layer_comm_t /= double(num_epoch - warmup_epoches);
+    compute_t /= double(num_epoch - warmup_epoches);
 
-    printf("Node %d, Pre/Post-Pipelining Time: %.3f / %.3f ms, Bubble Time: %.3f ms, Core Time: %.3f ms\n",
-            node_id, pre_pipelining_t, post_pipelining_t, bubble_t, core_t);
+    printf("Node %d, Pre/Post-Pipelining: %.3f / %.3f ms, Bubble: %.3f ms, Compute: %.3f ms, Comm: %.3f ms, Imbalance: %.3f ms\n",
+            node_id, pre_pipelining_t, post_pipelining_t, 
+            bubble_t, compute_t, layer_comm_t, 
+            core_t - compute_t - layer_comm_t
+            );
     fflush(stdout);
     usleep(1e5);
 
@@ -2584,12 +2345,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     usleep(1e5);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    double layer_comm_throughput = layer_comm / layer_comm_time * 8. / 1e9;
-    printf("Node %d, Layer-Level Communication Throughput: %.3f Gbps, Time %.3f ms\n",
-            node_id, layer_comm_throughput, layer_comm_time / num_epoch * 1e3);
-    fflush(stdout);
-    usleep(1e5);
-    MPI_Barrier(MPI_COMM_WORLD);
+    //double layer_comm_throughput = layer_comm / layer_comm_time * 8. / 1e9;
+    //printf("Node %d, Layer-Level Communication Throughput: %.3f Gbps, Time %.3f ms\n",
+    //        node_id, layer_comm_throughput, layer_comm_time / num_epoch * 1e3);
+    //fflush(stdout);
+    //usleep(1e5);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
     double graph_comm_throughput = engine_->graph_data_propagator_->get_comm() * 8.
         / engine_->graph_data_propagator_->get_comm_time() / 1e9;
@@ -2643,6 +2404,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 avg_ps_comm / 1024. / 1024. / 1024.);
         printf("\tTotal communication (cluster-wide, per-epoch): %.3f GB\n",
                 total_comm / 1024. / 1024. / 1024.);
+        printf("\tAggregated layer-level communication throughput: %.3f Gbps\n",
+                avg_layer_comm * 8. / 1e9 / (layer_comm_t / 1e3));
         // accuracies
         printf("Highest valid_acc: %.4f\n", highest_valid_acc);
         printf("Target test_acc: %.4f\n", test_acc);
@@ -3493,6 +3256,67 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
     }
 }
 
+void DistributedPIPHybridParallelExecutionEngineGPU::recomputation(
+        int op_begin, 
+        int op_end, 
+        int chunk_id
+        ) {
+    assert(chunk_manager_);
+    assert(op_ten_manager_);
+
+    VertexId local_vid_begin = chunk_manager_->get_chunk_begin(chunk_id);
+    VertexId local_vid_end = chunk_manager_->get_chunk_end(chunk_id);
+    int op_idx_begin = op_begin;
+    int op_idx_end = op_end;
+
+    executor_->enable_recomputation_mode();
+    for (int op_idx = op_idx_begin; op_idx < op_idx_end; ++ op_idx) {
+        Operator * op = op_ten_manager_->get_operator(op_idx);
+        assert(op != NULL);
+        bool need_recomputation = false;
+        int num_output_tensors = op->get_num_output_tensors();
+        for (int i = 0; i < num_output_tensors; ++ i) {
+            if (op->get_output_tensor(i)->is_data_transient) {
+                need_recomputation = true;
+                break;
+            }
+        }
+        if (! need_recomputation) {
+            continue;
+        }
+        switch (op->get_type()) {
+            case OPERATOR_INPUT:
+                // do nothing
+                break;
+            case OPERATOR_WEIGHT:
+                // do nothing
+                break;
+            case OPERATOR_ADD:
+                executor_->add_forward((AddOperator*)op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_RELU:
+                executor_->relu_forward((ReluOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_MATMUL:
+                executor_->matmul_forward((MatmulOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_SOFTMAX:
+                executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_AGGREGATION:
+                executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                break;
+            case OPERATOR_DROPOUT:
+                executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
+                break;
+            default:
+                fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
+                exit(-1);
+        }
+    }
+    executor_->disable_recomputation_mode();
+}
+
 void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(
         CUDAPIPBackwardTask task,
         int op_begin, 
@@ -3555,53 +3379,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(
     }
 
     // backward the gradients
-    // recomputation
-    executor_->enable_recomputation_mode();
-    for (int op_idx = op_idx_begin; op_idx < op_idx_end; ++ op_idx) {
-        Operator * op = op_ten_manager_->get_operator(op_idx);
-        assert(op != NULL);
-        bool need_recomputation = false;
-        int num_output_tensors = op->get_num_output_tensors();
-        for (int i = 0; i < num_output_tensors; ++ i) {
-            if (op->get_output_tensor(i)->is_data_transient) {
-                need_recomputation = true;
-                break;
-            }
-        }
-        if (! need_recomputation) {
-            continue;
-        }
-        switch (op->get_type()) {
-            case OPERATOR_INPUT:
-                // do nothing
-                break;
-            case OPERATOR_WEIGHT:
-                // do nothing
-                break;
-            case OPERATOR_ADD:
-                executor_->add_forward((AddOperator*)op, local_vid_begin, local_vid_end);
-                break;
-            case OPERATOR_RELU:
-                executor_->relu_forward((ReluOperator*) op, local_vid_begin, local_vid_end);
-                break;
-            case OPERATOR_MATMUL:
-                executor_->matmul_forward((MatmulOperator*) op, local_vid_begin, local_vid_end);
-                break;
-            case OPERATOR_SOFTMAX:
-                executor_->softmax_forward((SoftmaxOperator*) op, local_vid_begin, local_vid_end);
-                break;
-            case OPERATOR_AGGREGATION:
-                executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
-                break;
-            case OPERATOR_DROPOUT:
-                executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
-                break;
-            default:
-                fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
-                exit(-1);
-        }
-    }
-    executor_->disable_recomputation_mode();
+    recomputation(op_idx_begin, op_idx_end, chunk_id);
     propagate_gradient(op_idx_begin, op_idx_end, chunk_id);
     //compute_time_ += get_time();
     Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
@@ -4778,7 +4556,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
     
         // start profiling the performances of each layer
         std::map<int, double*> cached_runtimes;
-        const int count = 16;
+        const int count = 8;
+        const int warmup_count = 3;
     
         for (int layer = 0; layer < num_layers; ++ layer) {
             int layer_type = application->get_layer_type(layer);
@@ -4831,8 +4610,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
             for (int chunk: chunks) { 
                 //printf("Chunk %d\n", chunk);
                 // warmining up
-                for (int i = 0; i < count; ++ i) {
+                for (int i = 0; i < warmup_count; ++ i) {
                     propagate_activation(op_begin, op_end, chunk, true);
+                    recomputation(op_begin, op_end, chunk);
                     propagate_gradient(op_begin, op_end, chunk, true); 
                 }
                 cudaEvent_t events[count + 1];
@@ -4844,8 +4624,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
                 for (int i = 0; i < count; ++ i) {
                     checkCUDA(cudaEventRecord(events[i]));
                     propagate_activation(op_begin, op_end, chunk, true);
-                    propagate_gradient(op_begin, op_end, chunk, true);  
-                    //checkCUDA(cudaStreamSynchronize(0));
+                    //recomputation(op_begin, op_end, chunk); FIXME
+                    //propagate_gradient(op_begin, op_end, chunk, true);  
                 }
                 checkCUDA(cudaEventRecord(events[count]));
                 checkCUDA(cudaStreamSynchronize(0));
@@ -4971,6 +4751,17 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
                 num_chunks, MPI_DOUBLE, 
                 0, MPI_COMM_WORLD
                 );
+    }
+
+    for (int chunk: chunks) {
+        estimated_chunk_cost_[chunk] = 0;
+        for (int layer = 0; layer < num_layers; ++ layer) {
+            estimated_chunk_cost_[chunk] += estimated_runtime_[layer][chunk];
+        }
+        if (node_id == 0) {
+            printf("Estimated Cost of Chunk %d: %.3f ms\n",
+                    chunk, estimated_chunk_cost_[chunk] * 1e3);
+        }
     }
 }
 
@@ -5119,6 +4910,56 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
             partitioning_.partition_op_begin[i] = op_begin;
             application->get_op_range(p.second - 1, &op_begin, &op_end);
             partitioning_.partition_op_end[i] = op_end;
+        }
+
+        // estimated the pipelining cost
+        double estimated_costs[num_gpus][num_chunks];
+        for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+            auto p = optimal_partitioning[gpu];
+            for (int chunk = 0; chunk < num_chunks; ++ chunk) {
+                estimated_costs[gpu][chunk] = 0;
+                for (int layer = p.first; layer < p.second; ++ layer) {
+                    estimated_costs[gpu][chunk] += estimated_runtime_[layer][chunk];
+                }
+            }
+        }
+        // simulate the pipelining
+        double bubble_t[num_gpus];
+        double compute_t[num_gpus];
+        double imbalance_t[num_gpus];
+        memset(bubble_t, 0, sizeof(bubble_t));
+        memset(compute_t, 0, sizeof(compute_t));
+        memset(imbalance_t, 0, sizeof(imbalance_t));
+        double total_t = 0;
+        int num_time_slots = num_chunks + num_gpus - 1;
+        for (int time_slot = 0; time_slot < num_time_slots; ++ time_slot) {
+            // determine the slowest GPU for the current slot
+            double slowest_t = 0;
+            for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+                int chunk = time_slot - gpu;
+                if (chunk >= 0 && chunk < num_chunks) {
+                    slowest_t = std::max(slowest_t, estimated_costs[gpu][chunk]);
+                }
+            }
+            printf("Time Slot %d, Slowest Stage: %.3f ms\n", 
+                    time_slot, slowest_t);
+            total_t += slowest_t;
+            for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+                int chunk = time_slot - gpu;
+                if (chunk >= 0 && chunk < num_chunks) {
+                    double local_cost = estimated_costs[gpu][chunk];
+                    compute_t[gpu] += local_cost;
+                    imbalance_t[gpu] += slowest_t - local_cost;
+                } else {
+                    bubble_t[gpu] += slowest_t;
+                }
+            }
+        }
+        printf("Simulation Results: Total Runtime: %.3f ms\n",
+                total_t * 1e3);
+        for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+            printf("GPU %d, Compute Time: %.3f ms, Bubble Time: %.3f ms, Imbalance Overhead: %.3f ms\n",
+                    gpu, compute_t[gpu] * 1e3, bubble_t[gpu] * 1e3, imbalance_t[gpu] * 1e3);
         }
     }
 
