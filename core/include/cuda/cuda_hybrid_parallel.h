@@ -39,6 +39,7 @@
 #define MAX_SUPER_CHUNK_SIZE (8)
 #define MAX_NUM_WAYS (64)
 #define MAX_NUM_LAYERS (4096)
+#define MAX_NUM_GPUS (128)
 
 class DistributedPIPHybridParallelExecutionEngineGPU;
 class CUDAShadowGradientsMasterVertices;
@@ -1171,14 +1172,6 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue_;
 
-        //// the threads responsible for communication and computation
-        //pthread_barrier_t barrier_;
-        //CUDAPIPForwardTaskDispatcher * forward_task_dispatcher_;
-        //CUDAPIPForwardTaskCommitter * forward_task_committer_;
-        //CUDAPIPBackwardTaskDispatcher * backward_task_dispatcher_;
-        //CUDAPIPBackwardTaskCommitter * backward_task_committer_;
-        //int num_helper_threads_;
-
         //masks
         int * local_training_mask_;
         int * local_gpu_training_mask_;
@@ -1225,15 +1218,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         bool enable_compression_ = true;
 
-        //// using just-in-time chunk batching 
-        //const int super_chunk_size = 2;
-        //struct SuperChunk {
-        //    int chunk_ids[MAX_SUPER_CHUNK_SIZE];
-        //};
-        //std::vector<SuperChunk>
-
         // the cost model
         double estimated_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];
+        double estimated_forward_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];
+        double estimated_backward_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];
         double estimated_chunk_cost_[MAX_NUM_CHUNKS];
 
         inline int get_num_epoch() {
@@ -1251,7 +1239,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         inline VertexId get_partition_begin() {
             return partition_begin_;
         }
-        inline VertexId get_partition_end() {
+       inline VertexId get_partition_end() {
             return partition_end_;
         }
         inline int get_num_chunks() {
@@ -1372,13 +1360,23 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void get_inference_epoch_chunk_ordering(int * chunks, int * num_chunks );
 
         // the cost model
+        struct ExecutionPlan { 
+            int num_dp_ways;
+            int num_pipeline_stages;
+            int pipeline_layer_begin[MAX_NUM_GPUS];
+            int pipeline_layer_end[MAX_NUM_GPUS];
+        };
         void gen_profiling_results(AbstractApplication * application);
         double estimate_cost(int layer_begin, int layer_end, int chunk_id);
         void layer_level_partitioning(const std::vector<double> &costs_per_layer, std::vector<std::pair<int, int>> &optimal_partitioning, int num_partitions);
         void execution_plan_generation(AbstractApplication * application);
-        void simulate_pipeline_performance(
+        double simulate_pipeline_performance(
                 int num_chunks, int num_gpus,
-                double ** estimated_costs // double[num_gpus][num_chunks],
+                const double ** estimated_costs // double[num_gpus][num_chunks],
+                );
+        double estimated_execution_plan_runtime(
+                const ExecutionPlan &plan,
+                AbstractApplication * application
                 );
 
         friend class CUDAPIPForwardTaskDispatcher;

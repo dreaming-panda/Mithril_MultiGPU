@@ -2116,7 +2116,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             checkCUDA(cudaStreamSynchronize(0));
             MPI_Barrier(engine_->mpi_group_same_way_);
 
-            pre_data_communication(c_i);
+            pre_data_communication(c_i); 
 
             if (c_i == 0) {
                 checkCUDA(cudaEventRecord(scheduled_first_forward_task_event));
@@ -2131,7 +2131,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     std::make_pair(start_event, end_event)
                     );
 
-            post_data_communication(c_i);
+            post_data_communication(c_i); 
         }
         checkCUDA(cudaEventRecord(complete_forward_pipelining_event));
         for (int i = 0; i < num_stages - stage_id - 1; ++ i) {
@@ -2155,7 +2155,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             checkCUDA(cudaStreamSynchronize(0));
             MPI_Barrier(engine_->mpi_group_same_way_);
 
-            pre_grad_communication(c_i);
+            pre_grad_communication(c_i); 
 
             if (c_i == num_forward_chunks - 1) {
                 checkCUDA(cudaEventRecord(schedule_first_backward_task_event));
@@ -2170,7 +2170,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     std::make_pair(start_event, end_event)
                     );
 
-            post_grad_communication(c_i);
+            post_grad_communication(c_i); 
         }
         checkCUDA(cudaEventRecord(complete_backward_pipelining_event));
 
@@ -4565,6 +4565,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
     
         // start profiling the performances of each layer
         std::map<int, double*> cached_runtimes;
+        std::map<int, double*> cached_forward_runtimes;
+        std::map<int, double*> cached_backward_runtimes;
         const int count = 8;
         const int warmup_count = 3;
     
@@ -4573,8 +4575,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
             if (cached_runtimes.find(layer_type) != cached_runtimes.end()) {
                 // a layer with the same type have been profiled before
                 double * runtimes = cached_runtimes[layer_type];
+                double * forward_runtimes = cached_forward_runtimes[layer_type];
+                double * backward_runtimes = cached_backward_runtimes[layer_type];
+                assert(runtimes && forward_runtimes && backward_runtimes);
                 for (int chunk: chunks) {
                     estimated_runtime_[layer][chunk] = runtimes[chunk];
+                    estimated_forward_runtime_[layer][chunk] = forward_runtimes[chunk];
+                    estimated_backward_runtime_[layer][chunk] = backward_runtimes[chunk];
                 }
                 continue;
             }
@@ -4603,19 +4610,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
             for (Tensor * tensor: tensors) {
                 map_tensor(tensor);
             }
-            //if (layer == 0) {
-            //    for (int chunk: chunks) { 
-            //        for (int i = 0; i < count; ++ i) {
-            //            propagate_activation(op_begin, op_end, chunk, true);
-            //        }
-            //        for (int i = 0; i < count; ++ i) {
-            //            propagate_gradient(op_begin, op_end, chunk, true); 
-            //        }
-            //    }
-            //}
             // measurement
             double * runtimes = new double [num_chunks];
+            double * forward_runtimes = new double [num_chunks];
+            double * backward_runtimes = new double [num_chunks];
             assert(runtimes);
+            assert(forward_runtimes);
+            assert(backward_runtimes);
             for (int chunk: chunks) { 
                 //printf("Chunk %d\n", chunk);
                 // warmining up
@@ -4624,34 +4625,54 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
                     recomputation(op_begin, op_end, chunk);
                     propagate_gradient(op_begin, op_end, chunk, true); 
                 }
-                cudaEvent_t events[count + 1];
-                for (int i = 0; i <= count; ++ i) {
-                    checkCUDA(cudaEventCreate(&events[i]));
-                }
                 checkCUDA(cudaStreamSynchronize(0));
-                //uint64_t start_cycle = get_cycle();
+
+                // start profiling
+                cudaEvent_t forward_start_event;
+                cudaEvent_t forward_complete_event;
+                cudaEvent_t backward_complete_event;
+                checkCUDA(cudaEventCreate(&forward_start_event));
+                checkCUDA(cudaEventCreate(&forward_complete_event));
+                checkCUDA(cudaEventCreate(&backward_complete_event));
+
+                checkCUDA(cudaEventRecord(forward_start_event));
                 for (int i = 0; i < count; ++ i) {
-                    checkCUDA(cudaEventRecord(events[i]));
                     propagate_activation(op_begin, op_end, chunk, true);
+                }
+                checkCUDA(cudaEventRecord(forward_complete_event));
+                for (int i = 0; i < count; ++ i) {
                     recomputation(op_begin, op_end, chunk);
                     propagate_gradient(op_begin, op_end, chunk, true);  
                 }
-                checkCUDA(cudaEventRecord(events[count]));
+                checkCUDA(cudaEventRecord(backward_complete_event));
+
                 checkCUDA(cudaStreamSynchronize(0));
-                for (int i = 0; i <= count; ++ i) {
-                    assert(cudaEventQuery(events[i]) == cudaSuccess);
-                }
-                for (int i = 0; i < count; ++ i) {
-                    float t = 0;
-                    checkCUDA(cudaEventElapsedTime(&t, events[i], events[i + 1]));
-                }
-                float t = 0;
-                checkCUDA(cudaEventElapsedTime(&t, events[0], events[count]));
-                t /= count;
-                runtimes[chunk] = (double) t / 1e3;
-                estimated_runtime_[layer][chunk] = (double) t / 1e3;
+                checkCUDA(cudaEventQuery(forward_start_event));
+                checkCUDA(cudaEventQuery(forward_complete_event));
+                checkCUDA(cudaEventQuery(backward_complete_event));
+
+                float forward_t = 0;
+                checkCUDA(cudaEventElapsedTime(
+                            &forward_t, forward_start_event, forward_complete_event
+                            ));
+                forward_t /= double (count);
+                float backward_t = 0;
+                checkCUDA(cudaEventElapsedTime(
+                            &backward_t, forward_complete_event, backward_complete_event
+                            ));
+                backward_t /= double(count);
+                // update the cache
+                runtimes[chunk] = (double) (forward_t + backward_t) / 1e3;
+                forward_runtimes[chunk] = (double) forward_t / 1e3;
+                backward_runtimes[chunk] = (double) backward_t / 1e3;
+                // update the cost-model record
+                estimated_runtime_[layer][chunk] = runtimes[chunk];
+                estimated_forward_runtime_[layer][chunk] = forward_runtimes[chunk];
+                estimated_backward_runtime_[layer][chunk] = backward_runtimes[chunk];
             }
             cached_runtimes[layer_type] = runtimes;
+            cached_forward_runtimes[layer_type] = forward_runtimes;
+            cached_backward_runtimes[layer_type] = backward_runtimes;
             // unmap the tensors
             for (Tensor * tensor: tensors) {
                 unmap_tensor(tensor);
@@ -4741,6 +4762,16 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
             delete [] p.second;
         }
         cached_runtimes.clear();
+        for (std::pair<int, double*> p: cached_forward_runtimes) {
+            assert(p.second);
+            delete [] p.second;
+        }
+        cached_forward_runtimes.clear();
+        for (std::pair<int, double*> p: cached_backward_runtimes) {
+            assert(p.second);
+            delete [] p.second;
+        }
+        cached_backward_runtimes.clear();
 
         double end_time = get_time();
         printf("Profiling takes %.3f s\n", end_time - start_time);
@@ -4888,8 +4919,6 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
             }
             cost *= 1e3;
             costs_per_layer.push_back(cost);
-            //printf("Layer %d Cost %.2f ms\n",
-            //        layer, cost);
         }
 
         std::vector<std::pair<int, int>> optimal_partitioning;
@@ -4915,53 +4944,37 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
             partitioning_.partition_op_end[i] = op_end;
         }
 
-        // estimated the pipelining cost
-        double * estimated_costs[num_gpus];
-        for (int gpu = 0; gpu < num_gpus; ++ gpu) {
-            estimated_costs[gpu] = new double [num_chunks];
-            auto p = optimal_partitioning[gpu];
-            for (int chunk = 0; chunk < num_chunks; ++ chunk) {
-                estimated_costs[gpu][chunk] = 0;
-                for (int layer = p.first; layer < p.second; ++ layer) {
-                    estimated_costs[gpu][chunk] += estimated_runtime_[layer][chunk];
-                }
-            }
+        ExecutionPlan plan;
+        plan.num_dp_ways = 1;
+        plan.num_pipeline_stages = num_gpus;
+        for (int i = 0; i < num_gpus; ++ i) {
+            auto p = optimal_partitioning[i];
+            plan.pipeline_layer_begin[i] = p.first;
+            plan.pipeline_layer_end[i] = p.second;
         }
-        simulate_pipeline_performance(num_chunks, num_gpus, estimated_costs);
+        double pipeline_cost = estimated_execution_plan_runtime(
+                plan, application
+                );
+        double slowdown_factor = 1.05;
+        printf("The estimated cost of the whole pipeline: %.3f ms\n",
+                pipeline_cost * 1e3 * slowdown_factor);
 
-        //// verifying the idea of chunk pairing
-        //int sorted_chunks[num_chunks];
-        //for (int i = 0; i < num_chunks; ++ i) {
-        //    sorted_chunks[i] = i;
-        //}
-        //std::sort(
-        //        sorted_chunks, sorted_chunks + num_chunks,
-        //        [&](int a, int b) {
-        //            return estimated_chunk_cost_[a] > estimated_chunk_cost_[b];
-        //        }
-        //        );
-        //assert(num_chunks % 2 == 0);
-        //int num_super_chunks = num_chunks / 2;
+        //// estimated the pipelining cost
+        //double * estimated_costs[num_gpus];
         //for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+        //    estimated_costs[gpu] = new double [num_chunks];
         //    auto p = optimal_partitioning[gpu];
-        //    for (int chunk = 0; chunk < num_super_chunks; ++ chunk) {
+        //    for (int chunk = 0; chunk < num_chunks; ++ chunk) {
         //        estimated_costs[gpu][chunk] = 0;
         //        for (int layer = p.first; layer < p.second; ++ layer) {
-        //            int subchunk_0 = sorted_chunks[chunk];
-        //            int subchunk_1 = sorted_chunks[num_chunks - chunk - 1];
-        //            estimated_costs[gpu][chunk] += estimated_runtime_[layer][subchunk_0];
-        //            estimated_costs[gpu][chunk] += estimated_runtime_[layer][subchunk_1];
+        //            estimated_costs[gpu][chunk] += estimated_runtime_[layer][chunk];
         //        }
-        //        printf("%6.2f", estimated_costs[gpu][chunk] * 1e3);
         //    }
-        //    printf("\n");
         //}
-        //printf("************** WITH CHUNK PAIRING ****************\n");
-        //simulate_pipeline_performance(num_chunks / 2, num_gpus, estimated_costs);
-
-        for (int gpu = 0; gpu < num_gpus; ++ gpu) {
-            delete [] estimated_costs[gpu];
-        }
+        //simulate_pipeline_performance(num_chunks, num_gpus, estimated_costs);
+        //for (int gpu = 0; gpu < num_gpus; ++ gpu) {
+        //    delete [] estimated_costs[gpu];
+        //}
     }
 
     MPI_Bcast(
@@ -4974,11 +4987,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
             );
 }
 
-
-void DistributedPIPHybridParallelExecutionEngineGPU::simulate_pipeline_performance(
+double DistributedPIPHybridParallelExecutionEngineGPU::simulate_pipeline_performance(
         int num_chunks, 
         int num_gpus,
-        double ** estimated_costs
+        const double ** estimated_costs
         ) {
     // simulate the pipelining
     double bubble_t[num_gpus];
@@ -5015,10 +5027,164 @@ void DistributedPIPHybridParallelExecutionEngineGPU::simulate_pipeline_performan
     printf("Simulation Results: Total Runtime: %.3f ms\n",
             total_t * 1e3);
     for (int gpu = 0; gpu < num_gpus; ++ gpu) {
-        printf("GPU %d, Compute Time: %.3f ms, Bubble Time: %.3f ms, Imbalance Overhead: %.3f ms\n",
+        printf("GPU %d, Compute+Comm Time: %.3f ms, Bubble Time: %.3f ms, Imbalance Overhead: %.3f ms\n",
                 gpu, compute_t[gpu] * 1e3, bubble_t[gpu] * 1e3, imbalance_t[gpu] * 1e3);
     }
+    return total_t;
 }
+
+
+double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_runtime(
+        const ExecutionPlan &plan,
+        AbstractApplication * application
+        ) {
+    // TODO:
+    // 1) consider graph-level communication 
+    // 2) consider layer-level communication [done]
+    // 3) consider both forward and backward [done]
+    
+    const double layer_comm_throughput = 80; // 80Gbps FIXME: should be obtained by profiling
+    const std::vector<Operator*> operators = application->get_operators();
+
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int num_dp_ways = plan.num_dp_ways;
+    int num_stages = plan.num_pipeline_stages;
+    assert(num_nodes == num_dp_ways * num_stages);
+
+    int shared_tensor_dimension = 0;
+    if (global_shared_tensor_ != NULL) {
+        shared_tensor_dimension = global_shared_tensor_->dims[1];
+    }
+    int boundary_tensor_dimensions[num_stages - 1];
+    for (int stage = 0; stage < num_stages - 1; ++ stage) {
+        int boundary_layer = plan.pipeline_layer_end[stage];
+        assert(boundary_layer > 0);
+        int op_begin, op_end;
+        application->get_op_range(
+                boundary_layer - 1, &op_begin, &op_end
+                );
+        Operator * op = operators[op_end - 1];
+        assert(op);
+        Tensor * tensor = op->get_output_tensor(0);
+        assert(tensor);
+        assert(tensor->type == VERTEX_TENSOR);
+        boundary_tensor_dimensions[stage] = tensor->dims[1];
+    }
+
+    std::vector<int> chunks;
+    chunk_manager_->get_local_chunk_ids(chunks);
+    int num_chunks = (int) chunks.size();
+    assert(num_chunks % num_dp_ways == 0);
+    int num_chunks_per_way = num_chunks / num_dp_ways;
+
+    double * estimated_costs[num_stages];
+    for (int i = 0; i < num_stages; ++ i) {
+        estimated_costs[i] = new double [num_chunks_per_way];
+        assert(estimated_costs[i]);
+    }
+
+    // FIXME:
+    // remember to update here if changing the chunk placement
+    // policy
+    int chunks_per_way[num_dp_ways][num_chunks_per_way];
+    for (int way = 0; way < num_dp_ways; ++ way) {
+        int idx = 0;
+        for (int chunk = 0; chunk < num_chunks; ++ chunk) {
+            if (chunk % num_dp_ways == way) {
+                chunks_per_way[way][idx ++] = chunk;
+            }
+        }
+        assert(idx == num_chunks_per_way);
+    }
+
+    // estimated the forward pipeline cost
+    for (int stage = 0; stage < num_stages; ++ stage) {
+        for (int c = 0; c < num_chunks_per_way; ++ c) {
+            double cost = 0;
+            for (int layer = plan.pipeline_layer_begin[stage];
+                    layer < plan.pipeline_layer_end[stage]; ++ layer) {
+                double slowest_cost = 0;
+                for (int way = 0; way < num_dp_ways; ++ way) {
+                    int chunk = chunks_per_way[way][c];
+                    slowest_cost = std::max(
+                            slowest_cost, estimated_forward_runtime_[layer][chunk]
+                            );
+                }
+                cost += slowest_cost;
+                // TODO: add the graph communication cost
+            }
+            size_t communication = 0;
+            for (int way = 0; way < num_dp_ways; ++ way) {
+                int chunk = chunks_per_way[way][c];
+                VertexId vid_begin = chunk_manager_->get_chunk_begin(chunk);
+                VertexId vid_end = chunk_manager_->get_chunk_end(chunk);
+                communication += (vid_end - vid_begin);
+            }
+            if (stage > 0) {
+                communication *= (shared_tensor_dimension + boundary_tensor_dimensions[stage - 1]);
+            } else {
+                communication *= (shared_tensor_dimension + boundary_tensor_dimensions[0]);
+            }
+            communication *= sizeof(DataType);
+            double comm_t = communication * 8. / (layer_comm_throughput * 1e9);
+            cost += comm_t;
+            estimated_costs[stage][c] = cost;
+        }
+    }
+    printf("****** Estimating the Forwarding Pipeline Cost ******\n");
+    double forward_cost = simulate_pipeline_performance(
+            num_chunks_per_way, num_stages, (const double **) estimated_costs
+            );
+
+    // estimated the backward pipeline cost
+    for (int stage = num_stages - 1; stage >= 0; -- stage) {
+        for (int c = num_chunks_per_way - 1; c >= 0; -- c) {
+            double cost = 0;
+            for (int layer = plan.pipeline_layer_end[stage] - 1; 
+                    layer >= plan.pipeline_layer_begin[stage]; -- layer) {
+                double bottleneck = 0;
+                for (int way = 0; way < num_dp_ways; ++ way) {
+                    int chunk = chunks_per_way[way][c];
+                    bottleneck = std::max(
+                            bottleneck, estimated_backward_runtime_[layer][chunk]
+                            );
+                }
+                cost += bottleneck;
+                // TODO: add the graph communication cost
+            }
+            // add the layer communication cost
+            size_t communication = 0;
+            for (int way = 0; way < num_dp_ways; ++ way) {
+                int chunk = chunks_per_way[way][c];
+                VertexId vid_begin = chunk_manager_->get_chunk_begin(chunk);
+                VertexId vid_end = chunk_manager_->get_chunk_end(chunk);
+                communication += (vid_end - vid_begin);
+            }
+            if (stage < num_stages - 1) {
+                communication *= (shared_tensor_dimension + boundary_tensor_dimensions[stage]);
+            } else {
+                communication *= (shared_tensor_dimension + boundary_tensor_dimensions[num_stages - 2]);
+            }
+            communication *= sizeof(DataType);
+            double comm_t = communication * 8. / (layer_comm_throughput * 1e9);
+            cost += comm_t;
+            estimated_costs[num_stages - stage - 1][num_chunks_per_way - c - 1] = cost;
+        }
+    }
+    printf("****** Estimating the Backwarding Pipeline Cost *******\n");
+    double backward_cost = simulate_pipeline_performance(
+            num_chunks_per_way, num_stages, (const double **) estimated_costs
+            );
+
+    // release the memory allocation
+    for (int stage = 0; stage < num_stages; ++ stage) {
+        delete [] estimated_costs[stage];
+    }
+
+    double total_cost = forward_cost + backward_cost;
+    return total_cost;
+}
+
 
 
 
