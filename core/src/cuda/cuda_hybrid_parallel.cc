@@ -5215,34 +5215,12 @@ void DistributedPIPHybridParallelExecutionEngineGPU::profile_layer_comm_network_
     // consider this also as a collective commmunication 
     // and measure the per-GPU algorithmic bandwidth
     const int count = 1024;
-    const int warmup_count = 16;
 
     cudaEvent_t start_event;
     cudaEvent_t end_event;
     checkCUDA(cudaEventCreate(&start_event));
     checkCUDA(cudaEventCreate(&end_event));
 
-    // warming up
-    for (int i = 0; i < warmup_count; ++ i) {
-        checkNCCL(ncclGroupStart());
-        if (node_id < num_nodes - 1) {
-            checkNCCL(ncclSend(
-                        (const void*) send_buff,
-                        msg_size, ncclInt8,
-                        node_id + 1, nccl_handle, 
-                        0
-                        ));
-        }
-        if (node_id > 0) {
-            checkNCCL(ncclRecv(
-                        (void*) recv_buff,
-                        msg_size, ncclInt8,
-                        node_id - 1, nccl_handle,
-                        0
-                        ));
-        }
-        checkNCCL(ncclGroupEnd());
-    }
     cudaStreamSynchronize(0);
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -5290,8 +5268,81 @@ void DistributedPIPHybridParallelExecutionEngineGPU::profile_layer_comm_network_
     checkCUDA(cudaEventDestroy(end_event));
 }
 
-void DistributedPIPHybridParallelExecutionEngineGPU::profile_graph_comm_network_performance(int super_node_size) {
-    // TODO
+void DistributedPIPHybridParallelExecutionEngineGPU::profile_graph_comm_network_performance(
+        int super_node_size
+        ) {
+    printf("****** Start profiling the graph-level communication performance with supernodesize = %d ******\n",
+            super_node_size);
+
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    assert(super_node_size <= num_nodes);
+    ncclComm_t nccl_handle = DistributedSys::get_instance()->get_nccl_handle();
+
+    const size_t msg_size = 16 * 1024 * 1024;
+    uint8_t * send_buff = NULL;
+    uint8_t * recv_buff = NULL;
+    checkCUDA(cudaMalloc(&send_buff, msg_size));
+    checkCUDA(cudaMalloc(&recv_buff, msg_size));
+    assert(send_buff && recv_buff);
+
+    const int count = 1024;
+
+    cudaEvent_t start_event;
+    cudaEvent_t end_event;
+    checkCUDA(cudaEventCreate(&start_event));
+    checkCUDA(cudaEventCreate(&end_event));
+
+    cudaStreamSynchronize(0);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    checkCUDA(cudaEventRecord(start_event));
+    for (int i = 0; i < count; ++ i) {
+        for (int disp = 1; disp < super_node_size; ++ disp) {
+            if (node_id < super_node_size) {
+                checkNCCL(ncclGroupStart());
+                int send_remote = (node_id + disp) % super_node_size;
+                int recv_remote = (node_id + super_node_size - disp) % super_node_size;
+                checkNCCL(ncclSend(
+                            (const void*) send_buff + send_remote * (msg_size / super_node_size),
+                            msg_size / super_node_size, ncclInt8,
+                            send_remote, nccl_handle,
+                            0
+                            ));
+                checkNCCL(ncclRecv(
+                            (void*) recv_buff + recv_remote * (msg_size / super_node_size),
+                            msg_size / super_node_size, ncclInt8,
+                            recv_remote, nccl_handle,
+                            0
+                            ));
+                checkNCCL(ncclGroupEnd());
+            }
+        }
+    }
+    cudaStreamSynchronize(0);
+    MPI_Barrier(MPI_COMM_WORLD);
+    checkCUDA(cudaEventRecord(end_event));
+
+    cudaStreamSynchronize(0);
+    checkCUDA(cudaEventQuery(start_event));
+    checkCUDA(cudaEventQuery(end_event));
+
+    float t = 0;
+    checkCUDA(cudaEventElapsedTime(&t, start_event, end_event));
+    t /= 1e3;
+    t /= double(count);
+    double bandwidth = msg_size * 8. * (super_node_size - 1) / super_node_size / 1e9 / t;
+    graph_comm_bandwidth_[super_node_size] = bandwidth;
+    printf("The graph-level communication performance (supernode = %d): %.3f Gbps (per GPU), %.3f Gbps (aggregated, cluster-wide)\n",
+            super_node_size, bandwidth, bandwidth * num_nodes
+            );
+
+    checkCUDA(cudaFree(send_buff));
+    checkCUDA(cudaFree(recv_buff));
+    send_buff = recv_buff = NULL;
+
+    checkCUDA(cudaEventDestroy(start_event));
+    checkCUDA(cudaEventDestroy(end_event));
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::profile_network_performance() {
@@ -5304,16 +5355,16 @@ void DistributedPIPHybridParallelExecutionEngineGPU::profile_network_performance
 
     profile_layer_comm_network_performance();
 
-    //valid_super_node_sizes_.clear();
-    //for (int super_node_size = 1; super_node_size < num_nodes; ++ super_node_size) {
-    //    if (num_nodes % super_node_size == 0) {
-    //        valid_super_node_sizes_.push_back(super_node_size);
-    //    }
-    //}
+    valid_super_node_sizes_.clear();
+    for (int super_node_size = 2; super_node_size <= num_nodes; ++ super_node_size) {
+        if (num_nodes % super_node_size == 0) {
+            valid_super_node_sizes_.push_back(super_node_size);
+        }
+    }
 
-    //for (int super_node_size: valid_super_node_sizes_) {
-    //    profile_graph_comm_network_performance(super_node_size);
-    //}
+    for (int super_node_size: valid_super_node_sizes_) {
+        profile_graph_comm_network_performance(super_node_size);
+    }
 }
 
 
