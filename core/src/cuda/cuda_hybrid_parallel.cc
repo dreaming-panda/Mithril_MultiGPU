@@ -2389,6 +2389,14 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             );
     avg_layer_comm /= double(num_epoch);
 
+    double avg_layer_comm_t;
+    MPI_Allreduce(
+            &layer_comm_t, &avg_layer_comm_t, 1,
+            DistributedSys::get_mpi_data_type<double>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    avg_layer_comm_t /= double(num_nodes);
+
     double ps_comm = engine_->weight_aggregator_->get_comm();
     double avg_ps_comm;
     MPI_Allreduce(
@@ -2414,7 +2422,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         printf("\tTotal communication (cluster-wide, per-epoch): %.3f GB\n",
                 total_comm / 1024. / 1024. / 1024.);
         printf("\tAggregated layer-level communication throughput: %.3f Gbps\n",
-                avg_layer_comm * 8. / 1e9 / (layer_comm_t / 1e3));
+                avg_layer_comm * 8. / 1e9 / (avg_layer_comm_t / 1e3));
         // accuracies
         printf("Highest valid_acc: %.4f\n", highest_valid_acc);
         printf("Target test_acc: %.4f\n", test_acc);
@@ -4431,6 +4439,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
         AbstractApplication * application
         ) {
     printf("Start Cost Model Initialization...\n");
+
+    profile_network_performance();
+
     int node_id = DistributedSys::get_instance()->get_node_id();
     int num_layers = application->get_num_layers();
     std::vector<int> chunks;
@@ -5043,7 +5054,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
     // 2) consider layer-level communication [done]
     // 3) consider both forward and backward [done]
     
-    const double layer_comm_throughput = 80; // 80Gbps FIXME: should be obtained by profiling
+    const double layer_comm_throughput = layer_comm_bandwidth_;
     const std::vector<Operator*> operators = application->get_operators();
 
     int num_nodes = DistributedSys::get_instance()->get_num_nodes();
@@ -5184,6 +5195,128 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
     double total_cost = forward_cost + backward_cost;
     return total_cost;
 }
+
+void DistributedPIPHybridParallelExecutionEngineGPU::profile_layer_comm_network_performance() {
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int node_id = DistributedSys::get_instance()->get_node_id();
+    ncclComm_t nccl_handle = DistributedSys::get_instance()->get_nccl_handle();
+
+    if (node_id == 0) {
+        printf("***** Start profiling the layer-level communication performance *******\n");
+    }
+
+    const size_t msg_size = 16 * 1024 * 1024; // 16 MB communication size
+    uint8_t * send_buff = NULL;
+    uint8_t * recv_buff = NULL;
+    checkCUDA(cudaMalloc(&send_buff, msg_size));
+    checkCUDA(cudaMalloc(&recv_buff, msg_size));
+    assert(send_buff && recv_buff);
+
+    // consider this also as a collective commmunication 
+    // and measure the per-GPU algorithmic bandwidth
+    const int count = 1024;
+    const int warmup_count = 16;
+
+    cudaEvent_t start_event;
+    cudaEvent_t end_event;
+    checkCUDA(cudaEventCreate(&start_event));
+    checkCUDA(cudaEventCreate(&end_event));
+
+    // warming up
+    for (int i = 0; i < warmup_count; ++ i) {
+        checkNCCL(ncclGroupStart());
+        if (node_id < num_nodes - 1) {
+            checkNCCL(ncclSend(
+                        (const void*) send_buff,
+                        msg_size, ncclInt8,
+                        node_id + 1, nccl_handle, 
+                        0
+                        ));
+        }
+        if (node_id > 0) {
+            checkNCCL(ncclRecv(
+                        (void*) recv_buff,
+                        msg_size, ncclInt8,
+                        node_id - 1, nccl_handle,
+                        0
+                        ));
+        }
+        checkNCCL(ncclGroupEnd());
+    }
+    cudaStreamSynchronize(0);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    checkCUDA(cudaEventRecord(start_event));
+    for (int i = 0; i < count; ++ i) {
+        checkNCCL(ncclGroupStart());
+        if (node_id < num_nodes - 1) {
+            checkNCCL(ncclSend(
+                        (const void*) send_buff,
+                        msg_size, ncclInt8,
+                        node_id + 1, nccl_handle, 
+                        0
+                        ));
+        }
+        if (node_id > 0) {
+            checkNCCL(ncclRecv(
+                        (void*) recv_buff,
+                        msg_size, ncclInt8,
+                        node_id - 1, nccl_handle,
+                        0
+                        ));
+        }
+        checkNCCL(ncclGroupEnd());
+    }
+    checkCUDA(cudaEventRecord(end_event));
+
+    cudaStreamSynchronize(0);
+    checkCUDA(cudaEventQuery(start_event));
+    checkCUDA(cudaEventQuery(end_event));
+
+    float t = 0;
+    checkCUDA(cudaEventElapsedTime(&t, start_event, end_event));
+    t /= 1e3; // convert to seconds
+    t /= double(count);
+    layer_comm_bandwidth_ = msg_size * 8 / 1e9 / t;
+
+    printf("The layer-level communication performance: %.3f Gbps (per GPU), %.3f Gbps (aggregated)\n",
+            layer_comm_bandwidth_, layer_comm_bandwidth_ * num_nodes);
+
+    checkCUDA(cudaFree(send_buff));
+    checkCUDA(cudaFree(recv_buff));
+    send_buff = recv_buff = NULL;
+
+    checkCUDA(cudaEventDestroy(start_event));
+    checkCUDA(cudaEventDestroy(end_event));
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::profile_graph_comm_network_performance(int super_node_size) {
+    // TODO
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::profile_network_performance() {
+    // a very simple network profiling tool
+    // profiling the network performance of the model parallel
+    // communication patterns and the graph parallel communication
+    // pattern
+    int num_nodes = DistributedSys::get_instance()->get_num_nodes();
+    int node_id = DistributedSys::get_instance()->get_node_id();
+
+    profile_layer_comm_network_performance();
+
+    //valid_super_node_sizes_.clear();
+    //for (int super_node_size = 1; super_node_size < num_nodes; ++ super_node_size) {
+    //    if (num_nodes % super_node_size == 0) {
+    //        valid_super_node_sizes_.push_back(super_node_size);
+    //    }
+    //}
+
+    //for (int super_node_size: valid_super_node_sizes_) {
+    //    profile_graph_comm_network_performance(super_node_size);
+    //}
+}
+
+
 
 
 

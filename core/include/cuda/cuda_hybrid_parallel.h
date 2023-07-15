@@ -1366,6 +1366,13 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int pipeline_layer_begin[MAX_NUM_GPUS];
             int pipeline_layer_end[MAX_NUM_GPUS];
         };
+        double graph_comm_bandwidth_[MAX_NUM_GPUS]; // Gbps
+        double layer_comm_bandwidth_; // Gbps
+        std::vector<int> valid_super_node_sizes_;
+
+        void profile_layer_comm_network_performance();
+        void profile_graph_comm_network_performance(int super_node_size);
+        void profile_network_performance();
         void gen_profiling_results(AbstractApplication * application);
         double estimate_cost(int layer_begin, int layer_end, int chunk_id);
         void layer_level_partitioning(const std::vector<double> &costs_per_layer, std::vector<std::pair<int, int>> &optimal_partitioning, int num_partitions);
