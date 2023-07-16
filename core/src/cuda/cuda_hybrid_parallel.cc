@@ -4803,10 +4803,10 @@ void DistributedPIPHybridParallelExecutionEngineGPU::gen_profiling_results(
         for (int layer = 0; layer < num_layers; ++ layer) {
             estimated_chunk_cost_[chunk] += estimated_runtime_[layer][chunk];
         }
-        if (node_id == 0) {
-            printf("Estimated Cost of Chunk %d: %.3f ms\n",
-                    chunk, estimated_chunk_cost_[chunk] * 1e3);
-        }
+        //if (node_id == 0) {
+        //    printf("Estimated Cost of Chunk %d: %.3f ms\n",
+        //            chunk, estimated_chunk_cost_[chunk] * 1e3);
+        //}
     }
 }
 
@@ -5061,6 +5061,9 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
     int num_dp_ways = plan.num_dp_ways;
     int num_stages = plan.num_pipeline_stages;
     assert(num_nodes == num_dp_ways * num_stages);
+    assert(num_dp_ways >= 1);
+    assert(graph_comm_bandwidth_[num_dp_ways] != 0 || num_dp_ways == 1);
+    double graph_comm_throughput = graph_comm_bandwidth_[num_dp_ways];
 
     int shared_tensor_dimension = 0;
     if (global_shared_tensor_ != NULL) {
@@ -5115,14 +5118,42 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
             for (int layer = plan.pipeline_layer_begin[stage];
                     layer < plan.pipeline_layer_end[stage]; ++ layer) {
                 double slowest_cost = 0;
+                VertexId largest_chunk_size = 0;
                 for (int way = 0; way < num_dp_ways; ++ way) {
                     int chunk = chunks_per_way[way][c];
                     slowest_cost = std::max(
                             slowest_cost, estimated_forward_runtime_[layer][chunk]
                             );
+                    VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk);
+                    VertexId chunk_end = chunk_manager_->get_chunk_end(chunk);
+                    largest_chunk_size = std::max(
+                            largest_chunk_size, chunk_end - chunk_begin
+                            );
                 }
                 cost += slowest_cost;
-                // TODO: add the graph communication cost
+                // determine the graph-level communication cost
+                if (num_dp_ways > 1) {
+                    int op_begin = -1;
+                    int op_end = -1;
+                    application->get_op_range(
+                            layer, &op_begin, &op_end
+                            );
+                    assert(op_begin != -1 && op_end != -1);
+                    int aggr_op_dimension = 0;
+                    for (int op_idx = op_begin; op_idx < op_end; ++ op_idx) {
+                        Operator * op = operators[op_idx];
+                        assert(op);
+                        if (op->get_type() == OPERATOR_AGGREGATION) {
+                            Tensor * tensor = op->get_input_tensor(0);
+                            assert(tensor);
+                            aggr_op_dimension += tensor->dims[1];
+                        }
+                    }
+                    size_t graph_comm_size = aggr_op_dimension * largest_chunk_size 
+                        * sizeof(DataType) * (num_dp_ways - 1);
+                    double comm_t = graph_comm_size * 8. / (graph_comm_throughput * 1e9);
+                    cost += comm_t;
+                }
             }
             size_t communication = 0;
             for (int way = 0; way < num_dp_ways; ++ way) {
@@ -5154,14 +5185,42 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
             for (int layer = plan.pipeline_layer_end[stage] - 1; 
                     layer >= plan.pipeline_layer_begin[stage]; -- layer) {
                 double bottleneck = 0;
+                VertexId largest_chunk_size = 0;
                 for (int way = 0; way < num_dp_ways; ++ way) {
                     int chunk = chunks_per_way[way][c];
                     bottleneck = std::max(
                             bottleneck, estimated_backward_runtime_[layer][chunk]
                             );
+                    VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk);
+                    VertexId chunk_end = chunk_manager_->get_chunk_end(chunk);
+                    largest_chunk_size = std::max(
+                            largest_chunk_size, chunk_end - chunk_begin
+                            );
                 }
                 cost += bottleneck;
-                // TODO: add the graph communication cost
+                if (num_dp_ways > 1) {
+                    // determine the graph-level communication cost
+                    int op_begin = -1;
+                    int op_end = -1;
+                    application->get_op_range(
+                            layer, &op_begin, &op_end
+                            );
+                    assert(op_begin != -1 && op_end != -1);
+                    int aggr_op_dimension = 0;
+                    for (int op_idx = op_begin; op_idx < op_end; ++ op_idx) {
+                        Operator * op = operators[op_idx];
+                        assert(op);
+                        if (op->get_type() == OPERATOR_AGGREGATION) {
+                            Tensor * tensor = op->get_input_tensor(0);
+                            assert(tensor);
+                            aggr_op_dimension += tensor->dims[1];
+                        }
+                    }
+                    size_t graph_comm_size = aggr_op_dimension * largest_chunk_size 
+                        * sizeof(DataType) * (num_dp_ways - 1);
+                    double comm_t = graph_comm_size * 8. / (graph_comm_throughput * 1e9);
+                    cost += comm_t;
+                }
             }
             // add the layer communication cost
             size_t communication = 0;
@@ -5304,13 +5363,13 @@ void DistributedPIPHybridParallelExecutionEngineGPU::profile_graph_comm_network_
                 int send_remote = (node_id + disp) % super_node_size;
                 int recv_remote = (node_id + super_node_size - disp) % super_node_size;
                 checkNCCL(ncclSend(
-                            (const void*) send_buff + send_remote * (msg_size / super_node_size),
+                            (const void*) (send_buff + send_remote * (msg_size / super_node_size)),
                             msg_size / super_node_size, ncclInt8,
                             send_remote, nccl_handle,
                             0
                             ));
                 checkNCCL(ncclRecv(
-                            (void*) recv_buff + recv_remote * (msg_size / super_node_size),
+                            (void*) (recv_buff + recv_remote * (msg_size / super_node_size)),
                             msg_size / super_node_size, ncclInt8,
                             recv_remote, nccl_handle,
                             0
@@ -5362,6 +5421,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::profile_network_performance
         }
     }
 
+    memset(graph_comm_bandwidth_, 0, sizeof(graph_comm_bandwidth_));
     for (int super_node_size: valid_super_node_sizes_) {
         profile_graph_comm_network_performance(super_node_size);
     }

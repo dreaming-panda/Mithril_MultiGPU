@@ -1366,7 +1366,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int pipeline_layer_begin[MAX_NUM_GPUS];
             int pipeline_layer_end[MAX_NUM_GPUS];
         };
-        double graph_comm_bandwidth_[MAX_NUM_GPUS]; // Gbps
+        double graph_comm_bandwidth_[MAX_NUM_GPUS + 1]; // Gbps
         double layer_comm_bandwidth_; // Gbps
         std::vector<int> valid_super_node_sizes_;
 
