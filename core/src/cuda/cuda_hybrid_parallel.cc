@@ -1066,32 +1066,32 @@ void CUDAPIPForwardTaskDispatcher::thread_main() {
 
                 comm_time -= get_time();
                 // receiving the activation data
-                engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
-                        [&](uint8_t * buff, size_t buff_size) {
-                        size_t compressed_data_size = 0;
-#ifdef USE_RDMA
-                        MPI_Status status;
-                        MPI_Recv(
-                                &compressed_data_size, 1, 
-                                DistributedSys::get_mpi_data_type<size_t>(),
-                                remote_node, ForwardActivationPassing,
-                                MPI_COMM_WORLD, &status
-                                );
-#else
-                        MPI_Status status;
-                        MPI_Recv(
-                                buff, buff_size, MPI_CHAR,
-                                remote_node, ForwardActivationPassing,
-                                MPI_COMM_WORLD, &status
-                                );
-                        int count = 0;
-                        MPI_Get_count(&status, MPI_CHAR, &count);
-                        compressed_data_size = count;
-#endif
-                        comm += compressed_data_size;
-                        return compressed_data_size;
-                        }
-                );
+//                engine_->data_decompressors_[task.chunk_id]->receive_compressed_data(
+//                        [&](uint8_t * buff, size_t buff_size) {
+//                        size_t compressed_data_size = 0;
+//#ifdef USE_RDMA
+//                        MPI_Status status;
+//                        MPI_Recv(
+//                                &compressed_data_size, 1, 
+//                                DistributedSys::get_mpi_data_type<size_t>(),
+//                                remote_node, ForwardActivationPassing,
+//                                MPI_COMM_WORLD, &status
+//                                );
+//#else
+//                        MPI_Status status;
+//                        MPI_Recv(
+//                                buff, buff_size, MPI_CHAR,
+//                                remote_node, ForwardActivationPassing,
+//                                MPI_COMM_WORLD, &status
+//                                );
+//                        int count = 0;
+//                        MPI_Get_count(&status, MPI_CHAR, &count);
+//                        compressed_data_size = count;
+//#endif
+//                        comm += compressed_data_size;
+//                        return compressed_data_size;
+//                        }
+//                );
                 // receive the shared tensor data if applicable
                 if (engine_->global_shared_tensor_ != NULL) {
                     // need to receive the globally shared tensor
@@ -1249,32 +1249,32 @@ void CUDAPIPBackwardTaskDispatcher::thread_main() {
                 assert(num_elements_this_chunk > 0);
 
                 comm_time -= get_time();
-                engine_->grad_decompressors_[task.chunk_id]->receive_compressed_data(
-                        [&](uint8_t * buff, size_t buff_size) {
-                        size_t compressed_data_size = 0;
-#ifdef USE_RDMA
-                        MPI_Status status;
-                        MPI_Recv(
-                                &compressed_data_size, 1, 
-                                DistributedSys::get_mpi_data_type<size_t>(),
-                                remote_node, BackwardGradientPassing,
-                                MPI_COMM_WORLD, &status
-                                );
-#else
-                        MPI_Status status;
-                        MPI_Recv(
-                                buff, buff_size, MPI_CHAR, 
-                                remote_node, BackwardGradientPassing,
-                                MPI_COMM_WORLD, &status
-                                );
-                        int count = 0;
-                        MPI_Get_count(&status, MPI_CHAR, &count);
-                        compressed_data_size = count;
-#endif
-                        comm += compressed_data_size;
-                        return compressed_data_size;
-                        }
-                        );
+//                engine_->grad_decompressors_[task.chunk_id]->receive_compressed_data(
+//                        [&](uint8_t * buff, size_t buff_size) {
+//                        size_t compressed_data_size = 0;
+//#ifdef USE_RDMA
+//                        MPI_Status status;
+//                        MPI_Recv(
+//                                &compressed_data_size, 1, 
+//                                DistributedSys::get_mpi_data_type<size_t>(),
+//                                remote_node, BackwardGradientPassing,
+//                                MPI_COMM_WORLD, &status
+//                                );
+//#else
+//                        MPI_Status status;
+//                        MPI_Recv(
+//                                buff, buff_size, MPI_CHAR, 
+//                                remote_node, BackwardGradientPassing,
+//                                MPI_COMM_WORLD, &status
+//                                );
+//                        int count = 0;
+//                        MPI_Get_count(&status, MPI_CHAR, &count);
+//                        compressed_data_size = count;
+//#endif
+//                        comm += compressed_data_size;
+//                        return compressed_data_size;
+//                        }
+//                        );
                 // receive h0
                 if (engine_->global_shared_tensor_) {
                     int num_elements_per_vertex = engine_->global_shared_tensor_->dims[1];
@@ -1379,9 +1379,9 @@ void CUDAPIPForwardTaskCommitter::thread_main() {
 
                 DataType * compressed_data = NULL;
                 size_t compressed_data_size = 0;
-                engine_->data_compressors_[task.chunk_id]->get_compressed_data(
-                        compressed_data, compressed_data_size
-                        );
+                //engine_->data_compressors_[task.chunk_id]->get_compressed_data(
+                //        compressed_data, compressed_data_size
+                //        );
                 assert(compressed_data);
                 assert(compressed_data_size);
                 double t_2 = get_time();
@@ -1520,9 +1520,9 @@ void CUDAPIPBackwardTaskCommitter::thread_main() {
 
                 DataType * compressed_data = NULL;
                 size_t compressed_data_size = 0;
-                engine_->grad_compressors_[task.chunk_id]->get_compressed_data(
-                        compressed_data, compressed_data_size
-                        );
+                //engine_->grad_compressors_[task.chunk_id]->get_compressed_data(
+                //        compressed_data, compressed_data_size
+                //        );
                 assert(compressed_data);
                 assert(compressed_data_size);
 
@@ -1591,6 +1591,9 @@ CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::~CUDAPIP1Forward1BackwardPri
 }
 
 void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
+    printf("****** Start Scheduling the Tasks in a Pipelined Fashion ******\n");
+    fflush(stdout);
+
     ncclComm_t nccl_handle = DistributedSys::get_instance()->get_nccl_handle();
     double layer_comm = 0;
     double layer_comm_time = 0;
@@ -1841,7 +1844,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 // send the data of the previous chunk to a next stage 
                 send_tensor_data(
                         engine_->pipeline_output_tensor_, 
-                        forward_chunks[c_i - 1], node_id + 1
+                        forward_chunks[c_i - 1],  // node + 1
+                        engine_->get_next_stage_node_id()
                         );
             }
             if (! engine_->is_first_stage()) {
@@ -1849,7 +1853,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 // receive the data of the current chunk from a previous stage
                 recv_tensor_data(
                         engine_->pipeline_input_tensor_, 
-                        forward_chunks[c_i], node_id - 1
+                        forward_chunks[c_i], //node_id - 1
+                        engine_->get_prev_stage_node_id()
                         );
             }
             checkNCCL(ncclGroupEnd());
@@ -1860,14 +1865,16 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     // receive the data of the current chunk from a previous stage
                     recv_tensor_data(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i], node_id - 1
+                            forward_chunks[c_i], //node_id - 1
+                            engine_->get_prev_stage_node_id()
                             );
                 }
                 if (! engine_->is_last_stage() && c_i > 0) {
                     // send the data of the previous chunk to a next stage 
                     send_tensor_data(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i - 1], node_id + 1
+                            forward_chunks[c_i - 1], //node_id + 1
+                            engine_->get_next_stage_node_id()
                             );
                 }
                 checkNCCL(ncclGroupEnd());
@@ -1876,12 +1883,14 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             if (! engine_->is_first_stage()) {
                 recv_tensor_data(
                         engine_->pipeline_input_tensor_, 
-                        forward_chunks[c_i], node_id - 1
+                        forward_chunks[c_i], //node_id - 1
+                        engine_->get_prev_stage_node_id()
                         );
                 if (engine_->global_shared_tensor_ != NULL) {
                     recv_tensor_data(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i], node_id - 1
+                            forward_chunks[c_i], //node_id - 1
+                            engine_->get_prev_stage_node_id()
                             );
                 }
             }
@@ -1902,12 +1911,14 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             if (! engine_->is_last_stage() && c_i == num_forward_chunks - 1) {
                 send_tensor_data(
                         engine_->pipeline_output_tensor_, 
-                        forward_chunks[c_i], node_id + 1
+                        forward_chunks[c_i], //node_id + 1
+                        engine_->get_next_stage_node_id()
                         );
                 if (engine_->global_shared_tensor_ != NULL) {
                     send_tensor_data(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i], node_id + 1
+                            forward_chunks[c_i], //node_id + 1
+                            engine_->get_next_stage_node_id()
                             );
                 }
             }
@@ -1915,12 +1926,14 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             if (! engine_->is_last_stage()) {
                 send_tensor_data(
                         engine_->pipeline_output_tensor_, 
-                        forward_chunks[c_i], node_id + 1
+                        forward_chunks[c_i], //node_id + 1
+                        engine_->get_next_stage_node_id()
                         );
                 if (engine_->global_shared_tensor_ != NULL) {
                     send_tensor_data(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i], node_id + 1
+                            forward_chunks[c_i], //node_id + 1
+                            engine_->get_next_stage_node_id()
                             );
                 }
             }
@@ -1944,13 +1957,15 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 // receive the gradients of the current chunk from a previous stage
                 recv_tensor_grad(
                         engine_->pipeline_output_tensor_, 
-                        forward_chunks[c_i], node_id + 1
+                        forward_chunks[c_i], //node_id + 1
+                        engine_->get_next_stage_node_id()
                         );
             }
             if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
                 send_tensor_grad(
                         engine_->pipeline_input_tensor_, 
-                        forward_chunks[c_i + 1], node_id - 1
+                        forward_chunks[c_i + 1], //node_id - 1
+                        engine_->get_prev_stage_node_id()
                         );
             }
             checkNCCL(ncclGroupEnd());
@@ -1961,13 +1976,15 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                     // receive the gradients of the current chunk from a previous stage
                     recv_tensor_grad(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i], node_id + 1
+                            forward_chunks[c_i], //node_id + 1
+                            engine_->get_next_stage_node_id()
                             );
                 }
                 if (! engine_->is_first_stage() && c_i < num_forward_chunks - 1) {
                     send_tensor_grad(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i + 1], node_id - 1
+                            forward_chunks[c_i + 1], //node_id - 1
+                            engine_->get_prev_stage_node_id()
                             );
                 }
                 checkNCCL(ncclGroupEnd());
@@ -1976,12 +1993,14 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             if (! engine_->is_last_stage()) {
                 recv_tensor_grad(
                         engine_->pipeline_output_tensor_, 
-                        forward_chunks[c_i], node_id + 1
+                        forward_chunks[c_i], //node_id + 1
+                        engine_->get_next_stage_node_id()
                         );
                 if (engine_->global_shared_tensor_ != NULL) {
                     recv_tensor_grad(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i], node_id + 1
+                            forward_chunks[c_i], //node_id + 1
+                            engine_->get_next_stage_node_id()
                             );
                 }
             }
@@ -2003,13 +2022,15 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 // sync the boundary tensor
                 send_tensor_grad(
                         engine_->pipeline_input_tensor_, 
-                        forward_chunks[c_i], node_id - 1
+                        forward_chunks[c_i], //node_id - 1
+                        engine_->get_prev_stage_node_id()
                         );
                 // sync the globally shared tensor
                 if (engine_->global_shared_tensor_ != NULL) {
                     send_tensor_grad(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i], node_id - 1
+                            forward_chunks[c_i], //node_id - 1
+                            engine_->get_prev_stage_node_id()
                             );
                 }
             }
@@ -2018,13 +2039,15 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 // sync the boundary tensor
                 send_tensor_grad(
                         engine_->pipeline_input_tensor_, 
-                        forward_chunks[c_i], node_id - 1
+                        forward_chunks[c_i], //node_id - 1
+                        engine_->get_prev_stage_node_id()
                         );
                 // sync the globally shared tensor
                 if (engine_->global_shared_tensor_ != NULL) {
                     send_tensor_grad(
                             engine_->global_shared_tensor_, 
-                            forward_chunks[c_i], node_id - 1
+                            forward_chunks[c_i], //node_id - 1
+                            engine_->get_prev_stage_node_id()
                             );
                 }
             }
@@ -3179,7 +3202,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                         // graph data propagation
                         Tensor * tensor = op->get_input_tensor(0);
                         Profiler::submit_main_thread_event(CoreForwardComputationCompleteEvent);
-                        graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true);
+                        //graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true); FIXME
                         Profiler::submit_main_thread_event(CoreForwardComputationStartEvent);
                     }
                     // do the actual computation  
@@ -3256,7 +3279,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
                         // graph data propagation
                         Tensor * tensor = op->get_output_tensor(0);
                         Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
-                        graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false);
+                        //graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false); FIXME
                         Profiler::submit_main_thread_event(CoreBackwardComputationStartEvent);
                     }
                     // do the actual computation  
@@ -3888,119 +3911,119 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
     num_chunks_ = chunk_manager_->get_num_global_chunks();
     assert(num_chunks_ == user_specified_num_chunks_);
 
-    // the shared buffers for data compression and decompression
-    SharedDataBuffer * compression_buff = new SharedDataBuffer(2); // double buffering
-    SharedDataBuffer * decompression_data_buff = new SharedDataBuffer(1); 
-    SharedDataBuffer * decompression_index_buff = new SharedDataBuffer(1);
-    assert(compression_buff);
-    assert(decompression_data_buff);
-    assert(decompression_index_buff);
-
-    {
-        // initialize the data compressors
-        data_compressors_ = new DataCompressor* [num_chunks_];
-        data_decompressors_ = new DataDecompressor* [num_chunks_];
-        grad_compressors_ = new DataCompressor* [num_chunks_]; 
-        grad_decompressors_ = new DataDecompressor* [num_chunks_];
-        assert(data_compressors_);
-        assert(data_decompressors_);
-        assert(grad_compressors_);
-        assert(grad_decompressors_);
-        // the input side
-        if (pipeline_input_tensor_ != NULL) {
-            size_t num_elements_per_vertex = pipeline_input_tensor_->dims[1];
-            for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
-                VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
-                VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
-                size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
-                data_decompressors_[chunk_id] = new DataDecompressor(num_elements, decompression_data_buff, decompression_index_buff);
-                grad_compressors_[chunk_id] = new DataCompressor(num_elements, compression_buff);
-                assert(data_decompressors_[chunk_id]);
-                assert(grad_compressors_[chunk_id]);
-                if (! enable_compression_) {
-                    data_decompressors_[chunk_id]->disable_compression();
-                    grad_compressors_[chunk_id]->disable_compression();
-                }
-            }
-        }
-        // the output side
-        if (pipeline_output_tensor_ != NULL) {
-            size_t num_elements_per_vertex = pipeline_output_tensor_->dims[1];
-            for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
-                VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
-                VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
-                size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
-                data_compressors_[chunk_id] = new DataCompressor(num_elements, compression_buff);
-                grad_decompressors_[chunk_id] = new DataDecompressor(num_elements, decompression_data_buff, decompression_index_buff);
-                assert(data_compressors_[chunk_id]);
-                assert(grad_decompressors_[chunk_id]);
-                if (! enable_compression_) {
-                    data_compressors_[chunk_id]->disable_compression();
-                    grad_decompressors_[chunk_id]->disable_compression();
-                }
-            }
-        }
-#ifdef USE_RDMA
-        // set up RMA 
-        act_comm_wins_ = new MPI_Win [num_chunks_];
-        grad_comm_wins_ = new MPI_Win [num_chunks_];
-        assert(act_comm_wins_ && grad_comm_wins_);
-        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
-            // create the MPI windows for activation passing
-            if (pipeline_input_tensor_) {
-                uint8_t * buff = NULL;
-                size_t buff_size = 0;
-                data_decompressors_[chunk_id]->get_cpu_buff(buff, buff_size);
-                assert(buff != NULL && buff_size > 0);
-                MPI_Win_create(
-                        buff, buff_size, sizeof(uint8_t),
-                        MPI_INFO_NULL, MPI_COMM_WORLD, 
-                        &act_comm_wins_[chunk_id]
-                        );
-            } else {
-                MPI_Win_create(
-                        NULL, 0, sizeof(uint8_t), MPI_INFO_NULL, 
-                        MPI_COMM_WORLD, &act_comm_wins_[chunk_id]
-                        );
-            }
-            // passing sync
-            //if (node_id < num_nodes - 1) {
-            if (! is_last_stage()) {
-                MPI_Win_lock(
-                        MPI_LOCK_SHARED, node_id + 1, 0, act_comm_wins_[chunk_id]
-                        );
-            }
-            // create the MPI windows for gradients passing
-            if (pipeline_output_tensor_) {
-                uint8_t * buff = NULL;
-                size_t buff_size = 0;
-                grad_decompressors_[chunk_id]->get_cpu_buff(buff, buff_size);
-                assert(buff && buff_size);
-                MPI_Win_create(
-                        buff, buff_size, sizeof(uint8_t),
-                        MPI_INFO_NULL, MPI_COMM_WORLD,
-                        &grad_comm_wins_[chunk_id]
-                        );
-            } else {
-                MPI_Win_create(
-                        NULL, 0, sizeof(uint8_t), MPI_INFO_NULL,
-                        MPI_COMM_WORLD, &grad_comm_wins_[chunk_id]
-                        );
-            }
-            // passive sync
-            //if (node_id > 0) {
-            if (! is_first_stage()) {
-                MPI_Win_lock(
-                        MPI_LOCK_SHARED, node_id - 1, 0, grad_comm_wins_[chunk_id]
-                        );
-            }
-        }
-#endif
-    }
-
-    compression_buff->init_all_buffers();
-    decompression_data_buff->init_all_buffers();
-    decompression_index_buff->init_all_buffers();
+//    // the shared buffers for data compression and decompression
+//    SharedDataBuffer * compression_buff = new SharedDataBuffer(2); // double buffering
+//    SharedDataBuffer * decompression_data_buff = new SharedDataBuffer(1); 
+//    SharedDataBuffer * decompression_index_buff = new SharedDataBuffer(1);
+//    assert(compression_buff);
+//    assert(decompression_data_buff);
+//    assert(decompression_index_buff);
+//
+//    {
+//        // initialize the data compressors
+//        data_compressors_ = new DataCompressor* [num_chunks_];
+//        data_decompressors_ = new DataDecompressor* [num_chunks_];
+//        grad_compressors_ = new DataCompressor* [num_chunks_]; 
+//        grad_decompressors_ = new DataDecompressor* [num_chunks_];
+//        assert(data_compressors_);
+//        assert(data_decompressors_);
+//        assert(grad_compressors_);
+//        assert(grad_decompressors_);
+//        // the input side
+//        if (pipeline_input_tensor_ != NULL) {
+//            size_t num_elements_per_vertex = pipeline_input_tensor_->dims[1];
+//            for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+//                VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
+//                VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
+//                size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
+//                data_decompressors_[chunk_id] = new DataDecompressor(num_elements, decompression_data_buff, decompression_index_buff);
+//                grad_compressors_[chunk_id] = new DataCompressor(num_elements, compression_buff);
+//                assert(data_decompressors_[chunk_id]);
+//                assert(grad_compressors_[chunk_id]);
+//                if (! enable_compression_) {
+//                    data_decompressors_[chunk_id]->disable_compression();
+//                    grad_compressors_[chunk_id]->disable_compression();
+//                }
+//            }
+//        }
+//        // the output side
+//        if (pipeline_output_tensor_ != NULL) {
+//            size_t num_elements_per_vertex = pipeline_output_tensor_->dims[1];
+//            for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+//                VertexId chunk_begin = chunk_manager_->get_chunk_begin(chunk_id);
+//                VertexId chunk_end = chunk_manager_->get_chunk_end(chunk_id);
+//                size_t num_elements = num_elements_per_vertex * (chunk_end - chunk_begin);
+//                data_compressors_[chunk_id] = new DataCompressor(num_elements, compression_buff);
+//                grad_decompressors_[chunk_id] = new DataDecompressor(num_elements, decompression_data_buff, decompression_index_buff);
+//                assert(data_compressors_[chunk_id]);
+//                assert(grad_decompressors_[chunk_id]);
+//                if (! enable_compression_) {
+//                    data_compressors_[chunk_id]->disable_compression();
+//                    grad_decompressors_[chunk_id]->disable_compression();
+//                }
+//            }
+//        }
+//#ifdef USE_RDMA
+//        // set up RMA 
+//        act_comm_wins_ = new MPI_Win [num_chunks_];
+//        grad_comm_wins_ = new MPI_Win [num_chunks_];
+//        assert(act_comm_wins_ && grad_comm_wins_);
+//        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+//            // create the MPI windows for activation passing
+//            if (pipeline_input_tensor_) {
+//                uint8_t * buff = NULL;
+//                size_t buff_size = 0;
+//                data_decompressors_[chunk_id]->get_cpu_buff(buff, buff_size);
+//                assert(buff != NULL && buff_size > 0);
+//                MPI_Win_create(
+//                        buff, buff_size, sizeof(uint8_t),
+//                        MPI_INFO_NULL, MPI_COMM_WORLD, 
+//                        &act_comm_wins_[chunk_id]
+//                        );
+//            } else {
+//                MPI_Win_create(
+//                        NULL, 0, sizeof(uint8_t), MPI_INFO_NULL, 
+//                        MPI_COMM_WORLD, &act_comm_wins_[chunk_id]
+//                        );
+//            }
+//            // passing sync
+//            //if (node_id < num_nodes - 1) {
+//            if (! is_last_stage()) {
+//                MPI_Win_lock(
+//                        MPI_LOCK_SHARED, node_id + 1, 0, act_comm_wins_[chunk_id]
+//                        );
+//            }
+//            // create the MPI windows for gradients passing
+//            if (pipeline_output_tensor_) {
+//                uint8_t * buff = NULL;
+//                size_t buff_size = 0;
+//                grad_decompressors_[chunk_id]->get_cpu_buff(buff, buff_size);
+//                assert(buff && buff_size);
+//                MPI_Win_create(
+//                        buff, buff_size, sizeof(uint8_t),
+//                        MPI_INFO_NULL, MPI_COMM_WORLD,
+//                        &grad_comm_wins_[chunk_id]
+//                        );
+//            } else {
+//                MPI_Win_create(
+//                        NULL, 0, sizeof(uint8_t), MPI_INFO_NULL,
+//                        MPI_COMM_WORLD, &grad_comm_wins_[chunk_id]
+//                        );
+//            }
+//            // passive sync
+//            //if (node_id > 0) {
+//            if (! is_first_stage()) {
+//                MPI_Win_lock(
+//                        MPI_LOCK_SHARED, node_id - 1, 0, grad_comm_wins_[chunk_id]
+//                        );
+//            }
+//        }
+//#endif
+//    }
+//
+//    compression_buff->init_all_buffers();
+//    decompression_data_buff->init_all_buffers();
+//    decompression_index_buff->init_all_buffers();
 
     // set up support for the global shared tensor
     global_shared_tensor_ = application->get_global_shared_tensor();
@@ -4070,43 +4093,43 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
 
     delete graph_data_propagator_;
 
-    delete compression_buff;
-    delete decompression_data_buff;
-    delete decompression_index_buff;
+    //delete compression_buff;
+    //delete decompression_data_buff;
+    //delete decompression_index_buff;
 
-    {
-#ifdef USE_RDMA
-        // release the windows
-        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
-            //if (node_id < num_nodes - 1) {
-            if (! is_last_stage()) {
-                MPI_Win_unlock(node_id + 1, act_comm_wins_[chunk_id]);
-            }
-            //if (node_id > 0) {
-            if (! is_first_stage()) {
-                MPI_Win_unlock(node_id - 1, grad_comm_wins_[chunk_id]);
-            }
-        }
-        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
-            MPI_Win_free(&act_comm_wins_[chunk_id]);
-            MPI_Win_free(&grad_comm_wins_[chunk_id]);
-        }
-#endif
-        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
-            if (pipeline_input_tensor_) {
-                delete data_decompressors_[chunk_id];
-                delete grad_compressors_[chunk_id];
-            }
-            if (pipeline_output_tensor_) {
-                delete data_compressors_[chunk_id];
-                delete grad_decompressors_[chunk_id];
-            }
-        }
-        delete [] data_compressors_;
-        delete [] data_decompressors_;
-        delete [] grad_compressors_;
-        delete [] grad_decompressors_;
-    }
+//    {
+//#ifdef USE_RDMA
+//        // release the windows
+//        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+//            //if (node_id < num_nodes - 1) {
+//            if (! is_last_stage()) {
+//                MPI_Win_unlock(node_id + 1, act_comm_wins_[chunk_id]);
+//            }
+//            //if (node_id > 0) {
+//            if (! is_first_stage()) {
+//                MPI_Win_unlock(node_id - 1, grad_comm_wins_[chunk_id]);
+//            }
+//        }
+//        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+//            MPI_Win_free(&act_comm_wins_[chunk_id]);
+//            MPI_Win_free(&grad_comm_wins_[chunk_id]);
+//        }
+//#endif
+//        for (int chunk_id = 0; chunk_id < num_chunks_; ++ chunk_id) {
+//            if (pipeline_input_tensor_) {
+//                delete data_decompressors_[chunk_id];
+//                delete grad_compressors_[chunk_id];
+//            }
+//            if (pipeline_output_tensor_) {
+//                delete data_compressors_[chunk_id];
+//                delete grad_decompressors_[chunk_id];
+//            }
+//        }
+//        delete [] data_compressors_;
+//        delete [] data_decompressors_;
+//        delete [] grad_compressors_;
+//        delete [] grad_decompressors_;
+//    }
 
     if (global_shared_tensor_) {
         checkCUDA(cudaFreeHost(global_shared_tensor_data_));

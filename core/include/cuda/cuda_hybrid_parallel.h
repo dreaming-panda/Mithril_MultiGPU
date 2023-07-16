@@ -1155,10 +1155,10 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         Tensor * pipeline_input_tensor_;
         Tensor * pipeline_output_tensor_;
-        DataCompressor ** data_compressors_;
-        DataDecompressor ** data_decompressors_;
-        DataCompressor ** grad_compressors_;
-        DataDecompressor ** grad_decompressors_;
+        //DataCompressor ** data_compressors_;
+        //DataDecompressor ** data_decompressors_;
+        //DataCompressor ** grad_compressors_;
+        //DataDecompressor ** grad_decompressors_;
 
         std::vector<int> local_chunk_ids_;
         std::vector<bool> backward_operator_mask_;
@@ -1189,9 +1189,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         CUDAAbstractPIPScheduler * scheduler_;
         cudnnHandle_t * cudnn_;
 
-        // used for one-sided MPI communication
-        MPI_Win * act_comm_wins_;
-        MPI_Win * grad_comm_wins_;
+        //// used for one-sided MPI communication
+        //MPI_Win * act_comm_wins_;
+        //MPI_Win * grad_comm_wins_;
 
         std::string weight_file_;
 
@@ -1433,25 +1433,45 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         inline void set_always_exact_inference(bool always_exact_inferences) {
             always_exact_inferences_ = always_exact_inferences;
         }
+        inline bool is_master_node() {
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            return node_id == 0;
+        }
+        inline void set_chunk_boundary_file(std::string chunk_boundary_file) {
+            chunk_boundary_file_ = chunk_boundary_file;
+        }
+        inline void set_enable_compression(double enable_compression) {
+            enable_compression_ = enable_compression;
+        }
+
+        // the hybrid parallel settings
         inline int get_num_stages() {
             int num_nodes = DistributedSys::get_instance()->get_num_nodes();
             assert(num_nodes % num_dp_ways_ == 0);
             int num_stages = num_nodes / num_dp_ways_;
             return num_stages;
         }
-        inline int get_stage_id() {
-            int num_stages = get_num_stages();
-            int node_id = DistributedSys::get_instance()->get_node_id();
-            int stage_id = node_id % num_stages;
-            return stage_id;
-        }
         inline int get_num_dp_ways() {
             return num_dp_ways_;
         }
-        inline int get_dp_way_id() {
-            int num_stages = get_num_stages();
+        inline int get_stage_id() {
+            //int num_stages = get_num_stages();
+            //int node_id = DistributedSys::get_instance()->get_node_id();
+            //int stage_id = node_id % num_stages;
+            //return stage_id;
+            int num_dp_ways = get_num_dp_ways();
             int node_id = DistributedSys::get_instance()->get_node_id();
-            int way_id = node_id / num_stages;
+            int stage_id = node_id / num_dp_ways;
+            return stage_id;
+        }
+        inline int get_dp_way_id() {
+            //int num_stages = get_num_stages();
+            //int node_id = DistributedSys::get_instance()->get_node_id();
+            //int way_id = node_id / num_stages;
+            //return way_id;
+            int num_dp_ways = get_num_dp_ways();
+            int node_id = DistributedSys::get_instance()->get_node_id();
+            int way_id = node_id % num_dp_ways;
             return way_id;
         }
         inline bool is_first_stage() {
@@ -1463,21 +1483,50 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int num_stages = get_num_stages();
             return stage_id == num_stages - 1;
         }
-        inline bool is_master_node() {
-            int node_id = DistributedSys::get_instance()->get_node_id();
-            return node_id == 0;
+        inline int get_node_id(int way_id, int stage_id) {
+            int num_dp_ways = get_num_dp_ways();
+            int num_stages = get_num_stages();
+            assert(way_id >= 0 && way_id < num_dp_ways);
+            assert(stage_id >= 0 && stage_id < num_stages);
+            int node_id = num_dp_ways * stage_id + way_id;
+            return node_id;
+        }
+        inline int get_next_stage_node_id() {
+            assert(! is_last_stage());
+            int way_id = get_dp_way_id();
+            int stage_id = get_stage_id();
+            return get_node_id(way_id, stage_id + 1);
+        }
+        inline int get_prev_stage_node_id() {
+            assert(! is_first_stage());
+            int way_id = get_dp_way_id();
+            int stage_id = get_stage_id();
+            return get_node_id(way_id, stage_id - 1);
+        }
+        inline int get_next_way_node_id() {
+            int way_id = get_dp_way_id();
+            int num_dp_ways = get_num_dp_ways();
+            int stage_id = get_stage_id();
+            return get_node_id(
+                    (way_id + 1) % num_dp_ways,
+                    stage_id
+                    );
+        }
+        inline int get_prev_way_node_id() {
+            int way_id = get_dp_way_id();
+            int num_dp_ways = get_num_dp_ways();
+            int stage_id = get_stage_id();
+            return get_node_id(
+                    (way_id + num_dp_ways - 1) % num_dp_ways,
+                    stage_id
+                    );
         }
         inline void set_num_dp_ways(int num_dp_ways) {
             int num_nodes = DistributedSys::get_instance()->get_num_nodes();
             assert(num_nodes % num_dp_ways == 0);
             num_dp_ways_ = num_dp_ways;
         }
-        inline void set_chunk_boundary_file(std::string chunk_boundary_file) {
-            chunk_boundary_file_ = chunk_boundary_file;
-        }
-        inline void set_enable_compression(double enable_compression) {
-            enable_compression_ = enable_compression;
-        }
+
 };
 
 #endif
