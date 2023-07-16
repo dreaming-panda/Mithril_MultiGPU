@@ -531,6 +531,7 @@ void GraphDataPropagator::free_mirror_vertices() {
     }
 }
 
+// deprecated
 void GraphDataPropagator::put_graph_data(
         Tensor * tensor, int chunk_id, bool propagate_act
         ) {
@@ -644,6 +645,7 @@ void GraphDataPropagator::put_graph_data(
     Profiler::submit_main_thread_event(GraphNetworkCommunicationCompleteEvent);
 }
 
+// deprecated
 void GraphDataPropagator::retrieve_graph_data_to_gpu(bool propagate_act) {
     //Profiler::submit_main_thread_event(GraphDeviceHostCommunicationStartEvent);
 
@@ -886,8 +888,10 @@ void GraphDataPropagator::exchange_graph_data_nccl(
         header.random_ = 0;
         headers_sent[dst_remote_way_id] = header;
         // send and receive the data
-        int dst_node = num_stages * dst_remote_way_id + stage_id;
-        int src_node = num_stages * src_remote_way_id + stage_id;
+        //int dst_node = num_stages * dst_remote_way_id + stage_id;
+        //int src_node = num_stages * src_remote_way_id + stage_id;
+        int dst_node = engine_->get_node_id(dst_remote_way_id, stage_id);
+        int src_node = engine_->get_node_id(src_remote_way_id, stage_id);
         MPI_Request request;
         MPI_Status status;
         MPI_Isend(
@@ -903,13 +907,14 @@ void GraphDataPropagator::exchange_graph_data_nccl(
         MPI_Wait(&request, &status);
     }
 
-
     // circulant-style data propagation
     for (int disp = 1; disp < num_ways; ++ disp) {
         int remote_way_id_dst = (way_id + disp) % num_ways;
         int remote_way_id_src = (way_id + num_ways - disp) % num_ways;
-        int dst_node = num_stages * remote_way_id_dst + stage_id;
-        int src_node = num_stages * remote_way_id_src + stage_id;
+        //int dst_node = num_stages * remote_way_id_dst + stage_id;
+        //int src_node = num_stages * remote_way_id_src + stage_id;
+        int dst_node = engine_->get_node_id(remote_way_id_dst, stage_id);
+        int src_node = engine_->get_node_id(remote_way_id_src, stage_id);
         checkNCCL(ncclGroupStart());
         checkNCCL(ncclSend(
                     nccl_send_buff_[remote_way_id_dst], 
@@ -3202,7 +3207,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                         // graph data propagation
                         Tensor * tensor = op->get_input_tensor(0);
                         Profiler::submit_main_thread_event(CoreForwardComputationCompleteEvent);
-                        //graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true); FIXME
+                        graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true); 
                         Profiler::submit_main_thread_event(CoreForwardComputationStartEvent);
                     }
                     // do the actual computation  
@@ -3279,7 +3284,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
                         // graph data propagation
                         Tensor * tensor = op->get_output_tensor(0);
                         Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
-                        //graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false); FIXME
+                        graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false); 
                         Profiler::submit_main_thread_event(CoreBackwardComputationStartEvent);
                     }
                     // do the actual computation  
