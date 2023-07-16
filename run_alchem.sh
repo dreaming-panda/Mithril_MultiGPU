@@ -10,13 +10,13 @@ make -j
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
 #dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 num_gpus=8
-num_layers=32
+num_layers=8
 hunits=512
 lr=1e-3
 graph=reddit
 epoch=30
 decay=1e-5
-chunks=64
+chunks=16
 dropout=0.5
 seed=5
 model=graphsage

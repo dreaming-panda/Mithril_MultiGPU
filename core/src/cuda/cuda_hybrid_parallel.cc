@@ -3791,6 +3791,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
     CUDAModelPartitioning partitioning;
     partitioning = partitioning_;
 
+    printf("Num Stages: %d / %d\n", num_stages, partitioning.num_partitions);
     assert(num_stages == partitioning.num_partitions);
 
     {
@@ -4913,15 +4914,18 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
     int num_gpus = DistributedSys::get_instance()->get_num_nodes();
     int node_id = DistributedSys::get_instance()->get_node_id();
 
-    partitioning_.num_partitions = num_gpus;
-    partitioning_.partition_op_begin = new int [num_gpus];
-    partitioning_.partition_op_end = new int [num_gpus];
+    //partitioning_.num_partitions = num_gpus; FIXME
+    //partitioning_.partition_op_begin = new int [num_gpus];
+    //partitioning_.partition_op_end = new int [num_gpus];
 
     if (node_id == 0) {
+        // evaluate the pure model parallel plan
+        printf("Evaluating the performance of the pure model-parallel execution plan.\n");
         std::vector<double> costs_per_layer;
         std::vector<int> chunks;
         chunk_manager_->get_local_chunk_ids(chunks);
         int num_chunks = (int) chunks.size();
+        const double slowdown_factor = 1.05;
 
         for (int layer = 0; layer < num_layers; ++ layer) {
             double cost = 0;
@@ -4945,15 +4949,15 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
             printf("[%d, %d)\n", p.first, p.second);
         }
 
-        for (int i = 0; i < num_gpus; ++ i) {
-            auto p = optimal_partitioning[i];
-            int op_begin = -1;
-            int op_end = -1;
-            application->get_op_range(p.first, &op_begin, &op_end);
-            partitioning_.partition_op_begin[i] = op_begin;
-            application->get_op_range(p.second - 1, &op_begin, &op_end);
-            partitioning_.partition_op_end[i] = op_end;
-        }
+        //for (int i = 0; i < num_gpus; ++ i) { FIXME
+        //    auto p = optimal_partitioning[i];
+        //    int op_begin = -1;
+        //    int op_end = -1;
+        //    application->get_op_range(p.first, &op_begin, &op_end);
+        //    partitioning_.partition_op_begin[i] = op_begin;
+        //    application->get_op_range(p.second - 1, &op_begin, &op_end);
+        //    partitioning_.partition_op_end[i] = op_end;
+        //}
 
         ExecutionPlan plan;
         plan.num_dp_ways = 1;
@@ -4966,36 +4970,55 @@ void DistributedPIPHybridParallelExecutionEngineGPU::execution_plan_generation(
         double pipeline_cost = estimated_execution_plan_runtime(
                 plan, application
                 );
-        double slowdown_factor = 1.05;
+        pipeline_cost *= slowdown_factor;
         printf("The estimated cost of the whole pipeline: %.3f ms\n",
-                pipeline_cost * 1e3 * slowdown_factor);
+                pipeline_cost * 1e3);
 
-        //// estimated the pipelining cost
-        //double * estimated_costs[num_gpus];
-        //for (int gpu = 0; gpu < num_gpus; ++ gpu) {
-        //    estimated_costs[gpu] = new double [num_chunks];
-        //    auto p = optimal_partitioning[gpu];
-        //    for (int chunk = 0; chunk < num_chunks; ++ chunk) {
-        //        estimated_costs[gpu][chunk] = 0;
-        //        for (int layer = p.first; layer < p.second; ++ layer) {
-        //            estimated_costs[gpu][chunk] += estimated_runtime_[layer][chunk];
-        //        }
-        //    }
-        //}
-        //simulate_pipeline_performance(num_chunks, num_gpus, estimated_costs);
-        //for (int gpu = 0; gpu < num_gpus; ++ gpu) {
-        //    delete [] estimated_costs[gpu];
-        //}
+        // also consider the hybrid parallel
+        for (int num_dp_ways = 2; num_dp_ways <= num_gpus; ++ num_dp_ways) {
+            if (num_gpus % num_dp_ways == 0) {
+                printf("\nEvaluating the hybrid-parallelism execution plan with %d DP ways.\n", 
+                        num_dp_ways);
+                optimal_partitioning.clear();
+                int num_stages = num_gpus / num_dp_ways;
+                layer_level_partitioning(
+                        costs_per_layer, 
+                        optimal_partitioning,
+                        num_stages
+                        );
+                assert(optimal_partitioning.size() == num_stages);
+                // configure the execution plan
+                plan.num_dp_ways = num_dp_ways;
+                plan.num_pipeline_stages = num_stages;
+                for (int i = 0; i < num_stages; ++ i) {
+                    auto p = optimal_partitioning[i];
+                    plan.pipeline_layer_begin[i] = p.first;
+                    plan.pipeline_layer_end[i] = p.second;
+                }
+                double pipeline_cost = estimated_execution_plan_runtime(
+                        plan, application
+                        );
+                pipeline_cost *= slowdown_factor;
+                printf("    The estimated cost with %d DP ways is %.3f ms\n",
+                        num_dp_ways, pipeline_cost * 1e3
+                        );
+            }
+        }
+        printf("\n");
     }
 
-    MPI_Bcast(
-            partitioning_.partition_op_begin, 
-            num_gpus, MPI_INT, 0, MPI_COMM_WORLD
-            );
-    MPI_Bcast(
-            partitioning_.partition_op_end, 
-            num_gpus, MPI_INT, 0, MPI_COMM_WORLD
-            );
+    //MPI_Bcast( FIXME
+    //        partitioning_.partition_op_begin, 
+    //        num_gpus, MPI_INT, 0, MPI_COMM_WORLD
+    //        );
+    //MPI_Bcast(
+    //        partitioning_.partition_op_end, 
+    //        num_gpus, MPI_INT, 0, MPI_COMM_WORLD
+    //        );
+
+    fflush(stdout);
+    usleep(1e5);
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 double DistributedPIPHybridParallelExecutionEngineGPU::simulate_pipeline_performance(
@@ -5049,8 +5072,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
         const ExecutionPlan &plan,
         AbstractApplication * application
         ) {
-    // TODO:
-    // 1) consider graph-level communication 
+    // 1) consider graph-level communication [done]
     // 2) consider layer-level communication [done]
     // 3) consider both forward and backward [done]
     
@@ -5064,6 +5086,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
     assert(num_dp_ways >= 1);
     assert(graph_comm_bandwidth_[num_dp_ways] != 0 || num_dp_ways == 1);
     double graph_comm_throughput = graph_comm_bandwidth_[num_dp_ways];
+    const double mirror_ratio = 0.5;
 
     int shared_tensor_dimension = 0;
     if (global_shared_tensor_ != NULL) {
@@ -5150,7 +5173,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
                         }
                     }
                     size_t graph_comm_size = aggr_op_dimension * largest_chunk_size 
-                        * sizeof(DataType) * (num_dp_ways - 1);
+                        * sizeof(DataType) * (num_dp_ways - 1) * mirror_ratio;
                     double comm_t = graph_comm_size * 8. / (graph_comm_throughput * 1e9);
                     cost += comm_t;
                 }
@@ -5162,17 +5185,20 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
                 VertexId vid_end = chunk_manager_->get_chunk_end(chunk);
                 communication += (vid_end - vid_begin);
             }
-            if (stage > 0) {
-                communication *= (shared_tensor_dimension + boundary_tensor_dimensions[stage - 1]);
-            } else {
-                communication *= (shared_tensor_dimension + boundary_tensor_dimensions[0]);
+            if (num_stages > 1) {
+                if (stage > 0) {
+                    communication *= (shared_tensor_dimension + boundary_tensor_dimensions[stage - 1]);
+                } else {
+                    communication *= (shared_tensor_dimension + boundary_tensor_dimensions[0]);
+                }
+                communication *= sizeof(DataType);
+                double comm_t = communication * 8. / (layer_comm_throughput * 1e9);
+                cost += comm_t;
             }
-            communication *= sizeof(DataType);
-            double comm_t = communication * 8. / (layer_comm_throughput * 1e9);
-            cost += comm_t;
             estimated_costs[stage][c] = cost;
         }
     }
+    //printf("%.3f\n", estimated_costs[0][0]);
     printf("****** Estimating the Forwarding Pipeline Cost ******\n");
     double forward_cost = simulate_pipeline_performance(
             num_chunks_per_way, num_stages, (const double **) estimated_costs
@@ -5217,7 +5243,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
                         }
                     }
                     size_t graph_comm_size = aggr_op_dimension * largest_chunk_size 
-                        * sizeof(DataType) * (num_dp_ways - 1);
+                        * sizeof(DataType) * (num_dp_ways - 1) * mirror_ratio;
                     double comm_t = graph_comm_size * 8. / (graph_comm_throughput * 1e9);
                     cost += comm_t;
                 }
@@ -5230,14 +5256,16 @@ double DistributedPIPHybridParallelExecutionEngineGPU::estimated_execution_plan_
                 VertexId vid_end = chunk_manager_->get_chunk_end(chunk);
                 communication += (vid_end - vid_begin);
             }
-            if (stage < num_stages - 1) {
-                communication *= (shared_tensor_dimension + boundary_tensor_dimensions[stage]);
-            } else {
-                communication *= (shared_tensor_dimension + boundary_tensor_dimensions[num_stages - 2]);
+            if (num_stages > 1) {
+                if (stage < num_stages - 1) {
+                    communication *= (shared_tensor_dimension + boundary_tensor_dimensions[stage]);
+                } else {
+                    communication *= (shared_tensor_dimension + boundary_tensor_dimensions[num_stages - 2]);
+                }
+                communication *= sizeof(DataType);
+                double comm_t = communication * 8. / (layer_comm_throughput * 1e9);
+                cost += comm_t;
             }
-            communication *= sizeof(DataType);
-            double comm_t = communication * 8. / (layer_comm_throughput * 1e9);
-            cost += comm_t;
             estimated_costs[num_stages - stage - 1][num_chunks_per_way - c - 1] = cost;
         }
     }
