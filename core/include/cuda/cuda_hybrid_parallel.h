@@ -1218,6 +1218,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
 
         bool enable_compression_ = true;
 
+        bool enable_execution_plan_search_ = true;
+
         // the cost model
         double estimated_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];
         double estimated_forward_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];
