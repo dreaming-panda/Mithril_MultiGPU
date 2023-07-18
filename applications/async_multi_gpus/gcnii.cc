@@ -62,9 +62,9 @@ class GCNII: public AbstractApplication {
 
         Tensor * graph_convolution(Tensor * t, Tensor * h0, int layer) {
             double theta = log(lambda_ / layer + 1);
-            Tensor * hi = aggregation(t, NORM_SUM, true);
+            Tensor * hi = aggregation(t, NORM_SUM, false);
             Tensor * support = add(hi, h0, 1 - alpha_, alpha_, enable_recomputation_);
-            Tensor * fc_t = fc(support, num_hidden_units_, "None", true);
+            Tensor * fc_t = fc(support, num_hidden_units_, "None", false);
             Tensor * output = add(fc_t, support, theta, 1 - theta, enable_recomputation_);
             return output;
         }
@@ -73,7 +73,7 @@ class GCNII: public AbstractApplication {
             Tensor * t = input;
             // preparing for h0 (dimension reduction)
             t = dropout(t, dropout_rate_, enable_recomputation_); 
-            t = fc(t, num_hidden_units_, "None", true);
+            t = fc(t, num_hidden_units_, "None", false);
             t = relu(t, enable_recomputation_);
             Tensor * h0 = t;
             set_global_shared_tensor(h0); // the tensor that is shared across all GPUs
@@ -90,7 +90,7 @@ class GCNII: public AbstractApplication {
                 t = dropout(t, dropout_rate_, enable_recomputation_);
             }
             // classification
-            t = fc(t, num_classes_, "None", true);
+            t = fc(t, num_classes_, "None", false);
             //t = log_softmax(t, enable_recomputation_);
             t = softmax(t, enable_recomputation_);
             next_layer(2);

@@ -7,8 +7,10 @@ cd build
 make -j
 
 #dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_partitioned_graphs 
-#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
-dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
+dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
+#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
+
+method=hybrid
 
 num_gpus=8
 num_layers=32
@@ -17,16 +19,16 @@ lr=1e-3
 graph=reddit
 epoch=5000
 decay=1e-5
-chunks=$num_gpus
+chunks=32
 dropout=0.5
 #seed=5
 model=gcnii
 eval_freq=-1
-num_dp_ways=$num_gpus
+num_dp_ways=2
 enable_compression=0
 
 exact_inference=1
-result_dir=../results/nsdi23_basic_benchmarks/accuracy/$hunits/graph
+result_dir=../results/nsdi23_basic_benchmarks/accuracy/$hunits/$method
 echo "The result directory: $result_dir"
 mkdir -p $result_dir
 for seed in 1 2 3
@@ -35,7 +37,7 @@ do
 done
 
 exact_inference=0
-result_dir=../results/nsdi23_basic_benchmarks/performance/$hunits/graph
+result_dir=../results/nsdi23_basic_benchmarks/performance/$hunits/$method
 mkdir -p $result_dir
 for seed in 1 2 3
 do

@@ -33,7 +33,7 @@ def partition_graph(graph, num_parts, vweights):
     #n_cuts, membership = pymetis.part_graph(num_parts, adjacency=graph)
     #return membership
 
-    shuffle_factor = 1 # FIXME
+    shuffle_factor = 4 # FIXME
     n_cuts, membership = pymetis.part_graph(num_parts * shuffle_factor, adjacency=graph, vweights=vweights)
     mapping = [i for i in range(num_parts * shuffle_factor)]
     random.shuffle(mapping)

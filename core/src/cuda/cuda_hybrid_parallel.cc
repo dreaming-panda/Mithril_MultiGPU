@@ -16,7 +16,7 @@
 //#define USE_RDMA 
 
 #define REVERSE_PERIOD (20)
-#define EVAL_FREQUENCY (10)
+#define EVAL_FREQUENCY (25)
 #define NUM_GPUS_PER_NODE (4)
 #define NUM_INFERNECE_RUNS (3)
 #define NCCL_FUSED_COMMUNICATION (true)
@@ -1814,7 +1814,29 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     auto report_loss = [&]() {
         if (node_id == 0) {
-            printf("\tEpoch %d:\tLoss %.4f\n", epoch_id, engine_->accum_loss_);
+            printf("\tEpoch %d:\tLoss %.4f\n", epoch_id + 1, engine_->accum_loss_);
+            fflush(stdout);
+        }
+    };
+
+    auto report_loss_and_accuracy = [&]() {
+        double train_acc, valid_acc, test_acc; 
+        // a simple and slow inference implementation
+        // since our research only focuses on training
+        // need to replace it with a much better
+        // solution
+        engine_->run_exact_inference(
+                train_acc, valid_acc, test_acc,
+                engine_->weight_aggregator_->get_curr_weights()
+                );
+        if (valid_acc > highest_valid_acc) {
+            highest_valid_acc = valid_acc;
+            epoch_to_reach_target_acc = epoch_id;
+            engine_->weight_aggregator_->update_optimal_weights();
+        }
+        if (node_id == 0) {
+            printf("\tEpoch %d:\tLoss %.4f\tTrainAcc %.4f\tValidAcc %.4f\tTestAcc %.4f\tBestValid %.4f\n",
+                    epoch_id + 1, engine_->accum_loss_, train_acc, valid_acc, test_acc, highest_valid_acc);
             fflush(stdout);
         }
     };
@@ -2228,12 +2250,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         engine_->weight_aggregator_->clear_gradients();
         post_t += get_time() * 1e3;
 
-        if (epoch_id % EVAL_FREQUENCY == 0) {
+        if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {
             if (! engine_->always_exact_inferences_) {
                 report_loss();
             } else {
-                // FIXME
-                assert(false);
+                report_loss_and_accuracy();
             }
         }
 
@@ -2370,9 +2391,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     aggregate_and_report_metrics("Imbalance", core_t - compute_t - layer_comm_t);
 
     double train_acc, valid_acc, test_acc;
-    //engine_->run_exact_inference(train_acc, valid_acc, test_acc, 
-    //        engine_->weight_aggregator_->get_optimal_weights()
-    //        );
+    engine_->run_exact_inference(train_acc, valid_acc, test_acc, 
+            engine_->weight_aggregator_->get_optimal_weights()
+            );
 
     size_t free_mem_size = 0;
     size_t total_mem_size = 0;
@@ -2407,7 +2428,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     // check the consistency of the distributed weights
     engine_->weight_aggregator_->check_weights_consistency();
 
-    //Profiler::breakdown_analysis(num_epoch);
+    Profiler::breakdown_analysis(num_epoch);
 
     double avg_layer_comm;
     MPI_Allreduce(
