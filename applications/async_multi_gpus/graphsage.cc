@@ -36,11 +36,12 @@ class GraphSage: public AbstractApplication {
         int num_classes_;
         double dropout_rate_;
         bool enable_recomputation_;
+        bool use_residual_;
 
     public:
-        GraphSage(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate):
+        GraphSage(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, bool use_residual):
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate) {
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate), use_residual_(use_residual) {
                 assert(num_layers >= 1);
                 assert(num_hidden_units >= 1);
                 assert(num_classes >= 1);
@@ -58,6 +59,7 @@ class GraphSage: public AbstractApplication {
                     output_size = num_classes_;
                 }
                 // process the embeddings
+                Tensor * shortcut = t;
                 Tensor * t_0 = fc(t, output_size, "None", true);
                 // the aggregated results
                 if (i == 0) {
@@ -66,11 +68,18 @@ class GraphSage: public AbstractApplication {
                     t = fc(t, output_size, "None", true);
                     t = aggregation(t, MEAN, true);
                 } else {
+                    shortcut = t;
                     t = aggregation(t, MEAN, true);
                     t = fc(t, output_size, "None", true);
                 }
                 // added the transformed aggregated results with the transformed embeddings
                 t = add(t_0, t, 1., 1., enable_recomputation_);
+
+                if (i > 0 && i < num_layers_ - 1 && use_residual_) { // residual connection
+                    assert(t->dims[1] == shortcut->dims[1]);
+                    t = add(t, shortcut, 0.5, 0.5, enable_recomputation_);
+                }
+
                 if (i == num_layers_ - 1) {
                     //t = log_softmax(t, enable_recomputation_);
                     t = softmax(t, enable_recomputation_);
@@ -113,7 +122,8 @@ int main(int argc, char ** argv) {
         ("feature_pre", po::value<int>()->default_value(0), "1: preprocess features by row-based normalization, 0: no feature preprocessing")
         ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
         ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.")
-        ("enable_compression", po::value<int>()->default_value(1), "1/0: Enable/Disable data compression for communication.");
+        ("enable_compression", po::value<int>()->default_value(1), "1/0: Enable/Disable data compression for communication.")
+        ("residual", po::value<int>()->default_value(1), "1/0: Use residual connections.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -148,6 +158,7 @@ int main(int argc, char ** argv) {
     if (vm["feature_pre"].as<int>() == 1) {
         feature_preprocessing = RowNormalizationPreprocessing;
     }
+    bool use_residual = vm["residual"].as<int>() == 1;
     WeightInitializationMethod weight_init;
     std::string weight_init_name = vm["weight_init"].as<std::string>();
     if (weight_init_name == "xavier") {
@@ -206,7 +217,7 @@ int main(int argc, char ** argv) {
     }
 
     // IIitialize the engine
-    GraphSage * sage = new GraphSage(num_layers, num_hidden_units, num_classes, num_features, dropout);
+    GraphSage * sage = new GraphSage(num_layers, num_hidden_units, num_classes, num_features, dropout, use_residual);
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);

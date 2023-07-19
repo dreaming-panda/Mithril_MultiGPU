@@ -54,7 +54,7 @@
 template <typename T>
 void AllocateCUDAMemory(T** out_ptr, size_t size, const char* file, const int line) {
     void* tmp_ptr = nullptr;
-    cudaMalloc(&tmp_ptr, size * sizeof(T));
+    checkCUDA(cudaMalloc(&tmp_ptr, size * sizeof(T)));
     *out_ptr = reinterpret_cast<T*>(tmp_ptr);
 }
 

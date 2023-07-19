@@ -51,7 +51,8 @@ enum CUDAPIPParallelMessageType {
     GradientInterchanging,
     GradPushing, // push the weight (grad) to the parameter servers
     WeightPullingRequest, // pull the weight from the parameter servers
-    WeightPullingResponse
+    WeightPullingResponse,
+    WeightSynchronization
 };
 
 enum DispatchAlgorithm {
@@ -621,7 +622,9 @@ class CUDAVertexTensorDataGradManager {
                 CUDAVertexIdTranslationTable * vid_translation,
                 int local_op_begin_idx, int local_op_end_idx,
                 VertexId max_chunk_size, Tensor * output_tensor,
-                Tensor * global_shared_tensor
+                Tensor * global_shared_tensor,
+                VertexId local_vertex_begin, VertexId num_local_vertices,
+                Tensor * input_tensor
                 );
         ~CUDAVertexTensorDataGradManager();
 
@@ -1083,12 +1086,12 @@ class CUDAPIPWeightAggregator {
 
         AbstractLowerLevelOptimizer * optimizer_;
         CUDAOperatorsAndTensorsManager * op_ten_manager_;
+        DistributedPIPHybridParallelExecutionEngineGPU * engine_;
 
         // the communication volume
         double comm_; 
 
         // the weight file
-        WeightDumper * weight_dumper_;
         int epoch_id_;
 
         // the optimal weights
@@ -1101,8 +1104,7 @@ class CUDAPIPWeightAggregator {
         CUDAPIPWeightAggregator(
                 CUDAOperatorsAndTensorsManager * op_ten_manager,
                 AbstractLowerLevelOptimizer * optimizer,
-                DistributedPIPHybridParallelExecutionEngineGPU * engine,
-                WeightDumper * weight_dumper
+                DistributedPIPHybridParallelExecutionEngineGPU * engine
                 );
         ~CUDAPIPWeightAggregator();
 
@@ -1118,6 +1120,8 @@ class CUDAPIPWeightAggregator {
         // check whether all weights are consistent across all GPUs
         // this is expensive and only invokes at the end of the training
         void check_weights_consistency();
+        // sync weights across the whole pipeline EXPENSIVE!
+        void sync_weights();
 
         // maintaining the optimal weights
         void update_optimal_weights();
@@ -1163,6 +1167,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         std::vector<int> local_chunk_ids_;
         std::vector<bool> backward_operator_mask_;
         std::set<WeightOperator*> local_weight_ops_;
+        std::vector<WeightOperator*> local_weight_ops_vec_;
         Tensor * output_tensor_;
         Tensor * std_tensor_;
         double accuracy_;
@@ -1219,6 +1224,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         bool enable_compression_ = true;
 
         bool enable_execution_plan_search_ = true;
+
+        VertexId local_vertex_begin_;
+        VertexId num_local_vertices_;
 
         // the cost model
         double estimated_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];

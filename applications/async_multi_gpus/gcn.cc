@@ -36,12 +36,14 @@ class GCN: public AbstractApplication {
         int num_hidden_units_;
         int num_classes_;
         double dropout_rate_;
+        bool use_residual_;
 
     public:
-        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate): 
+        GCN(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, bool use_residual): 
             AbstractApplication(num_features),
             num_layers_(num_layers), num_hidden_units_(num_hidden_units), 
-            num_classes_(num_classes), dropout_rate_(dropout_rate) {
+            num_classes_(num_classes), dropout_rate_(dropout_rate),
+            use_residual_(use_residual) {
                 assert(num_layers >= 1);
                 assert(num_hidden_units >= 1);
                 assert(num_classes >= 1);
@@ -57,12 +59,19 @@ class GCN: public AbstractApplication {
                     output_size = num_classes_;
                 }
 
+                Tensor * shortcut = t;
+
                 if (i == 0) {
                     t = fc(t, output_size); 
                     t = aggregation(t, NORM_SUM);    
                 } else {
                     t = aggregation(t, NORM_SUM);    
                     t = fc(t, output_size); 
+                }
+
+                if (i > 0 && i < num_layers_ - 1 && use_residual_) { // residual connection
+                    assert(t->dims[1] == shortcut->dims[1]);
+                    t = add(t, shortcut, 0.5, 0.5, true);
                 }
 
                 if (i == num_layers_ - 1) { 
@@ -111,7 +120,8 @@ int main(int argc, char ** argv) {
         ("feature_pre", po::value<int>()->default_value(0), "1: preprocess features by row-based normalization, 0: no feature preprocessing")
         ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
         ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.")
-        ("enable_compression", po::value<int>()->default_value(1), "1/0: Enable/Disable data compression for communication.");
+        ("enable_compression", po::value<int>()->default_value(1), "1/0: Enable/Disable data compression for communication.")
+        ("residual", po::value<int>()->default_value(1), "1/0: Use residual connections.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -143,6 +153,7 @@ int main(int argc, char ** argv) {
     int num_dp_ways = vm["num_dp_ways"].as<int>();
     FeaturePreprocessingMethod feature_preprocessing = NoFeaturePreprocessing;
     bool enable_compression = vm["enable_compression"].as<int>() == 1;
+    bool use_residual = vm["residual"].as<int>() == 1;
     if (vm["feature_pre"].as<int>() == 1) {
         feature_preprocessing = RowNormalizationPreprocessing;
     }
@@ -204,7 +215,7 @@ int main(int argc, char ** argv) {
     }
 
     // IIitialize the engine
-    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features, dropout);
+    GCN * gcn = new GCN(num_layers, num_hidden_units, num_classes, num_features, dropout, use_residual);
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
