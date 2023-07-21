@@ -16,7 +16,7 @@ num_gpus=8
 num_layers=32
 hunits=100
 lr=1e-3
-epoch=50 # FIXME
+epoch=20000
 decay=1e-5
 dropout=0.5
 
