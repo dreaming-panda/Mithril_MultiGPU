@@ -221,6 +221,10 @@ void GraphDataPropagator::gather_vertices_embeddings(
         DataType * dst_data, size_t dst_data_size,
         bool sync
         ) {
+    if (num_vertices == 0) {
+        return ;
+    }
+
     assert(vertices);
     assert(num_vertices);
     assert(embedding_size);
@@ -245,6 +249,10 @@ void GraphDataPropagator::scatter_vertices_embeddings(
         DataType * dst_data, size_t dst_data_size,
         bool sync
         ) {
+    if (num_vertices == 0) {
+        return ;
+    }
+
     assert(vertices);
     assert(num_vertices);
     assert(embedding_size);

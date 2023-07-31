@@ -7,27 +7,27 @@ cd build
 make -j
 
 #dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_partitioned_graphs 
-dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
-#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
+#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
+dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
 num_gpus=8
-num_layers=32
-hunits=100
+num_layers=128
+hunits=128
 lr=1e-3
-graph=reddit
-epoch=200
+graph=pubmed
+epoch=50
 decay=0
 dropout=0.5
 #seed=5
-model=gcn
+model=gcnii
 eval_freq=-1
 enable_compression=0
 
-#chunks=$num_gpus
-#num_dp_ways=$num_gpus
+chunks=$num_gpus
+num_dp_ways=$num_gpus
 
-chunks=$((num_gpus*4))
-num_dp_ways=1
+#chunks=$((num_gpus*4))
+#num_dp_ways=1
 
 exact_inference=1
 seed=3
