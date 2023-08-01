@@ -26,7 +26,7 @@ enable_compression=0
 #chunks=$num_gpus
 #num_dp_ways=$num_gpus
 
-chunks=$((num_gpus*4))
+chunks=$((num_gpus*4*16))
 num_dp_ways=1
 
 exact_inference=1

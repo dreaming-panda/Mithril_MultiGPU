@@ -2242,7 +2242,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         barrier_t += get_time() * 1e3;
 
         post_t -= get_time() * 1e3;
-        //clear_historical_grad(); FIXME
+        clear_historical_grad(); 
         if ((epoch_id + 1) % REVERSE_PERIOD == 0) {
             backup_activation();
         }
@@ -3566,7 +3566,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(
                         tensor, processed_chunks[i], gpu_grad, num_elements
                         );
                 assert(gpu_grad && num_elements);
-                //scale_vector(gpu_grad, num_elements, 2.0, false);  FIXME
+                scale_vector(gpu_grad, num_elements, 2.0, false);  
             }
         }
     }
@@ -4551,7 +4551,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::finalize_chunk_ordering_gen
 }
 
 void DistributedPIPHybridParallelExecutionEngineGPU::gen_training_epoch_chunk_ordering() {
-    std::shuffle( 
+    std::shuffle(  
             training_chunk_ordering_,
             training_chunk_ordering_ + num_local_chunks_,
             *training_random_gen_
