@@ -14,8 +14,8 @@
 #define FIXPART
 //#define USE_RDMA 
 
-//#define REVERSE_PERIOD (20) FIXME
-#define REVERSE_PERIOD (1)
+#define REVERSE_PERIOD (20) 
+//#define REVERSE_PERIOD (1)
 #define EVAL_FREQUENCY (25)
 #define NUM_GPUS_PER_NODE (4)
 #define NUM_INFERNECE_RUNS (3)
@@ -2242,7 +2242,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         barrier_t += get_time() * 1e3;
 
         post_t -= get_time() * 1e3;
-        clear_historical_grad();
+        //clear_historical_grad(); FIXME
         if ((epoch_id + 1) % REVERSE_PERIOD == 0) {
             backup_activation();
         }
@@ -3566,7 +3566,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(
                         tensor, processed_chunks[i], gpu_grad, num_elements
                         );
                 assert(gpu_grad && num_elements);
-                scale_vector(gpu_grad, num_elements, 2.0, false); 
+                //scale_vector(gpu_grad, num_elements, 2.0, false);  FIXME
             }
         }
     }
