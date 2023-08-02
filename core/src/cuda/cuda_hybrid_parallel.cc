@@ -330,6 +330,8 @@ uint8_t GraphDataPropagator::get_checksum(uint8_t* data, size_t data_size) {
 }
 
 void GraphDataPropagator::setup_mirror_vertices() {
+    EdgeId num_mirror_vertices = 0;
+
     AbstractGraphStructure * graph = engine_->graph_structure_;
     CUDAVertexChunksManager * chunk_manager = engine_->chunk_manager_;
     assert(graph && chunk_manager);
@@ -395,6 +397,7 @@ void GraphDataPropagator::setup_mirror_vertices() {
                 vertices_to_send[num_vertices_to_send] = v_i;
                 num_vertices_to_send += need_to_be_sent;
             }
+            num_mirror_vertices += num_vertices_to_send;
             if (num_vertices_to_send > 0) {
                 // copy the data to GPU
                 VertexId * gpu_vertices = NULL;
@@ -439,6 +442,14 @@ void GraphDataPropagator::setup_mirror_vertices() {
         }
 
         delete [] vertices_to_send;
+    }
+    MPI_Allreduce(
+            MPI_IN_PLACE, &num_mirror_vertices, 1,
+            DistributedSys::get_mpi_data_type<EdgeId>(),
+            MPI_SUM, MPI_COMM_WORLD
+            );
+    if (! node_id) {
+        printf("The number of mirror vertices: %lu\n", num_mirror_vertices);
     }
 
     // find out which vertices need to be received
