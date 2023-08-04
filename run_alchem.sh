@@ -15,11 +15,11 @@ num_layers=32
 hunits=100
 lr=1e-3
 graph=reddit
-epoch=50
-decay=1e-5
+epoch=5000
+decay=0
 dropout=0.5
 #seed=5
-model=graphsage
+model=gcn
 eval_freq=-1
 enable_compression=0
 
@@ -27,9 +27,9 @@ enable_compression=0
 #num_dp_ways=$num_gpus
 
 chunks=$((num_gpus*4))
-num_dp_ways=2
+num_dp_ways=1
 
-exact_inference=0
+exact_inference=1
 seed=1
 
 echo "Running experiments..."

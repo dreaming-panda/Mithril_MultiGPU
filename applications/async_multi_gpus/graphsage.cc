@@ -75,17 +75,17 @@ class GraphSage: public AbstractApplication {
                 // added the transformed aggregated results with the transformed embeddings
                 t = add(t_0, t, 1., 1., enable_recomputation_);
 
-                if (i > 0 && i < num_layers_ - 1 && use_residual_) { // residual connection
-                    assert(t->dims[1] == shortcut->dims[1]);
-                    t = add(t, shortcut, 0.5, 0.5, enable_recomputation_);
-                }
-
                 if (i == num_layers_ - 1) {
                     //t = log_softmax(t, enable_recomputation_);
                     t = softmax(t, enable_recomputation_);
                 } else {
                     t = relu(t, enable_recomputation_);
                     t = dropout(t, dropout_rate_, enable_recomputation_);
+                }
+
+                if (i > 0 && i < num_layers_ - 1 && use_residual_) { // residual connection
+                    assert(t->dims[1] == shortcut->dims[1]);
+                    t = add(t, shortcut, 0.05, 0.95, enable_recomputation_);
                 }
 
                 if (i == 0) {

@@ -69,16 +69,16 @@ class GCN: public AbstractApplication {
                     t = fc(t, output_size); 
                 }
 
-                if (i > 0 && i < num_layers_ - 1 && use_residual_) { // residual connection
-                    assert(t->dims[1] == shortcut->dims[1]);
-                    t = add(t, shortcut, 0.5, 0.5, true);
-                }
-
                 if (i == num_layers_ - 1) { 
                     t = softmax(t, true); 
                 } else {
                     t = relu(t, true); // enable recomputation for relu
                     t = dropout(t, dropout_rate_, true);  // enable recomputation for dropout
+                }
+
+                if (i > 0 && i < num_layers_ - 1 && use_residual_) { // residual connection
+                    assert(t->dims[1] == shortcut->dims[1]);
+                    t = add(t, shortcut, 0.05, 0.95, true);
                 }
 
                 // the layer of the same type should have the 
