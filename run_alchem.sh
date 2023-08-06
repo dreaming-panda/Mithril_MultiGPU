@@ -19,7 +19,7 @@ epoch=5000
 decay=0
 dropout=0.5
 #seed=5
-model=gcn
+model=graphsage
 eval_freq=-1
 enable_compression=0
 
