@@ -17,6 +17,12 @@ def get_amazon_computer_dataset(donwload_path = "/shared_hdd_storage/shared/gnn_
             )
     return dataset
 
+def get_amazon_products_dataset(donwload_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    dataset = pyg.datasets.AmazonProducts(
+            root = donwload_path
+            )
+    return dataset
+
 def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/shared/gnn_datasets/raw"):
     path = saved_path + "/" + name
     os.system("mkdir -p " + path)
@@ -158,8 +164,11 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
             f.write(bi_label)
 
 if __name__ == "__main__":
-    dataset = get_blogcatlog_dataset()
-    name = "blogcatalog"
+    #dataset = get_blogcatlog_dataset()
+    #name = "blogcatalog"
+
+    dataset = get_amazon_products_dataset()
+    name = "amazon_products"
 
     #dataset = get_amazon_computer_dataset()
     #name = "amazon_computers"
