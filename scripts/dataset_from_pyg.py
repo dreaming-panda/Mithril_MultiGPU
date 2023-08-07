@@ -10,6 +10,13 @@ def get_blogcatlog_dataset(donwload_path = "/shared_hdd_storage/shared/gnn_datas
             )
     return dataset
 
+def get_amazon_computer_dataset(donwload_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    dataset = pyg.datasets.Amazon(
+            root = donwload_path,
+            name = "Computers"
+            )
+    return dataset
+
 def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/shared/gnn_datasets/raw"):
     path = saved_path + "/" + name
     os.system("mkdir -p " + path)
@@ -44,6 +51,18 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
     print("Number of classes:", num_classes);
     print("Number of features:", num_features)
 
+    if len(labels.shape) == 2: # some datasets are in one-hot representation
+        assert(labels.shape[1] == num_classes)
+        one_hot_labels = labels
+        labels = []
+        for i in range(num_vertices):
+            l = None
+            for j in range(num_classes):
+                if one_hot_labels[i][j] > 0.:
+                    assert(l == None)
+                    l = j
+            labels.append(l)
+
     # Dump the meta data
     with open(path + "/meta_data.txt", "w") as f:
         f.write(
@@ -52,22 +71,52 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
                     )
                 )
 
-    data_split = [0] * num_vertices
+    data_split = [3] * num_vertices
 
     if "train_mask" in dataset:
         print("Has Pre-set Training Mask")
         assert(False) # TODO
     else:
-        print("No Pre-set Training Mask, Using Random Splitting")
+        print("No Pre-set Training Mask, Using Random Splitting (the Semi-supervised Setting)")
         random.seed(1234)
+        vertex_each_class = {}
         for i in range(num_vertices):
-            r = random.randint(1, 10)
-            if r <= 8: 
-                data_split[i] = 0 # 80% training data
-            elif r == 9:
-                data_split[i] = 1 # 10% validation data
-            else:
-                data_split[i] = 2 # 10% test data
+            label = labels[i]
+            assert(label >= 0 and label < num_classes)
+            if label not in vertex_each_class:
+                vertex_each_class[label] = []
+            vertex_each_class[label].append(i)
+            
+        # Semi-supervised settings
+        # at most 20 vertices from each class for training
+        train_samples = 0
+        valid_samples = 0
+        test_samples = 0
+        for i in range(num_classes):
+            random.shuffle(vertex_each_class[i])
+            for j in range(min(len(vertex_each_class[i]), 20)):
+                v = vertex_each_class[i][j]
+                data_split[v] = 0
+                train_samples += 1
+        unused_vertices = []
+        for i in range(num_vertices):
+            if data_split[i] != 0:
+                unused_vertices.append(i)
+        random.shuffle(unused_vertices)
+        assert(len(unused_vertices) >= 500 + 1000)
+        # 500 for validation
+        for i in range(500):
+            v = unused_vertices[i]
+            data_split[v] = 1
+            valid_samples += 1
+        # 1000 for testing
+        for i in range(500, 1500):
+            v = unused_vertices[i]
+            data_split[v] = 2
+            test_samples += 1
+        print("Number of Training Samples: %s" % (train_samples))
+        print("Number of Validation Samples: %s" % (valid_samples))
+        print("Number of Testing Samples: %s" % (test_samples))
 
     # Dump the dataset split
     print("Dumping the dataset split...")
@@ -111,6 +160,13 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
 if __name__ == "__main__":
     dataset = get_blogcatlog_dataset()
     name = "blogcatalog"
+
+    #dataset = get_amazon_computer_dataset()
+    #name = "amazon_computers"
+
+    #dataset = get_ppi_dataset()
+    #name = "ppi"
+
     exported_as_mithril_format(dataset, name)
 
 
