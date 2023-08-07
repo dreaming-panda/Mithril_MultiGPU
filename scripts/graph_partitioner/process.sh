@@ -2,7 +2,7 @@
 
 g++ ./partition_existing_graphs.cc 
 
-for graph in squirrel
+for graph in flickr
 #for graph in ogbn_arxiv ogbn_mag ogbn_products
 do
     echo "processing $graph..."

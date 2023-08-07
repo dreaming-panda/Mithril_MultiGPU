@@ -12,10 +12,10 @@ dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_parti
 
 num_gpus=8
 num_layers=32
-hunits=1024
+hunits=100
 lr=1e-3
-graph=amazon_computers
-epoch=100
+graph=flickr
+epoch=500
 decay=0
 dropout=0.5
 #seed=5

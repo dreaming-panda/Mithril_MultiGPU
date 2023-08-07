@@ -3,23 +3,40 @@ import os
 import random
 import struct
 
-def get_blogcatlog_dataset(donwload_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+def get_blogcatlog_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    download_path += "/blogcatalog"
     dataset = pyg.datasets.AttributedGraphDataset(
-            root = donwload_path,
+            root = download_path,
             name = "BlogCatalog"
             )
     return dataset
 
-def get_amazon_computer_dataset(donwload_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+def get_amazon_computer_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    download_path += "/amazon_computers"
     dataset = pyg.datasets.Amazon(
-            root = donwload_path,
+            root = download_path,
             name = "Computers"
             )
     return dataset
 
-def get_amazon_products_dataset(donwload_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+def get_amazon_products_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    download_path += "/amazon_products"
     dataset = pyg.datasets.AmazonProducts(
-            root = donwload_path
+            root = download_path
+            )
+    return dataset
+
+def get_reddit2_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    download_path += "/reddit2"
+    dataset = pyg.datasets.Reddit2(
+            root = download_path
+            )
+    return dataset
+
+def get_flickr_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    download_path += "/flickr"
+    dataset = pyg.datasets.Flickr(
+            root = download_path
             )
     return dataset
 
@@ -81,7 +98,30 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
 
     if "train_mask" in dataset:
         print("Has Pre-set Training Mask")
-        assert(False) # TODO
+        print("Training Mask:", dataset.train_mask)
+        print("Validation Mask:", dataset.val_mask)
+        print("Testing Mask:", dataset.test_mask)
+        train_mask = dataset.train_mask.numpy()
+        valid_mask = dataset.val_mask.numpy()
+        test_mask = dataset.test_mask.numpy()
+        assert(len(train_mask) == num_vertices)
+        assert(len(valid_mask) == num_vertices)
+        assert(len(test_mask) == num_vertices)
+        for i in range(num_vertices):
+            if train_mask[i]:
+                data_split[i] = 0
+            if valid_mask[i]:
+                assert(data_split[i] == 3)
+                data_split[i] = 1
+            if test_mask[i]:
+                assert(data_split[i] == 3)
+                data_split[i] = 2
+        train_samples = sum(train_mask)
+        valid_samples = sum(valid_mask)
+        test_samples = sum(test_mask)
+        print("Number of Training Samples: %s" % (train_samples))
+        print("Number of Validation Samples: %s" % (valid_samples))
+        print("Number of Testing Samples: %s" % (test_samples))
     else:
         print("No Pre-set Training Mask, Using Random Splitting (the Semi-supervised Setting)")
         random.seed(1234)
@@ -167,14 +207,17 @@ if __name__ == "__main__":
     #dataset = get_blogcatlog_dataset()
     #name = "blogcatalog"
 
-    dataset = get_amazon_products_dataset()
-    name = "amazon_products"
+    #dataset = get_amazon_products_dataset()
+    #name = "amazon_products"
 
     #dataset = get_amazon_computer_dataset()
     #name = "amazon_computers"
 
-    #dataset = get_ppi_dataset()
-    #name = "ppi"
+    #dataset = get_reddit2_dataset()
+    #name = "reddit2"
+
+    dataset = get_flickr_dataset()
+    name = "flickr"
 
     exported_as_mithril_format(dataset, name)
 
