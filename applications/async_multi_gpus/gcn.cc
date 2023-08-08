@@ -121,7 +121,7 @@ int main(int argc, char ** argv) {
         ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
         ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.")
         ("enable_compression", po::value<int>()->default_value(1), "1/0: Enable/Disable data compression for communication.")
-        ("residual", po::value<int>()->default_value(1), "1/0: Use residual connections.");
+        ("residual", po::value<int>()->default_value(0), "1/0: Use residual connections.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);

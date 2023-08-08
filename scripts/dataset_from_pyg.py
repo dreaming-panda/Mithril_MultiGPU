@@ -3,6 +3,8 @@ import os
 import random
 import struct
 
+semi_supervised_split = True
+
 def get_blogcatlog_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
     download_path += "/blogcatalog"
     dataset = pyg.datasets.AttributedGraphDataset(
@@ -123,43 +125,57 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
         print("Number of Validation Samples: %s" % (valid_samples))
         print("Number of Testing Samples: %s" % (test_samples))
     else:
-        print("No Pre-set Training Mask, Using Random Splitting (the Semi-supervised Setting)")
-        random.seed(1234)
-        vertex_each_class = {}
-        for i in range(num_vertices):
-            label = labels[i]
-            assert(label >= 0 and label < num_classes)
-            if label not in vertex_each_class:
-                vertex_each_class[label] = []
-            vertex_each_class[label].append(i)
-            
-        # Semi-supervised settings
-        # at most 20 vertices from each class for training
         train_samples = 0
         valid_samples = 0
         test_samples = 0
-        for i in range(num_classes):
-            random.shuffle(vertex_each_class[i])
-            for j in range(min(len(vertex_each_class[i]), 20)):
-                v = vertex_each_class[i][j]
-                data_split[v] = 0
-                train_samples += 1
-        unused_vertices = []
-        for i in range(num_vertices):
-            if data_split[i] != 0:
-                unused_vertices.append(i)
-        random.shuffle(unused_vertices)
-        assert(len(unused_vertices) >= 500 + 1000)
-        # 500 for validation
-        for i in range(500):
-            v = unused_vertices[i]
-            data_split[v] = 1
-            valid_samples += 1
-        # 1000 for testing
-        for i in range(500, 1500):
-            v = unused_vertices[i]
-            data_split[v] = 2
-            test_samples += 1
+        random.seed(1234)
+        if semi_supervised_split:
+            print("No Pre-set Training Mask, Using Random Splitting (the Semi-supervised Setting)")
+            vertex_each_class = {}
+            for i in range(num_vertices):
+                label = labels[i]
+                assert(label >= 0 and label < num_classes)
+                if label not in vertex_each_class:
+                    vertex_each_class[label] = []
+                vertex_each_class[label].append(i)
+                
+            # Semi-supervised settings
+            # at most 20 vertices from each class for training
+            for i in range(num_classes):
+                random.shuffle(vertex_each_class[i])
+                for j in range(min(len(vertex_each_class[i]), 20)):
+                    v = vertex_each_class[i][j]
+                    data_split[v] = 0
+                    train_samples += 1
+            unused_vertices = []
+            for i in range(num_vertices):
+                if data_split[i] != 0:
+                    unused_vertices.append(i)
+            random.shuffle(unused_vertices)
+            assert(len(unused_vertices) >= 500 + 1000)
+            # 500 for validation
+            for i in range(500):
+                v = unused_vertices[i]
+                data_split[v] = 1
+                valid_samples += 1
+            # 1000 for testing
+            for i in range(500, 1500):
+                v = unused_vertices[i]
+                data_split[v] = 2
+                test_samples += 1
+        else:
+            print("No Pre-set Training Mask, Using Random Splitting (the Supervised Setting)")
+            for i in range(num_vertices):
+                r = random.randint(1, 10)
+                if r <= 6:
+                    data_split[i] = 0
+                    train_samples += 1
+                elif r <= 8:
+                    data_split[i] = 1
+                    valid_samples += 1
+                else:
+                    data_split[i] = 2
+                    test_samples += 1
         print("Number of Training Samples: %s" % (train_samples))
         print("Number of Validation Samples: %s" % (valid_samples))
         print("Number of Testing Samples: %s" % (test_samples))
@@ -210,14 +226,14 @@ if __name__ == "__main__":
     #dataset = get_amazon_products_dataset()
     #name = "amazon_products"
 
-    #dataset = get_amazon_computer_dataset()
-    #name = "amazon_computers"
+    dataset = get_amazon_computer_dataset()
+    name = "amazon_computers"
 
     #dataset = get_reddit2_dataset()
     #name = "reddit2"
 
-    dataset = get_flickr_dataset()
-    name = "flickr"
+    #dataset = get_flickr_dataset()
+    #name = "flickr"
 
     exported_as_mithril_format(dataset, name)
 

@@ -15,11 +15,10 @@ num_layers=32
 hunits=100
 lr=1e-3
 graph=flickr
-epoch=500
+epoch=100
 decay=0
 dropout=0.5
-#seed=5
-model=gcnii
+model=gcn
 eval_freq=-1
 enable_compression=0
 

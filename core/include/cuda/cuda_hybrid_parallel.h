@@ -1335,6 +1335,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         void perform_backward_task(CUDAPIPBackwardTask task);
         //void add_white_noise();
         void scale_vector(DataType * data, size_t N, double factor, bool sync = true);
+        void scale_and_add_vector(DataType * data_a, DataType * data_b, DataType * data_c, size_t N, double scale_a, double scale_b, bool sync = true);
 
         // some initialization functions
         void generate_backward_operator_mask(const std::vector<Operator*>& operators);

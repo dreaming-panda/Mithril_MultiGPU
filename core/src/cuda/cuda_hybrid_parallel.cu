@@ -110,6 +110,32 @@ void DistributedPIPHybridParallelExecutionEngineGPU::scale_vector(DataType * dat
     }
 }
 
+__global__ void scale_and_add_kernel(
+        DataType * data_a, DataType * data_b, DataType * data_c,
+        size_t N, double scale_a, double scale_b
+        ) {
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) {
+        DataType a = data_a[idx];
+        DataType b = data_b[idx];
+        DataType c = a * scale_a + b * scale_b;
+        data_c[idx] = c;
+    }
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::scale_and_add_vector(
+        DataType * data_a, DataType * data_b, DataType * data_c, size_t N, double scale_a, double scale_b, bool sync
+        ) {
+    const int block_size = 1024;
+    const int num_blocks = (N + block_size - 1) / block_size;
+    scale_and_add_kernel<<<num_blocks, block_size>>>(
+            data_a, data_b, data_c, N, scale_a, scale_b
+            );
+    if (sync) {
+        cudaStreamSynchronize(0);
+    }
+}
+
 __global__ void calculate_prediction_hits_kernel(
         DataType * output_data, DataType * std_data, int N,
         DataType * hits_buff, int output_size, int * mask

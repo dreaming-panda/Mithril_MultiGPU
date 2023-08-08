@@ -14,12 +14,14 @@
 #define FIXPART
 //#define USE_RDMA 
 
-#define REVERSE_PERIOD (20) 
+#define REVERSE_PERIOD (20)  
 //#define REVERSE_PERIOD (1)
 #define EVAL_FREQUENCY (25)
 #define NUM_GPUS_PER_NODE (4)
 #define NUM_INFERNECE_RUNS (3)
 #define NCCL_FUSED_COMMUNICATION (true)
+
+//#define UNBIASED_ACTIVATION 
 
 //#define SHOW_SCHEDULE_DETAILS
 
@@ -1795,11 +1797,54 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
             DataType * data = resource->get_gpu_data();
             size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+#ifndef UNBIASED_ACTIVATION
             checkCUDA(cudaMemcpyAsync(
                         h_data, data, sizeof(DataType) * num_elements,
                         cudaMemcpyDeviceToDevice
                         ));
+#else
+            engine_->scale_and_add_vector(
+                    h_data, data, h_data, num_elements, 0.5, 0.5, false
+                    );
+#endif
         }
+    };
+
+    auto adjust_historical_activation = [&](int chunk_id) {
+        // scale the gradients for unbaised estimation
+        Profiler::submit_main_thread_event(SideComputationStartEvent);
+        int num_ways = engine_->get_num_dp_ways();
+        int processed_chunks[num_ways];
+        MPI_Allgather(
+                &chunk_id, 1, MPI_INT, 
+                processed_chunks, 1, MPI_INT,
+                engine_->graph_data_propagator_->get_peer_group()
+                );
+        int num_aggr_ops = (int) aggr_ops.size();
+        assert(num_aggr_ops > 0);
+        for (int i = 0; i < num_aggr_ops; ++ i) {
+            Operator * op = aggr_ops[i];
+            DataType * h_data = historical_data[i];
+            Tensor * tensor = op->get_input_tensor(0);
+            TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+            DataType * data = resource->get_gpu_data();
+            int num_elements_per_vertex = tensor->dims[1];
+            // adjust the up-to-date embeddings for an 
+            // unbaised estimation
+            for (int i = 0; i < num_ways; ++ i) {
+                int c = processed_chunks[i];
+                VertexId vid_begin = engine_->chunk_manager_->get_chunk_begin(c);
+                VertexId vid_end = engine_->chunk_manager_->get_chunk_end(c);
+                engine_->scale_and_add_vector(
+                        data + vid_begin * num_elements_per_vertex,
+                        h_data + vid_begin * num_elements_per_vertex,
+                        data + vid_begin * num_elements_per_vertex,
+                        (vid_end - vid_begin) * num_elements_per_vertex,
+                        2., -1., false
+                        );
+            }
+        }
+        Profiler::submit_main_thread_event(SideComputationCompleteEvent);
     };
 
     auto calculate_loss = [&]() {
@@ -2186,6 +2231,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             checkCUDA(cudaEventRecord(start_event));
 
             engine_->perform_forward_task(task);
+#ifdef UNBIASED_ACTIVATION
+            adjust_historical_activation(task.chunk_id);
+#endif
 
             checkCUDA(cudaEventRecord(end_event));
             computation_events.push_back(
@@ -3134,6 +3182,9 @@ void CUDAPIPWeightAggregator::commit_grad() {
         if (engine_->local_weight_ops_.find(op) == engine_->local_weight_ops_.end()) {
             continue;
         }
+        if (engine_->get_num_dp_ways() == 1) {
+            continue;
+        }
 
         size_t num_elements = weight_op_num_elements_[i];
         //check_consistency(num_elements);
@@ -3142,19 +3193,34 @@ void CUDAPIPWeightAggregator::commit_grad() {
         // move the grad to the CPU memory
         DataType * buff = aggr_buffer_;
         assert(buff != NULL);
-        cudaMemcpy(buff, grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
-        // in-place allreduce
-        MPI_Allreduce(
-                MPI_IN_PLACE, buff, num_elements, 
-                DistributedSys::get_mpi_data_type<DataType>(),
-                MPI_SUM, 
-                engine_->graph_data_propagator_->get_peer_group()
-                //MPI_COMM_WORLD
-                );
-        // copy the data back to the GPU memory
-        cudaMemcpy(grad, buff, sizeof(DataType) * num_elements, cudaMemcpyHostToDevice);
+        if (engine_->get_num_stages() > 1) { 
+            cudaMemcpy(buff, grad, sizeof(DataType) * num_elements, cudaMemcpyDeviceToHost);
+            // in-place allreduce
+            MPI_Allreduce(
+                    MPI_IN_PLACE, buff, num_elements, 
+                    DistributedSys::get_mpi_data_type<DataType>(),
+                    MPI_SUM, 
+                    engine_->graph_data_propagator_->get_peer_group()
+                    //MPI_COMM_WORLD
+                    );
+            // copy the data back to the GPU memory
+            cudaMemcpy(grad, buff, sizeof(DataType) * num_elements, cudaMemcpyHostToDevice);
+        } else {
+            assert(engine_->get_num_stages() == 1); // pure graph parallel
+            // collective operation involving all nodes
+            // use NCCL allreduce
+            checkNCCL(ncclAllReduce(
+                    grad, grad, num_elements,
+                    ncclFloat32, ncclSum, 
+                    DistributedSys::get_instance()->get_nccl_handle(),
+                    0
+                    ));
+            checkCUDA(cudaStreamSynchronize(0));
+        }
         // update the volume
-        comm_ += sizeof(DataType) * num_elements;
+        int num_ways = engine_->get_num_dp_ways();
+        // the ring-allreduce bandwidth optimal algorithm
+        comm_ += sizeof(DataType) * num_elements / num_ways * (num_ways - 1) * 2;
     }
     // do the local optimization
     for (int i = 0; i < num_weight_operators; ++ i) {
