@@ -2167,6 +2167,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double core_t = 0.; // computation + communication
     double layer_comm_t = 0.;
     double compute_t = 0.;
+    double graph_comm_t = 0.;
 
     //const int super_chunk_size = 2;
     //assert(num_local_chunks % super_chunk_size == 0);
@@ -2189,6 +2190,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         communication_events.clear();
         computation_events.clear();
+        assert(engine_->graph_comm_events_.empty());
         
         // some pre-pipelining preparation
         checkCUDA(cudaEventRecord(pre_pipelining_start_event));
@@ -2319,6 +2321,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         // performance analysis
         if (epoch_id >= warmup_epoches) {
+            //double profile_t = -get_time();
             float t = 0;
             checkCUDA(cudaEventQuery(pre_pipelining_start_event));
             checkCUDA(cudaEventQuery(pre_pipelining_complete_event));
@@ -2377,6 +2380,17 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                             ));
                 compute_t += t;
             }
+            for (auto p: engine_->graph_comm_events_) {
+                checkCUDA(cudaEventQuery(p.first));
+                checkCUDA(cudaEventQuery(p.second));
+                checkCUDA(cudaEventElapsedTime(
+                            &t, p.first, p.second
+                            ));
+                graph_comm_t += t;
+            }
+            //profile_t += get_time();
+            //if (node_id == 0)
+            //    printf("Profiler Overhead: %.3f ms\n", profile_t * 1e3);
         }
 
         checkCUDA(cudaEventDestroy(pre_pipelining_start_event));
@@ -2394,6 +2408,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             checkCUDA(cudaEventDestroy(p.first));
             checkCUDA(cudaEventDestroy(p.second));
         }
+        for (auto p: engine_->graph_comm_events_) {
+            checkCUDA(cudaEventDestroy(p.first));
+            checkCUDA(cudaEventDestroy(p.second));
+        }
+        engine_->graph_comm_events_.clear();
     };
 
     for (; epoch_id < num_epoch; epoch_id ++) {
@@ -2416,17 +2435,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     post_pipelining_t /= double(num_epoch - warmup_epoches);
     layer_comm_t /= double(num_epoch - warmup_epoches);
     compute_t /= double(num_epoch - warmup_epoches);
+    graph_comm_t /= double(num_epoch - warmup_epoches);
 
-    printf("Node %d, Pre/Post-Pipelining: %.3f / %.3f ms, Bubble: %.3f ms, Compute: %.3f ms, Comm: %.3f ms, Imbalance: %.3f ms\n",
-            node_id, pre_pipelining_t, post_pipelining_t, 
-            bubble_t, compute_t, layer_comm_t, 
-            core_t - compute_t - layer_comm_t
-            );
-    fflush(stdout);
-    usleep(1e5);
+    //printf("Node %d, Pre/Post-Pipelining: %.3f / %.3f ms, Bubble-Pipeline: %.3f ms, Compute: %.3f ms, Comm-Layer: %.3f ms, Bubble-Imbalance: %.3f ms, Comm-Graph: %.3f ms\n",
+    //        node_id, pre_pipelining_t, post_pipelining_t, 
+    //        bubble_t, compute_t - graph_comm_t, layer_comm_t, 
+    //        core_t - compute_t - layer_comm_t,
+    //        graph_comm_t
+    //        );
+    //fflush(stdout);
+    //usleep(1e5);
 
     auto aggregate_and_report_metrics = [&](
-            std::string name, double value
+            std::string name, double value,
+            std::string unit = "ms"
             ) {
         double avg_value;
         MPI_Allreduce(
@@ -2435,32 +2457,53 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                 MPI_COMM_WORLD
                 );
         avg_value /= double(num_nodes);
+        double max_value;
+        MPI_Allreduce(
+                &value, &max_value, 1,
+                MPI_DOUBLE, MPI_MAX,
+                MPI_COMM_WORLD
+                );
+        double min_value;
+        MPI_Allreduce(
+                &value, &min_value, 1,
+                MPI_DOUBLE, MPI_MIN,
+                MPI_COMM_WORLD
+                );
         if (node_id == 0) {
-            printf("Cluster-Wide Average, %s: %.3f ms\n",
-                    name.c_str(), value);
+            printf("Cluster-Wide Average, %s: %.3f %s (Max: %.3f, Min: %.3f, Sum: %.3f)\n",
+                    name.c_str(), avg_value, unit.c_str(),
+                    max_value, min_value, avg_value * double(num_nodes));
         }
         fflush(stdout);
         usleep(1e5);
+        return avg_value;
     };
-    aggregate_and_report_metrics("Pre-Pipelining Overhead", pre_pipelining_t);
-    aggregate_and_report_metrics("Post-Pipelining Overhead", post_pipelining_t);
-    aggregate_and_report_metrics("Bubble", bubble_t);
-    aggregate_and_report_metrics("Compute", compute_t);
-    aggregate_and_report_metrics("Communication", layer_comm_t);
-    aggregate_and_report_metrics("Imbalance", core_t - compute_t - layer_comm_t);
+    double breakdown_sum = 0;
+    breakdown_sum += aggregate_and_report_metrics("Pre-Pipelining Overhead", pre_pipelining_t);
+    breakdown_sum += aggregate_and_report_metrics("Post-Pipelining Overhead", post_pipelining_t);
+    breakdown_sum += aggregate_and_report_metrics("Bubble-Pipeline", bubble_t);
+    breakdown_sum += aggregate_and_report_metrics("Compute", compute_t - graph_comm_t);
+    breakdown_sum += aggregate_and_report_metrics("Communication-Layer", layer_comm_t);
+    breakdown_sum += aggregate_and_report_metrics("Bubble-Imbalance", core_t - compute_t - layer_comm_t);
+    breakdown_sum += aggregate_and_report_metrics("Communication-Graph", graph_comm_t);
+    //if (node_id == 0) {
+    //    printf("Breakdown Sum: %.3f ms\n", breakdown_sum);
+    //}
 
     double train_acc, valid_acc, test_acc;
     engine_->run_exact_inference(train_acc, valid_acc, test_acc, 
             engine_->weight_aggregator_->get_optimal_weights()
-            ); // FIXME: weight sync
+            ); 
 
     size_t free_mem_size = 0;
     size_t total_mem_size = 0;
     checkCUDA(cudaMemGetInfo(&free_mem_size, &total_mem_size));
-    printf("Node %d, GPU memory consumption: %.3f GB\n", node_id, (total_mem_size - free_mem_size) / 1024. / 1024. / 1024.);
-    fflush(stdout);
-    usleep(1e5);
-    MPI_Barrier(MPI_COMM_WORLD);
+    aggregate_and_report_metrics("GPU Memory Consumption", 
+            (total_mem_size - free_mem_size) / 1024. / 1024. / 1024., "GB");
+    //printf("Node %d, GPU memory consumption: %.3f GB\n", node_id, (total_mem_size - free_mem_size) / 1024. / 1024. / 1024.);
+    //fflush(stdout);
+    //usleep(1e5);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
     //double layer_comm_throughput = layer_comm / layer_comm_time * 8. / 1e9;
     //printf("Node %d, Layer-Level Communication Throughput: %.3f Gbps, Time %.3f ms\n",
@@ -2471,13 +2514,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     double graph_comm_throughput = engine_->graph_data_propagator_->get_comm() * 8.
         / engine_->graph_data_propagator_->get_comm_time() / 1e9;
-    printf("Node %d, Graph-Level Communication Throughput: %.3f Gbps, Time: %.3f ms\n",
-            node_id, graph_comm_throughput, 
-            engine_->graph_data_propagator_->get_comm_time() / num_epoch * 1e3);
-    fflush(stdout);
-    usleep(1e5);
-    MPI_Barrier(MPI_COMM_WORLD);
+    aggregate_and_report_metrics(
+            "Graph-Level Communication Throughput",
+            graph_comm_throughput,
+            "Gbps"
+            );
+    //printf("Node %d, Graph-Level Communication Throughput: %.3f Gbps, Time: %.3f ms\n",
+    //        node_id, graph_comm_throughput, 
+    //        engine_->graph_data_propagator_->get_comm_time() / num_epoch * 1e3);
+    //fflush(stdout);
+    //usleep(1e5);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
+    double epoch_time = all_epoches_time / (num_epoch - warmup_epoches) * 1e3;
+    assert(epoch_time / breakdown_sum >= 0.95 && epoch_time / breakdown_sum <= 1.05);
     printf("------------------------node id %d,  per-epoch time: %f s---------------\n", 
             node_id, all_epoches_time / (num_epoch - warmup_epoches));
     fflush(stdout);
@@ -3399,11 +3449,22 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
             case OPERATOR_AGGREGATION:
                 { 
                     if (! profiling_mode) {
+                        cudaEvent_t start_event;
+                        cudaEvent_t end_event;
+                        checkCUDA(cudaEventCreate(&start_event));
+                        checkCUDA(cudaEventCreate(&end_event));
+
                         // graph data propagation
                         Tensor * tensor = op->get_input_tensor(0);
                         Profiler::submit_main_thread_event(CoreForwardComputationCompleteEvent);
+                        checkCUDA(cudaEventRecord(start_event));
                         graph_data_propagator_->propagate_graph_data(tensor, chunk_id, true); 
+                        checkCUDA(cudaEventRecord(end_event));
                         Profiler::submit_main_thread_event(CoreForwardComputationStartEvent);
+
+                        graph_comm_events_.push_back(
+                                std::make_pair(start_event, end_event)
+                                );
                     }
                     // do the actual computation  
                     executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
@@ -3476,11 +3537,22 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
             case OPERATOR_AGGREGATION:
                 {
                     if (! profiling_mode) {
+                        cudaEvent_t start_event;
+                        cudaEvent_t end_event;
+                        checkCUDA(cudaEventCreate(&start_event));
+                        checkCUDA(cudaEventCreate(&end_event));
+
                         // graph data propagation
                         Tensor * tensor = op->get_output_tensor(0);
                         Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
+                        checkCUDA(cudaEventRecord(start_event));
                         graph_data_propagator_->propagate_graph_data(tensor, chunk_id, false); 
+                        checkCUDA(cudaEventRecord(end_event));
                         Profiler::submit_main_thread_event(CoreBackwardComputationStartEvent);
+
+                        graph_comm_events_.push_back(
+                                std::make_pair(start_event, end_event)
+                                );
                     }
                     // do the actual computation  
                     executor_->aggregation_backward((AggregationOperator*) op, local_vid_begin, local_vid_end);

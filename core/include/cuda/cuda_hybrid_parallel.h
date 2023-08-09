@@ -1326,6 +1326,7 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         }
 
         // invoke by the scheduler
+        std::vector<std::pair<cudaEvent_t, cudaEvent_t>> graph_comm_events_;
         void propagate_activation(int op_begin, int op_end, int chunk_id, bool profiling_mode = false);
         void recomputation(int op_begin, int op_end, int chunk_id);
         void propagate_gradient(int op_begin, int op_end, int chunk_id, bool profiling_mode = false);
