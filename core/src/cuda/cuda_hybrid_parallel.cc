@@ -16,7 +16,7 @@
 
 #define REVERSE_PERIOD (20)  
 //#define REVERSE_PERIOD (1)
-#define EVAL_FREQUENCY (25)
+#define EVAL_FREQUENCY (50)
 #define NUM_GPUS_PER_NODE (4)
 #define NUM_INFERNECE_RUNS (3)
 #define NCCL_FUSED_COMMUNICATION (true)
@@ -2168,6 +2168,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     double layer_comm_t = 0.;
     double compute_t = 0.;
     double graph_comm_t = 0.;
+    double optimization_t = 0.;
 
     //const int super_chunk_size = 2;
     //assert(num_local_chunks % super_chunk_size == 0);
@@ -2180,6 +2181,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         cudaEvent_t complete_forward_pipelining_event;
         cudaEvent_t schedule_first_backward_task_event;
         cudaEvent_t complete_backward_pipelining_event;
+        cudaEvent_t optimization_start_event;
+        cudaEvent_t optimization_end_event;
 
         checkCUDA(cudaEventCreate(&pre_pipelining_start_event));
         checkCUDA(cudaEventCreate(&pre_pipelining_complete_event));
@@ -2187,10 +2190,15 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         checkCUDA(cudaEventCreate(&complete_forward_pipelining_event));
         checkCUDA(cudaEventCreate(&schedule_first_backward_task_event));
         checkCUDA(cudaEventCreate(&complete_backward_pipelining_event));
+        checkCUDA(cudaEventCreate(&optimization_start_event));
+        checkCUDA(cudaEventCreate(&optimization_end_event));
 
         communication_events.clear();
         computation_events.clear();
         assert(engine_->graph_comm_events_.empty());
+
+        checkCUDA(cudaStreamSynchronize(0));
+        double this_epoch_t = - get_time() * 1e3;
         
         // some pre-pipelining preparation
         checkCUDA(cudaEventRecord(pre_pipelining_start_event));
@@ -2307,10 +2315,18 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         if ((epoch_id + 1) % REVERSE_PERIOD == 0) {
             backup_activation();
         }
+        checkCUDA(cudaEventRecord(optimization_start_event));
         engine_->weight_aggregator_->commit_grad();
+        checkCUDA(cudaEventRecord(optimization_end_event));
         engine_->weight_aggregator_->clear_gradients();
         post_t += get_time() * 1e3;
 
+        checkCUDA(cudaStreamSynchronize(0));
+        this_epoch_t += get_time() * 1e3;
+
+        // excluding the inference time as we only 
+        // focus on the training throughput (so the 
+        // evaluation implementation is naive and slow)
         if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {
             if (! engine_->always_exact_inferences_) {
                 report_loss();
@@ -2321,6 +2337,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
         // performance analysis
         if (epoch_id >= warmup_epoches) {
+            all_epoches_time += this_epoch_t;
+
             //double profile_t = -get_time();
             float t = 0;
             checkCUDA(cudaEventQuery(pre_pipelining_start_event));
@@ -2360,6 +2378,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
                         complete_backward_pipelining_event
                         ));
             core_t += t;
+            checkCUDA(cudaEventElapsedTime(
+                        &t, 
+                        optimization_start_event,
+                        optimization_end_event
+                        ));
+            optimization_t += t;
 
             bubble_t += barrier_t;
             post_pipelining_t += post_t;
@@ -2399,6 +2423,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         checkCUDA(cudaEventDestroy(complete_forward_pipelining_event));
         checkCUDA(cudaEventDestroy(schedule_first_backward_task_event));
         checkCUDA(cudaEventDestroy(complete_backward_pipelining_event));
+        checkCUDA(cudaEventDestroy(optimization_start_event));
+        checkCUDA(cudaEventDestroy(optimization_end_event));
 
         for (auto p: communication_events) {
             checkCUDA(cudaEventDestroy(p.first));
@@ -2416,10 +2442,6 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     };
 
     for (; epoch_id < num_epoch; epoch_id ++) {
-        if (epoch_id == warmup_epoches) {
-            all_epoches_time -= get_time();
-        }
-
         // schedule a training epoch
         run_training_epoch();
     }
@@ -2427,7 +2449,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     Profiler::end_profiling();
 
     t += get_time();
-    all_epoches_time += get_time();
+
+    double epoch_time = all_epoches_time / (num_epoch - warmup_epoches);
+    if (! node_id)
+        printf("****** Epoch Time (Excluding Evaluation Cost): %.3f s ******\n",  epoch_time / 1e3);
 
     pre_pipelining_t /= double(num_epoch - warmup_epoches);
     bubble_t /= double(num_epoch - warmup_epoches);
@@ -2436,6 +2461,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     layer_comm_t /= double(num_epoch - warmup_epoches);
     compute_t /= double(num_epoch - warmup_epoches);
     graph_comm_t /= double(num_epoch - warmup_epoches);
+    optimization_t /= double(num_epoch - warmup_epoches);
 
     //printf("Node %d, Pre/Post-Pipelining: %.3f / %.3f ms, Bubble-Pipeline: %.3f ms, Compute: %.3f ms, Comm-Layer: %.3f ms, Bubble-Imbalance: %.3f ms, Comm-Graph: %.3f ms\n",
     //        node_id, pre_pipelining_t, post_pipelining_t, 
@@ -2478,17 +2504,20 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         usleep(1e5);
         return avg_value;
     };
+    if (! node_id) 
+        printf("****** Breakdown Analysis ******\n");
     double breakdown_sum = 0;
-    breakdown_sum += aggregate_and_report_metrics("Pre-Pipelining Overhead", pre_pipelining_t);
-    breakdown_sum += aggregate_and_report_metrics("Post-Pipelining Overhead", post_pipelining_t);
     breakdown_sum += aggregate_and_report_metrics("Bubble-Pipeline", bubble_t);
     breakdown_sum += aggregate_and_report_metrics("Compute", compute_t - graph_comm_t);
     breakdown_sum += aggregate_and_report_metrics("Communication-Layer", layer_comm_t);
     breakdown_sum += aggregate_and_report_metrics("Bubble-Imbalance", core_t - compute_t - layer_comm_t);
     breakdown_sum += aggregate_and_report_metrics("Communication-Graph", graph_comm_t);
-    //if (node_id == 0) {
-    //    printf("Breakdown Sum: %.3f ms\n", breakdown_sum);
-    //}
+    breakdown_sum += aggregate_and_report_metrics("Optimization", optimization_t); // already included in 
+    breakdown_sum += aggregate_and_report_metrics("Others", pre_pipelining_t + post_pipelining_t - optimization_t);
+    assert(epoch_time / breakdown_sum >= 0.95 && epoch_time / breakdown_sum <= 1.05);
+    if (node_id == 0) {
+        printf("****** Breakdown Sum: %.3f ms ******\n", breakdown_sum);
+    }
 
     double train_acc, valid_acc, test_acc;
     engine_->run_exact_inference(train_acc, valid_acc, test_acc, 
@@ -2519,6 +2548,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             graph_comm_throughput,
             "Gbps"
             );
+    aggregate_and_report_metrics(
+            "Layer-Level Communication Throughput",
+            layer_comm / double(num_epoch) * 8. / 1e9 / (layer_comm_t / 1e3),
+            "Gbps"
+            );
     //printf("Node %d, Graph-Level Communication Throughput: %.3f Gbps, Time: %.3f ms\n",
     //        node_id, graph_comm_throughput, 
     //        engine_->graph_data_propagator_->get_comm_time() / num_epoch * 1e3);
@@ -2526,18 +2560,16 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     //usleep(1e5);
     //MPI_Barrier(MPI_COMM_WORLD);
 
-    double epoch_time = all_epoches_time / (num_epoch - warmup_epoches) * 1e3;
-    assert(epoch_time / breakdown_sum >= 0.95 && epoch_time / breakdown_sum <= 1.05);
-    printf("------------------------node id %d,  per-epoch time: %f s---------------\n", 
-            node_id, all_epoches_time / (num_epoch - warmup_epoches));
-    fflush(stdout);
-    usleep(1e5);
-    MPI_Barrier(MPI_COMM_WORLD);
+    //printf("------------------------node id %d,  per-epoch time: %f s---------------\n", 
+    //        node_id, all_epoches_time / (num_epoch - warmup_epoches));
+    //fflush(stdout);
+    //usleep(1e5);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
     // check the consistency of the distributed weights
     //engine_->weight_aggregator_->check_weights_consistency();
 
-    Profiler::breakdown_analysis(num_epoch);
+    //Profiler::breakdown_analysis(num_epoch);
 
     double avg_layer_comm;
     MPI_Allreduce(
@@ -2571,20 +2603,21 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
 
     if (! node_id) {
         // communication statictics
-        printf("\tLayer-level communication (cluster-wide, per-epoch): %.3f GB\n",
+        printf("Layer-level communication (cluster-wide, per-epoch): %.3f GB\n",
                 avg_layer_comm / 1024. / 1024. / 1024.);
-        printf("\tGraph-level communication (cluster-wide, per-epoch): %.3f GB\n",
+        printf("Graph-level communication (cluster-wide, per-epoch): %.3f GB\n",
                 graph_comm / 1024. / 1024. / 1024.);
-        printf("\tWeight-sync communication (cluster-wide, per-epoch): %.3f GB\n",
+        printf("Weight-sync communication (cluster-wide, per-epoch): %.3f GB\n",
                 avg_ps_comm / 1024. / 1024. / 1024.);
-        printf("\tTotal communication (cluster-wide, per-epoch): %.3f GB\n",
+        printf("Total communication (cluster-wide, per-epoch): %.3f GB\n",
                 total_comm / 1024. / 1024. / 1024.);
-        printf("\tAggregated layer-level communication throughput: %.3f Gbps\n",
-                avg_layer_comm * 8. / 1e9 / (avg_layer_comm_t / 1e3));
         // accuracies
-        printf("Highest valid_acc: %.4f\n", highest_valid_acc);
-        printf("Target test_acc: %.4f\n", test_acc);
-        printf("Epoch to reach the target acc: %d\n", epoch_to_reach_target_acc);
+        if (engine_->always_exact_inferences_) {
+            printf("****** Accuracy Results ******\n");
+            printf("Highest valid_acc: %.4f\n", highest_valid_acc);
+            printf("Target test_acc: %.4f\n", test_acc);
+            printf("Epoch to reach the target acc: %d\n", epoch_to_reach_target_acc);
+        }
     }
     fflush(stdout);
 }
@@ -4025,7 +4058,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
 
     if (always_exact_inferences_) {
         evaluation_frequency_ = -1;
-        fprintf(stderr, "WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 10 epoches.\n");
+        fprintf(stderr, "WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.\n");
     }
 
     if (enable_compression_) {
