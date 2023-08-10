@@ -28,7 +28,7 @@ enable_compression=0
 chunks=$((num_gpus*4))
 num_dp_ways=2
 
-exact_inference=1
+exact_inference=0
 seed=1
 
 echo "Running experiments..."
