@@ -7,8 +7,8 @@ graphs = [
         ]
 models = [
         #"gcn", FIXME
-        "graphsage",
-        #"gcnii"
+        #"graphsage",
+        "gcnii"
         ]
 configurations = {
         "squirrel": {
@@ -185,24 +185,22 @@ def run_pipeline_parallel(
 if __name__ == "__main__":
     for graph in graphs:
         for model in models:
-            # graph parallel
             for seed in range(1, num_runs + 1):
+                # graph parallel
                 result_dir = "./nsdi2023/overall_performance/results/graph/%s/%s" % (
                         graph, model
                         )
                 os.system("mkdir -p %s" % (result_dir))
                 result_file = result_dir + "/%s.txt" % (seed)
                 run_graph_parallel(graph, model, seed, result_file)
-            # pipeline parallel
-            for seed in range(1, num_runs + 1):
+                # pipeline parallel
                 result_dir = "./nsdi2023/overall_performance/results/pipeline/%s/%s" % (
                         graph, model
                         )
                 os.system("mkdir -p %s" % (result_dir))
                 result_file = result_dir + "/%s.txt" % (seed)
                 run_pipeline_parallel(graph, model, seed, result_file)
-            # hybrid parallel
-            for seed in range(1, num_runs + 1):
+                # hybrid parallel
                 result_dir = "./nsdi2023/overall_performance/results/hybrid/%s/%s" % (
                         graph, model
                         )
