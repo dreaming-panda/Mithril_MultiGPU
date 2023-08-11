@@ -14,7 +14,7 @@
 #define FIXPART
 //#define USE_RDMA 
 
-#define REVERSE_PERIOD (20)  
+#define REVERSE_PERIOD (23)  
 //#define REVERSE_PERIOD (1)
 #define EVAL_FREQUENCY (50)
 #define NUM_GPUS_PER_NODE (4)
