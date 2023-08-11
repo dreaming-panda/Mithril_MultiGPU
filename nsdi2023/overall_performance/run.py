@@ -2,13 +2,13 @@ import os
 
 graphs = [
         "squirrel",
-        #"flickr", FIXME
-        #"reddit"
+        "flickr",
+        "reddit"
         ]
 models = [
-        "gcn",
+        #"gcn", FIXME
         "graphsage",
-        "gcnii"
+        #"gcnii"
         ]
 configurations = {
         "squirrel": {
@@ -183,9 +183,9 @@ def run_pipeline_parallel(
     os.system(command)
 
 if __name__ == "__main__":
-    # running graph parallel
     for graph in graphs:
         for model in models:
+            # graph parallel
             for seed in range(1, num_runs + 1):
                 result_dir = "./nsdi2023/overall_performance/results/graph/%s/%s" % (
                         graph, model
@@ -193,11 +193,7 @@ if __name__ == "__main__":
                 os.system("mkdir -p %s" % (result_dir))
                 result_file = result_dir + "/%s.txt" % (seed)
                 run_graph_parallel(graph, model, seed, result_file)
-
-    """
-    # running pipeline parallel
-    for graph in graphs:
-        for model in models:
+            # pipeline parallel
             for seed in range(1, num_runs + 1):
                 result_dir = "./nsdi2023/overall_performance/results/pipeline/%s/%s" % (
                         graph, model
@@ -205,10 +201,7 @@ if __name__ == "__main__":
                 os.system("mkdir -p %s" % (result_dir))
                 result_file = result_dir + "/%s.txt" % (seed)
                 run_pipeline_parallel(graph, model, seed, result_file)
-
-    # running hybrid parallel
-    for graph in graphs:
-        for model in models:
+            # hybrid parallel
             for seed in range(1, num_runs + 1):
                 result_dir = "./nsdi2023/overall_performance/results/hybrid/%s/%s" % (
                         graph, model
@@ -216,7 +209,6 @@ if __name__ == "__main__":
                 os.system("mkdir -p %s" % (result_dir))
                 result_file = result_dir + "/%s.txt" % (seed)
                 run_hybrid_parallel(graph, model, seed, result_file)
-    """
 
 
 

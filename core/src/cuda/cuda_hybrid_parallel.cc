@@ -2327,7 +2327,7 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         // excluding the inference time as we only 
         // focus on the training throughput (so the 
         // evaluation implementation is naive and slow)
-        if ((epoch_id + 1) % EVAL_FREQUENCY == 0) {
+        if ((epoch_id + 1) % EVAL_FREQUENCY == 0 || epoch_id == 0) {
             if (! engine_->always_exact_inferences_) {
                 report_loss();
             } else {
