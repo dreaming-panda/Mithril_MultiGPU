@@ -6,9 +6,9 @@ graphs = [
         "reddit"
         ]
 models = [
-        #"gcn", FIXME
-        #"graphsage",
-        "gcnii"
+        "gcn", 
+        "graphsage",
+        #"gcnii"
         ]
 configurations = {
         "squirrel": {
