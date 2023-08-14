@@ -8,7 +8,6 @@ graphs = [
 models = [
         "gcn", 
         "graphsage",
-        #"gcnii"
         ]
 configurations = {
         "squirrel": {
@@ -82,6 +81,7 @@ def run_graph_parallel(
     command += " --exact_inference %s" % (exact_inference)
     command += " --num_dp_ways %s" % (num_dp_ways)
     command += " --enable_compression %s" % (enable_compression) # deprecated
+    command += " --residual 1"
     command += " >%s 2>&1" % (result_file)
 
     print("\nRunning Graph Parallel: graph %s, model %s, seed %s" % (
@@ -128,6 +128,7 @@ def run_hybrid_parallel(
     command += " --exact_inference %s" % (exact_inference)
     command += " --num_dp_ways %s" % (num_dp_ways)
     command += " --enable_compression %s" % (enable_compression) # deprecated
+    command += " --residual 1"
     command += " >%s 2>&1" % (result_file)
 
     print("\nRunning 2-Way Hybrid Parallel: graph %s, model %s, seed %s" % (
@@ -174,6 +175,7 @@ def run_pipeline_parallel(
     command += " --exact_inference %s" % (exact_inference)
     command += " --num_dp_ways %s" % (num_dp_ways)
     command += " --enable_compression %s" % (enable_compression) # deprecated
+    command += " --residual 1"
     command += " >%s 2>&1" % (result_file)
 
     print("\nRunning Pipeline Parallel: graph %s, model %s, seed %s" % (
@@ -187,21 +189,21 @@ if __name__ == "__main__":
         for graph in graphs:
             for model in models:
                 # graph parallel
-                result_dir = "./nsdi2023/overall_performance/results/graph/%s/%s" % (
+                result_dir = "./nsdi2023/overall_performance/residual_results/graph/%s/%s" % (
                         graph, model
                         )
                 os.system("mkdir -p %s" % (result_dir))
                 result_file = result_dir + "/%s.txt" % (seed)
                 run_graph_parallel(graph, model, seed, result_file)
                 # pipeline parallel
-                result_dir = "./nsdi2023/overall_performance/results/pipeline/%s/%s" % (
+                result_dir = "./nsdi2023/overall_performance/residual_results/pipeline/%s/%s" % (
                         graph, model
                         )
                 os.system("mkdir -p %s" % (result_dir))
                 result_file = result_dir + "/%s.txt" % (seed)
                 run_pipeline_parallel(graph, model, seed, result_file)
                 # hybrid parallel
-                result_dir = "./nsdi2023/overall_performance/results/hybrid/%s/%s" % (
+                result_dir = "./nsdi2023/overall_performance/residual_results/hybrid/%s/%s" % (
                         graph, model
                         )
                 os.system("mkdir -p %s" % (result_dir))

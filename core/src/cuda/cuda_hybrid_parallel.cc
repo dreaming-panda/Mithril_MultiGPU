@@ -14,9 +14,9 @@
 #define FIXPART
 //#define USE_RDMA 
 
-#define DISABLE_TRICK_1
+//#define DISABLE_TRICK_1
 //#define DISABLE_TRICK_2
-//#define DISABLE_TRICK_3
+#define DISABLE_TRICK_3
 
 #ifndef DISABLE_TRICK_3
 #define REVERSE_PERIOD (23)  
@@ -4107,7 +4107,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
 
     // obtained the profiling results
     gen_profiling_results(application);
-    execution_plan_generation(application);
+    //execution_plan_generation(application); FIXME
 
     //return 0;
 
