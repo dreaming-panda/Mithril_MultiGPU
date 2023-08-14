@@ -54,9 +54,19 @@ class GraphSageII: public AbstractApplication {
         Tensor * graph_convolution(Tensor * t, Tensor * h0, int layer) {
             double theta = log(lambda_ / layer + 1);
 
-            Tensor * aggr_t = aggregation(t, NORM_SUM, false);
-            Tensor * fc_t = fc(aggr_t, num_hidden_units_, "None", false);
-            Tensor * output = add(fc_t, t, theta, 1 - theta);
+            //Tensor * aggr_t = aggregation(t, NORM_SUM, false);
+            //Tensor * fc_t = fc(aggr_t, num_hidden_units_, "None", false);
+            //Tensor * output = add(fc_t, t, theta, 1 - theta);
+
+            Tensor * aggr_t = aggregation(t, MEAN, false);
+            Tensor * fc_aggr_t = fc(aggr_t, num_hidden_units_, "None", false);
+            Tensor * fc_t = fc(t, num_hidden_units_, "None", false);
+            Tensor * fc_sum_t = add(fc_aggr_t, fc_t, 1., 1., enable_recomputation_);
+
+            Tensor * relu_t = relu(fc_sum_t, enable_recomputation_);
+            Tensor * dropout_t = dropout(relu_t, dropout_rate_, enable_recomputation_);
+
+            Tensor * output = add(dropout_t, t, theta, 1. - theta);
 
             return output;
 
@@ -89,8 +99,6 @@ class GraphSageII: public AbstractApplication {
                     next_layer(1);
                 }
                 t = graph_convolution(t, h0, i + 1);
-                t = relu(t, enable_recomputation_);
-                t = dropout(t, dropout_rate_, enable_recomputation_);
             }
             // classification
             t = fc(t, num_classes_, "None", false);

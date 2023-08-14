@@ -16,7 +16,7 @@
 
 //#define DISABLE_TRICK_1
 //#define DISABLE_TRICK_2
-#define DISABLE_TRICK_3
+//#define DISABLE_TRICK_3
 
 #ifndef DISABLE_TRICK_3
 #define REVERSE_PERIOD (23)  
