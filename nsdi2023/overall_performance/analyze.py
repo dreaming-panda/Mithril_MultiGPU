@@ -84,25 +84,40 @@ def get_test_accuracy(result_file):
 def print_runtimes():
     print("Epoch Time (unit: s)")
     print(methods)
+    avg_speedups = 1.
+    max_seppedup = 0
     for graph in graphs:
         for model in models:
             epoch_times = []
+            graph_t = None
+            pipeline_t = None
             for method in methods:
                 s = 0.
                 for seed in range(1, num_runs + 1):
                     result_file = "./results/%s/%s/%s/%s.txt" % (
                             method, graph, model, seed
                             )
-                    s += get_epoch_time(result_file)
+                    t = get_epoch_time(result_file)
+                    s += t
                 s /= float(num_runs)
+                if method == "graph":
+                    graph_t = s
+                elif method == "pipeline":
+                    pipeline_t = s
                 epoch_times.append("%.2f" % (s))
-            print(graph, model, epoch_times)
+            assert(graph_t != None)
+            assert(pipeline_t != None)
+            avg_speedups *= (graph_t / pipeline_t)
+            max_seppedup = max(max_seppedup, graph_t / pipeline_t)
+            print(graph, model, epoch_times, "%.2f" % (graph_t / pipeline_t))
+    avg_speedups = avg_speedups ** (1. / float(len(graphs) * len(methods)))
+    print("Average / MAX improvement: %.2f / %.2f" % (avg_speedups, max_seppedup))
 
 def print_accuracies():
     print("Accuracy (%)")
     print(methods)
     for graph in graphs:
-        for model in models:
+        for model in ["gcnii"]:
             accuracies = []
             for method in methods:
                 s = 0.
@@ -118,9 +133,13 @@ def print_accuracies():
 def print_communication_volume():
     print("Communication Volume (unit: GB)")
     print(methods)
+    avg_improv = 1.
+    max_improv = 0.
     for graph in graphs:
         for model in models:
             epoch_times = []
+            graph_v = None
+            pipeline_v = None 
             for method in methods:
                 s = 0.
                 for seed in range(1, num_runs + 1):
@@ -129,8 +148,50 @@ def print_communication_volume():
                             )
                     s += get_communication_volume(result_file, "Total")
                 s /= float(num_runs)
+                if method == "graph":
+                    graph_v = s
+                elif method == "pipeline":
+                    pipeline_v = s
                 epoch_times.append("%.2f" % (s))
-            print(graph, model, epoch_times)
+            assert(graph_v != None and pipeline_v != None)
+            improv = graph_v / pipeline_v
+            avg_improv *= improv
+            max_improv = max(max_improv, improv)
+            print(graph, model, epoch_times, "%.2f" % (improv))
+    avg_improv = avg_improv ** (1. / float(len(graphs) * len(models)))
+    print("Average / MAX improvement: %.2f / %.2f" % (avg_improv, max_improv))
+
+def print_communication_time():
+    print("Communication Time (unit: ms)")
+    print(methods)
+    avg_improv = 1.
+    max_improv = 0.
+    for graph in graphs:
+        for model in models:
+            epoch_times = []
+            graph_v = None
+            pipeline_v = None 
+            for method in methods:
+                s = 0.
+                for seed in range(1, num_runs + 1):
+                    result_file = "./results/%s/%s/%s/%s.txt" % (
+                            method, graph, model, seed
+                            )
+                    s += get_breakdown_time(result_file, "Communication-Layer")
+                    s += get_breakdown_time(result_file, "Communication-Graph")
+                s /= float(num_runs)
+                if method == "graph":
+                    graph_v = s
+                elif method == "pipeline":
+                    pipeline_v = s
+                epoch_times.append("%.2f" % (s))
+            assert(graph_v != None and pipeline_v != None)
+            improv = graph_v / pipeline_v
+            avg_improv *= improv
+            max_improv = max(max_improv, improv)
+            print(graph, model, epoch_times, "%.2f" % (improv))
+    avg_improv = avg_improv ** (1. / float(len(graphs) * len(models)))
+    print("Average / MAX improvement: %.2f / %.2f" % (avg_improv, max_improv))
 
 def plot_convergence_curves():
     for graph in graphs:
@@ -159,14 +220,18 @@ def plot_convergence_curves():
                 #plt.ylabel("Test Accuracy")
             #max_y = max(y)
             #plt.ylim([max_y * 0.5, max_y * 1.1])
+            if graph == "reddit":
+                plt.ylim([0.85, 0.96])
             plt.legend()
+            plt.savefig("convergence_%s_%s.pdf" % (graph, model))
             plt.show()
 
 if __name__ == "__main__":
     print_runtimes()
     print_communication_volume()
+    print_communication_time();
     print_accuracies();
-    plot_convergence_curves()
+    #plot_convergence_curves()
 
 
 
