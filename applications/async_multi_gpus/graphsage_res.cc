@@ -29,82 +29,63 @@
 #include "distributed_sys.h"
 #include "partitioner.h"
 
-class GraphSageII: public AbstractApplication {
+class GraphSage: public AbstractApplication {
     private:
         int num_layers_;
         int num_hidden_units_;
         int num_classes_;
         double dropout_rate_;
-        double lambda_;
-        double alpha_;
         bool enable_recomputation_;
+        bool use_residual_;
 
     public:
-        GraphSageII(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, double lambda, double alpha):
+        GraphSage(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, bool use_residual):
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), 
-            dropout_rate_(dropout_rate), lambda_(lambda), alpha_(alpha) {
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate), use_residual_(use_residual) {
                 assert(num_layers >= 1);
                 assert(num_hidden_units >= 1);
                 assert(num_classes >= 1);
                 enable_recomputation_ = true;
         }
-        ~GraphSageII() {}
-
-        Tensor * graph_convolution(Tensor * t, Tensor * h0, int layer) {
-            double theta = log(lambda_ / layer + 1);
-
-            //Tensor * aggr_t = aggregation(t, NORM_SUM, false);
-            //Tensor * fc_t = fc(aggr_t, num_hidden_units_, "None", false);
-            //Tensor * output = add(fc_t, t, theta, 1 - theta);
-
-            Tensor * aggr_t = aggregation(t, MEAN, false);
-            Tensor * fc_aggr_t = fc(aggr_t, num_hidden_units_, "None", false);
-            Tensor * fc_t = fc(t, num_hidden_units_, "None", false);
-            Tensor * fc_sum_t = add(fc_aggr_t, fc_t, 1., 1., enable_recomputation_);
-
-            Tensor * relu_t = relu(fc_sum_t, enable_recomputation_);
-            Tensor * dropout_t = dropout(relu_t, dropout_rate_, enable_recomputation_);
-
-            Tensor * output = add(dropout_t, t, theta, 1. - theta);
-
-            return output;
-
-            //Tensor * hi = aggregation(t, MEAN, false);
-            //Tensor * support = add(hi, h0, 1 - alpha_, alpha_, enable_recomputation_);
-            //Tensor * fc_t = fc(support, num_hidden_units_, "None", false);
-            //Tensor * output_1 = add(fc_t, support, theta, 1 - theta, enable_recomputation_);
-
-            //Tensor * support_2 = add(t, h0, 1 - alpha_, alpha_, enable_recomputation_);
-            //Tensor * fc_t_2 = fc(support_2, num_hidden_units_, "None", false);;
-            //Tensor * output_2 = add(fc_t_2, support_2, theta, 1 - theta, enable_recomputation_);
-
-            //return add(output_1, output_2, 0.5, 0.5, enable_recomputation_);
-        }
+        ~GraphSage() {}
 
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
-            // preparing for h0 (dimension reduction)
-            t = dropout(t, dropout_rate_, enable_recomputation_); 
-            t = fc(t, num_hidden_units_, "None", false);
-            t = relu(t, enable_recomputation_);
+            t = dropout(t, dropout_rate_, true);
+            t = fc(t, num_hidden_units_);
+            t = relu(t, true);
             Tensor * h0 = t;
-            set_global_shared_tensor(h0); // the tensor that is shared across all GPUs
-            t = dropout(t, dropout_rate_, enable_recomputation_);
-            // L-layer GraphSageII convolutions
+
             for (int i = 0; i < num_layers_; ++ i) {
+                double lambda = 0.5;
+                double alpha = 0.1;
+                double theta = log(lambda / (i + 1) + 1);
+
+                // process the embeddings
+                //t = add(t, h0, 1 - alpha, alpha, true);
+                Tensor * res = t;
+                Tensor * t_0 = fc(t, num_hidden_units_, "None", true);
+                t = aggregation(t, MEAN, true);
+                t = fc(t, num_hidden_units_, "None", true);
+                t = add(t_0, t, 1., 1., enable_recomputation_);
+                t = relu(t, enable_recomputation_);
+                t = dropout(t, dropout_rate_, enable_recomputation_);
+                t = add(res, t, 1 - theta, theta, true);
+
+
+                if (i == num_layers_ - 1) {
+                    t = fc(t, num_classes_);
+                    t = softmax(t, enable_recomputation_);
+                } 
+
                 if (i == 0) {
                     next_layer(0);
+                } else if (i == num_layers_ - 1) {
+                    next_layer(2);
                 } else {
                     next_layer(1);
                 }
-                t = graph_convolution(t, h0, i + 1);
             }
-            // classification
-            t = fc(t, num_classes_, "None", false);
-            //t = log_softmax(t, enable_recomputation_);
-            t = softmax(t, enable_recomputation_);
-            next_layer(2);
             return t;
         }
 };
@@ -126,14 +107,13 @@ int main(int argc, char ** argv) {
         ("dropout", po::value<double>()->default_value(0.5), "The dropout rate.")
         ("weight_file", po::value<std::string>()->default_value("checkpointed_weights"), "The file storing the checkpointed weights.")
         ("seed", po::value<int>()->default_value(1234), "The random seed.")
-        ("alpha", po::value<double>()->default_value(0.1), "GraphSageII hyper-parameter alpha.")
-        ("lambda", po::value<double>()->default_value(0.5), "GraphSageII hyper-parameter lambda.")
         ("eval_freq", po::value<int>()->default_value(-1), "The evaluation frequency (for how many epoches the model is evaluated, -1: no evaluation, better for throughput measurement)")
         ("exact_inference", po::value<int>()->default_value(0), "1: always using exact inference to select the optimal weights (might be slower, only used for convergence analysis), 0: using approximate inference during the training.")
         ("feature_pre", po::value<int>()->default_value(0), "1: preprocess features by row-based normalization, 0: no feature preprocessing")
         ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
         ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.")
-        ("enable_compression", po::value<int>()->default_value(0), "1/0: Enable/Disable data compression for communication.");
+        ("enable_compression", po::value<int>()->default_value(0), "1/0: Enable/Disable data compression for communication.")
+        ("residual", po::value<int>()->default_value(0), "1/0: Use residual connections.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -160,8 +140,6 @@ int main(int argc, char ** argv) {
     double dropout = vm["dropout"].as<double>();
     std::string weight_file = vm["weight_file"].as<std::string>();
     int random_seed = vm["seed"].as<int>();
-    double alpha = vm["alpha"].as<double>();
-    double lambda = vm["lambda"].as<double>();
     int evaluation_frequency = vm["eval_freq"].as<int>();
     double always_exact_inference = vm["exact_inference"].as<int>() == 1;
     int num_dp_ways = vm["num_dp_ways"].as<int>();
@@ -170,6 +148,7 @@ int main(int argc, char ** argv) {
     if (vm["feature_pre"].as<int>() == 1) {
         feature_preprocessing = RowNormalizationPreprocessing;
     }
+    bool use_residual = vm["residual"].as<int>() == 1;
     WeightInitializationMethod weight_init;
     std::string weight_init_name = vm["weight_init"].as<std::string>();
     if (weight_init_name == "xavier") {
@@ -213,7 +192,7 @@ int main(int argc, char ** argv) {
 
     if (! node_id) {
         printf("The graph dataset locates at %s\n", graph_path.c_str());
-        printf("The number of GraphSageII layers: %d\n", num_layers);
+        printf("The number of GCNII layers: %d\n", num_layers);
         printf("The number of hidden units: %d\n", num_hidden_units);
         printf("The number of training epoches: %d\n", num_epoch);
         printf("Learning rate: %.6f\n", learning_rate);
@@ -221,8 +200,6 @@ int main(int argc, char ** argv) {
         printf("The dropout rate: %.3f\n", dropout);
         printf("The checkpointed weight file: %s\n", weight_file.c_str());
         printf("The random seed: %d\n", random_seed);
-        printf("GraphSage hyper-parameter alpha: %.6f\n", alpha);
-        printf("GraphSage hyper-parameter lambda: %.6f\n", lambda);
         printf("Number of classes: %d\n", num_classes);
         printf("Number of feature dimensions: %d\n", num_features);
         printf("Number of vertices: %u\n", num_vertices);
@@ -230,12 +207,12 @@ int main(int argc, char ** argv) {
     }
 
     // IIitialize the engine
-    GraphSageII * gcn = new GraphSageII(num_layers, num_hidden_units, num_classes, num_features, dropout, lambda, alpha);
+    GraphSage * sage = new GraphSage(num_layers, num_hidden_units, num_classes, num_features, dropout, use_residual);
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
-    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     //NLLLoss * loss = new NLLLoss();
+    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
     loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
 
     // loading the dataset masks
@@ -258,7 +235,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_loss(loss);
     execution_engine->set_weight_file(weight_file);
     execution_engine->set_num_chunks(num_chunks);
-    execution_engine->set_aggregation_type(NORM_SUM);
+    execution_engine->set_aggregation_type(MEAN);
     execution_engine->set_evaluation_frequency(evaluation_frequency);
     execution_engine->set_always_exact_inference(always_exact_inference);
     execution_engine->set_feature_preprocessing_method(feature_preprocessing);
@@ -273,13 +250,13 @@ int main(int argc, char ** argv) {
         exit(-1);
     } else if (partition_strategy == "model") {
         std::vector<double> cost_each_layer;
-        for (int i = 0; i < num_layers + 1; ++ i) {
+        for (int i = 0; i < num_layers; ++ i) {
             // assumed that the cost of each layer is the same
             cost_each_layer.push_back(1.);
         }
         int num_stages = execution_engine->get_num_stages();
         CUDAModelPartitioning partition = ModelPartitioner::get_model_parallel_partition(
-                gcn, num_stages, num_layers + 1, cost_each_layer, num_vertices
+                sage, num_stages, num_layers, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
     } else {
@@ -289,10 +266,10 @@ int main(int argc, char ** argv) {
     }
 
     // model training
-    execution_engine->execute_application(gcn, num_epoch);
+    execution_engine->execute_application(sage, num_epoch);
 
     // destroy the model and the engine
-    delete gcn;
+    delete sage;
     delete execution_engine;
     delete optimizer;
     delete executor;

@@ -11,22 +11,22 @@ dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_parti
 #dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
 num_gpus=4
-num_layers=32
-hunits=100
-lr=1e-3
-graph=flickr
+num_layers=2
+hunits=256
+lr=1e-2
+graph=reddit2
 epoch=5000
-decay=0
-dropout=0.5
-model=graphsageii
+decay=1e-5
+dropout=0.1
+model=graphsage_res
 eval_freq=-1
 enable_compression=0
 
-#chunks=$num_gpus
-#num_dp_ways=$num_gpus
+chunks=$num_gpus
+num_dp_ways=$num_gpus
 
-chunks=$((num_gpus*4))
-num_dp_ways=1
+#chunks=$((num_gpus*4))
+#num_dp_ways=1
 
 exact_inference=1
 seed=1
@@ -36,5 +36,5 @@ echo "Running experiments..."
 #mpirun -n $num_gpus --map-by node:PE=8 --host gnerv2:4,gnerv3:4 hostname
 
 #mpirun -n $num_gpus --map-by node:PE=8 --host gnerv2:4,gnerv3:4 ./applications/async_multi_gpus/$model --graph $dataset_path/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression 
-mpirun -n $num_gpus --map-by node:PE=8 --host gnerv1:4 ./applications/async_multi_gpus/$model --graph $dataset_path/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression 
+mpirun -n $num_gpus --map-by node:PE=8 --host gnerv1:4 ./applications/async_multi_gpus/$model --graph $dataset_path/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression --feature_pre 1 #--weight_init pytorch
 
