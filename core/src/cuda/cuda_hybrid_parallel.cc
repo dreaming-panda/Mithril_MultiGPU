@@ -23,7 +23,7 @@
 #else
 #define REVERSE_PERIOD (1)
 #endif
-#define EVAL_FREQUENCY (50)
+#define EVAL_FREQUENCY (10)
 #define NUM_GPUS_PER_NODE (4)
 #define NUM_INFERNECE_RUNS (3)
 #define NCCL_FUSED_COMMUNICATION (true)
@@ -82,6 +82,8 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
                 // do nothing
             } else if (aggregation_type == MEAN) {
                 norm_factor = 1. / indgree;
+            } else if (aggregation_type == SUM) {
+                norm_factor = 1.;
             } else {
                 fprintf(stderr, "Not supported aggregation type.\n");
                 assert(false);
@@ -91,6 +93,8 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
                 if (aggregation_type == NORM_SUM) {
                     host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
                 } else if (aggregation_type == MEAN) {
+                    host_csrValue_In_[nnz_in_count] = 0;
+                } else if (aggregation_type == SUM) {
                     host_csrValue_In_[nnz_in_count] = 0;
                 } else {
                     assert(false);
@@ -109,6 +113,8 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
             if (aggregation_type == NORM_SUM) {
                 host_csrValue_In_[nnz_in_count] = 1./(indgree + 1);
             } else if (aggregation_type == MEAN) {
+                host_csrValue_In_[nnz_in_count] = 0;
+            } else if (aggregation_type == SUM) {
                 host_csrValue_In_[nnz_in_count] = 0;
             } else {
                 assert(false);
@@ -149,6 +155,8 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
                 // do nothing
             } else if (aggregation_type == MEAN) {
                 norm_factor = 1. / global_graph_->get_in_degree(g_dst);
+            } else if (aggregation_type == SUM) {
+                norm_factor = 1.;
             } else {
                 assert(false);
             }
@@ -157,6 +165,8 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
                 if (aggregation_type == NORM_SUM) {
                     host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
                 } else if (aggregation_type == MEAN) {
+                    host_csrValue_Out_[nnz_out_count] = 0;
+                } else if (aggregation_type == SUM) {
                     host_csrValue_Out_[nnz_out_count] = 0;
                 } else {
                     assert(false);
@@ -177,6 +187,8 @@ void CUDABPIPLocalGraph::InitCsr(AggregationType aggregation_type)
             if (aggregation_type == NORM_SUM) {
                 host_csrValue_Out_[nnz_out_count] = 1./(indgree + 1);
             } else if (aggregation_type == MEAN) {
+                host_csrValue_Out_[nnz_out_count] = 0;
+            } else if (aggregation_type == SUM) {
                 host_csrValue_Out_[nnz_out_count] = 0;
             } else {
                 assert(false);
@@ -3913,8 +3925,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::hybrid_prepare_input_tensor
                         sum += feature_vec.data[i];
                     }
                     if (sum != 0) {
+                        double sqrt_sum = sqrt(sum);
                         for (int i = 0; i < num_features; ++ i) {
-                            feature_vec.data[i] /= sum;
+                            feature_vec.data[i] /= sqrt_sum;
                             bool bad_value = isinf(feature_vec.data[i]) || isnan(feature_vec.data[i]);
                             feature_vec.data[i] = bad_value ? 0.0: feature_vec.data[i];
                         }
