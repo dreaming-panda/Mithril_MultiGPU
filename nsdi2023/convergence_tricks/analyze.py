@@ -36,37 +36,44 @@ def extract_training_curve(result_file):
                 y.append(float(line[-3]))
     return x, y
 
-def plot_training_curve(result_file, curve_name):
+def plot_training_curve(result_file, curve_name, line = "-"):
     x, y = extract_training_curve(result_file)
-    plt.plot(x, y, label = curve_name)
+    plt.plot(x, y, line, label = curve_name)
 
 if __name__ == "__main__":
     for graph in graphs:
         fig, ax = plt.subplots(figsize=(5, 3))
-        #plot_training_curve(
-        #        "./results/no_tricks/%s/gcnii/1.txt" % (graph),
-        #        "No Tricks"
-        #        )
+        plot_training_curve(
+                "./results/no_tricks/%s/gcnii/1.txt" % (graph),
+                "No Tricks",
+                line = ":"
+                )
         plot_training_curve(
                 "./results/no_trick_1/%s/gcnii/1.txt" % (graph),
-                "No Trick 1"
+                "No Trick 1",
+                line = "--"
                 )
         plot_training_curve(
                 "./results/no_trick_2/%s/gcnii/1.txt" % (graph),
-                "No Trick 2"
+                "No Trick 2",
+                line = "--+"
                 )
         plot_training_curve(
                 "./results/no_trick_3/%s/gcnii/1.txt" % (graph),
-                "No Trick 3"
+                "No Trick 3",
+                line = "-."
                 )
         plot_training_curve(
                 "../overall_performance/results/pipeline/%s/gcnii/1.txt" % (graph),
-                "With All Tricks"
+                "With All Tricks",
+                line = "-"
                 )
         if graph == "reddit":
-            plt.ylim([0.8, 0.96])
+            plt.ylim([0.9, 0.96])
         plt.title(graph)
-        #plt.legend()
+        if graph == "squirrel":
+            plt.legend()
+        plt.savefig("%s.pdf" % (graph))
         plt.show()
 
 
