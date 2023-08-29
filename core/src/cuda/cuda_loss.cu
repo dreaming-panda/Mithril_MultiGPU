@@ -2,6 +2,7 @@
 #include<assert.h>
 #include<cuda_runtime.h>
 #include<math.h>
+#include "thrust/reduce.h"
 
 __global__ void kernelx()
 {
@@ -540,3 +541,144 @@ double NLLLoss::get_loss(Tensor * output_tensor, Tensor * std_tensor, VertexId l
             right - left, output_size, left, 0
             );
 }
+
+__global__ void bce_with_logits_get_loss_kernel(
+        DataType * prediction,
+        DataType * groundtruth,
+        int N, int output_size,
+        DataType * loss_buffer,
+        int * mask
+        ) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) {
+        DataType x = prediction[idx];
+        DataType y = groundtruth[idx];
+        int m = mask[idx / output_size];
+        DataType c = (-x) > 0 ? (-x): 0;
+        DataType log_sigma = - (c + log(exp(-c) + exp(-x-c)));
+        DataType l = y * log_sigma + (1. - y) * (-x + log_sigma);
+        loss_buffer[idx] = m ? l: 0;
+    }
+}
+
+double BCEWithLogitsLoss::get_loss(
+        Tensor * output_tensor, 
+        Tensor * std_tensor, 
+        VertexId left, 
+        VertexId right
+        ) {
+    assert(output_tensor != NULL);
+    assert(std_tensor != NULL);
+    assert(output_tensor->type == VERTEX_TENSOR);
+    assert(std_tensor->type == VERTEX_TENSOR);
+    assert(output_tensor->dims[0] == std_tensor->dims[0]);
+    assert(output_tensor->dims[1] == std_tensor->dims[1]);
+    int output_size = output_tensor->dims[1];
+
+    DataType * loss_buffer = get_loss_buffer(
+            sizeof(DataType) * output_size * (right - left)
+            );
+    assert(loss_buffer);
+    int num_elements = output_size * (right - left);
+    assert(num_elements > 0);
+
+    TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor->resource;
+    TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor->resource;
+
+    DataType * d_output_data = output_resource->get_gpu_data();
+    DataType * d_std_data = std_resource->get_gpu_data();
+
+    const int block_size = 1024;
+    const int num_blocks = (num_elements + block_size - 1) / block_size;
+    bce_with_logits_get_loss_kernel<<<num_blocks, block_size>>>(
+            d_output_data + left * output_size,
+            d_std_data + left * output_size,
+            num_elements, output_size,
+            loss_buffer,
+            gpu_training_mask_ + left
+            );
+    DataType loss = thrust::reduce(
+            thrust::device,
+            loss_buffer, 
+            loss_buffer + num_elements
+            ) / double(gntrain);
+    return loss;
+}
+
+__global__ void bce_with_logits_calculate_gradients_kernel(
+        DataType * prediction,
+        DataType * groundtruth,
+        DataType * prediction_grad,
+        int * mask,
+        int N,
+        int output_size, 
+        int num_training_samples
+        ) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) {
+        DataType x = prediction[idx];
+        DataType y = groundtruth[idx];
+        int m = mask[idx / output_size];
+        DataType sigma_x = 1. / (1. + exp(-x));
+        DataType grad = y + (1 - 2 * y) * sigma_x;
+        grad /= double(num_training_samples);
+        prediction_grad[idx] = m ? grad: 0.;
+    }
+}
+
+void BCEWithLogitsLoss::calculate_gradients(
+        Tensor * output_tensor, 
+        Tensor * std_tensor, 
+        VertexId left, 
+        VertexId right
+        ) {
+    assert(output_tensor && std_tensor);
+
+    assert(output_tensor->type == VERTEX_TENSOR);
+    assert(std_tensor->type == VERTEX_TENSOR);
+
+    assert(output_tensor->dims[0] == std_tensor->dims[0]);
+    assert(output_tensor->dims[1] == std_tensor->dims[1]);
+
+    assert(output_tensor->resource != NULL);
+    assert(std_tensor->resource != NULL);
+    TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor->resource;
+    TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor->resource;
+
+    DataType * d_output_data = output_resource->get_gpu_data();
+    DataType * d_std_data = std_resource->get_gpu_data();
+    DataType * d_output_grad = output_resource->get_gpu_grad();
+    assert(d_output_data != NULL);
+    assert(d_std_data != NULL);
+    assert(d_output_grad != NULL);
+
+    int output_size = output_tensor->dims[1];
+    DataType * adjusted_std_data = d_std_data + left * output_size;
+    DataType * adjusted_output_data = d_output_data + left * output_size;
+    DataType * adjusted_output_grad = d_output_grad + left * output_size;
+    int * mask = gpu_training_mask_ + left;
+
+    assert(! output_tensor->is_grad_transient);
+    assert(! output_tensor->is_data_transient);
+
+    const VertexId num_elements = (right - left) * output_size;
+    const int block_size = 1024;
+    const int num_blocks = (num_elements + block_size - 1) / block_size;
+
+    bce_with_logits_calculate_gradients_kernel<<<num_blocks, block_size>>>(
+            adjusted_output_data, 
+            adjusted_std_data,
+            adjusted_output_grad,
+            mask, 
+            num_elements, 
+            output_size, 
+            gntrain
+            );
+
+    cudaStreamSynchronize(0);
+}
+
+
+
+
+

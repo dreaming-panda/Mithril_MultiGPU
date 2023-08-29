@@ -494,5 +494,37 @@ void NLLLoss::calculate_gradients(Tensor * output_tensor, Tensor * std_tensor) {
     assert(false);
 }
 
+// BCEWithLogitsLoss
+
+DataType * BCEWithLogitsLoss::get_loss_buffer(
+        size_t requested_buffer_size_
+        ) {
+    if (requested_buffer_size_ <= loss_buffer_size_) {
+        assert(loss_buffer_);
+        return loss_buffer_;
+    }
+    if (loss_buffer_ != NULL) {
+        checkCUDA(cudaFree(loss_buffer_));
+        loss_buffer_ = NULL;
+    }
+    checkCUDA(cudaMalloc(&loss_buffer_, requested_buffer_size_));
+}
+
+BCEWithLogitsLoss::BCEWithLogitsLoss() {
+    loss_buffer_ = NULL;
+    loss_buffer_size_ = 0;
+}
+
+BCEWithLogitsLoss::~BCEWithLogitsLoss() {
+    if (loss_buffer_size_ > 0) {
+        assert(loss_buffer_);
+        checkCUDA(cudaFree(loss_buffer_));
+        loss_buffer_ = NULL;
+        loss_buffer_size_ = 0;
+    }
+    assert(loss_buffer_size_ == 0);
+    assert(loss_buffer_ == NULL);
+}
+
 
 

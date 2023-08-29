@@ -192,4 +192,30 @@ class NLLLoss: public CrossEntropyLossGPU {
         void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right);
 };
 
+class BCEWithLogitsLoss: public AbstractLoss {
+    private:
+        DataType * loss_buffer_;
+        size_t loss_buffer_size_;
+
+        DataType * get_loss_buffer(size_t requested_buffer_size_);
+
+    public:
+        BCEWithLogitsLoss();
+        ~BCEWithLogitsLoss();
+
+        double get_loss(Tensor * output_tensor, Tensor * std_tensor) {
+            assert(false); // not supported
+        }
+        void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor) {
+            assert(false); // not supported
+        }
+
+        double get_loss(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right);
+        void calculate_gradients(Tensor * output_tensor, Tensor * std_tensor, VertexId left, VertexId right);
+};
+
 #endif
+
+
+
+
