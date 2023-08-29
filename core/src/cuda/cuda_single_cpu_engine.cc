@@ -281,7 +281,7 @@ double SingleNodeExecutionEngineGPU::calculate_accuracy_mask(Tensor * output_ten
     assert(cuda_std_data != nullptr);
     VertexId num_vertices = output_resource->get_num_vertices();
     int output_size = output_tensor->dims[1];
-    DataType * cuda_acc_;
+    //DataType * cuda_acc_;
     double acc = LaunchCalculate_Accuracy_Mask(cuda_acc, cuda_output_data, cuda_std_data, num_vertices, output_size, type);
     return acc;
 }

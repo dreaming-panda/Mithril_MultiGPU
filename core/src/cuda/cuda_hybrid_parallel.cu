@@ -203,6 +203,190 @@ DataType DistributedPIPHybridParallelExecutionEngineGPU::calculate_test_predicti
             );
 }
 
+__global__ void calculate_tp_kernel(
+        DataType * prediction, 
+        DataType * groundtruth,
+        int num_vertices,
+        int output_size,
+        DataType * accum_buffer,
+        int * mask
+        ) {
+    int vidx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (vidx < num_vertices) {
+        int tp = 0;
+        for (int i = 0; i < output_size; ++ i) {
+            int idx = i * num_vertices + vidx;
+            int m = mask[idx / output_size];
+            DataType x = prediction[idx];
+            DataType y = groundtruth[idx];
+            tp += (((x >= 0.) && (y >= 0.5)) && (m > 0));
+        }
+        accum_buffer[vidx] = (DataType) tp;
+    }
+}
+
+__global__ void calculate_fp_kernel(
+        DataType * prediction, 
+        DataType * groundtruth,
+        int num_vertices,
+        int output_size,
+        DataType * accum_buffer,
+        int * mask
+        ) {
+    int vidx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (vidx < num_vertices) {
+        int fp = 0;
+        for (int i = 0; i < output_size; ++ i) {
+            int idx = i * num_vertices + vidx;
+            int m = mask[idx / output_size];
+            DataType x = prediction[idx];
+            DataType y = groundtruth[idx];
+            fp += (((x >= 0.) && (y < 0.5)) && (m > 0));
+        }
+        accum_buffer[vidx] = (DataType) fp;
+    }
+}
+
+__global__ void calculate_tn_kernel(
+        DataType * prediction, 
+        DataType * groundtruth,
+        int num_vertices,
+        int output_size,
+        DataType * accum_buffer,
+        int * mask
+        ) {
+    int vidx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (vidx < num_vertices) {
+        int tn = 0;
+        for (int i = 0; i < output_size; ++ i) {
+            int idx = i * num_vertices + vidx;
+            int m = mask[idx / output_size];
+            DataType x = prediction[idx];
+            DataType y = groundtruth[idx];
+            tn += (((x < 0.) && (y < 0.5)) && (m > 0));
+        }
+        accum_buffer[vidx] = (DataType) tn;
+    }
+}
+
+__global__ void calculate_fn_kernel(
+        DataType * prediction, 
+        DataType * groundtruth,
+        int num_vertices,
+        int output_size,
+        DataType * accum_buffer,
+        int * mask
+        ) {
+    int vidx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (vidx < num_vertices) {
+        int fn = 0;
+        for (int i = 0; i < output_size; ++ i) {
+            int idx = i * num_vertices + vidx;
+            int m = mask[idx / output_size];
+            DataType x = prediction[idx];
+            DataType y = groundtruth[idx];
+            fn += (((x < 0.) && (y >= 0.5)) && (m > 0));
+        }
+        accum_buffer[vidx] = (DataType) fn;
+    }
+}
+
+double DistributedPIPHybridParallelExecutionEngineGPU::calculate_micro_f1_mask(
+        Tensor * output_tensor, 
+        Tensor * std_tensor, 
+        int mask_type
+        ) {
+    assert(output_tensor->type == VERTEX_TENSOR);
+    assert(std_tensor->type == VERTEX_TENSOR);
+    assert(output_tensor->dims[0] == std_tensor->dims[0]);
+    assert(output_tensor->dims[1] == std_tensor->dims[1]);
+
+    assert(output_tensor->resource != nullptr);
+    assert(std_tensor->resource != nullptr);
+    TensorResourceGPU * output_resource = (TensorResourceGPU*) output_tensor->resource;
+    TensorResourceGPU * std_resource = (TensorResourceGPU*) std_tensor->resource;
+
+    DataType * prediction = output_resource->get_gpu_data();
+    DataType * groundtruth = std_resource->get_gpu_data();
+    assert(prediction);
+    assert(groundtruth);
+
+    int num_vertices = (int) output_resource->get_num_vertices();
+    int output_size = output_tensor->dims[1];
+
+    int * mask = NULL;
+    if (mask_type == 0) {
+        mask = gpu_training_mask_;
+    } else if (mask_type == 1) {
+        mask = gpu_valid_mask_;
+    } else if (mask_type == 2) {
+        mask = gpu_test_mask_;
+    } else {
+        assert(false && "Unsupported mask type");
+    }
+    assert(mask);
+
+    int block_size = 1024;
+    int num_blocks = (num_vertices + block_size - 1) / block_size;
+
+    assert(cuda_acc);
+
+    // calculate true positives
+    calculate_tp_kernel<<<num_blocks, block_size>>>(
+            prediction, groundtruth, 
+            num_vertices, output_size,
+            cuda_acc, mask
+            );
+    DataType tp = thrust::reduce(
+            thrust::device,
+            cuda_acc, 
+            cuda_acc + num_vertices
+            );
+
+    // calculate false positives
+    calculate_fp_kernel<<<num_blocks, block_size>>>(
+            prediction, groundtruth, 
+            num_vertices, output_size,
+            cuda_acc, mask
+            );
+    DataType fp = thrust::reduce(
+            thrust::device,
+            cuda_acc, 
+            cuda_acc + num_vertices
+            );
+
+    // calculate true negatives
+    calculate_tn_kernel<<<num_blocks, block_size>>>(
+            prediction, groundtruth, 
+            num_vertices, output_size,
+            cuda_acc, mask
+            );
+    DataType tn = thrust::reduce(
+            thrust::device,
+            cuda_acc, 
+            cuda_acc + num_vertices
+            );
+
+    // calculate false negatives
+    calculate_fn_kernel<<<num_blocks, block_size>>>(
+            prediction, groundtruth, 
+            num_vertices, output_size,
+            cuda_acc, mask
+            );
+    DataType fn = thrust::reduce(
+            thrust::device,
+            cuda_acc, 
+            cuda_acc + num_vertices
+            );
+
+    // calculate the micro F1 score
+    DataType precision = tp / (fp + tp);
+    DataType recall = tp / (fn + tp);
+    DataType micro_f1 = 2 * (precision * recall) / (precision + recall);
+
+    return micro_f1;
+}
+
 __global__ void gather_vertices_embeddings_kernel(
         DataType * src_data, size_t src_data_size,
         DataType * dst_data, size_t dst_data_size,
