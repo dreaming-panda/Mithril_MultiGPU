@@ -42,6 +42,13 @@ def get_flickr_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/
             )
     return dataset
 
+def get_yelp_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    download_path += "yelp"
+    dataset = pyg.datasets.Yelp(
+            root = download_path
+            )
+    return dataset
+
 def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/shared/gnn_datasets/raw"):
     path = saved_path + "/" + name
     os.system("mkdir -p " + path)
@@ -63,9 +70,9 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
     features = features.numpy()
     labels = labels.numpy()
 
-    print(edge_index)
-    print(features)
-    print(labels)
+    print("Edges:", edge_index)
+    print("Features:", features)
+    print("Labels:", labels)
 
     num_edges = edge_index.shape[1]
     num_vertices = features.shape[0]
@@ -78,15 +85,6 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
 
     if len(labels.shape) == 2: # some datasets are in one-hot representation
         assert(labels.shape[1] == num_classes)
-        one_hot_labels = labels
-        labels = []
-        for i in range(num_vertices):
-            l = None
-            for j in range(num_classes):
-                if one_hot_labels[i][j] > 0.:
-                    assert(l == None)
-                    l = j
-            labels.append(l)
 
     # Dump the meta data
     with open(path + "/meta_data.txt", "w") as f:
@@ -212,8 +210,13 @@ def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/
     with open(path + "/label.bin", "wb") as f:
         for i in range(num_vertices):
             label = [0.] * num_classes
-            assert(labels[i] >= 0 and labels[i] < num_classes)
-            label[labels[i]] = 1.
+            if len(labels.shape) == 1: 
+                assert(labels[i] >= 0 and labels[i] < num_classes)
+                label[labels[i]] = 1.
+            else: # already in the one hot representation
+                assert(len(labels.shape) == 2)
+                for j in range(num_classes):
+                    label[j] = labels[i][j]
             bi_label = struct.pack(
                     "%sf" % (num_classes), *label
                     )
@@ -226,14 +229,17 @@ if __name__ == "__main__":
     #dataset = get_amazon_products_dataset()
     #name = "amazon_products"
 
-    dataset = get_amazon_computer_dataset()
-    name = "amazon_computers"
+    #dataset = get_amazon_computer_dataset()
+    #name = "amazon_computers"
 
     #dataset = get_reddit2_dataset()
     #name = "reddit2"
 
     #dataset = get_flickr_dataset()
     #name = "flickr"
+
+    dataset = get_yelp_dataset()
+    name = "yelp"
 
     exported_as_mithril_format(dataset, name)
 

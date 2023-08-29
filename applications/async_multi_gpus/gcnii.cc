@@ -29,15 +29,6 @@
 #include "distributed_sys.h"
 #include "partitioner.h"
 
-// TODO
-// [x] allowed inference directly on this code base
-// [x] allowed compression or not configuration
-// [x] allowed initialization method conf
-// [x] allowed feature preprocessing conf
-// [x] collecting the mirror data
-// [x] transferring the mirror data to remote nodes with RDMA
-// [x] updating the received graph data
-
 class GCNII: public AbstractApplication {
     private:
         int num_layers_;
@@ -47,12 +38,15 @@ class GCNII: public AbstractApplication {
         double lambda_;
         double alpha_;
         bool enable_recomputation_;
+        bool multi_label_;
 
     public:
-        GCNII(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, double lambda, double alpha):
+        GCNII(int num_layers, int num_hidden_units, int num_classes, 
+                int num_features, double dropout_rate, double lambda, double alpha,
+                bool multi_label):
             AbstractApplication(num_features),
             num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), 
-            dropout_rate_(dropout_rate), lambda_(lambda), alpha_(alpha) {
+            dropout_rate_(dropout_rate), lambda_(lambda), alpha_(alpha), multi_label_(multi_label) {
                 assert(num_layers >= 1);
                 assert(num_hidden_units >= 1);
                 assert(num_classes >= 1);
@@ -92,7 +86,8 @@ class GCNII: public AbstractApplication {
             // classification
             t = fc(t, num_classes_, "None", false);
             //t = log_softmax(t, enable_recomputation_);
-            t = softmax(t, enable_recomputation_);
+            if (! multi_label_)
+                t = softmax(t, enable_recomputation_);
             next_layer(2);
             return t;
         }
@@ -122,7 +117,8 @@ int main(int argc, char ** argv) {
         ("feature_pre", po::value<int>()->default_value(0), "1: preprocess features by row-based normalization, 0: no feature preprocessing")
         ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
         ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.")
-        ("enable_compression", po::value<int>()->default_value(0), "1/0: Enable/Disable data compression for communication.");
+        ("enable_compression", po::value<int>()->default_value(0), "1/0: Enable/Disable data compression for communication.")
+        ("multi_label", po::value<int>()->default_value(0), "1/0: Is a multi-label classification task.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
         po::notify(vm);
@@ -156,6 +152,7 @@ int main(int argc, char ** argv) {
     int num_dp_ways = vm["num_dp_ways"].as<int>();
     FeaturePreprocessingMethod feature_preprocessing = NoFeaturePreprocessing;
     bool enable_compression = vm["enable_compression"].as<int>() == 1;
+    bool multi_label = vm["multi_label"].as<int>() == 1;
     if (vm["feature_pre"].as<int>() == 1) {
         feature_preprocessing = RowNormalizationPreprocessing;
     }
@@ -219,13 +216,20 @@ int main(int argc, char ** argv) {
     }
 
     // IIitialize the engine
-    GCNII * gcn = new GCNII(num_layers, num_hidden_units, num_classes, num_features, dropout, lambda, alpha);
+    GCNII * gcn = new GCNII(num_layers, num_hidden_units, num_classes, num_features, dropout, lambda, alpha, multi_label);
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
-    CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
-    //NLLLoss * loss = new NLLLoss();
-    loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
+    AbstractLoss * loss = NULL;
+    if (! multi_label) {
+        CrossEntropyLossGPU * ce_loss = new CrossEntropyLossGPU();
+        //NLLLoss * loss = new NLLLoss();
+        ce_loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
+        loss = ce_loss;
+    } else {
+        BCEWithLogitsLoss * bce_loss = new BCEWithLogitsLoss();
+        loss = bce_loss;
+    }
 
     // loading the dataset masks
     int * training = NULL;
@@ -255,6 +259,9 @@ int main(int argc, char ** argv) {
     execution_engine->set_num_dp_ways(num_dp_ways);
     execution_engine->set_chunk_boundary_file(graph_path + "/partitions.txt");
     execution_engine->set_enable_compression(enable_compression);
+    if (multi_label) {
+        execution_engine->enable_multi_label_classification();
+    }
 
     // determine the partitioning 
     if (partition_strategy == "hybrid") {

@@ -508,6 +508,7 @@ DataType * BCEWithLogitsLoss::get_loss_buffer(
         loss_buffer_ = NULL;
     }
     checkCUDA(cudaMalloc(&loss_buffer_, requested_buffer_size_));
+    return loss_buffer_;
 }
 
 BCEWithLogitsLoss::BCEWithLogitsLoss() {

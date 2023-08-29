@@ -53,18 +53,33 @@ class GraphProcessor {
                 Edge * edges,
                 Edge * &processed_edges
                 ) {
-            printf("Removing self-loops...\n");
+            printf("Removing self-loops... num_edges = %lu\n", num_edges);
             for (EdgeId i = 0; i < num_edges; ++ i) {
                 VertexId src = edges[i].src;
                 VertexId dst = edges[i].dst;
                 edges[i].src = std::min(src, dst);
                 edges[i].dst = std::max(src, dst);
             }
+            EdgeId num_self_loops = 0;
+            {
+                EdgeId i = 0;
+                while (i < num_edges) {
+                    if (edges[i].src == edges[i].dst) {
+                        std::swap(edges[i], edges[num_edges - 1]);
+                        num_edges --;
+                        num_self_loops ++;
+                    } else {
+                        ++ i;
+                    }
+                }
+            }
+            printf("    Removed %lu self-loops, num_edges = %lu\n", num_self_loops, num_edges);
             for (EdgeId i = 0; i < num_edges; ++ i) {
                 if (edges[i].src == edges[i].dst) {
-                    std::swap(edges[i], edges[num_edges - 1]);
-                    num_edges --;
+                    printf("Detected an unexpected self-loop: %lu: %u <=> %u\n", 
+                            i, edges[i].src, edges[i].dst);
                 }
+                assert(edges[i].src != edges[i].dst);
             }
             printf("Removing the duplicated edges...\n");
             auto cmp = [](const Edge &a, const Edge &b) {
@@ -82,11 +97,12 @@ class GraphProcessor {
             processed_edges = new Edge [num_edges * 2];
             EdgeId unremoved_edges = 0;
             for (EdgeId i = 0; i < num_edges; ++ i) {
-                if (! (edges[i].src == edges[i - 1].src &&
+                if (i == 0 || !(edges[i].src == edges[i - 1].src &&
                         edges[i].dst == edges[i - 1].dst)) {
                     processed_edges[unremoved_edges ++] = edges[i];
                     processed_edges[unremoved_edges].src = edges[i].dst;
                     processed_edges[unremoved_edges].dst = edges[i].src;
+                    assert(edges[i].src != edges[i].dst);
                     unremoved_edges ++;
                 }
             }

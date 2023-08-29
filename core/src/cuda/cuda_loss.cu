@@ -556,7 +556,7 @@ __global__ void bce_with_logits_get_loss_kernel(
         int m = mask[idx / output_size];
         DataType c = (-x) > 0 ? (-x): 0;
         DataType log_sigma = - (c + log(exp(-c) + exp(-x-c)));
-        DataType l = y * log_sigma + (1. - y) * (-x + log_sigma);
+        DataType l = -(y * log_sigma + (1. - y) * (-x + log_sigma));
         loss_buffer[idx] = m ? l: 0;
     }
 }
@@ -587,6 +587,7 @@ double BCEWithLogitsLoss::get_loss(
 
     DataType * d_output_data = output_resource->get_gpu_data();
     DataType * d_std_data = std_resource->get_gpu_data();
+    assert(! output_tensor->is_data_transient);
 
     const int block_size = 1024;
     const int num_blocks = (num_elements + block_size - 1) / block_size;
@@ -597,11 +598,12 @@ double BCEWithLogitsLoss::get_loss(
             loss_buffer,
             gpu_training_mask_ + left
             );
+    checkCUDA(cudaStreamSynchronize(0));
     DataType loss = thrust::reduce(
             thrust::device,
             loss_buffer, 
             loss_buffer + num_elements
-            ) / double(gntrain);
+            ) / double(gntrain) / double(output_size);
     return loss;
 }
 
@@ -620,9 +622,11 @@ __global__ void bce_with_logits_calculate_gradients_kernel(
         DataType y = groundtruth[idx];
         int m = mask[idx / output_size];
         DataType sigma_x = 1. / (1. + exp(-x));
-        DataType grad = y + (1 - 2 * y) * sigma_x;
+        DataType grad = -(y + (1 - 2 * y) * sigma_x);
         grad /= double(num_training_samples);
+        grad /= double(output_size);
         prediction_grad[idx] = m ? grad: 0.;
+        //prediction_grad[idx] = 0.;
     }
 }
 
@@ -658,8 +662,14 @@ void BCEWithLogitsLoss::calculate_gradients(
     DataType * adjusted_output_grad = d_output_grad + left * output_size;
     int * mask = gpu_training_mask_ + left;
 
-    assert(! output_tensor->is_grad_transient);
-    assert(! output_tensor->is_data_transient);
+    if (output_tensor->is_grad_transient) {
+        adjusted_output_grad = d_output_grad; 
+    }
+    if (output_tensor->is_data_transient) {
+        adjusted_output_data = d_output_data;
+    }
+    //assert(! output_tensor->is_grad_transient);
+    //assert(! output_tensor->is_data_transient);
 
     const VertexId num_elements = (right - left) * output_size;
     const int block_size = 1024;

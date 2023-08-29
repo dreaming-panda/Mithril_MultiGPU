@@ -4704,9 +4704,15 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
             gpu_data[output_tensor_] = resource->get_gpu_data();
             resource->set_gpu_data_from_gpu(gpu);
             // do the computation
-            train_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 0);
-            valid_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 1);
-            test_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 2);
+            if (! multi_label_classification_) {
+                train_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 0);
+                valid_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 1);
+                test_acc = calculate_accuracy_mask(output_tensor_, std_tensor_, 2);
+            } else {
+                train_acc = calculate_micro_f1_mask(output_tensor_, std_tensor_, 0);
+                valid_acc = calculate_micro_f1_mask(output_tensor_, std_tensor_, 1);
+                test_acc = calculate_micro_f1_mask(output_tensor_, std_tensor_, 2);
+            }
             // release the temporary GPU buffer
             checkCUDA(cudaFree(gpu));
             resource->set_gpu_data_from_gpu(gpu_data[output_tensor_]);

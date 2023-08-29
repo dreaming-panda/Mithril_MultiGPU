@@ -322,7 +322,7 @@ double DistributedPIPHybridParallelExecutionEngineGPU::calculate_micro_f1_mask(
     } else if (mask_type == 2) {
         mask = gpu_test_mask_;
     } else {
-        assert(false && "Unsupported mask type");
+        assert(false);
     }
     assert(mask);
 

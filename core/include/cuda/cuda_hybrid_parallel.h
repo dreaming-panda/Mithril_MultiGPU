@@ -1173,6 +1173,8 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         double accuracy_;
         double accum_loss_;
 
+        bool multi_label_classification_ = false; // by default, the classification tasks are single-label
+
         int user_specified_num_chunks_ = 128;
 
         LockFreeQueue<CUDAPIPForwardTask> * act_gpu2cpu_queue_;
@@ -1538,6 +1540,9 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
             int num_nodes = DistributedSys::get_instance()->get_num_nodes();
             assert(num_nodes % num_dp_ways == 0);
             num_dp_ways_ = num_dp_ways;
+        }
+        inline void enable_multi_label_classification() {
+            multi_label_classification_ = true;
         }
 
 };
