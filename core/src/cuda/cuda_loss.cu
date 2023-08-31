@@ -603,7 +603,8 @@ double BCEWithLogitsLoss::get_loss(
             thrust::device,
             loss_buffer, 
             loss_buffer + num_elements
-            ) / double(gntrain) / double(output_size);
+            );
+    loss = loss / double(gntrain) / double(output_size);
     return loss;
 }
 
@@ -622,7 +623,7 @@ __global__ void bce_with_logits_calculate_gradients_kernel(
         DataType y = groundtruth[idx];
         int m = mask[idx / output_size];
         DataType sigma_x = 1. / (1. + exp(-x));
-        DataType grad = -(y + (1 - 2 * y) * sigma_x);
+        DataType grad = sigma_x - y;
         grad /= double(num_training_samples);
         grad /= double(output_size);
         prediction_grad[idx] = m ? grad: 0.;

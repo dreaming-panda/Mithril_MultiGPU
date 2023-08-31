@@ -23,7 +23,7 @@
 #else
 #define REVERSE_PERIOD (1)
 #endif
-#define EVAL_FREQUENCY (10)
+#define EVAL_FREQUENCY (50)
 #define NUM_GPUS_PER_NODE (4)
 #define NUM_INFERNECE_RUNS (3)
 #define NCCL_FUSED_COMMUNICATION (true)
