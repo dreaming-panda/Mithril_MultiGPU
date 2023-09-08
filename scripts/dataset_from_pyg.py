@@ -49,6 +49,13 @@ def get_yelp_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/py
             )
     return dataset
 
+def get_amazon_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    download_path += "amazon"
+    dataset = pyg.datasets.AmazonProducts(
+            root = download_path
+            )
+    return dataset
+
 def exported_as_mithril_format(dataset, name, saved_path = "/shared_hdd_storage/shared/gnn_datasets/raw"):
     path = saved_path + "/" + name
     os.system("mkdir -p " + path)
@@ -238,8 +245,11 @@ if __name__ == "__main__":
     #dataset = get_flickr_dataset()
     #name = "flickr"
 
-    dataset = get_yelp_dataset()
-    name = "yelp"
+    #dataset = get_yelp_dataset()
+    #name = "yelp"
+
+    dataset = get_amazon_dataset()
+    name = "amazon"
 
     exported_as_mithril_format(dataset, name)
 

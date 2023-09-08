@@ -7,18 +7,18 @@ cd build
 make -j
 
 #dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_partitioned_graphs 
-dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
-#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
+#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
+dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
-num_gpus=4
-num_layers=4
-hunits=256
+num_gpus=8
+num_layers=32
+hunits=8
 lr=1e-3
-graph=yelp
-epoch=15000
+graph=amazon
+epoch=100
 decay=0
 dropout=0.1
-model=graphsage
+model=gcnii
 eval_freq=-1
 enable_compression=0
 
@@ -36,5 +36,5 @@ echo "Running experiments..."
 #mpirun -n $num_gpus --map-by node:PE=8 --host gnerv2:4,gnerv3:4 hostname
 
 #mpirun -n $num_gpus --map-by node:PE=8 --host gnerv2:4,gnerv3:4 ./applications/async_multi_gpus/$model --graph $dataset_path/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression 
-mpirun -n $num_gpus --map-by node:PE=8 --host gnerv2:4 ./applications/async_multi_gpus/$model --graph $dataset_path/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression --multi_label 1
+mpirun -n $num_gpus --map-by node:PE=8 --host gnerv2:4,gnerv1:4 ./applications/async_multi_gpus/$model --graph $dataset_path/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression --multi_label 1
 
