@@ -1236,6 +1236,36 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
         double estimated_backward_runtime_[MAX_NUM_LAYERS][MAX_NUM_CHUNKS];
         double estimated_chunk_cost_[MAX_NUM_CHUNKS];
 
+        DataType * aggregation_buffer_ = NULL;
+        inline void alloc_aggregation_buffer(const std::vector<Operator*>& operators) {
+            int max_vector_size = 0;
+            for (Operator* op: operators) {
+                if (op->get_type() == OPERATOR_AGGREGATION) {
+                    Tensor * tensor = op->get_input_tensor(0);
+                    max_vector_size = std::max(max_vector_size, tensor->dims[1]);
+                }
+            }
+            assert(max_vector_size > 0);
+            VertexId num_vertices = graph_structure_->get_num_global_vertices();
+            int num_elements = num_vertices * max_vector_size;
+            checkCUDA(
+                    cudaMalloc(
+                        &aggregation_buffer_, 
+                        sizeof(DataType) * num_elements
+                        )
+                    );
+            assert(aggregation_buffer_);
+        }
+        void swap_in_aggregation_buffer_act(Tensor * tensor);
+        void swap_out_aggregation_buffer_act(Tensor * tensor);
+        void swap_in_aggregation_buffer_grad(Tensor * tensor);
+        void swap_out_aggregation_buffer_grad(Tensor * tensor);
+        inline void dealloc_aggregation_buffer() {
+            assert(aggregation_buffer_);
+            checkCUDA(cudaFree(aggregation_buffer_));
+            aggregation_buffer_ = NULL;
+        }
+
         inline int get_num_epoch() {
             return num_epoch_;
         }

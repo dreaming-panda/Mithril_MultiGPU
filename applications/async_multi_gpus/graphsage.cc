@@ -67,10 +67,10 @@ class GraphSage: public AbstractApplication {
                     // reduce the dimension first to reduce 
                     // computation cost
                     t = fc(t, output_size, "None", true);
-                    t = aggregation(t, MEAN, true);
+                    t = aggregation(t, MEAN);
                 } else {
                     shortcut = t;
-                    t = aggregation(t, MEAN, true);
+                    t = aggregation(t, MEAN);
                     t = fc(t, output_size, "None", true);
                 }
                 // added the transformed aggregated results with the transformed embeddings

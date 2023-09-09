@@ -88,8 +88,10 @@ DistributedSys * DistributedSys::instance_ = nullptr;
 
 
 DistributedSys::DistributedSys() {
+    printf("Initializing the runtime environment\n");
     int provided;
     MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+    printf("DONE MPI INIT\n");
     assert(provided == MPI_THREAD_MULTIPLE);
     MPI_Comm_rank(MPI_COMM_WORLD, &node_id_);
     MPI_Comm_size(MPI_COMM_WORLD, &num_nodes_);

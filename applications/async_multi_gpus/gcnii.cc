@@ -134,6 +134,8 @@ int main(int argc, char ** argv) {
         exit(-1);
     }
 
+    printf("Starting GNN Training...\n");
+
     std::string graph_path = vm["graph"].as<std::string>();
     int num_layers = vm["layers"].as<int>();
     int num_hidden_units = vm["hunits"].as<int>();

@@ -1740,10 +1740,12 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         if (op->get_type() == OPERATOR_AGGREGATION) {
             aggr_ops.push_back(op);
             Tensor * tensor = op->get_input_tensor(0);
-            size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+            size_t disp = (size_t) engine_->local_vertex_begin_ * tensor->dims[1];
+            size_t num_elements = (size_t) engine_->num_local_vertices_ * tensor->dims[1];
             DataType * data = NULL;
             checkCUDA(cudaMalloc(&data, sizeof(DataType) * num_elements));
             assert(data);
+            data -= disp;
             historical_data.push_back(data);
         }
     }
@@ -1755,8 +1757,9 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
         Tensor * tensor = op->get_input_tensor(0);
         TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
         DataType * data = resource->get_gpu_data();
-        size_t num_elements = (size_t) num_vertices * tensor->dims[1];
-        checkCUDA(cudaMemcpy(h_data, data, sizeof(DataType) * num_elements,
+        size_t disp = (size_t) engine_->local_vertex_begin_ * tensor->dims[1];
+        size_t num_elements = (size_t) engine_->num_local_vertices_ * tensor->dims[1];
+        checkCUDA(cudaMemcpy(h_data + disp, data + disp, sizeof(DataType) * num_elements,
                     cudaMemcpyDeviceToDevice));
     }
 
@@ -1779,9 +1782,10 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             Tensor * tensor = op->get_input_tensor(0);
             TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
             DataType * data = resource->get_gpu_data();
-            size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+            size_t disp = (size_t) engine_->local_vertex_begin_ * tensor->dims[1];
+            size_t num_elements = (size_t) engine_->num_local_vertices_ * tensor->dims[1];
             checkCUDA(cudaMemcpyAsync(
-                        data, h_data, sizeof(DataType) * num_elements,
+                        data + disp, h_data + disp, sizeof(DataType) * num_elements,
                         cudaMemcpyDeviceToDevice
                         ));
         }
@@ -1815,15 +1819,16 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             Tensor * tensor = op->get_input_tensor(0);
             TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
             DataType * data = resource->get_gpu_data();
-            size_t num_elements = (size_t) num_vertices * tensor->dims[1];
+            size_t disp = (size_t) engine_->local_vertex_begin_ * tensor->dims[1];
+            size_t num_elements = (size_t) engine_->num_local_vertices_ * tensor->dims[1];
 #ifndef UNBIASED_ACTIVATION
             checkCUDA(cudaMemcpyAsync(
-                        h_data, data, sizeof(DataType) * num_elements,
+                        h_data + disp, data + disp, sizeof(DataType) * num_elements,
                         cudaMemcpyDeviceToDevice
                         ));
 #else
             engine_->scale_and_add_vector(
-                    h_data, data, h_data, num_elements, 0.5, 0.5, false
+                    h_data + disp, data + disp, h_data + disp, num_elements, 0.5, 0.5, false
                     );
 #endif
         }
@@ -1923,10 +1928,11 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
             Tensor * tensor = op->get_output_tensor(0);
             TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
             size_t num_elements_per_vertex = tensor->dims[1];
-            size_t num_elements = num_vertices * num_elements_per_vertex;
+            size_t disp = num_elements_per_vertex * engine_->local_vertex_begin_;
+            size_t num_elements = engine_->num_local_vertices_ * num_elements_per_vertex;
             DataType * data = resource->get_gpu_data();
             DataType * grad = resource->get_gpu_grad();
-            checkCUDA(cudaMemset(grad, 0, sizeof(DataType) * num_elements));
+            checkCUDA(cudaMemset(grad + disp, 0, sizeof(DataType) * num_elements));
         }
     };
 
@@ -2548,6 +2554,8 @@ void CUDAPIP1Forward1BackwardPrioritizedUpdateScheduler::schedule_task() {
     size_t free_mem_size = 0;
     size_t total_mem_size = 0;
     checkCUDA(cudaMemGetInfo(&free_mem_size, &total_mem_size));
+    //printf("Node %d, GPU Memory: %.3f GB\n", 
+    //        node_id, (total_mem_size - free_mem_size) / 1024. / 1024. / 1024.);
     aggregate_and_report_metrics("GPU Memory Consumption", 
             (total_mem_size - free_mem_size) / 1024. / 1024. / 1024., "GB");
     //printf("Node %d, GPU memory consumption: %.3f GB\n", node_id, (total_mem_size - free_mem_size) / 1024. / 1024. / 1024.);
@@ -2854,14 +2862,20 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
 
         // allocate memory for the activation data
         if ((lvt.type & InputToAggregation) != 0) {
-            // need to allocate the tensor in whole 
-            // mirror data is needed
-            size_t num_elements = lvt.num_elements_per_vertex * (
-                    num_master_vertices + num_incoming_mirror_vertices
-                    );
+            //// need to allocate the tensor in whole 
+            //// mirror data is needed
+            //size_t num_elements = lvt.num_elements_per_vertex * (
+            //        num_master_vertices + num_incoming_mirror_vertices
+            //        );
+            //AllocateCUDAMemory<DataType>(&lvt.data, num_elements, __FILE__, __LINE__);
+            //assert(lvt.data != NULL);
+            //SetCUDAMemory<DataType>(lvt.data, 0, num_elements, __FILE__, __LINE__);
+
+            size_t num_elements = lvt.num_elements_per_vertex * num_local_vertices;
             AllocateCUDAMemory<DataType>(&lvt.data, num_elements, __FILE__, __LINE__);
             assert(lvt.data != NULL);
             SetCUDAMemory<DataType>(lvt.data, 0, num_elements, __FILE__, __LINE__);
+            lvt.data -= (lvt.num_elements_per_vertex * local_vertex_begin);
         } else {
             // determine whether we can only allocate a chunk of memory (a partial tensor)
             // i.e., recomputable 
@@ -2900,15 +2914,19 @@ CUDAVertexTensorDataGradManager::CUDAVertexTensorDataGradManager(
         // allocate memory for the gradient data
         if ((lvt.type & OutputFromAggregation) != 0 || 
                 lvt.tensor == global_shared_tensor) {
-            // mirror grad is needed
-            size_t num_elements = lvt.num_elements_per_vertex * (
-                    num_master_vertices + num_outgoing_mirror_vertices
-                    );
-            //lvt.grad = new DataType [num_elements];
+            //// mirror grad is needed
+            //size_t num_elements = lvt.num_elements_per_vertex * (
+            //        num_master_vertices + num_outgoing_mirror_vertices
+            //        );
+            //AllocateCUDAMemory<DataType>(&lvt.grad, num_elements, __FILE__, __LINE__);
+            //assert(lvt.grad != NULL);
+            //SetCUDAMemory<DataType>(lvt.grad, 0, num_elements, __FILE__, __LINE__);
+
+            size_t num_elements = lvt.num_elements_per_vertex * num_local_vertices;
             AllocateCUDAMemory<DataType>(&lvt.grad, num_elements, __FILE__, __LINE__);
             assert(lvt.grad != NULL);
-            //memset(lvt.grad, 0, sizeof(DataType) * num_elements);
             SetCUDAMemory<DataType>(lvt.grad, 0, num_elements, __FILE__, __LINE__);
+            lvt.grad -= (lvt.num_elements_per_vertex * local_vertex_begin);
         } else {
             // mirro grad isn't needed
             size_t num_elements = lvt.num_elements_per_vertex * 
@@ -3502,6 +3520,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                 break;
             case OPERATOR_AGGREGATION:
                 { 
+                    swap_in_aggregation_buffer_act(op->get_input_tensor(0));
                     if (! profiling_mode) {
                         cudaEvent_t start_event;
                         cudaEvent_t end_event;
@@ -3522,6 +3541,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                     }
                     // do the actual computation  
                     executor_->aggregation_forward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                    swap_out_aggregation_buffer_act(op->get_input_tensor(0));
                 }
                 break;
             case OPERATOR_DROPOUT:
@@ -3590,6 +3610,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
                 break;
             case OPERATOR_AGGREGATION:
                 {
+                    swap_in_aggregation_buffer_grad(op->get_output_tensor(0));
                     if (! profiling_mode) {
                         cudaEvent_t start_event;
                         cudaEvent_t end_event;
@@ -3610,6 +3631,7 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
                     }
                     // do the actual computation  
                     executor_->aggregation_backward((AggregationOperator*) op, local_vid_begin, local_vid_end);
+                    swap_out_aggregation_buffer_grad(op->get_output_tensor(0));
                 }
                 break;
             case OPERATOR_DROPOUT:
@@ -3745,36 +3767,37 @@ void DistributedPIPHybridParallelExecutionEngineGPU::perform_backward_task(
     }
 
     // backward the gradients
-    recomputation(op_idx_begin, op_idx_end, chunk_id);
-    propagate_gradient(op_idx_begin, op_idx_end, chunk_id);
+    recomputation(op_idx_begin, op_idx_end, chunk_id); 
+    propagate_gradient(op_idx_begin, op_idx_end, chunk_id); 
     //compute_time_ += get_time();
     Profiler::submit_main_thread_event(CoreBackwardComputationCompleteEvent);
 
-    // scale the gradients for unbaised estimation
-    Profiler::submit_main_thread_event(SideComputationStartEvent);
-    int processed_chunks[num_ways];
-    MPI_Allgather(
-            &task.chunk_id, 1, MPI_INT, 
-            processed_chunks, 1, MPI_INT,
-            graph_data_propagator_->get_peer_group()
-            );
-    for (int op_idx = op_idx_begin; op_idx < op_idx_end; ++ op_idx)  {
-        Operator * op = op_ten_manager_->get_operator(op_idx);
-        if (op->get_type() == OPERATOR_AGGREGATION) {
-            Tensor * tensor = op->get_output_tensor(0);
-            for (int i = 0; i < num_ways; ++ i) {
-                DataType * gpu_grad = NULL;
-                size_t num_elements = 0;
-                get_vertex_tensor_grad_by_chunk(
-                        tensor, processed_chunks[i], gpu_grad, num_elements
-                        );
-                assert(gpu_grad && num_elements);
-#ifndef DISABLE_TRICK_2
-                scale_vector(gpu_grad, num_elements, 2.0, false);  
-#endif
-            }
-        }
-    }
+    // TODO: fix hybrid
+//    // scale the gradients for unbaised estimation
+//    Profiler::submit_main_thread_event(SideComputationStartEvent);
+//    int processed_chunks[num_ways];
+//    MPI_Allgather(
+//            &task.chunk_id, 1, MPI_INT, 
+//            processed_chunks, 1, MPI_INT,
+//            graph_data_propagator_->get_peer_group()
+//            );
+//    for (int op_idx = op_idx_begin; op_idx < op_idx_end; ++ op_idx)  {
+//        Operator * op = op_ten_manager_->get_operator(op_idx);
+//        if (op->get_type() == OPERATOR_AGGREGATION) {
+//            Tensor * tensor = op->get_output_tensor(0);
+//            for (int i = 0; i < num_ways; ++ i) {
+//                DataType * gpu_grad = NULL;
+//                size_t num_elements = 0;
+//                get_vertex_tensor_grad_by_chunk(
+//                        tensor, processed_chunks[i], gpu_grad, num_elements
+//                        );
+//                assert(gpu_grad && num_elements);
+//#ifndef DISABLE_TRICK_2
+//                scale_vector(gpu_grad, num_elements, 2.0, false);  
+//#endif
+//            }
+//        }
+//    }
 
     // apply the gradients by pushing them to the parameter server
     for (WeightOperator * op: local_weight_ops_) { 
@@ -4141,6 +4164,11 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
 
     printf("*** Node %d, starting model training...\n", node_id);
 
+    // init the aggregation helper buffer
+    if (get_num_dp_ways() > 1) {
+        alloc_aggregation_buffer(operators);
+    }
+
     // construct a partitioning
     CUDAModelPartitioning partitioning;
     partitioning = partitioning_;
@@ -4479,6 +4507,10 @@ double DistributedPIPHybridParallelExecutionEngineGPU::execute_application(
     if (global_shared_tensor_) {
         checkCUDA(cudaFreeHost(global_shared_tensor_data_));
         checkCUDA(cudaFreeHost(global_shared_tensor_grad_));
+    }
+
+    if (get_num_dp_ways() > 1) {
+        dealloc_aggregation_buffer();
     }
 
     delete op_ten_manager_;
@@ -5836,7 +5868,95 @@ void DistributedPIPHybridParallelExecutionEngineGPU::profile_network_performance
     }
 }
 
+void DistributedPIPHybridParallelExecutionEngineGPU::swap_in_aggregation_buffer_act(Tensor * tensor) {
+    if (aggregation_buffer_ == NULL) {
+        return ;
+    }
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
 
+    assert(aggregation_buffer_ != NULL);
+    assert(tensor != NULL);
+    assert(tensor->type == VERTEX_TENSOR);
+
+    int num_elements_per_vertex = tensor->dims[1];
+    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+    assert(resource != NULL);
+    DataType * data = resource->get_gpu_data();
+    assert(data != NULL);
+    int disp = num_elements_per_vertex * local_vertex_begin_;
+    int num_elements = num_elements_per_vertex * num_local_vertices_;
+    checkCUDA(cudaMemcpy(
+                aggregation_buffer_ + disp, 
+                data + disp,
+                sizeof(DataType) * num_elements,
+                cudaMemcpyDeviceToDevice
+                ));
+    resource->set_gpu_data_from_gpu(aggregation_buffer_);
+    aggregation_buffer_ = data;
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::swap_out_aggregation_buffer_act(Tensor * tensor) {
+    if (aggregation_buffer_ == NULL) {
+        return ;
+    }
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
+
+    assert(aggregation_buffer_ != NULL);
+    assert(tensor != NULL);
+    assert(tensor->type == VERTEX_TENSOR);
+
+    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+    assert(resource != NULL);
+    DataType * data = resource->get_gpu_data();
+    assert(data);
+    resource->set_gpu_data_from_gpu(aggregation_buffer_);
+    aggregation_buffer_ = data;
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::swap_in_aggregation_buffer_grad(Tensor * tensor) {
+    if (aggregation_buffer_ == NULL) {
+        return ;
+    }
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
+                                         //
+    assert(aggregation_buffer_ != NULL);
+    assert(tensor != NULL);
+    assert(tensor->type == VERTEX_TENSOR);
+
+    int num_elements_per_vertex = tensor->dims[1];
+    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+    assert(resource != NULL);
+    DataType * grad = resource->get_gpu_grad();
+    assert(grad != NULL);
+    int disp = num_elements_per_vertex * local_vertex_begin_;
+    int num_elements = num_elements_per_vertex * num_local_vertices_;
+    checkCUDA(cudaMemcpy(
+                aggregation_buffer_ + disp, 
+                grad + disp,
+                sizeof(DataType) * num_elements,
+                cudaMemcpyDeviceToDevice
+                ));
+    resource->set_gpu_grad_from_gpu(aggregation_buffer_);
+    aggregation_buffer_ = grad;
+}
+
+void DistributedPIPHybridParallelExecutionEngineGPU::swap_out_aggregation_buffer_grad(Tensor * tensor) {
+    if (aggregation_buffer_ == NULL) {
+        return ;
+    }
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
+                                         
+    assert(aggregation_buffer_ != NULL);
+    assert(tensor != NULL);
+    assert(tensor->type == VERTEX_TENSOR);
+
+    TensorResourceGPU * resource = (TensorResourceGPU*) tensor->resource;
+    assert(resource != NULL);
+    DataType * grad = resource->get_gpu_grad();
+    assert(grad);
+    resource->set_gpu_grad_from_gpu(aggregation_buffer_);
+    aggregation_buffer_ = grad;
+}
 
 
 
