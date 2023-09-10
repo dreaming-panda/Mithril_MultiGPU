@@ -16,22 +16,22 @@ make -j
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
 num_gpus=4
-num_layers=2
-hunits=256
+num_layers=8
+hunits=128
 lr=1e-3
 graph=yelp
-epoch=100
+epoch=1000
 decay=0
-dropout=0.5
-model=gcn
+dropout=0.1
+model=graphsage
 eval_freq=-1
 enable_compression=0
 
-chunks=$num_gpus
-num_dp_ways=$num_gpus
+#chunks=$num_gpus
+#num_dp_ways=$num_gpus
 
-#chunks=$((num_gpus*4))
-#num_dp_ways=1
+chunks=$((num_gpus*4))
+num_dp_ways=2
 
 exact_inference=1
 seed=1
