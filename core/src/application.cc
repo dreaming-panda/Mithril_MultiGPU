@@ -139,6 +139,18 @@ Tensor * AbstractApplication::dropout(Tensor * a, double dropout_rate, bool is_t
     return dropout->get_output_tensor(0);
 }
 
+Tensor * AbstractApplication::layer_norm(Tensor * a, bool is_transient) {
+    assert(a->num_dims == 1);
+    int embedding_size = a->dims[1];
+    Tensor * w = weight(2, embedding_size);
+    // TODO: remember to initialize the weight correctly
+    Operator * layer_norm = new LayerNormalizationOperator(
+            a, w, is_transient
+            );
+    assert(layer_norm);
+    return layer_norm->get_output_tensor(0);
+}
+
 AbstractApplication::AbstractApplication(int num_features): num_features_(num_features) {
     operators_.clear();
     input_tensor_ = NULL;

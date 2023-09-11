@@ -1368,6 +1368,74 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
 #endif
 }
 
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_mean_buffer(
+        size_t size
+        ) {
+    if (size > layer_norm_mean_buff_size_) {
+        checkCUDA(cudaFree(layer_norm_mean_buff_));
+        layer_norm_mean_buff_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_mean_buff_, 
+                    layer_norm_mean_buff_size_
+                    ));
+        layer_norm_mean_buff_size_ = size;
+    }
+    assert(layer_norm_mean_buff_);
+    assert(layer_norm_mean_buff_size_ >= size);
+    return layer_norm_mean_buff_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_var_buffer(
+        size_t size
+        ) {
+    if (size > layer_norm_var_buff_size_) {
+        checkCUDA(cudaFree(layer_norm_var_buff_));
+        layer_norm_var_buff_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_var_buff_, 
+                    layer_norm_var_buff_size_
+                    ));
+        layer_norm_var_buff_size_ = size;
+    }
+    assert(layer_norm_var_buff_);
+    assert(layer_norm_var_buff_size_ >= size);
+    return layer_norm_var_buff_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace(
+        size_t size
+        ) {
+    if (size > layer_norm_reduce_workspace_size_) {
+        checkCUDA(cudaFree(layer_norm_reduce_workspace_));
+        layer_norm_reduce_workspace_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_reduce_workspace_, 
+                    layer_norm_reduce_workspace_size_
+                    ));
+        layer_norm_reduce_workspace_size_ = size;
+    }
+    assert(layer_norm_reduce_workspace_);
+    assert(layer_norm_reduce_workspace_size_ >= size);
+    return layer_norm_reduce_workspace_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace2(
+        size_t size
+        ) {
+    if (size > layer_norm_reduce_workspace2_size_) {
+        checkCUDA(cudaFree(layer_norm_reduce_workspace2_));
+        layer_norm_reduce_workspace2_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_reduce_workspace2_, 
+                    layer_norm_reduce_workspace2_size_
+                    ));
+        layer_norm_reduce_workspace2_size_ = size;
+    }
+    assert(layer_norm_reduce_workspace2_);
+    assert(layer_norm_reduce_workspace2_size_ >= size);
+    return layer_norm_reduce_workspace2_;
+}
+
 void OperatorExecutorGPUV2::init_cuda_handle() {
     cublasCreate(&cublas_);
     cudnnCreate(&cudnn_);

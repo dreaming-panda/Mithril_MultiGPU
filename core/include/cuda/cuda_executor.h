@@ -63,6 +63,21 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         DataType * dropout_tmp_buff_ = NULL;
         size_t dropout_tmp_buff_size_ = 0;
 
+        // helper buffers used for layernorm
+        uint8_t * layer_norm_mean_buff_; 
+        uint8_t * layer_norm_var_buff_;
+        uint8_t * layer_norm_reduce_workspace_;
+        uint8_t * layer_norm_reduce_workspace2_;
+        size_t layer_norm_mean_buff_size_ = 0;
+        size_t layer_norm_var_buff_size_ = 0;
+        size_t layer_norm_reduce_workspace_size_ = 0;
+        size_t layer_norm_reduce_workspace2_size_ = 0;
+
+        uint8_t * get_layer_norm_mean_buffer(size_t size);
+        uint8_t * get_layer_norm_var_buffer(size_t size);
+        uint8_t * get_layer_norm_reduce_workspace(size_t size);
+        uint8_t * get_layer_norm_reduce_workspace2(size_t size);
+
         cusparseSpMatDescr_t SpCsr_;
         cusparseSpMatDescr_t SpCsr_T;
         bool has_Spcsr_;
@@ -132,6 +147,11 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         void dropout_backward(DropoutOperator * op);
         void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
         void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
+
+        void reduce_over_column_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
+        void reduce_over_row_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
+        void layer_norm_forward(LayerNormalizationOperator * op, VertexId left, VertexId right);
+        void layer_norm_backward(LayerNormalizationOperator * op, VertexId left, VertexId right);
 };
 
 #endif

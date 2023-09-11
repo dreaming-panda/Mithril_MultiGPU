@@ -46,7 +46,8 @@ enum OperatorType {
     OPERATOR_SOFTMAX,
     OPERATOR_AGGREGATION,
     OPERATOR_ADD,
-    OPERATOR_DROPOUT
+    OPERATOR_DROPOUT,
+    OPERATOR_LAYER_NORM
 };
 
 std::string get_op_type_str(OperatorType type);
@@ -140,6 +141,15 @@ class DropoutOperator: public Operator {
         DropoutOperator(Tensor * a, double dropout_rate, bool is_transient = false);
         ~DropoutOperator() {}
         double dropout_rate_;
+};
+
+class LayerNormalizationOperator: public Operator {
+    public:
+        // the weight is a 2-dimension tensor with shape = (2, a.shape[1])
+        // the first row represent the learnable scaling factor while (1. init)
+        // the second row represents the learnable bias  (0. init)
+        LayerNormalizationOperator(Tensor * a, Tensor * weight, bool is_transient = false);
+        ~LayerNormalizationOperator() {}
 };
 
 // graph operators

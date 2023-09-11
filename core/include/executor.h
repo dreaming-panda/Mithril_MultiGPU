@@ -222,6 +222,7 @@ class AbstractOperatorExecutor {
         virtual void aggregation_forward(AggregationOperator * op, VertexId left, VertexId right) = 0;
         virtual void add_forward(AddOperator * op, VertexId left, VertexId right) = 0;
         virtual void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) = 0;
+        virtual void layer_norm_forward(LayerNormalizationOperator * op, VertexId left, VertexId right) = 0;
 
         //// the backwarding phases
         virtual void relu_backward(ReluOperator * op) = 0;
@@ -238,6 +239,7 @@ class AbstractOperatorExecutor {
         virtual void aggregation_backward(AggregationOperator * op, VertexId left, VertexId right) = 0;
         virtual void add_backward(AddOperator * op, VertexId left, VertexId right) = 0;
         virtual void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) = 0;
+        virtual void layer_norm_backward(LayerNormalizationOperator * op, VertexId left, VertexId right) = 0;
 
         // some operator might hehavior improperly if not telling the executor that
         // recomputation is perform (e.g., dropout)

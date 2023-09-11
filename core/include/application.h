@@ -86,6 +86,8 @@ class AbstractApplication {
         Tensor * aggregation(Tensor * t, AggregationType type, bool is_transient = false);
         Tensor * add(Tensor * a, Tensor * b, DataType alpha, DataType beta, bool is_transient = false);
         Tensor * dropout(Tensor * a, double dropout_rate, bool is_transient = false);
+        Tensor * layer_norm(Tensor * a, bool is_transient = false);
+
         void next_layer(int prev_layer_type = 0);
         void set_global_shared_tensor(Tensor * tensor);
 

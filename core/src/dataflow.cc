@@ -37,10 +37,11 @@ std::string get_op_type_str(OperatorType type) {
         return "OPERATOR_ADD";
     } else if (type == OPERATOR_DROPOUT) {
         return "OPERATOR_DROPOUT";
-    } else {
+    } else if (type == OPERATOR_LAYER_NORM) {
         fprintf(stderr, "Unrecognized operator type.\n");
         exit(-1);
     }
+    return "NONE";
 }
 
 void Operator::init_output_tensors() {
@@ -283,6 +284,29 @@ DropoutOperator::DropoutOperator(Tensor * a, double dropout_rate, bool is_transi
         output_tensors_[0].dims[1] = a->dims[1];
     }
 
+// the LayerNormalization operator
+
+LayerNormalizationOperator::LayerNormalizationOperator(
+        Tensor * a, 
+        Tensor * weight,
+        bool is_transient
+        ): Operator(a, weight, 1, OPERATOR_LAYER_NORM, is_transient){
+    // check the type of tensor a
+    assert(a->type == VERTEX_TENSOR);
+    assert(a->num_dims == 2);
+    assert(a->dims[0] == -1);
+    assert(a->dims[1] > 0);
+    // check the type of tensor weight
+    assert(weight->type == NORMAL_TENSOR);
+    assert(weight->num_dims == 2);
+    assert(weight->dims[0] == 2);
+    assert(weight->dims[1] == a->dims[1]);
+    // setup the output tensor
+    output_tensors_[0].type = VERTEX_TENSOR;
+    output_tensors_[0].num_dims = 2;
+    output_tensors_[0].dims[0] = -1;
+    output_tensors_[0].dims[1] = a->dims[1];
+}
 
 
 
