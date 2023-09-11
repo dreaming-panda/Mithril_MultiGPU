@@ -66,15 +66,18 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         // helper buffers used for layernorm
         uint8_t * layer_norm_mean_buff_; 
         uint8_t * layer_norm_var_buff_;
+        uint8_t * layer_norm_elementwise_var_buff_;
         uint8_t * layer_norm_reduce_workspace_;
         uint8_t * layer_norm_reduce_workspace2_;
         size_t layer_norm_mean_buff_size_ = 0;
         size_t layer_norm_var_buff_size_ = 0;
+        size_t layer_norm_elementwise_var_buff_size_ = 0;
         size_t layer_norm_reduce_workspace_size_ = 0;
         size_t layer_norm_reduce_workspace2_size_ = 0;
 
         uint8_t * get_layer_norm_mean_buffer(size_t size);
         uint8_t * get_layer_norm_var_buffer(size_t size);
+        uint8_t * get_layer_norm_elementwise_var_buffer(size_t size);
         uint8_t * get_layer_norm_reduce_workspace(size_t size);
         uint8_t * get_layer_norm_reduce_workspace2(size_t size);
 

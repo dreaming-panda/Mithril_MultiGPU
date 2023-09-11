@@ -1402,6 +1402,23 @@ uint8_t * OperatorExecutorGPUV2::get_layer_norm_var_buffer(
     return layer_norm_var_buff_;
 }
 
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_elementwise_var_buffer(
+        size_t size
+        ) {
+    if (size > layer_norm_elementwise_var_buff_size_) {
+        checkCUDA(cudaFree(layer_norm_elementwise_var_buff_));
+        layer_norm_elementwise_var_buff_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_elementwise_var_buff_, 
+                    layer_norm_elementwise_var_buff_size_
+                    ));
+        layer_norm_elementwise_var_buff_size_ = size;
+    }
+    assert(layer_norm_elementwise_var_buff_);
+    assert(layer_norm_elementwise_var_buff_size_ >= size);
+    return layer_norm_elementwise_var_buff_;
+}
+
 uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace(
         size_t size
         ) {
