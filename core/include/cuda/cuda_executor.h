@@ -63,23 +63,40 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         DataType * dropout_tmp_buff_ = NULL;
         size_t dropout_tmp_buff_size_ = 0;
 
-        // helper buffers used for layernorm
-        uint8_t * layer_norm_mean_buff_; 
-        uint8_t * layer_norm_var_buff_;
-        uint8_t * layer_norm_elementwise_var_buff_;
-        uint8_t * layer_norm_reduce_workspace_;
-        uint8_t * layer_norm_reduce_workspace2_;
-        size_t layer_norm_mean_buff_size_ = 0;
-        size_t layer_norm_var_buff_size_ = 0;
-        size_t layer_norm_elementwise_var_buff_size_ = 0;
-        size_t layer_norm_reduce_workspace_size_ = 0;
-        size_t layer_norm_reduce_workspace2_size_ = 0;
+        // used to chunk-based GPU training batch norm
+        struct BatchNormState {
+            cudnnTensorDescriptor_t in_out_tensor_descriptor;
+            cudnnTensorDescriptor_t scale_bias_tensor_descriptor;
+            void * saved_mean;
+            void * saved_var;
+            void * running_mean; // shared by all chunks of the same op
+            void * running_var; // sahred
+            VertexId left;
+            VertexId right;
+        };
+        std::map<BatchNormalizationOperator*, std::map<int, BatchNormState>*> batch_norm_states_;
+        std::map<BatchNormalizationOperator*, void*> shared_running_means_;
+        std::map<BatchNormalizationOperator*, void*> shared_running_vars_;
+        BatchNormState get_batch_norm_state(BatchNormalizationOperator * op, int chunk_id, VertexId left, VertexId right);
+        void release_batch_norm_states();
 
-        uint8_t * get_layer_norm_mean_buffer(size_t size);
-        uint8_t * get_layer_norm_var_buffer(size_t size);
-        uint8_t * get_layer_norm_elementwise_var_buffer(size_t size);
-        uint8_t * get_layer_norm_reduce_workspace(size_t size);
-        uint8_t * get_layer_norm_reduce_workspace2(size_t size);
+        //// helper buffers used for layernorm
+        //uint8_t * layer_norm_mean_buff_; 
+        //uint8_t * layer_norm_var_buff_;
+        //uint8_t * layer_norm_elementwise_var_buff_;
+        //uint8_t * layer_norm_reduce_workspace_;
+        //uint8_t * layer_norm_reduce_workspace2_;
+        //size_t layer_norm_mean_buff_size_ = 0;
+        //size_t layer_norm_var_buff_size_ = 0;
+        //size_t layer_norm_elementwise_var_buff_size_ = 0;
+        //size_t layer_norm_reduce_workspace_size_ = 0;
+        //size_t layer_norm_reduce_workspace2_size_ = 0;
+
+        //uint8_t * get_layer_norm_mean_buffer(size_t size);
+        //uint8_t * get_layer_norm_var_buffer(size_t size);
+        //uint8_t * get_layer_norm_elementwise_var_buffer(size_t size);
+        //uint8_t * get_layer_norm_reduce_workspace(size_t size);
+        //uint8_t * get_layer_norm_reduce_workspace2(size_t size);
 
         cusparseSpMatDescr_t SpCsr_;
         cusparseSpMatDescr_t SpCsr_T;
@@ -151,13 +168,20 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
         void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id);
 
-        void reduce_over_column_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
-        void reduce_over_row_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
-        void layer_norm_forward(LayerNormalizationOperator * op, VertexId left, VertexId right);
-        void layer_norm_backward(LayerNormalizationOperator * op, VertexId left, VertexId right);
+        void batch_norm_forward(BatchNormalizationOperator * op);
+        void batch_norm_backward(BatchNormalizationOperator * op);
+        void batch_norm_forward(BatchNormalizationOperator * op, VertexId left, VertexId right, int chunk_id);
+        void batch_norm_backward(BatchNormalizationOperator * op, VertexId left, VertexId right, int chunk_id);
+
+        //void reduce_over_column_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
+        //void reduce_over_row_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
+        //void layer_norm_forward(LayerNormalizationOperator * op, VertexId left, VertexId right);
+        //void layer_norm_backward(LayerNormalizationOperator * op, VertexId left, VertexId right);
 };
 
 #endif
+
+
 
 
 

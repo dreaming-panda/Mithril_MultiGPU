@@ -1368,89 +1368,441 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
 #endif
 }
 
-uint8_t * OperatorExecutorGPUV2::get_layer_norm_mean_buffer(
-        size_t size
+//uint8_t * OperatorExecutorGPUV2::get_layer_norm_mean_buffer(
+//        size_t size
+//        ) {
+//    if (size > layer_norm_mean_buff_size_) {
+//        checkCUDA(cudaFree(layer_norm_mean_buff_));
+//        layer_norm_mean_buff_ = NULL;
+//        checkCUDA(cudaMalloc(
+//                    &layer_norm_mean_buff_, 
+//                    layer_norm_mean_buff_size_
+//                    ));
+//        layer_norm_mean_buff_size_ = size;
+//    }
+//    assert(layer_norm_mean_buff_);
+//    assert(layer_norm_mean_buff_size_ >= size);
+//    return layer_norm_mean_buff_;
+//}
+//
+//uint8_t * OperatorExecutorGPUV2::get_layer_norm_var_buffer(
+//        size_t size
+//        ) {
+//    if (size > layer_norm_var_buff_size_) {
+//        checkCUDA(cudaFree(layer_norm_var_buff_));
+//        layer_norm_var_buff_ = NULL;
+//        checkCUDA(cudaMalloc(
+//                    &layer_norm_var_buff_, 
+//                    layer_norm_var_buff_size_
+//                    ));
+//        layer_norm_var_buff_size_ = size;
+//    }
+//    assert(layer_norm_var_buff_);
+//    assert(layer_norm_var_buff_size_ >= size);
+//    return layer_norm_var_buff_;
+//}
+//
+//uint8_t * OperatorExecutorGPUV2::get_layer_norm_elementwise_var_buffer(
+//        size_t size
+//        ) {
+//    if (size > layer_norm_elementwise_var_buff_size_) {
+//        checkCUDA(cudaFree(layer_norm_elementwise_var_buff_));
+//        layer_norm_elementwise_var_buff_ = NULL;
+//        checkCUDA(cudaMalloc(
+//                    &layer_norm_elementwise_var_buff_, 
+//                    layer_norm_elementwise_var_buff_size_
+//                    ));
+//        layer_norm_elementwise_var_buff_size_ = size;
+//    }
+//    assert(layer_norm_elementwise_var_buff_);
+//    assert(layer_norm_elementwise_var_buff_size_ >= size);
+//    return layer_norm_elementwise_var_buff_;
+//}
+//
+//uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace(
+//        size_t size
+//        ) {
+//    if (size > layer_norm_reduce_workspace_size_) {
+//        checkCUDA(cudaFree(layer_norm_reduce_workspace_));
+//        layer_norm_reduce_workspace_ = NULL;
+//        checkCUDA(cudaMalloc(
+//                    &layer_norm_reduce_workspace_, 
+//                    layer_norm_reduce_workspace_size_
+//                    ));
+//        layer_norm_reduce_workspace_size_ = size;
+//    }
+//    assert(layer_norm_reduce_workspace_);
+//    assert(layer_norm_reduce_workspace_size_ >= size);
+//    return layer_norm_reduce_workspace_;
+//}
+//
+//uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace2(
+//        size_t size
+//        ) {
+//    if (size > layer_norm_reduce_workspace2_size_) {
+//        checkCUDA(cudaFree(layer_norm_reduce_workspace2_));
+//        layer_norm_reduce_workspace2_ = NULL;
+//        checkCUDA(cudaMalloc(
+//                    &layer_norm_reduce_workspace2_, 
+//                    layer_norm_reduce_workspace2_size_
+//                    ));
+//        layer_norm_reduce_workspace2_size_ = size;
+//    }
+//    assert(layer_norm_reduce_workspace2_);
+//    assert(layer_norm_reduce_workspace2_size_ >= size);
+//    return layer_norm_reduce_workspace2_;
+//}
+
+OperatorExecutorGPUV2::BatchNormState OperatorExecutorGPUV2::get_batch_norm_state(
+        BatchNormalizationOperator * op, 
+        int chunk_id,
+        VertexId left, 
+        VertexId right
         ) {
-    if (size > layer_norm_mean_buff_size_) {
-        checkCUDA(cudaFree(layer_norm_mean_buff_));
-        layer_norm_mean_buff_ = NULL;
+    if (batch_norm_states_.find(op) == batch_norm_states_.end()) {
+        // the op haven't been touched yet
+        assert(shared_running_means_.find(op) == shared_running_means_.end());
+        assert(shared_running_vars_.find(op) == shared_running_vars_.end());
+        // allocate the map
+        std::map<int, BatchNormState> * m = new std::map<int, BatchNormState>();
+        assert(m);
+        m->clear();
+        batch_norm_states_[op] = m;
+        // allocate the running mean and var
+        int embedding_size = op->get_input_tensor(0)->dims[1];
+        DataType * running_mean = NULL;
+        DataType * running_var = NULL;
         checkCUDA(cudaMalloc(
-                    &layer_norm_mean_buff_, 
-                    layer_norm_mean_buff_size_
+                    &running_mean, sizeof(DataType) * embedding_size
                     ));
-        layer_norm_mean_buff_size_ = size;
+        checkCUDA(cudaMalloc(
+                    &running_var, sizeof(DataType) * embedding_size
+                    ));
+        assert(running_mean);
+        assert(running_var);
+        // zero out
+        checkCUDA(
+                cudaMemset(
+                    running_mean, 0, sizeof(DataType) * embedding_size
+                    )
+                );
+        checkCUDA(
+                cudaMemset(
+                    running_var, 0, sizeof(DataType) * embedding_size
+                    )
+                );
+        shared_running_means_[op] = running_mean;
+        shared_running_vars_[op] = running_var;
     }
-    assert(layer_norm_mean_buff_);
-    assert(layer_norm_mean_buff_size_ >= size);
-    return layer_norm_mean_buff_;
+
+    std::map<int, BatchNormState> * chunk2state = batch_norm_states_[op];
+    assert(chunk2state);
+    if (chunk2state->find(chunk_id) == chunk2state->end()) {
+        BatchNormState state;
+
+        int embedding_size = op->get_input_tensor(0)->dims[1];
+        // set up the tensor descriptor
+        checkCUDNN(
+                cudnnCreateTensorDescriptor(
+                    &(state.in_out_tensor_descriptor)
+                    )
+                );
+        checkCUDNN(
+                cudnnCreateTensorDescriptor(
+                    &(state.scale_bias_tensor_descriptor)
+                    )
+                );
+        int n = (int) right - left; // the batch size
+        int c = 1;
+        int h = 1;
+        int w = embedding_size;
+        checkCUDNN(
+                cudnnSetTensor4dDescriptor(
+                    state.in_out_tensor_descriptor,
+                    CUDNN_TENSOR_NCHW,
+                    CUDNN_DATA_FLOAT,
+                    n, c, h, w
+                    )
+                );
+        checkCUDNN(
+                cudnnSetTensor4dDescriptor(
+                    state.scale_bias_tensor_descriptor,
+                    CUDNN_TENSOR_NCHW,
+                    CUDNN_DATA_FLOAT,
+                    1, c, h, w
+                    )
+                );
+        // allocate spaces for the savec_mean and var
+        state.saved_mean = NULL;
+        state.saved_var = NULL;
+        checkCUDA(
+                cudaMalloc(
+                    &(state.saved_mean),
+                    sizeof(DataType) * embedding_size
+                    )
+                );
+        checkCUDA(
+                cudaMalloc(
+                    &(state.saved_var),
+                    sizeof(DataType) * embedding_size
+                    )
+                );
+        assert(state.saved_mean);
+        assert(state.saved_var);
+        // set up the running mean / var
+        state.running_mean = shared_running_means_[op];
+        state.running_var = shared_running_vars_[op];
+        state.left = left;
+        state.right = right;
+
+        (*chunk2state)[chunk_id] = state;
+    }
+
+    BatchNormState state = chunk2state->at(chunk_id);
+    assert(state.left == left);
+    assert(state.right == right);
+    return state;
 }
 
-uint8_t * OperatorExecutorGPUV2::get_layer_norm_var_buffer(
-        size_t size
-        ) {
-    if (size > layer_norm_var_buff_size_) {
-        checkCUDA(cudaFree(layer_norm_var_buff_));
-        layer_norm_var_buff_ = NULL;
-        checkCUDA(cudaMalloc(
-                    &layer_norm_var_buff_, 
-                    layer_norm_var_buff_size_
-                    ));
-        layer_norm_var_buff_size_ = size;
-    }
-    assert(layer_norm_var_buff_);
-    assert(layer_norm_var_buff_size_ >= size);
-    return layer_norm_var_buff_;
+void OperatorExecutorGPUV2::release_batch_norm_states() {
+    // TODO
 }
 
-uint8_t * OperatorExecutorGPUV2::get_layer_norm_elementwise_var_buffer(
-        size_t size
-        ) {
-    if (size > layer_norm_elementwise_var_buff_size_) {
-        checkCUDA(cudaFree(layer_norm_elementwise_var_buff_));
-        layer_norm_elementwise_var_buff_ = NULL;
-        checkCUDA(cudaMalloc(
-                    &layer_norm_elementwise_var_buff_, 
-                    layer_norm_elementwise_var_buff_size_
-                    ));
-        layer_norm_elementwise_var_buff_size_ = size;
-    }
-    assert(layer_norm_elementwise_var_buff_);
-    assert(layer_norm_elementwise_var_buff_size_ >= size);
-    return layer_norm_elementwise_var_buff_;
+void OperatorExecutorGPUV2::batch_norm_forward(BatchNormalizationOperator * op) {
+    VertexId num_vertices = graph_->get_num_global_vertices();
+    batch_norm_forward(op, 0, num_vertices, -1);
 }
 
-uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace(
-        size_t size
-        ) {
-    if (size > layer_norm_reduce_workspace_size_) {
-        checkCUDA(cudaFree(layer_norm_reduce_workspace_));
-        layer_norm_reduce_workspace_ = NULL;
-        checkCUDA(cudaMalloc(
-                    &layer_norm_reduce_workspace_, 
-                    layer_norm_reduce_workspace_size_
-                    ));
-        layer_norm_reduce_workspace_size_ = size;
-    }
-    assert(layer_norm_reduce_workspace_);
-    assert(layer_norm_reduce_workspace_size_ >= size);
-    return layer_norm_reduce_workspace_;
+void OperatorExecutorGPUV2::batch_norm_backward(BatchNormalizationOperator * op) {
+    VertexId num_vertices = graph_->get_num_global_vertices();
+    batch_norm_backward(op, 0, num_vertices, -1);
 }
 
-uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace2(
-        size_t size
+void OperatorExecutorGPUV2::batch_norm_forward(
+        BatchNormalizationOperator * op, 
+        VertexId left, 
+        VertexId right,
+        int chunk_id
         ) {
-    if (size > layer_norm_reduce_workspace2_size_) {
-        checkCUDA(cudaFree(layer_norm_reduce_workspace2_));
-        layer_norm_reduce_workspace2_ = NULL;
-        checkCUDA(cudaMalloc(
-                    &layer_norm_reduce_workspace2_, 
-                    layer_norm_reduce_workspace2_size_
-                    ));
-        layer_norm_reduce_workspace2_size_ = size;
+    if (left == right) {
+        return ;
     }
-    assert(layer_norm_reduce_workspace2_);
-    assert(layer_norm_reduce_workspace2_size_ >= size);
-    return layer_norm_reduce_workspace2_;
+    assert(left < right);
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+
+    assert(op);
+    assert(op->get_num_input_tensors() == 3);
+    assert(op->get_num_output_tensors() == 1);
+
+    Tensor * input_tensor = op->get_input_tensor(0);
+    Tensor * weight_scale_tensor = op->get_input_tensor(1);
+    Tensor * weight_bias_tensor = op->get_input_tensor(2);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor);
+    assert(weight_scale_tensor);
+    assert(weight_bias_tensor);
+    assert(output_tensor);
+
+    assert(input_tensor->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+    assert(weight_scale_tensor->type == NORMAL_TENSOR);
+    assert(weight_bias_tensor->type == NORMAL_TENSOR);
+
+    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*)
+        input_tensor->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*)
+        output_tensor->resource;
+    TensorResourceGPU * weight_scale_tensor_resource = (TensorResourceGPU*)
+        weight_scale_tensor->resource;
+    TensorResourceGPU * weight_bias_tensor_resource = (TensorResourceGPU*)
+        weight_bias_tensor->resource;
+    assert(input_tensor_resource);
+    assert(weight_scale_tensor_resource);
+    assert(weight_bias_tensor_resource);
+
+    int embedding_size = input_tensor->dims[1];
+    int start_idx = embedding_size * left;
+    int end_idx = embedding_size * right;
+
+    DataType * d_input_data = input_tensor_resource->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    DataType * d_scale_data = weight_scale_tensor_resource->get_gpu_data();
+    DataType * d_bias_data = weight_bias_tensor_resource->get_gpu_data();
+    
+    assert(d_input_data);
+    assert(d_output_data);
+    assert(d_scale_data);
+    assert(d_bias_data);
+
+    if (! input_tensor->is_data_transient) {
+        d_input_data += start_idx;
+    }
+    if (! output_tensor->is_data_transient) {
+        d_output_data += start_idx;
+    }
+
+    BatchNormState state = get_batch_norm_state(
+            op, chunk_id, left, right
+            );
+
+    float alpha = 1.;
+    float beta = 0.;
+    double eps = 1e-5;
+
+    if (is_in_inference_mode_) {
+        checkCUDNN(
+                cudnnBatchNormalizationForwardInference(
+                    *cudnn_handle_,
+                    CUDNN_BATCHNORM_PER_ACTIVATION,
+                    &alpha, &beta,
+                    state.in_out_tensor_descriptor,
+                    d_input_data,
+                    state.in_out_tensor_descriptor,
+                    d_output_data,
+                    state.scale_bias_tensor_descriptor,
+                    d_scale_data,
+                    d_bias_data,
+                    state.running_mean,
+                    state.running_var,
+                    eps
+                    )
+                );
+    } else {
+        double momentum = 0.1;
+        checkCUDNN(
+                cudnnBatchNormalizationForwardTraining(
+                    *cudnn_handle_,
+                    CUDNN_BATCHNORM_PER_ACTIVATION,
+                    &alpha, &beta,
+                    state.in_out_tensor_descriptor,
+                    d_input_data,
+                    state.in_out_tensor_descriptor,
+                    d_output_data,
+                    state.scale_bias_tensor_descriptor,
+                    d_scale_data,
+                    d_bias_data,
+                    momentum,
+                    state.running_mean,
+                    state.running_var,
+                    eps,
+                    state.saved_mean,
+                    state.saved_var
+                    )
+                );
+    }
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+}
+
+void OperatorExecutorGPUV2::batch_norm_backward(
+        BatchNormalizationOperator * op, 
+        VertexId left, 
+        VertexId right,
+        int chunk_id
+        ) {
+    if (left == right) {
+        return ;
+    }
+    assert(left < right);
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+
+    assert(op);
+    assert(op->get_num_input_tensors() == 3);
+    assert(op->get_num_output_tensors() == 1);
+
+    Tensor * input_tensor = op->get_input_tensor(0);
+    Tensor * weight_scale_tensor = op->get_input_tensor(1);
+    Tensor * weight_bias_tensor = op->get_input_tensor(2);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor);
+    assert(weight_scale_tensor);
+    assert(weight_bias_tensor);
+    assert(output_tensor);
+
+    assert(input_tensor->type == VERTEX_TENSOR);
+    assert(output_tensor->type == VERTEX_TENSOR);
+    assert(weight_scale_tensor->type == NORMAL_TENSOR);
+    assert(weight_bias_tensor->type == NORMAL_TENSOR);
+
+    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*)
+        input_tensor->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*)
+        output_tensor->resource;
+    TensorResourceGPU * weight_scale_tensor_resource = (TensorResourceGPU*)
+        weight_scale_tensor->resource;
+    TensorResourceGPU * weight_bias_tensor_resource = (TensorResourceGPU*)
+        weight_bias_tensor->resource;
+    assert(input_tensor_resource);
+    assert(weight_scale_tensor_resource);
+    assert(weight_bias_tensor_resource);
+
+    int embedding_size = input_tensor->dims[1];
+    int start_idx = embedding_size * left;
+    int end_idx = embedding_size * right;
+
+    DataType * d_input_data = input_tensor_resource->get_gpu_data();
+    DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    DataType * d_scale_data = weight_scale_tensor_resource->get_gpu_data();
+    DataType * d_scale_grad = weight_scale_tensor_resource->get_gpu_grad();
+    DataType * d_bias_grad = weight_bias_tensor_resource->get_gpu_grad();
+    
+    assert(d_input_data);
+    assert(d_input_grad);
+    assert(d_output_grad);
+    assert(d_scale_data);
+    assert(d_scale_grad);
+    assert(d_bias_grad);
+
+    if (! input_tensor->is_data_transient) {
+        d_input_data += start_idx;
+    }
+    if (! input_tensor->is_grad_transient) {
+        d_input_grad += start_idx;
+    }
+    if (! output_tensor->is_grad_transient) {
+        d_output_grad += start_idx;
+    }
+
+    BatchNormState state = batch_norm_states_[op]->at(chunk_id);
+
+    float alpha = 1.;
+    float beta = 1.; 
+    double eps = 1e-5;
+
+    checkCUDNN(
+            cudnnBatchNormalizationBackward(
+                *cudnn_handle_,
+                CUDNN_BATCHNORM_PER_ACTIVATION,
+                &alpha, &beta,
+                &alpha, &beta,
+                state.in_out_tensor_descriptor,
+                d_input_data,
+                state.in_out_tensor_descriptor,
+                d_output_grad,
+                state.in_out_tensor_descriptor,
+                d_input_grad,
+                state.scale_bias_tensor_descriptor,
+                d_scale_data,
+                d_scale_grad,
+                d_bias_grad,
+                eps,
+                state.saved_mean,
+                state.saved_var
+                )
+            );
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
 }
 
 void OperatorExecutorGPUV2::init_cuda_handle() {

@@ -309,6 +309,34 @@ LayerNormalizationOperator::LayerNormalizationOperator(
 }
 
 
+BatchNormalizationOperator::BatchNormalizationOperator(
+        Tensor * a, 
+        Tensor * weight_scale, 
+        Tensor * weight_bias, 
+        bool is_transient
+        ): Operator(a, weight_scale, weight_bias, 1, OPERATOR_BATCH_NORM, is_transient) {
+    // check the type of tensor a
+    assert(a->type == VERTEX_TENSOR);
+    assert(a->num_dims == 2);
+    assert(a->dims[0] == -1);
+    assert(a->dims[1] > 0);
+    // check the type of tensor weight_scale
+    assert(weight_scale->type == NORMAL_TENSOR);
+    assert(weight_scale->num_dims == 1);
+    assert(weight_scale->dims[0] == a->dims[1]);
+    // check the type of the tensor weight_bias
+    assert(weight_bias->type == NORMAL_TENSOR);
+    assert(weight_bias->num_dims == 1);
+    assert(weight_bias->dims[0] == a->dims[1]);
+    // set up of output tensors
+    output_tensors_[0].type = VERTEX_TENSOR;
+    output_tensors_[0].num_dims = 2;
+    output_tensors_[0].dims[0] = -1;
+    output_tensors_[0].dims[1] = a->dims[1];
+}
+
+
+
 
 
 

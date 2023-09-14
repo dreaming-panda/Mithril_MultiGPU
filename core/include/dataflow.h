@@ -47,7 +47,8 @@ enum OperatorType {
     OPERATOR_AGGREGATION,
     OPERATOR_ADD,
     OPERATOR_DROPOUT,
-    OPERATOR_LAYER_NORM
+    OPERATOR_LAYER_NORM,
+    OPERATOR_BATCH_NORM
 };
 
 std::string get_op_type_str(OperatorType type);
@@ -150,6 +151,12 @@ class LayerNormalizationOperator: public Operator {
         // the second row represents the learnable bias  (0. init)
         LayerNormalizationOperator(Tensor * a, Tensor * weight, bool is_transient = false);
         ~LayerNormalizationOperator() {}
+};
+
+class BatchNormalizationOperator: public Operator {
+    public:
+        BatchNormalizationOperator(Tensor * a, Tensor * weight_scale, Tensor * weight_bias, bool is_transient = false);
+        ~BatchNormalizationOperator() {}
 };
 
 // graph operators
