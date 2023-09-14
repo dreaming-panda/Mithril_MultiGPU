@@ -16,11 +16,11 @@ make -j
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
 num_gpus=4
-num_layers=16
+num_layers=4
 hunits=128
 lr=1e-3
 graph=reddit
-epoch=200
+epoch=300
 decay=0
 dropout=0.5
 model=resgcn

@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <stdio.h>
+#include <math.h>
 
 #include <string>
 #include <sstream> 
 #include <thread>
+#include <fstream>
 
 #include <boost/program_options.hpp>
 
@@ -19,80 +21,80 @@
 #include "cuda/cuda_graph.h"
 #include "cublas_v2.h"
 #include "cuda/cuda_loss.h"
-#include"cuda/cuda_executor.h"
+#include "cuda/cuda_executor.h"
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_optimizer.h"
 #include "cuda/cuda_single_cpu_engine.h"
 #include "cuda/cuda_utils.h"
 #include "distributed_sys.h"
 #include "partitioner.h"
-#include <fstream>
 
-using namespace std;
-
-class ResGCN: public AbstractApplication {
+class GraphSage: public AbstractApplication {
     private:
         int num_layers_;
         int num_hidden_units_;
         int num_classes_;
         double dropout_rate_;
-        bool use_residual_;
+        bool enable_recomputation_;
         bool multi_label_;
 
     public:
-        ResGCN(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, bool use_residual, bool multi_label): 
+        GraphSage(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, bool multi_label):
             AbstractApplication(num_features),
-            num_layers_(num_layers), num_hidden_units_(num_hidden_units), 
-            num_classes_(num_classes), dropout_rate_(dropout_rate),
-            use_residual_(use_residual), multi_label_(multi_label) {
+            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate), multi_label_(multi_label) {
                 assert(num_layers >= 1);
                 assert(num_hidden_units >= 1);
                 assert(num_classes >= 1);
+                enable_recomputation_ = true;
         }
-        ~ResGCN() {}
-
-        Tensor * graph_convolution_sage(Tensor * t) {
-            // GraphSage convolution
-            Tensor * aggr = aggregation(t, MEAN);
-            Tensor * aggr_fc = fc(t, num_hidden_units_);
-            Tensor * t_fc = fc(t, num_hidden_units_);
-            Tensor * output = add(aggr_fc, t_fc, 1., 1., true);
-            return output;
-        }
-
-        Tensor * graph_convolution_gcn(Tensor * t) {
-            // GCN convolution
-            t = aggregation(t, NORM_SUM);
-            t = fc(t, num_hidden_units_);
-            return t;
-        }
+        ~GraphSage() {}
 
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
-            t = dropout(t, dropout_rate_, true);
-            t = fc(t, num_hidden_units_); // project to num_hidden_units_
-            t = relu(t, true);
-            next_layer(0);
-            
-            for (int i = 0; i < num_layers_; ++ i) {
-                Tensor * shortcut = t;
-                t = graph_convolution_gcn(t);
-                t = relu(t, true);
-                t = add(t, shortcut, 1., 1., true);
-                t = dropout(t, dropout_rate_, true);
-                next_layer(1);
-            }
+            t = dropout(t, dropout_rate_, enable_recomputation_);
+            t = fc(t, num_hidden_units_);
 
-            t = fc(t, num_classes_); // project to num_classes_
-            if (! multi_label_) {
-                t = softmax(t, true);
+            for (int i = 0; i < num_layers_; ++ i) {
+                int output_size = num_hidden_units_;
+                //if (i == num_layers_ - 1) {
+                //    output_size = num_classes_;
+                //}
+                // process the embeddings
+                Tensor * t_0 = fc(t, output_size, "None", true);
+                // the aggregated results
+                if (i == 0) {
+                    // reduce the dimension first to reduce 
+                    // computation cost
+                    t = fc(t, output_size, "None", true);
+                    t = aggregation(t, MEAN);
+                } else {
+                    t = aggregation(t, MEAN);
+                    t = fc(t, output_size, "None", true);
+                }
+                // added the transformed aggregated results with the transformed embeddings
+                t = add(t_0, t, 1., 1., enable_recomputation_);
+
+                t = relu(t, enable_recomputation_);
+                t = dropout(t, dropout_rate_, enable_recomputation_);
+
+                if (i == num_layers_ - 1) {
+                    t = fc(t, num_classes_);
+                    if (! multi_label_) {
+                        t = softmax(t, enable_recomputation_);
+                    }
+                }
+
+                if (i == 0) {
+                    next_layer(0);
+                } else if (i == num_layers_ - 1) {
+                    next_layer(2);
+                } else {
+                    next_layer(1);
+                }
             }
-            next_layer(2);
             return t;
         }
 };
-
-// The ResGCN from the DeepGCN paper
 
 int main(int argc, char ** argv) {
     // parse input arguments
@@ -117,7 +119,6 @@ int main(int argc, char ** argv) {
         ("weight_init", po::value<std::string>()->default_value("xavier"), "Weight initialization method. xavier: xavier initialization, pytorch: the Pytorch default initialization method.")
         ("num_dp_ways", po::value<int>()->default_value(1), "The number of data-parallel ways.")
         ("enable_compression", po::value<int>()->default_value(0), "1/0: Enable/Disable data compression for communication.")
-        ("residual", po::value<int>()->default_value(0), "1/0: Use residual connections.")
         ("multi_label", po::value<int>()->default_value(0), "1/0: Is a multi-label classification task.");
     po::store(po::parse_command_line(argc, argv, desc), vm);
     try {
@@ -151,7 +152,6 @@ int main(int argc, char ** argv) {
     FeaturePreprocessingMethod feature_preprocessing = NoFeaturePreprocessing;
     bool enable_compression = vm["enable_compression"].as<int>() == 1;
     bool multi_label = vm["multi_label"].as<int>() == 1;
-    bool use_residual = vm["residual"].as<int>() == 1;
     if (vm["feature_pre"].as<int>() == 1) {
         feature_preprocessing = RowNormalizationPreprocessing;
     }
@@ -198,7 +198,7 @@ int main(int argc, char ** argv) {
 
     if (! node_id) {
         printf("The graph dataset locates at %s\n", graph_path.c_str());
-        printf("The number of ResGCN layers: %d\n", num_layers);
+        printf("The number of GCNII layers: %d\n", num_layers);
         printf("The number of hidden units: %d\n", num_hidden_units);
         printf("The number of training epoches: %d\n", num_epoch);
         printf("Learning rate: %.6f\n", learning_rate);
@@ -213,12 +213,10 @@ int main(int argc, char ** argv) {
     }
 
     // IIitialize the engine
-    ResGCN * gcn = new ResGCN(num_layers, num_hidden_units, num_classes, num_features, dropout, use_residual, multi_label);
+    GraphSage * sage = new GraphSage(num_layers, num_hidden_units, num_classes, num_features, dropout, multi_label);
     DistributedPIPHybridParallelExecutionEngineGPU* execution_engine = new DistributedPIPHybridParallelExecutionEngineGPU();
     AdamOptimizerGPU * optimizer = new AdamOptimizerGPU(learning_rate, weight_decay); 
     OperatorExecutorGPUV2 * executor = new OperatorExecutorGPUV2(graph_structure);
-    //CrossEntropyLossGPU * loss = new CrossEntropyLossGPU();
-    //loss->set_elements_(graph_structure->get_num_global_vertices() , num_classes);
     AbstractLoss * loss = NULL;
     if (! multi_label) {
         CrossEntropyLossGPU * ce_loss = new CrossEntropyLossGPU();
@@ -250,7 +248,7 @@ int main(int argc, char ** argv) {
     execution_engine->set_loss(loss);
     execution_engine->set_weight_file(weight_file);
     execution_engine->set_num_chunks(num_chunks);
-    execution_engine->set_aggregation_type(NORM_SUM);
+    execution_engine->set_aggregation_type(MEAN);
     execution_engine->set_evaluation_frequency(evaluation_frequency);
     execution_engine->set_always_exact_inference(always_exact_inference);
     execution_engine->set_feature_preprocessing_method(feature_preprocessing);
@@ -268,13 +266,13 @@ int main(int argc, char ** argv) {
         exit(-1);
     } else if (partition_strategy == "model") {
         std::vector<double> cost_each_layer;
-        for (int i = 0; i < num_layers + 2; ++ i) {
+        for (int i = 0; i < num_layers; ++ i) {
             // assumed that the cost of each layer is the same
             cost_each_layer.push_back(1.);
         }
         int num_stages = execution_engine->get_num_stages();
         CUDAModelPartitioning partition = ModelPartitioner::get_model_parallel_partition(
-                gcn, num_stages, num_layers + 2, cost_each_layer, num_vertices
+                sage, num_stages, num_layers, cost_each_layer, num_vertices
                 );
         execution_engine->set_partition(partition);
     } else {
@@ -284,10 +282,10 @@ int main(int argc, char ** argv) {
     }
 
     // model training
-    execution_engine->execute_application(gcn, num_epoch);
+    execution_engine->execute_application(sage, num_epoch);
 
     // destroy the model and the engine
-    delete gcn;
+    delete sage;
     delete execution_engine;
     delete optimizer;
     delete executor;
@@ -300,7 +298,6 @@ int main(int argc, char ** argv) {
     Context::finalize_context();
     printf("[MPI Rank %d] Success \n", node_id);
     return 0;
-
 }
 
 

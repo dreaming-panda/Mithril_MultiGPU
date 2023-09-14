@@ -160,6 +160,7 @@ Tensor * AbstractApplication::batch_norm(Tensor * a, bool is_transient) {
             a, scale, bias, is_transient
             );
     assert(batch_norm);
+    operators_.push_back(batch_norm);
     return batch_norm->get_output_tensor(0);
 }
 

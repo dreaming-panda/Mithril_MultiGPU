@@ -3257,7 +3257,7 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
                     cudaMemcpy(
                         scale_data_gpu, cpu_data,
                         sizeof(DataType) * embedding_size,
-                        cudaMemcpyDeviceToDevice
+                        cudaMemcpyHostToDevice
                         )
                     );
             delete [] cpu_data;
