@@ -144,14 +144,14 @@ class DropoutOperator: public Operator {
         double dropout_rate_;
 };
 
-class LayerNormalizationOperator: public Operator {
-    public:
-        // the weight is a 2-dimension tensor with shape = (2, a.shape[1])
-        // the first row represent the learnable scaling factor while (1. init)
-        // the second row represents the learnable bias  (0. init)
-        LayerNormalizationOperator(Tensor * a, Tensor * weight, bool is_transient = false);
-        ~LayerNormalizationOperator() {}
-};
+//class LayerNormalizationOperator: public Operator {
+//    public:
+//        // the weight is a 2-dimension tensor with shape = (2, a.shape[1])
+//        // the first row represent the learnable scaling factor while (1. init)
+//        // the second row represents the learnable bias  (0. init)
+//        LayerNormalizationOperator(Tensor * a, Tensor * weight, bool is_transient = false);
+//        ~LayerNormalizationOperator() {}
+//};
 
 class BatchNormalizationOperator: public Operator {
     public:

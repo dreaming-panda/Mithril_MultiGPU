@@ -3233,6 +3233,44 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
         engine->hybrid_init_weight_tensor_data(data, num_elements, tensor->dims[0]);
         check_consistency_gpu_array(data, num_elements);
     }
+
+    // the biases and scales of batchnorm need to be initialized differently
+    for (int i = 0; i < num_operators; ++ i) {
+        Operator * op = op_ten_manager->get_operator(i);
+        assert(op != NULL);
+        if (op->get_type() == OPERATOR_BATCH_NORM) {
+            WeightOperator * scale_weight = (WeightOperator*) op->get_input_tensor(1)->op;
+            WeightOperator * bias_weight = (WeightOperator*) op->get_input_tensor(2)->op;
+            assert(scale_weight && bias_weight);
+            int embedding_size = op->get_input_tensor(0)->dims[1];
+            assert(embedding_size == op->get_input_tensor(1)->dims[0]);
+            assert(embedding_size == op->get_input_tensor(2)->dims[0]);
+            // initialize the scale data
+            DataType * cpu_data = new DataType[embedding_size];
+            DataType * scale_data_gpu = curr_weights_[scale_weight];
+            assert(cpu_data);
+            assert(scale_data_gpu);
+            for (int j = 0; j < embedding_size; ++ j) {
+                cpu_data[j] = 1.;
+            }
+            checkCUDA(
+                    cudaMemcpy(
+                        scale_data_gpu, cpu_data,
+                        sizeof(DataType) * embedding_size,
+                        cudaMemcpyDeviceToDevice
+                        )
+                    );
+            delete [] cpu_data;
+            // initialize the bias data
+            DataType * bias_data_gpu = curr_weights_[bias_weight];
+            checkCUDA(
+                    cudaMemset(
+                        bias_data_gpu, 0, sizeof(DataType) * embedding_size
+                        )
+                    );
+        }
+    }
+
     // clear the communication volume
     comm_ = 0;
     // allocate the reduce buffer
@@ -3556,6 +3594,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
             case OPERATOR_DROPOUT:
                 executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
                 break;
+            case OPERATOR_BATCH_NORM:
+                executor_->batch_norm_forward(
+                        (BatchNormalizationOperator*) op, local_vid_begin, local_vid_end, chunk_id
+                        );
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -3646,6 +3689,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
             case OPERATOR_DROPOUT:
                 executor_->dropout_backward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
                 break;
+            case OPERATOR_BATCH_NORM:
+                executor_->batch_norm_backward(
+                        (BatchNormalizationOperator*) op, local_vid_begin, local_vid_end, chunk_id
+                        );
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -3705,6 +3753,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::recomputation(
                 break;
             case OPERATOR_DROPOUT:
                 executor_->dropout_forward((DropoutOperator*) op, local_vid_begin, local_vid_end, chunk_id);
+                break;
+            case OPERATOR_BATCH_NORM:
+                executor_->batch_norm_forward(
+                        (BatchNormalizationOperator*) op, local_vid_begin, local_vid_end, chunk_id
+                        );
                 break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
@@ -4683,6 +4736,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                     break;
                 case OPERATOR_DROPOUT:
                     executor_->dropout_forward((DropoutOperator*) op);
+                    break;
+                case OPERATOR_BATCH_NORM:
+                    executor_->batch_norm_forward((BatchNormalizationOperator*) op);
                     break;
                 default:
                     fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());

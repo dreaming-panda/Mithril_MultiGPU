@@ -139,16 +139,28 @@ Tensor * AbstractApplication::dropout(Tensor * a, double dropout_rate, bool is_t
     return dropout->get_output_tensor(0);
 }
 
-Tensor * AbstractApplication::layer_norm(Tensor * a, bool is_transient) {
-    assert(false); // NOT SUPPORTED
-    assert(a->num_dims == 1);
+//Tensor * AbstractApplication::layer_norm(Tensor * a, bool is_transient) {
+//    assert(false); // NOT SUPPORTED
+//    assert(a->num_dims == 1);
+//    int embedding_size = a->dims[1];
+//    Tensor * w = weight(2, embedding_size);
+//    Operator * layer_norm = new LayerNormalizationOperator(
+//            a, w, is_transient
+//            );
+//    assert(layer_norm);
+//    return layer_norm->get_output_tensor(0);
+//}
+
+Tensor * AbstractApplication::batch_norm(Tensor * a, bool is_transient) {
+    assert(a->type == VERTEX_TENSOR);
     int embedding_size = a->dims[1];
-    Tensor * w = weight(2, embedding_size);
-    Operator * layer_norm = new LayerNormalizationOperator(
-            a, w, is_transient
+    Tensor * scale = weight(embedding_size);
+    Tensor * bias = weight(embedding_size);
+    Operator * batch_norm = new BatchNormalizationOperator(
+            a, scale, bias, is_transient
             );
-    assert(layer_norm);
-    return layer_norm->get_output_tensor(0);
+    assert(batch_norm);
+    return batch_norm->get_output_tensor(0);
 }
 
 AbstractApplication::AbstractApplication(int num_features): num_features_(num_features) {
