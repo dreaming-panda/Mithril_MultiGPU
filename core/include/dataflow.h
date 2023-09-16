@@ -159,6 +159,12 @@ class BatchNormalizationOperator: public Operator {
         ~BatchNormalizationOperator() {}
 };
 
+class LayerNormalizationNoAffineOperator: public Operator {
+    public: 
+        LayerNormalizationNoAffineOperator(Tensor * a, bool is_transient = false);
+        ~LayerNormalizationNoAffineOperator();
+};
+
 // graph operators
 
 class AggregationOperator: public Operator {

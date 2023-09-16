@@ -56,42 +56,44 @@ class GraphSage: public AbstractApplication {
 
             for (int i = 0; i < num_layers_; ++ i) {
                 int output_size = num_hidden_units_;
-                //if (i == num_layers_ - 1) {
-                //    output_size = num_classes_;
-                //}
-                // process the embeddings
-                Tensor * t_0 = fc(t, output_size, "None", true);
-                // the aggregated results
-                if (i == 0) {
-                    // reduce the dimension first to reduce 
-                    // computation cost
-                    t = fc(t, output_size, "None", true);
-                    t = aggregation(t, MEAN);
-                } else {
-                    t = aggregation(t, MEAN);
-                    t = fc(t, output_size, "None", true);
-                }
-                // added the transformed aggregated results with the transformed embeddings
-                t = add(t_0, t, 1., 1., enable_recomputation_);
+                Tensor * shortcut = t;
 
+                //// RES
+                //// process the embeddings
+                //Tensor * t_0 = fc(t, output_size, "None", true);
+                //t = aggregation(t, MEAN);
+                //t = fc(t, output_size, "None", true);
+                //// added the transformed aggregated results with the transformed embeddings
+                //t = add(t_0, t, 1., 1., enable_recomputation_);
+                //t = batch_norm(t);
+                //t = relu(t, enable_recomputation_);
+                //t = add(t, shortcut, 1., 1., enable_recomputation_); // residual connection
+                //t = dropout(t, dropout_rate_, enable_recomputation_);
+
+                // RES+
+                t = batch_norm(t);
                 t = relu(t, enable_recomputation_);
                 t = dropout(t, dropout_rate_, enable_recomputation_);
-
-                if (i == num_layers_ - 1) {
-                    t = fc(t, num_classes_);
-                    if (! multi_label_) {
-                        t = softmax(t, enable_recomputation_);
-                    }
-                }
+                // graph convolution
+                Tensor * t_0 = fc(t, output_size, "None", true);
+                t = aggregation(t, MEAN);
+                t = fc(t, output_size, "None", true);
+                t = add(t_0, t, 1., 1., enable_recomputation_);
+                // residual connection
+                t = add(t, shortcut, 1., 1., enable_recomputation_); // residual connection
 
                 if (i == 0) {
                     next_layer(0);
-                } else if (i == num_layers_ - 1) {
-                    next_layer(2);
-                } else {
+                } else if (i < num_layers_ - 1) {
                     next_layer(1);
-                }
+                } 
             }
+
+            t = fc(t, num_classes_);
+            if (! multi_label_) {
+                t = softmax(t, enable_recomputation_);
+            }
+            next_layer(2);
             return t;
         }
 };

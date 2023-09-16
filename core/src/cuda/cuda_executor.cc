@@ -1146,6 +1146,7 @@ void OperatorExecutorGPUV2::dropout_forward(DropoutOperator * op, VertexId left,
     assert(num_elements == output_tensor_resource->get_num_elements());
     assert(num_elements % num_vertices == 0);
     size_t num_elements_per_vertex = num_elements / num_vertices;
+    assert(num_elements_per_vertex == input_tensor->dims[1]);
 
     size_t start_idx = num_elements_per_vertex * left;
     size_t end_idx = num_elements_per_vertex * right;
@@ -1368,90 +1369,124 @@ void OperatorExecutorGPUV2::dropout_backward(DropoutOperator * op, VertexId left
 #endif
 }
 
-//uint8_t * OperatorExecutorGPUV2::get_layer_norm_mean_buffer(
-//        size_t size
-//        ) {
-//    if (size > layer_norm_mean_buff_size_) {
-//        checkCUDA(cudaFree(layer_norm_mean_buff_));
-//        layer_norm_mean_buff_ = NULL;
-//        checkCUDA(cudaMalloc(
-//                    &layer_norm_mean_buff_, 
-//                    layer_norm_mean_buff_size_
-//                    ));
-//        layer_norm_mean_buff_size_ = size;
-//    }
-//    assert(layer_norm_mean_buff_);
-//    assert(layer_norm_mean_buff_size_ >= size);
-//    return layer_norm_mean_buff_;
-//}
-//
-//uint8_t * OperatorExecutorGPUV2::get_layer_norm_var_buffer(
-//        size_t size
-//        ) {
-//    if (size > layer_norm_var_buff_size_) {
-//        checkCUDA(cudaFree(layer_norm_var_buff_));
-//        layer_norm_var_buff_ = NULL;
-//        checkCUDA(cudaMalloc(
-//                    &layer_norm_var_buff_, 
-//                    layer_norm_var_buff_size_
-//                    ));
-//        layer_norm_var_buff_size_ = size;
-//    }
-//    assert(layer_norm_var_buff_);
-//    assert(layer_norm_var_buff_size_ >= size);
-//    return layer_norm_var_buff_;
-//}
-//
-//uint8_t * OperatorExecutorGPUV2::get_layer_norm_elementwise_var_buffer(
-//        size_t size
-//        ) {
-//    if (size > layer_norm_elementwise_var_buff_size_) {
-//        checkCUDA(cudaFree(layer_norm_elementwise_var_buff_));
-//        layer_norm_elementwise_var_buff_ = NULL;
-//        checkCUDA(cudaMalloc(
-//                    &layer_norm_elementwise_var_buff_, 
-//                    layer_norm_elementwise_var_buff_size_
-//                    ));
-//        layer_norm_elementwise_var_buff_size_ = size;
-//    }
-//    assert(layer_norm_elementwise_var_buff_);
-//    assert(layer_norm_elementwise_var_buff_size_ >= size);
-//    return layer_norm_elementwise_var_buff_;
-//}
-//
-//uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace(
-//        size_t size
-//        ) {
-//    if (size > layer_norm_reduce_workspace_size_) {
-//        checkCUDA(cudaFree(layer_norm_reduce_workspace_));
-//        layer_norm_reduce_workspace_ = NULL;
-//        checkCUDA(cudaMalloc(
-//                    &layer_norm_reduce_workspace_, 
-//                    layer_norm_reduce_workspace_size_
-//                    ));
-//        layer_norm_reduce_workspace_size_ = size;
-//    }
-//    assert(layer_norm_reduce_workspace_);
-//    assert(layer_norm_reduce_workspace_size_ >= size);
-//    return layer_norm_reduce_workspace_;
-//}
-//
-//uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace2(
-//        size_t size
-//        ) {
-//    if (size > layer_norm_reduce_workspace2_size_) {
-//        checkCUDA(cudaFree(layer_norm_reduce_workspace2_));
-//        layer_norm_reduce_workspace2_ = NULL;
-//        checkCUDA(cudaMalloc(
-//                    &layer_norm_reduce_workspace2_, 
-//                    layer_norm_reduce_workspace2_size_
-//                    ));
-//        layer_norm_reduce_workspace2_size_ = size;
-//    }
-//    assert(layer_norm_reduce_workspace2_);
-//    assert(layer_norm_reduce_workspace2_size_ >= size);
-//    return layer_norm_reduce_workspace2_;
-//}
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_mean_buffer(
+        size_t size
+        ) {
+    if (size > layer_norm_mean_buff_size_) {
+        checkCUDA(cudaFree(layer_norm_mean_buff_));
+        layer_norm_mean_buff_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_mean_buff_, 
+                    layer_norm_mean_buff_size_
+                    ));
+        layer_norm_mean_buff_size_ = size;
+    }
+    assert(layer_norm_mean_buff_);
+    assert(layer_norm_mean_buff_size_ >= size);
+    return layer_norm_mean_buff_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_var_buffer(
+        size_t size
+        ) {
+    if (size > layer_norm_var_buff_size_) {
+        checkCUDA(cudaFree(layer_norm_var_buff_));
+        layer_norm_var_buff_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_var_buff_, 
+                    layer_norm_var_buff_size_
+                    ));
+        layer_norm_var_buff_size_ = size;
+    }
+    assert(layer_norm_var_buff_);
+    assert(layer_norm_var_buff_size_ >= size);
+    return layer_norm_var_buff_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_r1_buffer(
+        size_t size
+        ) {
+    if (size > layer_norm_r1_buff_size_) {
+        checkCUDA(cudaFree(layer_norm_r1_buff_));
+        layer_norm_r1_buff_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_r1_buff_, 
+                    layer_norm_r1_buff_size_
+                    ));
+        layer_norm_r1_buff_size_ = size;
+    }
+    assert(layer_norm_r1_buff_);
+    assert(layer_norm_r1_buff_size_ >= size);
+    return layer_norm_r1_buff_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_r2_buffer(
+        size_t size
+        ) {
+    if (size > layer_norm_r2_buff_size_) {
+        checkCUDA(cudaFree(layer_norm_r2_buff_));
+        layer_norm_r2_buff_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_r2_buff_, 
+                    layer_norm_r2_buff_size_
+                    ));
+        layer_norm_r2_buff_size_ = size;
+    }
+    assert(layer_norm_r2_buff_);
+    assert(layer_norm_r2_buff_size_ >= size);
+    return layer_norm_r2_buff_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_elementwise_var_buffer(
+        size_t size
+        ) {
+    if (size > layer_norm_elementwise_var_buff_size_) {
+        checkCUDA(cudaFree(layer_norm_elementwise_var_buff_));
+        layer_norm_elementwise_var_buff_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_elementwise_var_buff_, 
+                    layer_norm_elementwise_var_buff_size_
+                    ));
+        layer_norm_elementwise_var_buff_size_ = size;
+    }
+    assert(layer_norm_elementwise_var_buff_);
+    assert(layer_norm_elementwise_var_buff_size_ >= size);
+    return layer_norm_elementwise_var_buff_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace(
+        size_t size
+        ) {
+    if (size > layer_norm_reduce_workspace_size_) {
+        checkCUDA(cudaFree(layer_norm_reduce_workspace_));
+        layer_norm_reduce_workspace_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_reduce_workspace_, 
+                    layer_norm_reduce_workspace_size_
+                    ));
+        layer_norm_reduce_workspace_size_ = size;
+    }
+    assert(layer_norm_reduce_workspace_);
+    assert(layer_norm_reduce_workspace_size_ >= size);
+    return layer_norm_reduce_workspace_;
+}
+
+uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace2(
+        size_t size
+        ) {
+    if (size > layer_norm_reduce_workspace2_size_) {
+        checkCUDA(cudaFree(layer_norm_reduce_workspace2_));
+        layer_norm_reduce_workspace2_ = NULL;
+        checkCUDA(cudaMalloc(
+                    &layer_norm_reduce_workspace2_, 
+                    layer_norm_reduce_workspace2_size_
+                    ));
+        layer_norm_reduce_workspace2_size_ = size;
+    }
+    assert(layer_norm_reduce_workspace2_);
+    assert(layer_norm_reduce_workspace2_size_ >= size);
+    return layer_norm_reduce_workspace2_;
+}
 
 OperatorExecutorGPUV2::BatchNormState OperatorExecutorGPUV2::get_batch_norm_state(
         BatchNormalizationOperator * op, 
@@ -1593,6 +1628,8 @@ void OperatorExecutorGPUV2::batch_norm_forward(
     cudaStreamSynchronize(0);
 #endif
 
+    //printf("%u %u %d\n", left, right, chunk_id);
+
     assert(op);
     assert(op->get_num_input_tensors() == 3);
     assert(op->get_num_output_tensors() == 1);
@@ -1620,6 +1657,7 @@ void OperatorExecutorGPUV2::batch_norm_forward(
     TensorResourceGPU * weight_bias_tensor_resource = (TensorResourceGPU*)
         weight_bias_tensor->resource;
     assert(input_tensor_resource);
+    assert(output_tensor_resource);
     assert(weight_scale_tensor_resource);
     assert(weight_bias_tensor_resource);
 
@@ -1647,12 +1685,38 @@ void OperatorExecutorGPUV2::batch_norm_forward(
     BatchNormState state = get_batch_norm_state(
             op, chunk_id, left, right
             );
+    assert(state.saved_mean);
+    assert(state.saved_var);
+    assert(state.running_mean);
+    assert(state.running_var);
+    assert(state.left == left && state.right == right);
 
     float alpha = 1.;
     float beta = 0.;
     double eps = 1e-5;
 
     if (is_in_inference_mode_) {
+        //double momentum = 1.0;
+        //checkCUDNN(
+        //        cudnnBatchNormalizationForwardTraining(
+        //            *cudnn_handle_,
+        //            CUDNN_BATCHNORM_PER_ACTIVATION,
+        //            &alpha, &beta,
+        //            state.in_out_tensor_descriptor,
+        //            d_input_data,
+        //            state.in_out_tensor_descriptor,
+        //            d_output_data,
+        //            state.scale_bias_tensor_descriptor,
+        //            d_scale_data,
+        //            d_bias_data,
+        //            momentum,
+        //            state.running_mean,
+        //            state.running_var,
+        //            eps,
+        //            state.saved_mean,
+        //            state.saved_var
+        //            )
+        //        );
         checkCUDNN(
                 cudnnBatchNormalizationForwardInference(
                     *cudnn_handle_,

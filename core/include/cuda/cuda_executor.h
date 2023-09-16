@@ -80,23 +80,29 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         BatchNormState get_batch_norm_state(BatchNormalizationOperator * op, int chunk_id, VertexId left, VertexId right);
         void release_batch_norm_states();
 
-        //// helper buffers used for layernorm
-        //uint8_t * layer_norm_mean_buff_; 
-        //uint8_t * layer_norm_var_buff_;
-        //uint8_t * layer_norm_elementwise_var_buff_;
-        //uint8_t * layer_norm_reduce_workspace_;
-        //uint8_t * layer_norm_reduce_workspace2_;
-        //size_t layer_norm_mean_buff_size_ = 0;
-        //size_t layer_norm_var_buff_size_ = 0;
-        //size_t layer_norm_elementwise_var_buff_size_ = 0;
-        //size_t layer_norm_reduce_workspace_size_ = 0;
-        //size_t layer_norm_reduce_workspace2_size_ = 0;
+        // helper buffers used for layernorm
+        uint8_t * layer_norm_mean_buff_; 
+        uint8_t * layer_norm_var_buff_;
+        uint8_t * layer_norm_elementwise_var_buff_;
+        uint8_t * layer_norm_r1_buff_; // sum d_L / d_yk
+        uint8_t * layer_norm_r2_buff_; // sum [(x_k - M) * dL / d_yk]
+        uint8_t * layer_norm_reduce_workspace_;
+        uint8_t * layer_norm_reduce_workspace2_;
+        size_t layer_norm_mean_buff_size_ = 0;
+        size_t layer_norm_var_buff_size_ = 0;
+        size_t layer_norm_elementwise_var_buff_size_ = 0;
+        size_t layer_norm_r1_buff_size_ = 0;
+        size_t layer_norm_r2_buff_size_ = 0;
+        size_t layer_norm_reduce_workspace_size_ = 0;
+        size_t layer_norm_reduce_workspace2_size_ = 0;
 
-        //uint8_t * get_layer_norm_mean_buffer(size_t size);
-        //uint8_t * get_layer_norm_var_buffer(size_t size);
-        //uint8_t * get_layer_norm_elementwise_var_buffer(size_t size);
-        //uint8_t * get_layer_norm_reduce_workspace(size_t size);
-        //uint8_t * get_layer_norm_reduce_workspace2(size_t size);
+        uint8_t * get_layer_norm_mean_buffer(size_t size);
+        uint8_t * get_layer_norm_var_buffer(size_t size);
+        uint8_t * get_layer_norm_elementwise_var_buffer(size_t size);
+        uint8_t * get_layer_norm_r1_buffer(size_t size);
+        uint8_t * get_layer_norm_r2_buffer(size_t size);
+        uint8_t * get_layer_norm_reduce_workspace(size_t size);
+        uint8_t * get_layer_norm_reduce_workspace2(size_t size);
 
         cusparseSpMatDescr_t SpCsr_;
         cusparseSpMatDescr_t SpCsr_T;
@@ -173,7 +179,12 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         void batch_norm_forward(BatchNormalizationOperator * op, VertexId left, VertexId right, int chunk_id);
         void batch_norm_backward(BatchNormalizationOperator * op, VertexId left, VertexId right, int chunk_id);
 
-        //void reduce_over_column_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
+        void reduce_over_column_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
+        void layer_norm_no_affine_forward(LayerNormalizationNoAffineOperator * op);
+        void layer_norm_no_affine_backward(LayerNormalizationNoAffineOperator * op);
+        void layer_norm_no_affine_forward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right, int chunk_id);
+        void layer_norm_no_affine_backward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right, int chunk_id);
+
         //void reduce_over_row_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
         //void layer_norm_forward(LayerNormalizationOperator * op, VertexId left, VertexId right);
         //void layer_norm_backward(LayerNormalizationOperator * op, VertexId left, VertexId right);

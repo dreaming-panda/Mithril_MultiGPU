@@ -3535,6 +3535,8 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
         int chunk_id,
         bool profiling_mode
         ) {
+    //printf("Propoagate activation: %d, %d, %d, %d\n",
+    //        op_begin, op_end, chunk_id, (int) profiling_mode);
     assert(chunk_manager_);
     assert(op_ten_manager_);
 
