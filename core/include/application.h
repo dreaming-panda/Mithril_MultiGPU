@@ -88,6 +88,7 @@ class AbstractApplication {
         Tensor * dropout(Tensor * a, double dropout_rate, bool is_transient = false);
         //Tensor * layer_norm(Tensor * a, bool is_transient = false);
         Tensor * batch_norm(Tensor * a, bool is_transient = false);
+        Tensor * layer_norm_no_affine(Tensor * a, bool is_transient = false);
 
         void next_layer(int prev_layer_type = 0);
         void set_global_shared_tensor(Tensor * tensor);

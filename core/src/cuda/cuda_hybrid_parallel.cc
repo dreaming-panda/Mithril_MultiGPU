@@ -3601,6 +3601,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                         (BatchNormalizationOperator*) op, local_vid_begin, local_vid_end, chunk_id
                         );
                 break;
+            case OPERATOR_LAYER_NORM_NO_AFFINE:
+                executor_->layer_norm_no_affine_forward(
+                        (LayerNormalizationNoAffineOperator*) op, local_vid_begin, local_vid_end
+                        );
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -3696,6 +3701,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
                         (BatchNormalizationOperator*) op, local_vid_begin, local_vid_end, chunk_id
                         );
                 break;
+            case OPERATOR_LAYER_NORM_NO_AFFINE:
+                executor_->layer_norm_no_affine_backward(
+                        (LayerNormalizationNoAffineOperator*) op, local_vid_begin, local_vid_end
+                        );
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -3759,6 +3769,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::recomputation(
             case OPERATOR_BATCH_NORM:
                 executor_->batch_norm_forward(
                         (BatchNormalizationOperator*) op, local_vid_begin, local_vid_end, chunk_id
+                        );
+                break;
+            case OPERATOR_LAYER_NORM_NO_AFFINE:
+                executor_->layer_norm_no_affine_forward(
+                        (LayerNormalizationNoAffineOperator*) op, local_vid_begin, local_vid_end
                         );
                 break;
             default:
@@ -4741,6 +4756,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                     break;
                 case OPERATOR_BATCH_NORM:
                     executor_->batch_norm_forward((BatchNormalizationOperator*) op);
+                    break;
+                case OPERATOR_LAYER_NORM_NO_AFFINE:
+                    executor_->layer_norm_no_affine_forward((LayerNormalizationNoAffineOperator*) op);
                     break;
                 default:
                     fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());

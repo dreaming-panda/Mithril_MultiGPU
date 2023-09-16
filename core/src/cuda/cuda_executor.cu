@@ -38,6 +38,8 @@ void OperatorExecutorGPUV2::reduce_over_column_dimension(
         int num_rows, 
         int num_cols
         ) {
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //printf("Reduce called\n");
     assert(in);
     assert(out);
     assert(num_rows > 0 && num_cols > 0);
@@ -62,6 +64,8 @@ void OperatorExecutorGPUV2::reduce_over_column_dimension(
             keys, keys + num_elements, in, 
             reduced_keys, out
             );
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //printf("Reduce completed\n");
 }
 
 __global__ void calculate_elementwise_var_kernel(
@@ -368,7 +372,7 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_forward(
         ) {
     VertexId num_vertices = graph_->get_num_global_vertices();
     layer_norm_no_affine_forward(
-            op, 0, num_vertices, -1
+            op, 0, num_vertices
             );
 }
 
@@ -377,15 +381,14 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_backward(
         ) {
     VertexId num_vertices = graph_->get_num_global_vertices();
     layer_norm_no_affine_backward(
-            op, 0, num_vertices, -1
+            op, 0, num_vertices
             );
 }
 
 void OperatorExecutorGPUV2::layer_norm_no_affine_forward(
         LayerNormalizationNoAffineOperator * op, 
         VertexId left, 
-        VertexId right, 
-        int chunk_id
+        VertexId right
         ) {
     if (left == right) {
         return ;
@@ -444,11 +447,17 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_forward(
     int num_elements = (right - left) * embedding_size;
     int block_size = 1024;
     int num_blocks = (num_elements + block_size - 1) / block_size;
-    scale_vector_kernel<<<num_blocks, block_size>>>(
-            mean, mean, 
-            (DataType) 1. / embedding_size,
-            num_elements
-            );
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    {
+        int N = (int) (right - left);
+        int num_blocks = (N + block_size - 1) / block_size;
+        scale_vector_kernel<<<num_blocks, block_size>>>(
+                mean, mean, 
+                (DataType) 1. / embedding_size,
+                N
+                );
+    }
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
 
     // calculate the var of each sample 
     DataType * var = (DataType*) get_layer_norm_var_buffer(
@@ -457,11 +466,15 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_forward(
     DataType * elementwise_var = (DataType*) get_layer_norm_elementwise_var_buffer(
             sizeof(DataType) * (right - left) * embedding_size
             );
+    assert(var);
+    assert(elementwise_var);
     // calcualte the elementwise_var 
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
     calculate_elementwise_var_kernel<<<num_blocks, block_size>>>(
             d_input_data, mean, elementwise_var,
             num_elements, embedding_size
             );
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
     // reduce over the column dimension to calculate the sample-wise var
     reduce_over_column_dimension(
             elementwise_var, var, 
@@ -531,8 +544,7 @@ __global__ void calculate_layer_norm_grad_kernel(
 void OperatorExecutorGPUV2::layer_norm_no_affine_backward(
         LayerNormalizationNoAffineOperator * op, 
         VertexId left, 
-        VertexId right, 
-        int chunk_id
+        VertexId right
         ) {
     if (left == right) {
         return ;
@@ -602,11 +614,15 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_backward(
     int num_elements = (right - left) * embedding_size;
     int block_size = 1024;
     int num_blocks = (num_elements + block_size - 1) / block_size;
-    scale_vector_kernel<<<num_blocks, block_size>>>(
-            mean, mean, 
-            (DataType) 1. / embedding_size,
-            num_elements
-            );
+    {
+        int N = (int) (right - left);
+        int num_blocks = (N + block_size - 1) / block_size;
+        scale_vector_kernel<<<num_blocks, block_size>>>(
+                mean, mean, 
+                (DataType) 1. / embedding_size,
+                N
+                );
+    }
 
     // calculate the var of each sample 
     DataType * var = (DataType*) get_layer_norm_var_buffer(

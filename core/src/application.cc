@@ -164,6 +164,16 @@ Tensor * AbstractApplication::batch_norm(Tensor * a, bool is_transient) {
     return batch_norm->get_output_tensor(0);
 }
 
+Tensor * AbstractApplication::layer_norm_no_affine(Tensor * a, bool is_transient) {
+    assert(a->type == VERTEX_TENSOR);
+    LayerNormalizationNoAffineOperator * layer_norm = new LayerNormalizationNoAffineOperator(
+            a, is_transient
+            );
+    assert(layer_norm);
+    operators_.push_back(layer_norm);
+    return layer_norm->get_output_tensor(0);
+}
+
 AbstractApplication::AbstractApplication(int num_features): num_features_(num_features) {
     operators_.clear();
     input_tensor_ = NULL;

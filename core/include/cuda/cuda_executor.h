@@ -88,6 +88,7 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         uint8_t * layer_norm_r2_buff_; // sum [(x_k - M) * dL / d_yk]
         uint8_t * layer_norm_reduce_workspace_;
         uint8_t * layer_norm_reduce_workspace2_;
+
         size_t layer_norm_mean_buff_size_ = 0;
         size_t layer_norm_var_buff_size_ = 0;
         size_t layer_norm_elementwise_var_buff_size_ = 0;
@@ -182,8 +183,8 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         void reduce_over_column_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
         void layer_norm_no_affine_forward(LayerNormalizationNoAffineOperator * op);
         void layer_norm_no_affine_backward(LayerNormalizationNoAffineOperator * op);
-        void layer_norm_no_affine_forward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right, int chunk_id);
-        void layer_norm_no_affine_backward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right, int chunk_id);
+        void layer_norm_no_affine_forward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right);
+        void layer_norm_no_affine_backward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right);
 
         //void reduce_over_row_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
         //void layer_norm_forward(LayerNormalizationOperator * op, VertexId left, VertexId right);

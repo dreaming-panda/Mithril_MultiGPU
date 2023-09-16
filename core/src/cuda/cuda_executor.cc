@@ -1373,13 +1373,14 @@ uint8_t * OperatorExecutorGPUV2::get_layer_norm_mean_buffer(
         size_t size
         ) {
     if (size > layer_norm_mean_buff_size_) {
-        checkCUDA(cudaFree(layer_norm_mean_buff_));
+        if (layer_norm_mean_buff_size_ > 0) 
+            checkCUDA(cudaFree(layer_norm_mean_buff_));
         layer_norm_mean_buff_ = NULL;
+        layer_norm_mean_buff_size_ = size;
         checkCUDA(cudaMalloc(
                     &layer_norm_mean_buff_, 
                     layer_norm_mean_buff_size_
                     ));
-        layer_norm_mean_buff_size_ = size;
     }
     assert(layer_norm_mean_buff_);
     assert(layer_norm_mean_buff_size_ >= size);
@@ -1390,13 +1391,14 @@ uint8_t * OperatorExecutorGPUV2::get_layer_norm_var_buffer(
         size_t size
         ) {
     if (size > layer_norm_var_buff_size_) {
-        checkCUDA(cudaFree(layer_norm_var_buff_));
+        if (layer_norm_var_buff_size_ > 0)
+            checkCUDA(cudaFree(layer_norm_var_buff_));
         layer_norm_var_buff_ = NULL;
+        layer_norm_var_buff_size_ = size;
         checkCUDA(cudaMalloc(
                     &layer_norm_var_buff_, 
                     layer_norm_var_buff_size_
                     ));
-        layer_norm_var_buff_size_ = size;
     }
     assert(layer_norm_var_buff_);
     assert(layer_norm_var_buff_size_ >= size);
@@ -1407,13 +1409,14 @@ uint8_t * OperatorExecutorGPUV2::get_layer_norm_r1_buffer(
         size_t size
         ) {
     if (size > layer_norm_r1_buff_size_) {
-        checkCUDA(cudaFree(layer_norm_r1_buff_));
+        if (layer_norm_r1_buff_size_)
+            checkCUDA(cudaFree(layer_norm_r1_buff_));
         layer_norm_r1_buff_ = NULL;
+        layer_norm_r1_buff_size_ = size;
         checkCUDA(cudaMalloc(
                     &layer_norm_r1_buff_, 
                     layer_norm_r1_buff_size_
                     ));
-        layer_norm_r1_buff_size_ = size;
     }
     assert(layer_norm_r1_buff_);
     assert(layer_norm_r1_buff_size_ >= size);
@@ -1424,13 +1427,14 @@ uint8_t * OperatorExecutorGPUV2::get_layer_norm_r2_buffer(
         size_t size
         ) {
     if (size > layer_norm_r2_buff_size_) {
-        checkCUDA(cudaFree(layer_norm_r2_buff_));
+        if (layer_norm_r2_buff_size_)
+            checkCUDA(cudaFree(layer_norm_r2_buff_));
         layer_norm_r2_buff_ = NULL;
+        layer_norm_r2_buff_size_ = size;
         checkCUDA(cudaMalloc(
                     &layer_norm_r2_buff_, 
                     layer_norm_r2_buff_size_
                     ));
-        layer_norm_r2_buff_size_ = size;
     }
     assert(layer_norm_r2_buff_);
     assert(layer_norm_r2_buff_size_ >= size);
@@ -1441,13 +1445,14 @@ uint8_t * OperatorExecutorGPUV2::get_layer_norm_elementwise_var_buffer(
         size_t size
         ) {
     if (size > layer_norm_elementwise_var_buff_size_) {
-        checkCUDA(cudaFree(layer_norm_elementwise_var_buff_));
+        if (layer_norm_elementwise_var_buff_size_)
+            checkCUDA(cudaFree(layer_norm_elementwise_var_buff_));
         layer_norm_elementwise_var_buff_ = NULL;
+        layer_norm_elementwise_var_buff_size_ = size;
         checkCUDA(cudaMalloc(
                     &layer_norm_elementwise_var_buff_, 
                     layer_norm_elementwise_var_buff_size_
                     ));
-        layer_norm_elementwise_var_buff_size_ = size;
     }
     assert(layer_norm_elementwise_var_buff_);
     assert(layer_norm_elementwise_var_buff_size_ >= size);
@@ -1458,13 +1463,14 @@ uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace(
         size_t size
         ) {
     if (size > layer_norm_reduce_workspace_size_) {
-        checkCUDA(cudaFree(layer_norm_reduce_workspace_));
+        if (layer_norm_reduce_workspace_size_)
+            checkCUDA(cudaFree(layer_norm_reduce_workspace_));
         layer_norm_reduce_workspace_ = NULL;
+        layer_norm_reduce_workspace_size_ = size;
         checkCUDA(cudaMalloc(
                     &layer_norm_reduce_workspace_, 
                     layer_norm_reduce_workspace_size_
                     ));
-        layer_norm_reduce_workspace_size_ = size;
     }
     assert(layer_norm_reduce_workspace_);
     assert(layer_norm_reduce_workspace_size_ >= size);
@@ -1475,13 +1481,14 @@ uint8_t * OperatorExecutorGPUV2::get_layer_norm_reduce_workspace2(
         size_t size
         ) {
     if (size > layer_norm_reduce_workspace2_size_) {
-        checkCUDA(cudaFree(layer_norm_reduce_workspace2_));
+        if (layer_norm_reduce_workspace2_size_)
+            checkCUDA(cudaFree(layer_norm_reduce_workspace2_));
         layer_norm_reduce_workspace2_ = NULL;
+        layer_norm_reduce_workspace2_size_ = size;
         checkCUDA(cudaMalloc(
                     &layer_norm_reduce_workspace2_, 
                     layer_norm_reduce_workspace2_size_
                     ));
-        layer_norm_reduce_workspace2_size_ = size;
     }
     assert(layer_norm_reduce_workspace2_);
     assert(layer_norm_reduce_workspace2_size_ >= size);
