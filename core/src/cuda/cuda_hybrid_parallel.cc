@@ -3238,7 +3238,7 @@ CUDAPIPWeightAggregator::CUDAPIPWeightAggregator(
     for (int i = 0; i < num_operators; ++ i) {
         Operator * op = op_ten_manager->get_operator(i);
         assert(op != NULL);
-        if (op->get_type() == OPERATOR_BATCH_NORM) {
+        if (op->get_type() == OPERATOR_BATCH_NORM || op->get_type() == OPERATOR_LN_AFFINE) {
             WeightOperator * scale_weight = (WeightOperator*) op->get_input_tensor(1)->op;
             WeightOperator * bias_weight = (WeightOperator*) op->get_input_tensor(2)->op;
             assert(scale_weight && bias_weight);
@@ -3606,6 +3606,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_activation(
                         (LayerNormalizationNoAffineOperator*) op, local_vid_begin, local_vid_end
                         );
                 break;
+            case OPERATOR_LN_AFFINE:
+                executor_->layer_norm_affine_forward(
+                        (LayerNormalizationAffineOperator*) op, local_vid_begin, local_vid_end
+                        );
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -3706,6 +3711,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::propagate_gradient(
                         (LayerNormalizationNoAffineOperator*) op, local_vid_begin, local_vid_end
                         );
                 break;
+            case OPERATOR_LN_AFFINE:
+                executor_->layer_norm_affine_backward(
+                        (LayerNormalizationAffineOperator*) op, local_vid_begin, local_vid_end
+                        );
+                break;
             default:
                 fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());
                 exit(-1);
@@ -3774,6 +3784,11 @@ void DistributedPIPHybridParallelExecutionEngineGPU::recomputation(
             case OPERATOR_LAYER_NORM_NO_AFFINE:
                 executor_->layer_norm_no_affine_forward(
                         (LayerNormalizationNoAffineOperator*) op, local_vid_begin, local_vid_end
+                        );
+                break;
+            case OPERATOR_LN_AFFINE:
+                executor_->layer_norm_affine_forward(
+                        (LayerNormalizationAffineOperator*) op, local_vid_begin, local_vid_end
                         );
                 break;
             default:
@@ -4759,6 +4774,9 @@ void DistributedPIPHybridParallelExecutionEngineGPU::run_exact_inference(
                     break;
                 case OPERATOR_LAYER_NORM_NO_AFFINE:
                     executor_->layer_norm_no_affine_forward((LayerNormalizationNoAffineOperator*) op);
+                    break;
+                case OPERATOR_LN_AFFINE:
+                    executor_->layer_norm_affine_forward((LayerNormalizationAffineOperator*) op);
                     break;
                 default:
                     fprintf(stderr, "Unsupported operator type %d.\n", (int) op->get_type());

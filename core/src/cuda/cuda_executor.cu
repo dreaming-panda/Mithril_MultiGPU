@@ -686,6 +686,256 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_backward(
 }
 
 
+void OperatorExecutorGPUV2::layer_norm_affine_forward(
+        LayerNormalizationAffineOperator * op
+        ) {
+    VertexId num_vertices = graph_->get_num_global_vertices();
+    layer_norm_affine_forward(
+            op, 0, num_vertices
+            );
+}
+
+void OperatorExecutorGPUV2::layer_norm_affine_backward(
+        LayerNormalizationAffineOperator * op
+        ) {
+    VertexId num_vertices = graph_->get_num_global_vertices();
+    layer_norm_affine_backward(
+            op, 0, num_vertices
+            );
+}
+
+__global__ void layer_norm_affine_kernel(
+        const DataType * in, 
+        DataType * out,
+        const DataType * gamma,
+        const DataType * beta,
+        const int num_elements, 
+        const int embedding_size
+        ) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int t_idx = threadIdx.x;
+    extern __shared__ DataType s_gamma[];
+    extern __shared__ DataType s_beta[];
+
+    if (idx < num_elements) {
+        if (t_idx < embedding_size) {
+            // load gamma and beta to the shared memory
+            s_gamma[t_idx] = gamma[t_idx];
+            s_beta[t_idx] = beta[t_idx];
+        }
+        // load the data needed
+        DataType x = in[idx];
+        __syncthreads();
+
+        int col = idx % embedding_size;
+        DataType g = s_gamma[col];
+        DataType b = s_beta[col];
+        DataType y = x * g + b; // perform affine
+        out[idx] = y; // write back the result
+    }
+}
+
+void OperatorExecutorGPUV2::layer_norm_affine_forward(
+        LayerNormalizationAffineOperator * op, 
+        VertexId left, 
+        VertexId right
+        ) {
+    if (left == right) {
+        return ;
+    }
+    assert(left < right);
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+
+    assert(op);
+    assert(op->get_num_input_tensors() == 3);
+    assert(op->get_num_input_tensors() == 1);
+
+    Tensor * input_tensor = op->get_input_tensor(0);
+    Tensor * gamma_tensor = op->get_input_tensor(1);
+    Tensor * beta_tensor = op->get_input_tensor(2);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor);
+    assert(gamma_tensor);
+    assert(beta_tensor);
+    assert(output_tensor);
+
+    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*)
+        input_tensor->resource;
+    TensorResourceGPU * gamma_tensor_resource = (TensorResourceGPU*)
+        gamma_tensor->resource;
+    TensorResourceGPU * beta_tensor_resource = (TensorResourceGPU*)
+        beta_tensor->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*)
+        output_tensor->resource;
+    assert(input_tensor_resource);
+    assert(gamma_tensor_resource);
+    assert(beta_tensor_resource);
+    assert(output_tensor_resource);
+
+    int embedding_size = input_tensor->dims[1];
+    int start_idx = embedding_size * left;
+
+    DataType * d_input_data = input_tensor_resource->get_gpu_data();
+    DataType * d_gamma_data = gamma_tensor_resource->get_gpu_data();
+    DataType * d_beta_data = beta_tensor_resource->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    assert(d_input_data);
+    assert(d_gamma_data);
+    assert(d_beta_data);
+    assert(d_output_data);
+
+    if (! input_tensor->is_data_transient) {
+        d_input_data += start_idx;
+    }
+    if (! output_tensor->is_data_transient) {
+        d_output_data += start_idx;
+    }
+
+    int num_elements = (right - left) * embedding_size;
+    // in order to make sure block_size is a multiple of embedding_size
+    assert(embedding_size <= 1024); // 1024: max block size
+    int block_size = 1;
+    while ((block_size + 1) * embedding_size <= 1024) {
+        block_size += 1;
+    }
+    block_size *= embedding_size;
+    int num_blocks = (num_elements + block_size - 1) / block_size;
+    assert(block_size % embedding_size == 0);
+    size_t shared_memory_size = sizeof(DataType) * embedding_size * 2;
+
+    layer_norm_affine_kernel<<<num_blocks, block_size, shared_memory_size>>>(
+            d_input_data, d_output_data,
+            d_gamma_data, d_beta_data,
+            num_elements, embedding_size
+            );
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+}
+
+__global__ void layer_norm_affine_backward_to_input(
+        DataType * in_grad,
+        const DataType * out_grad,
+        const DataType * gamma,
+        const int num_elements,
+        const int embedding_size
+        ) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int t_idx = threadIdx.x;
+    extern __shared__ DataType s_gamma[];
+
+    if (idx < num_elements) {
+        if (t_idx < embedding_size) {
+            s_gamma[t_idx] = gamma[t_idx];
+        }
+        DataType o_g = out_grad[idx];
+        __syncthreads();
+
+        int col = idx % embedding_size;
+        DataType g = s_gamma[col];
+        DataType i_g = o_g * g;
+        in_grad[idx] = i_g;
+    }
+}
+
+void OperatorExecutorGPUV2::layer_norm_affine_backward(
+        LayerNormalizationAffineOperator * op, 
+        VertexId left, 
+        VertexId right
+        ) {
+    // TODO
+    assert(false);
+
+    if (left == right) {
+        return ;
+    }
+    assert(left < right);
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+
+    assert(op);
+    assert(op->get_num_input_tensors() == 3);
+    assert(op->get_num_input_tensors() == 1);
+
+    Tensor * input_tensor = op->get_input_tensor(0);
+    Tensor * gamma_tensor = op->get_input_tensor(1);
+    Tensor * beta_tensor = op->get_input_tensor(2);
+    Tensor * output_tensor = op->get_output_tensor(0);
+    assert(input_tensor);
+    assert(gamma_tensor);
+    assert(beta_tensor);
+    assert(output_tensor);
+
+    TensorResourceGPU * input_tensor_resource = (TensorResourceGPU*)
+        input_tensor->resource;
+    TensorResourceGPU * gamma_tensor_resource = (TensorResourceGPU*)
+        gamma_tensor->resource;
+    TensorResourceGPU * beta_tensor_resource = (TensorResourceGPU*)
+        beta_tensor->resource;
+    TensorResourceGPU * output_tensor_resource = (TensorResourceGPU*)
+        output_tensor->resource;
+    assert(input_tensor_resource);
+    assert(gamma_tensor_resource);
+    assert(beta_tensor_resource);
+    assert(output_tensor_resource);
+
+    int embedding_size = input_tensor->dims[1];
+    int start_idx = embedding_size * left;
+
+    DataType * d_input_data = input_tensor_resource->get_gpu_data();
+    DataType * d_gamma_data = gamma_tensor_resource->get_gpu_data();
+    DataType * d_beta_data = beta_tensor_resource->get_gpu_data();
+    DataType * d_output_data = output_tensor_resource->get_gpu_data();
+    assert(d_input_data);
+    assert(d_gamma_data);
+    assert(d_beta_data);
+    assert(d_output_data);
+
+    if (! input_tensor->is_data_transient) {
+        d_input_data += start_idx;
+    }
+    if (! output_tensor->is_data_transient) {
+        d_output_data += start_idx;
+    }
+
+    DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
+    DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    assert(d_input_grad);
+    assert(d_output_grad);
+
+    if (! input_tensor->is_grad_transient) {
+        d_input_grad += start_idx;
+    }
+    if (! output_tensor->is_grad_transient) {
+        d_output_grad += start_idx;
+    }
+
+    int num_elements = (right - left) * embedding_size;
+    const int max_block_size = 1024;
+    assert(embedding_size <= max_block_size);
+    int block_size = embedding_size;
+    for (; block_size + embedding_size <= max_block_size; block_size += embedding_size);
+    int num_blocks = (num_elements + block_size - 1) / block_size;
+    assert(block_size % embedding_size == 0);
+    size_t shared_memory_size = sizeof(DataType) * embedding_size;
+
+    layer_norm_affine_backward_to_input<<<num_blocks, block_size, shared_memory_size>>>(
+            d_input_grad, d_output_grad, d_gamma_data,
+            num_elements, embedding_size
+            );
+
+#ifdef TIMETAG
+    cudaStreamSynchronize(0);
+#endif
+}
+
+
 
 
 

@@ -186,6 +186,11 @@ class OperatorExecutorGPUV2: public AbstractOperatorExecutor {
         void layer_norm_no_affine_forward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right);
         void layer_norm_no_affine_backward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right);
 
+        void layer_norm_affine_forward(LayerNormalizationAffineOperator * op);
+        void layer_norm_affine_backward(LayerNormalizationAffineOperator * op);
+        void layer_norm_affine_forward(LayerNormalizationAffineOperator * op, VertexId left, VertexId right);
+        void layer_norm_affine_backward(LayerNormalizationAffineOperator * op, VertexId left, VertexId right);
+
         //void reduce_over_row_dimension(DataType * in, DataType * out, int num_rows, int num_cols);
         //void layer_norm_forward(LayerNormalizationOperator * op, VertexId left, VertexId right);
         //void layer_norm_backward(LayerNormalizationOperator * op, VertexId left, VertexId right);

@@ -41,6 +41,8 @@ std::string get_op_type_str(OperatorType type) {
         return "OPERATOR_BATCH_NORM";
     } else if (type == OPERATOR_LAYER_NORM_NO_AFFINE) {
         return "OPERATOR_LAYER_NORM_NO_AFFINE";
+    } else if (type == OPERATOR_LN_AFFINE) {
+        return "OPERATOR_LN_AFFINE";
     } else {
         fprintf(stderr, "Unrecognized operator type.\n");
         exit(-1);
@@ -356,6 +358,31 @@ LayerNormalizationNoAffineOperator::LayerNormalizationNoAffineOperator(
         output_tensors_[0].dims[1] = a->dims[1];
     }
 
+LayerNormalizationAffineOperator::LayerNormalizationAffineOperator(
+        Tensor * a, 
+        Tensor * gamma, 
+        Tensor * beta, 
+        bool is_transient 
+        ): Operator(a, gamma, beta, 1, OPERATOR_LN_AFFINE, is_transient) {
+    // check the type of tensor a
+    assert(a->type == VERTEX_TENSOR);
+    assert(a->num_dims == 2);
+    assert(a->dims[0] == -1);
+    assert(a->dims[1] > 0);
+    // check the type of tensor gamma
+    assert(gamma->type == NORMAL_TENSOR);
+    assert(gamma->num_dims == 1);
+    assert(gamma->dims[0] == a->dims[1]);
+    // check the type of the tensor beta
+    assert(beta->type == NORMAL_TENSOR);
+    assert(beta->num_dims == 1);
+    assert(beta->dims[0] == a->dims[1]);
+    // set up of output tensors
+    output_tensors_[0].type = VERTEX_TENSOR;
+    output_tensors_[0].num_dims = 2;
+    output_tensors_[0].dims[0] = -1;
+    output_tensors_[0].dims[1] = a->dims[1];
+}
 
 
 

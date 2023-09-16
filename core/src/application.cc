@@ -164,14 +164,27 @@ Tensor * AbstractApplication::batch_norm(Tensor * a, bool is_transient) {
     return batch_norm->get_output_tensor(0);
 }
 
-Tensor * AbstractApplication::layer_norm_no_affine(Tensor * a, bool is_transient) {
+Tensor * AbstractApplication::layer_norm(Tensor * a, bool affine, bool is_transient) {
     assert(a->type == VERTEX_TENSOR);
     LayerNormalizationNoAffineOperator * layer_norm = new LayerNormalizationNoAffineOperator(
             a, is_transient
             );
     assert(layer_norm);
     operators_.push_back(layer_norm);
-    return layer_norm->get_output_tensor(0);
+    Tensor * t = layer_norm->get_output_tensor(0);
+    if (! affine) {
+        return t;
+    }
+    // rescale the output
+    int embedding_size = a->dims[1];
+    Tensor * gamma = weight(embedding_size);
+    Tensor * beta = weight(embedding_size);
+    Operator * affine_op = new LayerNormalizationAffineOperator(
+            t, gamma, beta, is_transient
+            );
+    assert(affine_op);
+    operators_.push_back(affine_op);
+    return affine_op->get_output_tensor(0);
 }
 
 AbstractApplication::AbstractApplication(int num_features): num_features_(num_features) {

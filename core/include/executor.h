@@ -216,6 +216,7 @@ class AbstractOperatorExecutor {
         virtual void dropout_forward(DropoutOperator * op) = 0;
         virtual void batch_norm_forward(BatchNormalizationOperator * op) = 0;
         virtual void layer_norm_no_affine_forward(LayerNormalizationNoAffineOperator * op) = 0;
+        virtual void layer_norm_affine_forward(LayerNormalizationAffineOperator * op) = 0;
 
         // the forwarding phases with graph chunking
         virtual void relu_forward(ReluOperator * op, VertexId left, VertexId right) = 0;
@@ -226,6 +227,7 @@ class AbstractOperatorExecutor {
         virtual void dropout_forward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) = 0;
         virtual void batch_norm_forward(BatchNormalizationOperator * op, VertexId left, VertexId right, int chunk_id) = 0;
         virtual void layer_norm_no_affine_forward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right) = 0;
+        virtual void layer_norm_affine_forward(LayerNormalizationAffineOperator * op, VertexId left, VertexId right) = 0;
 
         //// the backwarding phases
         virtual void relu_backward(ReluOperator * op) = 0;
@@ -236,6 +238,7 @@ class AbstractOperatorExecutor {
         virtual void dropout_backward(DropoutOperator * op) = 0;
         virtual void batch_norm_backward(BatchNormalizationOperator * op) = 0;
         virtual void layer_norm_no_affine_backward(LayerNormalizationNoAffineOperator * op) = 0;
+        virtual void layer_norm_affine_backward(LayerNormalizationAffineOperator * op) = 0;
 
         // the backwarding operations with graph chunking
         virtual void relu_backward(ReluOperator * op, VertexId left, VertexId right) = 0;
@@ -246,6 +249,7 @@ class AbstractOperatorExecutor {
         virtual void dropout_backward(DropoutOperator * op, VertexId left, VertexId right, int chunk_id) = 0;
         virtual void batch_norm_backward(BatchNormalizationOperator * op, VertexId left, VertexId right, int chunk_id) = 0;
         virtual void layer_norm_no_affine_backward(LayerNormalizationNoAffineOperator * op, VertexId left, VertexId right) = 0;
+        virtual void layer_norm_affine_backward(LayerNormalizationAffineOperator * op, VertexId left, VertexId right) = 0;
 
         // some operator might hehavior improperly if not telling the executor that
         // recomputation is perform (e.g., dropout)

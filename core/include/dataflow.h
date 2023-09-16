@@ -48,6 +48,7 @@ enum OperatorType {
     OPERATOR_ADD,
     OPERATOR_DROPOUT,
     OPERATOR_LAYER_NORM_NO_AFFINE,
+    OPERATOR_LN_AFFINE,
     OPERATOR_BATCH_NORM
 };
 
@@ -163,6 +164,12 @@ class LayerNormalizationNoAffineOperator: public Operator {
     public: 
         LayerNormalizationNoAffineOperator(Tensor * a, bool is_transient = false);
         ~LayerNormalizationNoAffineOperator() {}
+};
+
+class LayerNormalizationAffineOperator: public Operator {
+    public:
+        LayerNormalizationAffineOperator(Tensor * a, Tensor * gamma, Tensor * beta, bool is_transient = false);
+        ~LayerNormalizationAffineOperator() {}
 };
 
 // graph operators
