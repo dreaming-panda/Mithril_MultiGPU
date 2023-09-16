@@ -1,5 +1,7 @@
 #include "cuda/cuda_executor.h"
 
+#include <algorithm>
+
 #include <thrust/reduce.h>
 
 __global__ void cuda_vector_add_kernel(
@@ -851,6 +853,54 @@ __global__ void layer_norm_affine_backward_to_input(
     }
 }
 
+__global__ void intra_block_reduce_over_col_dimension(
+        const DataType * in,
+        DataType * out,
+        const int rows,
+        const int cols
+        ) {
+    extern __shared__ DataType s_data[];
+
+    // noticed that the X,Y ordering is slightly different
+    // from the cuda convention
+    int bid_x = blockIdx.x;
+    int bid_y = blockIdx.y;
+    int blk_size_x = blockDim.y;
+    int blk_size_y = blockDim.x;
+    int tid_x = threadIdx.y;
+    int tid_y = threadIdx.x;
+
+    // load the data to the shared memory first
+    int x = bid_x * blk_size_x + tid_x;
+    int y = bid_y * blk_size_y + tid_y;
+
+    int local_idx = tid_x * blk_size_y + tid_y;
+    if (x < rows && y < cols) {
+        s_data[local_idx] = in[x * cols + y];
+    } else {
+        s_data[local_idx] = 0.;
+    }
+    __syncthreads();
+
+    // reduce the loaded data 
+    // over the x dimension
+    for (int s = blk_size_x / 2; s > 0; s = (s >> 1)) {
+        if (tid_x < s) {
+            DataType delta = s_data[(tid_x + s) * blk_size_y + tid_y];
+            s_data[tid_x * blk_size_y + tid_y] += delta;
+        }
+        __syncthreads();
+    }
+
+    // write the result back
+    if (tid_x == 0 && y < cols) {
+        int out_x = bid_x;
+        int out_y = y;
+        int out_idx = out_x * cols + out_y;
+        out[out_idx] = s_data[tid_y];
+    }
+}
+
 void OperatorExecutorGPUV2::layer_norm_affine_backward(
         LayerNormalizationAffineOperator * op, 
         VertexId left, 
@@ -912,8 +962,12 @@ void OperatorExecutorGPUV2::layer_norm_affine_backward(
 
     DataType * d_input_grad = input_tensor_resource->get_gpu_grad();
     DataType * d_output_grad = output_tensor_resource->get_gpu_grad();
+    DataType * d_gamma_grad = gamma_tensor_resource->get_gpu_grad();
+    DataType * d_beta_grad = beta_tensor_resource->get_gpu_grad();
     assert(d_input_grad);
     assert(d_output_grad);
+    assert(d_gamma_grad);
+    assert(d_beta_grad);
 
     if (! input_tensor->is_grad_transient) {
         d_input_grad += start_idx;
@@ -931,10 +985,57 @@ void OperatorExecutorGPUV2::layer_norm_affine_backward(
     assert(block_size % embedding_size == 0);
     size_t shared_memory_size = sizeof(DataType) * embedding_size;
 
+    // calculate the gradients of the input 
     layer_norm_affine_backward_to_input<<<num_blocks, block_size, shared_memory_size>>>(
             d_input_grad, d_output_grad, d_gamma_data,
             num_elements, embedding_size
             );
+    
+    // calculate the gradients of beta 
+    {
+        int rows = (int) (right - left);
+        int cols = embedding_size;
+
+        // reduce buffer
+        DataType * reduce_buffer_0 = (DataType*) get_layer_norm_reduce_workspace(
+                sizeof(DataType) * rows * cols
+                );
+        DataType * reduce_buffer_1 = (DataType*) get_layer_norm_reduce_workspace2(
+                sizeof(DataType) * ((rows + 31) / 32) * cols
+                );
+        assert(reduce_buffer_0);
+        assert(reduce_buffer_1);
+
+        checkCUDA(
+                cudaMemcpy(
+                    reduce_buffer_0,
+                    d_output_grad,
+                    sizeof(DataType) * rows * cols,
+                    cudaMemcpyDeviceToDevice
+                    )
+                );
+        DataType * in = reduce_buffer_0;
+        DataType * out = reduce_buffer_1;
+
+        while (rows > 1) {
+            dim3 block(32, 32);
+            dim3 grid((rows + 31) / 32, (cols + 31) / 32);
+            size_t shared_memory_size = sizeof(DataType) * 1024;
+
+            intra_block_reduce_over_col_dimension<<<grid, block, shared_memory_size>>>(
+                    in, out, rows, cols
+                    );
+
+            rows = (rows + 31) / 32;
+            std::swap(in, out);
+        }
+
+        cuda_vector_add(
+                in, d_beta_grad, d_beta_grad, 
+                embedding_size
+                );
+    }
+
 
 #ifdef TIMETAG
     cudaStreamSynchronize(0);
