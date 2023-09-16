@@ -12,11 +12,11 @@ mpirun -n 4 hostname
 cd build
 make -j
 
-#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
-dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
+dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
+#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
-num_gpus=1
-num_layers=12
+num_gpus=4
+num_layers=16
 hunits=128
 lr=1e-3
 graph=reddit
@@ -28,11 +28,11 @@ eval_freq=-1
 enable_compression=0
 multi_label=0
 
-chunks=2
-num_dp_ways=$num_gpus
+#chunks=$num_gpus
+#num_dp_ways=$num_gpus
 
-#chunks=$((num_gpus*4))
-#num_dp_ways=2
+chunks=$((num_gpus*4))
+num_dp_ways=1
 
 exact_inference=1
 seed=1
