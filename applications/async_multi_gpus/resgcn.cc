@@ -71,7 +71,7 @@ class GraphSage: public AbstractApplication {
                 //t = dropout(t, dropout_rate_, enable_recomputation_);
 
                 // RES+
-                t = layer_norm(t);
+                t = layer_norm(t, true);
                 t = relu(t, enable_recomputation_);
                 t = dropout(t, dropout_rate_, enable_recomputation_);
                 // graph convolution

@@ -712,27 +712,32 @@ __global__ void layer_norm_affine_kernel(
         const int num_elements, 
         const int embedding_size
         ) {
+    extern __shared__ DataType shared_mem[];
+
+    DataType * s_gamma = shared_mem;
+    DataType * s_beta = &shared_mem[embedding_size];
+
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int t_idx = threadIdx.x;
-    extern __shared__ DataType s_gamma[];
-    extern __shared__ DataType s_beta[];
+    int tid = threadIdx.x;
+
+    // load the data 
+    if (tid < embedding_size) {
+        s_gamma[tid] = gamma[tid];
+        s_beta[tid] = beta[tid];
+    }
+    DataType x = 0;
+    if (idx < num_elements) {
+        x = in[idx];
+    }
+    __syncthreads();
 
     if (idx < num_elements) {
-        if (t_idx < embedding_size) {
-            // load gamma and beta to the shared memory
-            s_gamma[t_idx] = gamma[t_idx];
-            s_beta[t_idx] = beta[t_idx];
-        }
-        // load the data needed
-        DataType x = in[idx];
-        __syncthreads();
-
         int col = idx % embedding_size;
         DataType g = s_gamma[col];
         DataType b = s_beta[col];
         DataType y = x * g + b; // perform affine
         out[idx] = y; // write back the result
-    }
+    } 
 }
 
 void OperatorExecutorGPUV2::layer_norm_affine_forward(
@@ -751,7 +756,7 @@ void OperatorExecutorGPUV2::layer_norm_affine_forward(
 
     assert(op);
     assert(op->get_num_input_tensors() == 3);
-    assert(op->get_num_input_tensors() == 1);
+    assert(op->get_num_output_tensors() == 1);
 
     Tensor * input_tensor = op->get_input_tensor(0);
     Tensor * gamma_tensor = op->get_input_tensor(1);
@@ -797,11 +802,10 @@ void OperatorExecutorGPUV2::layer_norm_affine_forward(
     int num_elements = (right - left) * embedding_size;
     // in order to make sure block_size is a multiple of embedding_size
     assert(embedding_size <= 1024); // 1024: max block size
-    int block_size = 1;
-    while ((block_size + 1) * embedding_size <= 1024) {
-        block_size += 1;
+    int block_size = embedding_size;
+    while (block_size + embedding_size <= 1024) {
+        block_size += embedding_size;
     }
-    block_size *= embedding_size;
     int num_blocks = (num_elements + block_size - 1) / block_size;
     assert(block_size % embedding_size == 0);
     size_t shared_memory_size = sizeof(DataType) * embedding_size * 2;
@@ -824,17 +828,22 @@ __global__ void layer_norm_affine_backward_to_input(
         const int num_elements,
         const int embedding_size
         ) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int t_idx = threadIdx.x;
     extern __shared__ DataType s_gamma[];
 
-    if (idx < num_elements) {
-        if (t_idx < embedding_size) {
-            s_gamma[t_idx] = gamma[t_idx];
-        }
-        DataType o_g = out_grad[idx];
-        __syncthreads();
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int tid = threadIdx.x;
 
+    // data loading
+    if (tid < embedding_size) {
+        s_gamma[tid] = gamma[tid];
+    }
+    DataType o_g = 0;
+    if (idx < num_elements) {
+        o_g = out_grad[idx];
+    }
+    __syncthreads();
+
+    if (idx < num_elements) {
         int col = idx % embedding_size;
         DataType g = s_gamma[col];
         DataType i_g = o_g * g;
@@ -847,9 +856,6 @@ void OperatorExecutorGPUV2::layer_norm_affine_backward(
         VertexId left, 
         VertexId right
         ) {
-    // TODO
-    assert(false);
-
     if (left == right) {
         return ;
     }
@@ -861,7 +867,7 @@ void OperatorExecutorGPUV2::layer_norm_affine_backward(
 
     assert(op);
     assert(op->get_num_input_tensors() == 3);
-    assert(op->get_num_input_tensors() == 1);
+    assert(op->get_num_output_tensors() == 1);
 
     Tensor * input_tensor = op->get_input_tensor(0);
     Tensor * gamma_tensor = op->get_input_tensor(1);
