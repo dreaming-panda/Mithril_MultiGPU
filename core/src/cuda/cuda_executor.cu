@@ -901,6 +901,18 @@ __global__ void intra_block_reduce_over_col_dimension(
     }
 }
 
+__global__ void layer_norm_gen_element_wise_gamma_grad(
+        const DataType * x,
+        const DataType * dy,
+        DataType * element_wise_grad,
+        const int N
+        ) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < N) {
+        element_wise_grad[idx] = x[idx] * dy[idx];
+    }
+}
+
 void OperatorExecutorGPUV2::layer_norm_affine_backward(
         LayerNormalizationAffineOperator * op, 
         VertexId left, 
@@ -1018,6 +1030,7 @@ void OperatorExecutorGPUV2::layer_norm_affine_backward(
         DataType * out = reduce_buffer_1;
 
         while (rows > 1) {
+            //printf("rows = %d\n", rows);
             dim3 block(32, 32);
             dim3 grid((rows + 31) / 32, (cols + 31) / 32);
             size_t shared_memory_size = sizeof(DataType) * 1024;
@@ -1036,6 +1049,49 @@ void OperatorExecutorGPUV2::layer_norm_affine_backward(
                 );
     }
 
+    // calculate the gradients of gamma
+    {
+        int rows = (int) (right - left);
+        int cols = embedding_size;
+
+        // reduce buffer
+        DataType * reduce_buffer_0 = (DataType*) get_layer_norm_reduce_workspace(
+                sizeof(DataType) * rows * cols
+                );
+        DataType * reduce_buffer_1 = (DataType*) get_layer_norm_reduce_workspace2(
+                sizeof(DataType) * ((rows + 31) / 32) * cols
+                );
+        assert(reduce_buffer_0);
+        assert(reduce_buffer_1);
+
+        layer_norm_gen_element_wise_gamma_grad<<<(num_elements + 1023) / 1024, 1024>>>(
+                d_input_data, d_output_grad,
+                reduce_buffer_0, num_elements
+                );
+
+        DataType * in = reduce_buffer_0;
+        DataType * out = reduce_buffer_1;
+
+        while (rows > 1) {
+            //printf("rows = %d\n", rows);
+            dim3 block(32, 32);
+            dim3 grid((rows + 31) / 32, (cols + 31) / 32);
+            size_t shared_memory_size = sizeof(DataType) * 1024;
+
+            intra_block_reduce_over_col_dimension<<<grid, block, shared_memory_size>>>(
+                    in, out, rows, cols
+                    );
+
+            rows = (rows + 31) / 32;
+            std::swap(in, out);
+        }
+
+        cuda_vector_add(
+                in, d_gamma_grad, d_gamma_grad, 
+                embedding_size
+                );
+    }
+    checkCUDA(cudaStreamSynchronize(0)); // TODO
 
 #ifdef TIMETAG
     cudaStreamSynchronize(0);
