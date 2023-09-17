@@ -18,7 +18,7 @@ if __name__ == "__main__":
     assert(len(sys.argv) == 3)
     hostname = sys.argv[1]
     num_nodes = int(sys.argv[2])
-    print(hostname, num_nodes)
+    #print(hostname, num_nodes)
 
     nodes = load_node_lists(num_nodes)
     gpus_per_node = 4
@@ -31,8 +31,9 @@ if __name__ == "__main__":
 
     master_node = nodes[0]
 
-    os.system(
-            "python ./main.py %s %s %s" % (
-                node_id, num_nodes, master_node
-                )
+    command = "python ./main.py %s %s %s" % (
+            node_id, num_nodes, master_node
             )
+    print("Executing: ", "'%s'" % (command), "on", hostname)
+    sys.stdout.flush()
+    os.system(command)
