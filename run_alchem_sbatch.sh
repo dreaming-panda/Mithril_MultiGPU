@@ -16,14 +16,14 @@ make -j
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
 num_gpus=4
-num_layers=32
-hunits=1000
+num_layers=2
+hunits=100
 lr=1e-3
-graph=squirrel
-epoch=100
+graph=cora
+epoch=1000
 decay=0
 dropout=0.5
-model=resgcn
+model=gcn
 eval_freq=-1
 enable_compression=0
 multi_label=0

@@ -11,18 +11,25 @@ import torch.nn.functional as F
 
 num_gpus_per_node = 4
 num_layers = 2
-batch_size = 4
+batch_size = 16
 hidden_units = 100
-num_epoches = 150
+num_epoches = 1000
 lr = 1e-3
+dropout = 0.5
 seed = 1
 full_graph_in_gpu = True
+eval_frequency = 1
+dataset = "cora"
+save_dir = "/shared_hdd_storage/shared/gnn_datasets/dgl_datasets"
 
 # some utility functions
 
 def get_graph(graph_name):
     if graph_name == "citeseer":
-        dataset = dgl.data.CiteseerGraphDataset()
+        dataset = dgl.data.CiteseerGraphDataset(raw_dir = save_dir)
+        return dataset[0]
+    elif graph_name == "cora":
+        dataset = dgl.data.CoraGraphDataset(raw_dir = save_dir)
         return dataset[0]
     else:
         print("Unknown dataset %s" % (citeseer))
@@ -48,23 +55,25 @@ def get_accuracy(model, dataloader, num_samples, device):
 # models
 
 class StochasticTwoLayerGCN(nn.Module):
-    def __init__(self, in_features, hidden_features, out_features):
+    def __init__(self, in_features, hidden_features, out_features, dropout):
         super().__init__()
         self.conv1 = dgl.nn.GraphConv(in_features, hidden_features)
         self.conv2 = dgl.nn.GraphConv(hidden_features, out_features)
+        self.dropout = dropout
 
     def forward(self, blocks, x):
         x = F.relu(self.conv1(blocks[0], x))
+        x = F.dropout(x, self.dropout)
         x = F.relu(self.conv2(blocks[1], x))
         return x
 
 """ The actual entry point"""
 def run(rank, size):
-    # looks like fixing the seed cannot completely eliminate the 
-    # randomness of DGL
-    dgl.seed(seed + rank)
-    torch.manual_seed(seed + rank)
-    torch.cuda.manual_seed_all(seed + rank)
+    ## looks like fixing the seed cannot completely eliminate the 
+    ## randomness of DGL
+    #dgl.seed(seed + rank)
+    #torch.manual_seed(seed + rank)
+    #torch.cuda.manual_seed_all(seed + rank)
 
     print("Hello World From Process %s, the World Size is %s" % (
         rank, size
@@ -73,7 +82,6 @@ def run(rank, size):
     local_rank = rank % num_gpus_per_node
     device = "cuda:%s" % (local_rank)
 
-    dataset = "citeseer"
     g = get_graph(dataset)
     if full_graph_in_gpu:
         g = g.to(device)
@@ -162,7 +170,7 @@ def run(rank, size):
     n_labels = int(g.ndata['label'].max().item() + 1)
     out_features = n_labels
 
-    model = StochasticTwoLayerGCN(in_features, hidden_features, out_features)
+    model = StochasticTwoLayerGCN(in_features, hidden_features, out_features, dropout)
     model.to(device)
     model = torch.nn.parallel.DistributedDataParallel(model) # wrap the model to support weight synchronization
 
@@ -182,20 +190,22 @@ def run(rank, size):
         start = time.time()
         model.train()
         accum_loss = 0.
+        opt.zero_grad()
         for input_nodes, output_nodes, blocks in dataloader:
             input_features = blocks[0].srcdata['feat']
             output_labels = blocks[-1].dstdata['label']
             assert(output_labels.shape[0] == output_nodes.shape[0])
             output_predictions = model(blocks, input_features)
             loss = F.cross_entropy(output_predictions, output_labels)
-            opt.zero_grad()
             loss.backward()
-            opt.step()
             accum_loss += loss.item() * output_nodes.shape[0]
+
+        opt.step() 
+
         end = time.time()
         training_time += (end - start)
 
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % eval_frequency == 0:
             # calculate the loss
             accum_loss = torch.tensor([accum_loss]).to(device)
             dist.all_reduce(accum_loss, op = dist.ReduceOp.SUM)
