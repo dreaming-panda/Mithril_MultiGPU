@@ -18,8 +18,9 @@ lr = 1e-3
 dropout = 0.5
 seed = 1
 full_graph_in_gpu = False
+use_uva = True
 eval_frequency = 1
-dataset = "cora"
+dataset = "flickr"
 save_dir = "/shared_hdd_storage/shared/gnn_datasets/dgl_datasets"
 
 # some utility functions
@@ -34,6 +35,9 @@ def get_graph(graph_name):
     elif graph_name == "reddit":
         dataset = dgl.data.RedditDataset(raw_dir = save_dir)
         return dataset[0]
+    elif graph_name == "flickr":
+        dataset = dgl.data.FlickrDataset(raw_dir = save_dir)
+        return dataset[0]
     else:
         print("Unknown dataset %s" % (citeseer))
         exit(-1)
@@ -42,7 +46,7 @@ def get_accuracy(model, dataloader, num_samples, device):
     model.eval()
     num_hits = 0
     with torch.no_grad():
-        #with dataloader.enable_cpu_affinity(): CRASHED
+        #with dataloader.enable_cpu_affinity(): 
         for input_nodes, output_nodes, blocks in dataloader:
             if not full_graph_in_gpu:
                 blocks = [b.to(torch.device(device)) for b in blocks]
@@ -88,6 +92,8 @@ def run(rank, size):
     local_rank = rank % num_gpus_per_node
     device = "cuda:%s" % (local_rank)
 
+    torch.cuda.set_device(torch.device(device))
+
     g = None
     if rank == 0:
         g = get_graph(dataset)
@@ -117,7 +123,7 @@ def run(rank, size):
             splitted_train_ids.append(train_ids[i])
     # move to the GPU
     train_ids = torch.tensor(splitted_train_ids)
-    if full_graph_in_gpu:
+    if full_graph_in_gpu or use_uva:
         train_ids = train_ids.to(device)
 
     # process the validation samples
@@ -135,7 +141,7 @@ def run(rank, size):
             splitted_val_ids.append(val_ids[i])
     # move to the GPU
     val_ids = torch.tensor(splitted_val_ids)
-    if full_graph_in_gpu:
+    if full_graph_in_gpu or use_uva:
         val_ids = val_ids.to(device)
 
     # process the testing samples
@@ -153,12 +159,12 @@ def run(rank, size):
             splitted_test_ids.append(test_ids[i])
     # move to the GPU
     test_ids = torch.tensor(splitted_test_ids)
-    if full_graph_in_gpu:
+    if full_graph_in_gpu or use_uva:
         test_ids = test_ids.to(device)
 
     # configure the full neighbours sampler
     num_workers = 1
-    if full_graph_in_gpu:
+    if full_graph_in_gpu or use_uva:
         num_workers = 0
 
     sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers)
@@ -167,7 +173,8 @@ def run(rank, size):
         batch_size=batch_size,
         shuffle=True,
         drop_last=False,
-        num_workers=num_workers
+        num_workers=num_workers,
+        use_uva=use_uva
         )
 
     valid_dataloader = dgl.dataloading.DataLoader(
@@ -176,7 +183,8 @@ def run(rank, size):
             batch_size=batch_size,
             shuffle=True,
             drop_last=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            use_uva=use_uva
             )
     test_dataloader = dgl.dataloading.DataLoader(
             g, test_ids, 
@@ -184,7 +192,8 @@ def run(rank, size):
             batch_size=batch_size,
             shuffle=True,
             drop_last=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            use_uva=use_uva
             )
 
     in_features = g.ndata['feat'].shape[1]
@@ -194,7 +203,7 @@ def run(rank, size):
 
     model = StochasticTwoLayerGCN(in_features, hidden_features, out_features, dropout)
     model.to(device)
-    model = torch.nn.parallel.DistributedDataParallel(model) # wrap the model to support weight synchronization
+    #model = torch.nn.parallel.DistributedDataParallel(model) # wrap the model to support weight synchronization FIXME
 
     opt = torch.optim.Adam(model.parameters(), lr = lr)
 
@@ -214,24 +223,24 @@ def run(rank, size):
         accum_loss = 0.
 
         it = 0
-        with dataloader.enable_cpu_affinity():
-            for input_nodes, output_nodes, blocks in dataloader:
-                if not full_graph_in_gpu:
-                    blocks = [b.to(torch.device(device)) for b in blocks]
-                input_features = blocks[0].srcdata['feat']
-                output_labels = blocks[-1].dstdata['label']
-                assert(output_labels.shape[0] == output_nodes.shape[0])
-                output_predictions = model(blocks, input_features)
-                loss = F.cross_entropy(output_predictions, output_labels)
-                opt.zero_grad()
-                loss.backward()
-                opt.step() 
-                accum_loss += loss.item() * output_nodes.shape[0]
-                #if rank == 0:
-                #    print("\tRank %s, Iteration %s, Loss %s" % (
-                #        rank, it, loss.item()
-                #        ))
-                it += 1
+        #with dataloader.enable_cpu_affinity():
+        for input_nodes, output_nodes, blocks in dataloader:
+            if not full_graph_in_gpu:
+                blocks = [b.to(torch.device(device)) for b in blocks]
+            input_features = blocks[0].srcdata['feat']
+            output_labels = blocks[-1].dstdata['label']
+            assert(output_labels.shape[0] == output_nodes.shape[0])
+            output_predictions = model(blocks, input_features)
+            loss = F.cross_entropy(output_predictions, output_labels)
+            opt.zero_grad()
+            loss.backward()
+            opt.step() 
+            accum_loss += loss.item() * output_nodes.shape[0]
+            if rank == 0:
+                print("\tRank %s, Iteration %s, Loss %.4f" % (
+                    rank, it, loss.item()
+                    ))
+            it += 1
 
         end = time.time()
         training_time += (end - start)
@@ -294,26 +303,28 @@ def init_process(rank, size, master_node, fn, backend='gloo'):
     dist.destroy_process_group()
 
 if __name__ == "__main__":
-    assert(len(sys.argv) >= 4)
+    assert(len(sys.argv) >= 6)
     node_id = int(sys.argv[1])
     num_nodes = int(sys.argv[2])
     master_node = sys.argv[3]
+    rank = int(sys.argv[4])
+    size = int(sys.argv[5])
 
-    #print(node_id, num_nodes, master_node)
-    if node_id != 0:
-        time.sleep(1)
+    #jif node_id != 0:
+    #j    time.sleep(1)
 
-    #init_process(0, 1, master_node, run)
+    print(sys.argv)
+    init_process(rank, size, master_node, run)
 
-    processes = []
-    mp.set_start_method("spawn")
-    for gpu in range(num_gpus_per_node):
-        rank = node_id * num_gpus_per_node + gpu
-        size = num_nodes * num_gpus_per_node
-        p = mp.Process(target=init_process, args=(rank, size, master_node, run))
-        p.start()
-        processes.append(p)
-    for p in processes:
-        p.join()
+    #processes = []
+    #mp.set_start_method("spawn")
+    #for gpu in range(num_gpus_per_node):
+    #    rank = node_id * num_gpus_per_node + gpu
+    #    size = num_nodes * num_gpus_per_node
+    #    p = mp.Process(target=init_process, args=(rank, size, master_node, run))
+    #    p.start()
+    #    processes.append(p)
+    #for p in processes:
+    #    p.join()
 
 

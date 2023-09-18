@@ -1,5 +1,6 @@
 import os
 import sys
+import torch.multiprocessing as mp
 
 def load_node_lists(num_nodes):
     nodes = []
@@ -21,7 +22,7 @@ if __name__ == "__main__":
     #print(hostname, num_nodes)
 
     nodes = load_node_lists(num_nodes)
-    gpus_per_node = 1
+    gpus_per_node = 4
     node_id = None
     for i in range(num_nodes):
         if nodes[i] == hostname:
@@ -31,9 +32,24 @@ if __name__ == "__main__":
 
     master_node = nodes[0]
 
-    command = "python ./main.py %s %s %s" % (
-            node_id, num_nodes, master_node
-            )
-    print("Executing: ", "'%s'" % (command), "on", hostname)
-    sys.stdout.flush()
-    os.system(command)
+    def run(node_id, num_nodes, rank, size, master_node):
+        command = "python ./main.py %s %s %s %s %s" % (
+                node_id, num_nodes, master_node, rank, size
+                )
+        print("Executing: ", "'%s'" % (command), "on", hostname)
+        sys.stdout.flush()
+        os.system(command)
+
+    processes = []
+    for gpu in range(gpus_per_node):
+        rank = node_id * gpus_per_node + gpu
+        size = num_nodes * gpus_per_node
+        p = mp.Process(
+                target = run, 
+                args = (node_id, num_nodes, rank, size, master_node)
+                )
+        p.start()
+        processes.append(p)
+    for p in processes:
+        p.join()
+
