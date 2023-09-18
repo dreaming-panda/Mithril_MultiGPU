@@ -40,7 +40,7 @@ void OperatorExecutorGPUV2::reduce_over_column_dimension(
         int num_rows, 
         int num_cols
         ) {
-    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //checkCUDA(cudaStreamSynchronize(0)); 
     //printf("Reduce called\n");
     assert(in);
     assert(out);
@@ -66,7 +66,7 @@ void OperatorExecutorGPUV2::reduce_over_column_dimension(
             keys, keys + num_elements, in, 
             reduced_keys, out
             );
-    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //checkCUDA(cudaStreamSynchronize(0)); 
     //printf("Reduce completed\n");
 }
 
@@ -449,7 +449,7 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_forward(
     int num_elements = (right - left) * embedding_size;
     int block_size = 1024;
     int num_blocks = (num_elements + block_size - 1) / block_size;
-    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //checkCUDA(cudaStreamSynchronize(0)); 
     {
         int N = (int) (right - left);
         int num_blocks = (N + block_size - 1) / block_size;
@@ -459,7 +459,7 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_forward(
                 N
                 );
     }
-    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //checkCUDA(cudaStreamSynchronize(0)); 
 
     // calculate the var of each sample 
     DataType * var = (DataType*) get_layer_norm_var_buffer(
@@ -471,12 +471,12 @@ void OperatorExecutorGPUV2::layer_norm_no_affine_forward(
     assert(var);
     assert(elementwise_var);
     // calcualte the elementwise_var 
-    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //checkCUDA(cudaStreamSynchronize(0)); 
     calculate_elementwise_var_kernel<<<num_blocks, block_size>>>(
             d_input_data, mean, elementwise_var,
             num_elements, embedding_size
             );
-    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //checkCUDA(cudaStreamSynchronize(0)); 
     // reduce over the column dimension to calculate the sample-wise var
     reduce_over_column_dimension(
             elementwise_var, var, 
@@ -1091,7 +1091,7 @@ void OperatorExecutorGPUV2::layer_norm_affine_backward(
                 embedding_size
                 );
     }
-    checkCUDA(cudaStreamSynchronize(0)); // TODO
+    //checkCUDA(cudaStreamSynchronize(0)); 
 
 #ifdef TIMETAG
     cudaStreamSynchronize(0);

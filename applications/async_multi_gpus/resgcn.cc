@@ -169,7 +169,7 @@ class GraphSage: public AbstractApplication {
                 // residual connection
                 t = add(t, shortcut, 1., 1., enable_recomputation_); // residual connection
                                                                      
-                t = layer_norm(t, true);
+                t = layer_norm(t, false);
 
                 if (i == 0) {
                     next_layer(0);
