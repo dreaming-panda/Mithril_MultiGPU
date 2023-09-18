@@ -18,6 +18,8 @@ lr = 1e-3
 seed = 1
 full_graph_in_gpu = True
 
+# some utility functions
+
 def get_graph(graph_name):
     if graph_name == "citeseer":
         dataset = dgl.data.CiteseerGraphDataset()
@@ -25,6 +27,25 @@ def get_graph(graph_name):
     else:
         print("Unknown dataset %s" % (citeseer))
         exit(-1)
+
+def get_accuracy(model, dataloader, num_samples, device):
+    model.eval()
+    num_hits = 0
+    with torch.no_grad():
+        for input_nodes, output_nodes, blocks in dataloader:
+            input_features = blocks[0].srcdata['feat']
+            output_labels = blocks[-1].dstdata['label']
+            assert(output_labels.shape[0] == output_nodes.shape[0])
+            output_predictions = model(blocks, input_features)
+            _, indices = torch.max(output_predictions, dim=1)
+            hits = torch.sum(indices == output_labels).item()
+            num_hits += hits
+    num_hits = torch.tensor([num_hits]).to(device)
+    dist.all_reduce(num_hits, op = dist.ReduceOp.SUM)
+    accuracy = num_hits.item() / float(num_samples)
+    return accuracy;
+
+# models
 
 class StochasticTwoLayerGCN(nn.Module):
     def __init__(self, in_features, hidden_features, out_features):
@@ -39,7 +60,11 @@ class StochasticTwoLayerGCN(nn.Module):
 
 """ The actual entry point"""
 def run(rank, size):
+    # looks like fixing the seed cannot completely eliminate the 
+    # randomness of DGL
     dgl.seed(seed + rank)
+    torch.manual_seed(seed + rank)
+    torch.cuda.manual_seed_all(seed + rank)
 
     print("Hello World From Process %s, the World Size is %s" % (
         rank, size
@@ -76,7 +101,7 @@ def run(rank, size):
     for i in range(len(mask_cpu)):
         if mask_cpu[i]:
             val_ids.append(i)
-    num_global_valing_samples = len(val_ids)
+    num_global_val_samples = len(val_ids)
     # split the val ID equally to each GPU
     splitted_val_ids = []
     for i in range(len(val_ids)):
@@ -105,6 +130,7 @@ def run(rank, size):
     num_workers = 4
     if full_graph_in_gpu:
         num_workers = 0
+
     sampler = dgl.dataloading.MultiLayerFullNeighborSampler(num_layers)
     dataloader = dgl.dataloading.DataLoader(
         g, train_ids, sampler,
@@ -113,6 +139,23 @@ def run(rank, size):
         drop_last=False,
         num_workers=num_workers
         )
+
+    valid_dataloader = dgl.dataloading.DataLoader(
+            g, val_ids, 
+            dgl.dataloading.MultiLayerFullNeighborSampler(num_layers),
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=False,
+            num_workers=num_workers
+            )
+    test_dataloader = dgl.dataloading.DataLoader(
+            g, test_ids, 
+            dgl.dataloading.MultiLayerFullNeighborSampler(num_layers),
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=False,
+            num_workers=num_workers
+            )
 
     in_features = g.ndata['feat'].shape[1]
     hidden_features = hidden_units
@@ -130,8 +173,13 @@ def run(rank, size):
     if rank == 0:
         print("Start Distributed GNN Training\n\n")
 
+    training_time = 0.
+    highest_valid_acc = 0.
+    target_test_acc = 0.
+
     for epoch in range(num_epoches):
         # training 
+        start = time.time()
         model.train()
         accum_loss = 0.
         for input_nodes, output_nodes, blocks in dataloader:
@@ -144,6 +192,8 @@ def run(rank, size):
             loss.backward()
             opt.step()
             accum_loss += loss.item() * output_nodes.shape[0]
+        end = time.time()
+        training_time += (end - start)
 
         if (epoch + 1) % 10 == 0:
             # calculate the loss
@@ -151,28 +201,41 @@ def run(rank, size):
             dist.all_reduce(accum_loss, op = dist.ReduceOp.SUM)
             accum_loss = accum_loss.item() / float(num_global_training_samples)
 
-            # evaluation
-            model.eval()
-            num_hits = 0
-            with torch.no_grad():
-                for input_nodes, output_nodes, blocks in dataloader:
-                    input_features = blocks[0].srcdata['feat']
-                    output_labels = blocks[-1].dstdata['label']
-                    assert(output_labels.shape[0] == output_nodes.shape[0])
-                    output_predictions = model(blocks, input_features)
-                    _, indices = torch.max(output_predictions, dim=1)
-                    hits = torch.sum(indices == output_labels).item()
-                    num_hits += hits
-            num_hits = torch.tensor([num_hits]).to(device)
-            dist.all_reduce(num_hits, op = dist.ReduceOp.SUM)
-            train_accuracy = num_hits.item() / float(num_global_training_samples)
+            ## evaluation
+            train_accuracy = get_accuracy(
+                    model, dataloader, num_global_training_samples, device
+                    )
+            valid_accuracy = get_accuracy(
+                    model, valid_dataloader, num_global_val_samples, device
+                    )
+            test_accuracy = get_accuracy(
+                    model, test_dataloader, num_global_testing_samples, device
+                    )
+            if valid_accuracy > highest_valid_acc:
+                highest_valid_acc = valid_accuracy
+                target_test_acc = test_accuracy
 
             if rank == 0:
-                print("Epoch %d, Loss %.4f, Train Accuracy %.4f" % (
-                    epoch, 
+                print("Epoch %d, Loss %.4f, Train Accuracy %.4f, Valid Accuracy %.4f, Test Accuracy %.4f" % (
+                    epoch + 1, 
                     accum_loss, 
-                    train_accuracy
+                    train_accuracy,
+                    valid_accuracy,
+                    test_accuracy
                     ))
+                sys.stdout.flush()
+
+    if rank == 0:
+        training_time /= float(num_epoches)
+        print("Per-epoch Time: %.4f s" % (
+            training_time
+            ))
+        print("Highest Validation Accuracy: %.4f" % (
+            highest_valid_acc
+            ))
+        print("Target Test Accuracy: %.4f" % (
+            target_test_acc
+            ))
 
 def init_process(rank, size, master_node, fn, backend='gloo'):
     """ Initialize the distributed environment. """
