@@ -11,9 +11,9 @@ import torch.nn.functional as F
 
 num_gpus_per_node = 4
 num_layers = 2
-batch_size = 16
+batch_size = 1024
 hidden_units = 100
-num_epoches = 1000
+num_epoches = 100
 lr = 1e-3
 dropout = 0.5
 seed = 1
@@ -30,6 +30,9 @@ def get_graph(graph_name):
         return dataset[0]
     elif graph_name == "cora":
         dataset = dgl.data.CoraGraphDataset(raw_dir = save_dir)
+        return dataset[0]
+    elif graph_name == "reddit":
+        dataset = dgl.data.RedditDataset(raw_dir = save_dir)
         return dataset[0]
     else:
         print("Unknown dataset %s" % (citeseer))
@@ -82,7 +85,15 @@ def run(rank, size):
     local_rank = rank % num_gpus_per_node
     device = "cuda:%s" % (local_rank)
 
-    g = get_graph(dataset)
+    g = None
+    if rank == 0:
+        g = get_graph(dataset)
+        time.sleep(3)
+        dist.barrier()
+    else:
+        dist.barrier()
+        g = get_graph(dataset)
+
     if full_graph_in_gpu:
         g = g.to(device)
 
@@ -190,17 +201,17 @@ def run(rank, size):
         start = time.time()
         model.train()
         accum_loss = 0.
-        opt.zero_grad()
         for input_nodes, output_nodes, blocks in dataloader:
             input_features = blocks[0].srcdata['feat']
             output_labels = blocks[-1].dstdata['label']
             assert(output_labels.shape[0] == output_nodes.shape[0])
             output_predictions = model(blocks, input_features)
             loss = F.cross_entropy(output_predictions, output_labels)
+            opt.zero_grad()
             loss.backward()
+            opt.step() 
             accum_loss += loss.item() * output_nodes.shape[0]
 
-        opt.step() 
 
         end = time.time()
         training_time += (end - start)
