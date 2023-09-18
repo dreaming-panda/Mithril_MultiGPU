@@ -21,7 +21,7 @@ if __name__ == "__main__":
     #print(hostname, num_nodes)
 
     nodes = load_node_lists(num_nodes)
-    gpus_per_node = 4
+    gpus_per_node = 1
     node_id = None
     for i in range(num_nodes):
         if nodes[i] == hostname:

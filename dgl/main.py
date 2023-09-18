@@ -9,15 +9,15 @@ import dgl.nn as dglnn
 import torch.nn as nn
 import torch.nn.functional as F
 
-num_gpus_per_node = 4
+num_gpus_per_node = 1
 num_layers = 2
 batch_size = 1024
 hidden_units = 100
-num_epoches = 100
+num_epoches = 10
 lr = 1e-3
 dropout = 0.5
 seed = 1
-full_graph_in_gpu = True
+full_graph_in_gpu = False
 eval_frequency = 1
 dataset = "cora"
 save_dir = "/shared_hdd_storage/shared/gnn_datasets/dgl_datasets"
@@ -42,7 +42,10 @@ def get_accuracy(model, dataloader, num_samples, device):
     model.eval()
     num_hits = 0
     with torch.no_grad():
+        #with dataloader.enable_cpu_affinity(): CRASHED
         for input_nodes, output_nodes, blocks in dataloader:
+            if not full_graph_in_gpu:
+                blocks = [b.to(torch.device(device)) for b in blocks]
             input_features = blocks[0].srcdata['feat']
             output_labels = blocks[-1].dstdata['label']
             assert(output_labels.shape[0] == output_nodes.shape[0])
@@ -93,6 +96,8 @@ def run(rank, size):
     else:
         dist.barrier()
         g = get_graph(dataset)
+    print("Downloaded the graph dataset")
+    sys.stdout.flush()
 
     if full_graph_in_gpu:
         g = g.to(device)
@@ -111,7 +116,9 @@ def run(rank, size):
         if i % size == rank:
             splitted_train_ids.append(train_ids[i])
     # move to the GPU
-    train_ids = torch.tensor(splitted_train_ids).to(device)
+    train_ids = torch.tensor(splitted_train_ids)
+    if full_graph_in_gpu:
+        train_ids = train_ids.to(device)
 
     # process the validation samples
     val_mask = g.ndata['val_mask']
@@ -127,7 +134,9 @@ def run(rank, size):
         if i % size == rank:
             splitted_val_ids.append(val_ids[i])
     # move to the GPU
-    val_ids = torch.tensor(splitted_val_ids).to(device)
+    val_ids = torch.tensor(splitted_val_ids)
+    if full_graph_in_gpu:
+        val_ids = val_ids.to(device)
 
     # process the testing samples
     test_mask = g.ndata['test_mask']
@@ -143,10 +152,12 @@ def run(rank, size):
         if i % size == rank:
             splitted_test_ids.append(test_ids[i])
     # move to the GPU
-    test_ids = torch.tensor(splitted_test_ids).to(device)
+    test_ids = torch.tensor(splitted_test_ids)
+    if full_graph_in_gpu:
+        test_ids = test_ids.to(device)
 
     # configure the full neighbours sampler
-    num_workers = 4
+    num_workers = 1
     if full_graph_in_gpu:
         num_workers = 0
 
@@ -189,8 +200,8 @@ def run(rank, size):
 
     sys.stdout.flush()
     dist.barrier()
-    if rank == 0:
-        print("Start Distributed GNN Training\n\n")
+    print("Start Distributed GNN Training")
+    sys.stdout.flush()
 
     training_time = 0.
     highest_valid_acc = 0.
@@ -201,17 +212,26 @@ def run(rank, size):
         start = time.time()
         model.train()
         accum_loss = 0.
-        for input_nodes, output_nodes, blocks in dataloader:
-            input_features = blocks[0].srcdata['feat']
-            output_labels = blocks[-1].dstdata['label']
-            assert(output_labels.shape[0] == output_nodes.shape[0])
-            output_predictions = model(blocks, input_features)
-            loss = F.cross_entropy(output_predictions, output_labels)
-            opt.zero_grad()
-            loss.backward()
-            opt.step() 
-            accum_loss += loss.item() * output_nodes.shape[0]
 
+        it = 0
+        with dataloader.enable_cpu_affinity():
+            for input_nodes, output_nodes, blocks in dataloader:
+                if not full_graph_in_gpu:
+                    blocks = [b.to(torch.device(device)) for b in blocks]
+                input_features = blocks[0].srcdata['feat']
+                output_labels = blocks[-1].dstdata['label']
+                assert(output_labels.shape[0] == output_nodes.shape[0])
+                output_predictions = model(blocks, input_features)
+                loss = F.cross_entropy(output_predictions, output_labels)
+                opt.zero_grad()
+                loss.backward()
+                opt.step() 
+                accum_loss += loss.item() * output_nodes.shape[0]
+                #if rank == 0:
+                #    print("\tRank %s, Iteration %s, Loss %s" % (
+                #        rank, it, loss.item()
+                #        ))
+                it += 1
 
         end = time.time()
         training_time += (end - start)
@@ -283,6 +303,8 @@ if __name__ == "__main__":
     if node_id != 0:
         time.sleep(1)
 
+    #init_process(0, 1, master_node, run)
+
     processes = []
     mp.set_start_method("spawn")
     for gpu in range(num_gpus_per_node):
@@ -291,7 +313,6 @@ if __name__ == "__main__":
         p = mp.Process(target=init_process, args=(rank, size, master_node, run))
         p.start()
         processes.append(p)
-
     for p in processes:
         p.join()
 

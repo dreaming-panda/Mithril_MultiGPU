@@ -3,7 +3,7 @@
 #SBATCH --time=00:30:00
 #SBATCH --partition=gpu
 #SBATCH --gpus-per-task=4
-#SBATCH --ntasks=2
+#SBATCH --ntasks=1
 #SBATCH --exclusive
 
 mpirun hostname > hosts
