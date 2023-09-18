@@ -1,4 +1,5 @@
 import os
+import sys
 
 graphs = [
         #"squirrel",
@@ -104,6 +105,7 @@ def run_graph_parallel(
         graph, model, seed
         ))
     print("COMMAND: '%s'" % (command))
+    sys.stdout.flush()
     os.system(command)
 
 def run_hybrid_parallel(
@@ -152,6 +154,7 @@ def run_hybrid_parallel(
         graph, model, seed
         ))
     print("COMMAND: '%s'" % (command))
+    sys.stdout.flush()
     os.system(command)
 
 def run_pipeline_parallel(
@@ -200,6 +203,7 @@ def run_pipeline_parallel(
         graph, model, seed
         ))
     print("COMMAND: '%s'" % (command))
+    sys.stdout.flush()
     os.system(command)
 
 if __name__ == "__main__":

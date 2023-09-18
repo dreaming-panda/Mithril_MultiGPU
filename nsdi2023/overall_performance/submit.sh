@@ -6,7 +6,7 @@
 #SBATCH --exclusive
 
 echo "Configurating the hostfile"
-nvidia-smi
+mpirun nvidia-smi
 mpirun ./gen_hostfile.sh > ./nsdi2023/overall_performance/hostfile
 
 # compile the project
