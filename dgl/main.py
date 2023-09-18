@@ -13,7 +13,9 @@ num_gpus_per_node = 4
 num_layers = 2
 batch_size = 4
 hidden_units = 100
-num_epoches = 15
+num_epoches = 150
+lr = 1e-3
+seed = 1
 full_graph_in_gpu = True
 
 def get_graph(graph_name):
@@ -37,6 +39,8 @@ class StochasticTwoLayerGCN(nn.Module):
 
 """ The actual entry point"""
 def run(rank, size):
+    dgl.seed(seed + rank)
+
     print("Hello World From Process %s, the World Size is %s" % (
         rank, size
         ));
@@ -49,6 +53,7 @@ def run(rank, size):
     if full_graph_in_gpu:
         g = g.to(device)
 
+    # process the training samples
     train_mask = g.ndata['train_mask']
     mask_cpu = train_mask.cpu().numpy()
     train_ids = []
@@ -63,6 +68,38 @@ def run(rank, size):
             splitted_train_ids.append(train_ids[i])
     # move to the GPU
     train_ids = torch.tensor(splitted_train_ids).to(device)
+
+    # process the validation samples
+    val_mask = g.ndata['val_mask']
+    mask_cpu = val_mask.cpu().numpy()
+    val_ids = []
+    for i in range(len(mask_cpu)):
+        if mask_cpu[i]:
+            val_ids.append(i)
+    num_global_valing_samples = len(val_ids)
+    # split the val ID equally to each GPU
+    splitted_val_ids = []
+    for i in range(len(val_ids)):
+        if i % size == rank:
+            splitted_val_ids.append(val_ids[i])
+    # move to the GPU
+    val_ids = torch.tensor(splitted_val_ids).to(device)
+
+    # process the testing samples
+    test_mask = g.ndata['test_mask']
+    mask_cpu = test_mask.cpu().numpy()
+    test_ids = []
+    for i in range(len(mask_cpu)):
+        if mask_cpu[i]:
+            test_ids.append(i)
+    num_global_testing_samples = len(test_ids)
+    # split the test ID equally to each GPU
+    splitted_test_ids = []
+    for i in range(len(test_ids)):
+        if i % size == rank:
+            splitted_test_ids.append(test_ids[i])
+    # move to the GPU
+    test_ids = torch.tensor(splitted_test_ids).to(device)
 
     # configure the full neighbours sampler
     num_workers = 4
@@ -84,17 +121,18 @@ def run(rank, size):
 
     model = StochasticTwoLayerGCN(in_features, hidden_features, out_features)
     model.to(device)
-    #model = torch.nn.parallel.DistributedDataParallel(model) # wrap the model to support weight synchronization
+    model = torch.nn.parallel.DistributedDataParallel(model) # wrap the model to support weight synchronization
 
-    opt = torch.optim.Adam(model.parameters())
+    opt = torch.optim.Adam(model.parameters(), lr = lr)
 
     sys.stdout.flush()
     dist.barrier()
     if rank == 0:
         print("Start Distributed GNN Training\n\n")
 
-    # TODO: weight synchronization
     for epoch in range(num_epoches):
+        # training 
+        model.train()
         accum_loss = 0.
         for input_nodes, output_nodes, blocks in dataloader:
             input_features = blocks[0].srcdata['feat']
@@ -106,8 +144,35 @@ def run(rank, size):
             loss.backward()
             opt.step()
             accum_loss += loss.item() * output_nodes.shape[0]
-        accum_loss /= float(train_ids.shape[0])
-        print("Rank %s, Epoch %d, Loss %.4f" % (rank, epoch, accum_loss))
+
+        if (epoch + 1) % 10 == 0:
+            # calculate the loss
+            accum_loss = torch.tensor([accum_loss]).to(device)
+            dist.all_reduce(accum_loss, op = dist.ReduceOp.SUM)
+            accum_loss = accum_loss.item() / float(num_global_training_samples)
+
+            # evaluation
+            model.eval()
+            num_hits = 0
+            with torch.no_grad():
+                for input_nodes, output_nodes, blocks in dataloader:
+                    input_features = blocks[0].srcdata['feat']
+                    output_labels = blocks[-1].dstdata['label']
+                    assert(output_labels.shape[0] == output_nodes.shape[0])
+                    output_predictions = model(blocks, input_features)
+                    _, indices = torch.max(output_predictions, dim=1)
+                    hits = torch.sum(indices == output_labels).item()
+                    num_hits += hits
+            num_hits = torch.tensor([num_hits]).to(device)
+            dist.all_reduce(num_hits, op = dist.ReduceOp.SUM)
+            train_accuracy = num_hits.item() / float(num_global_training_samples)
+
+            if rank == 0:
+                print("Epoch %d, Loss %.4f, Train Accuracy %.4f" % (
+                    epoch, 
+                    accum_loss, 
+                    train_accuracy
+                    ))
 
 def init_process(rank, size, master_node, fn, backend='gloo'):
     """ Initialize the distributed environment. """
