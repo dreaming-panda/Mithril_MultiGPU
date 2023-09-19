@@ -1,3 +1,5 @@
+//#define REVERSE_PERIOD (5)  
+
 #include <assert.h>
 #include <stdio.h>
 #include <math.h>
@@ -29,8 +31,8 @@
 #include "distributed_sys.h"
 #include "partitioner.h"
 
-#define RES_GCN_PLUS
-#define AGGREGATION (MEAN)
+//#define RES_GCN_PLUS
+#define AGGREGATION (NORM_SUM)
 
 class GraphSage: public AbstractApplication {
     private:
@@ -52,23 +54,23 @@ class GraphSage: public AbstractApplication {
         }
         ~GraphSage() {}
 
-        //Tensor * graph_conv(Tensor * t) {
-        //    t = fc(t, num_hidden_units_);
-        //    t = aggregation(t, AGGREGATION);
-        //    return t;
-        //}
-
         Tensor * graph_conv(Tensor * t) {
-            // the Graphsage conv
-            Tensor * t_0 = fc(t, num_hidden_units_);
             t = aggregation(t, AGGREGATION);
             t = fc(t, num_hidden_units_);
-            t = add(t_0, t, 1., 1., enable_recomputation_);
             return t;
         }
 
+        //Tensor * graph_conv(Tensor * t) {
+        //    Tensor * t_0 = fc(t, num_hidden_units_);
+        //    t = aggregation(t, AGGREGATION);
+        //    t = fc(t, num_hidden_units_);
+        //    t = add(t_0, t, 1., 1., enable_recomputation_);
+        //    return t;
+        //}
+
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
+            t = dropout(t, dropout_rate_, enable_recomputation_);
             t = fc(t, num_hidden_units_);
 
 #ifdef RES_GCN_PLUS
@@ -80,20 +82,18 @@ class GraphSage: public AbstractApplication {
 
                 // ResGCN+
                 // order: LN => ReLU => GraphConv => Res
-                t = layer_norm(t, true); 
+                t = layer_norm(t, false);
                 t = relu(t, enable_recomputation_);
                 t = dropout(t, dropout_rate_, enable_recomputation_);
                 t = graph_conv(t);
                 t = add(t, shortcut, 1., 1., enable_recomputation_);
 
-                if (i == 0) {
-                    next_layer(0);
-                } else if (i < num_layers_ - 1) {
+                if (i < num_layers_ - 1) {
                     next_layer(1);
                 } 
             }
 
-            t = layer_norm(t, true);
+            t = layer_norm(t, false);
             t = relu(t, enable_recomputation_);
             t = dropout(t, dropout_rate_, enable_recomputation_);
 #else
@@ -117,7 +117,6 @@ class GraphSage: public AbstractApplication {
             t = dropout(t, dropout_rate_, enable_recomputation_);
             t = layer_norm(t, false);
 #endif
-
             t = fc(t, num_classes_);
             if (! multi_label_) {
                 t = softmax(t, enable_recomputation_);

@@ -1,15 +1,15 @@
 #!/bin/bash
-#SBATCH --output=./nsdi2023/overall_performance/progress2.txt
+#SBATCH --output=./nsdi2023/overall_performance/progress.txt
 #SBATCH --partition=gpu
 #SBATCH --gpus=8
 #SBATCH --gpus-per-task=4
 #SBATCH --exclusive
 
-# FIXME: progress2.txt
+# FIXME: progress.txt
 
 echo "Configurating the hostfile"
 mpirun nvidia-smi
-mpirun ./gen_hostfile.sh > ./nsdi2023/overall_performance/hostfile2 # TODO
+mpirun ./gen_hostfile.sh > ./nsdi2023/overall_performance/hostfile # TODO
 
 # compile the project
 echo "Build the project"
