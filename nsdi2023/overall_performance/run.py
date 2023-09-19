@@ -2,15 +2,15 @@ import os
 import sys
 
 graphs = [
-        #"squirrel",
-        #"flickr",
-        #"reddit",
-        "yelp"
+        "squirrel",
+        "flickr",
+        "reddit",
+        #"yelp"
         ]
 models = [
-        "gcn", 
-        "graphsage",
-        "gcnii",
+        #"gcn", 
+        #"graphsage",
+        #"gcnii",
         "resgcn"
         ]
 configurations = {
@@ -54,6 +54,7 @@ configurations = {
 
 baseline_datasets = "/shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets"
 mithril_datasets = "/shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets"
+host_file = "./nsdi2023/overall_performance/hostfile2" # TODO
 num_gpus = 8
 #hosts = "gnerv2:4,gnerv3:4"
 application_dir = "./build/applications/async_multi_gpus"
@@ -77,8 +78,8 @@ def run_graph_parallel(
     num_dp_ways = num_gpus
     dataset_path = baseline_datasets
 
-    command = "mpirun -n %s --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile" % (
-            num_gpus
+    command = "mpirun -n %s --map-by node:PE=8 --hostfile %s" % (
+            num_gpus, host_file
             )
     command += " %s/%s" % (
             application_dir, model 
@@ -126,8 +127,8 @@ def run_hybrid_parallel(
     num_dp_ways = 2
     dataset_path = mithril_datasets 
 
-    command = "mpirun -n %s --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile" % (
-            num_gpus
+    command = "mpirun -n %s --map-by node:PE=8 --hostfile %s" % (
+            num_gpus, host_file
             )
     command += " %s/%s" % (
             application_dir, model
@@ -175,8 +176,8 @@ def run_pipeline_parallel(
     num_dp_ways = 1
     dataset_path = mithril_datasets
 
-    command = "mpirun -n %s --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile" % (
-            num_gpus
+    command = "mpirun -n %s --map-by node:PE=8 --hostfile %s" % (
+            num_gpus, host_file
             )
     command += " %s/%s" % (
             application_dir, model

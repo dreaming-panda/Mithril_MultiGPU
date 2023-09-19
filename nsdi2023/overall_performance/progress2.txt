@@ -1,0 +1,78 @@
+Configurating the hostfile
+Mon Sep 18 22:28:58 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
+| 35%   57C    P5    72W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
+| 32%   56C    P8    22W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
+| 44%   61C    P8    26W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
+| 49%   66C    P8    34W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+Mon Sep 18 22:29:03 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
+| 32%   54C    P8    32W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
+| 38%   58C    P8    29W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
+| 44%   61C    P8    32W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
+| 48%   64C    P8    39W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+Build the project
+[ 18%] Built target context
+[ 34%] Built target core
+[ 73%] Built target cudahelp
+[ 92%] Built target OSDI2023_MULTI_NODES_gcnii
+[ 92%] Built target OSDI2023_MULTI_NODES_resgcn
+[ 92%] Built target OSDI2023_MULTI_NODES_graphsage
+[ 92%] Built target estimate_comm_volume
+[100%] Built target OSDI2023_MULTI_NODES_gcn
+Run the experiments
+
+Running Graph Parallel: graph squirrel, model resgcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/squirrel/resgcn/1.txt 2>&1'

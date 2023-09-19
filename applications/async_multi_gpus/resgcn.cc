@@ -29,80 +29,7 @@
 #include "distributed_sys.h"
 #include "partitioner.h"
 
-//class GraphSage: public AbstractApplication {
-//    private:
-//        int num_layers_;
-//        int num_hidden_units_;
-//        int num_classes_;
-//        double dropout_rate_;
-//        bool enable_recomputation_;
-//        bool use_residual_;
-//        bool multi_label_;
-//
-//    public:
-//        GraphSage(int num_layers, int num_hidden_units, int num_classes, int num_features, double dropout_rate, bool multi_label):
-//            AbstractApplication(num_features),
-//            num_layers_(num_layers), num_hidden_units_(num_hidden_units), num_classes_(num_classes), dropout_rate_(dropout_rate), use_residual_(false), multi_label_(multi_label) {
-//                assert(num_layers >= 1);
-//                assert(num_hidden_units >= 1);
-//                assert(num_classes >= 1);
-//                enable_recomputation_ = true;
-//        }
-//        ~GraphSage() {}
-//
-//        Tensor * forward(Tensor * input) {
-//            Tensor * t = input;
-//            t = dropout(t, dropout_rate_, enable_recomputation_);
-//
-//            for (int i = 0; i < num_layers_; ++ i) {
-//                int output_size = num_hidden_units_;
-//                if (i == num_layers_ - 1) {
-//                    output_size = num_classes_;
-//                }
-//                // process the embeddings
-//                Tensor * shortcut = t;
-//                Tensor * t_0 = fc(t, output_size, "None", true);
-//                // the aggregated results
-//                if (i == 0) {
-//                    // reduce the dimension first to reduce 
-//                    // computation cost
-//                    t = fc(t, output_size, "None", true);
-//                    t = aggregation(t, MEAN);
-//                } else {
-//                    shortcut = t;
-//                    t = aggregation(t, MEAN);
-//                    t = fc(t, output_size, "None", true);
-//                }
-//                // added the transformed aggregated results with the transformed embeddings
-//                t = add(t_0, t, 1., 1., enable_recomputation_);
-//
-//                if (i == num_layers_ - 1) {
-//                    //t = log_softmax(t, enable_recomputation_);
-//                    if (! multi_label_) {
-//                        t = softmax(t, enable_recomputation_);
-//                    }
-//                } else {
-//                    t = relu(t, enable_recomputation_);
-//                    t = dropout(t, dropout_rate_, enable_recomputation_);
-//                }
-//
-//                if (i > 0 && i < num_layers_ - 1 && use_residual_) { // residual connection
-//                    assert(t->dims[1] == shortcut->dims[1]);
-//                    t = add(t, shortcut, 0.05, 0.95, enable_recomputation_);
-//                }
-//
-//                if (i == 0) {
-//                    next_layer(0);
-//                } else if (i == num_layers_ - 1) {
-//                    next_layer(2);
-//                } else {
-//                    next_layer(1);
-//                }
-//            }
-//            return t;
-//        }
-//};
-
+#define RES_GCN_PLUS
 
 class GraphSage: public AbstractApplication {
     private:
@@ -124,59 +51,61 @@ class GraphSage: public AbstractApplication {
         }
         ~GraphSage() {}
 
+        Tensor * graph_conv(Tensor * t) {
+            t = aggregation(t, NORM_SUM);
+            t = fc(t, num_hidden_units_);
+            return t;
+        }
+
         Tensor * forward(Tensor * input) {
             Tensor * t = input;
-            //t = dropout(t, dropout_rate_, enable_recomputation_);
             t = fc(t, num_hidden_units_);
 
-            for (int i = 0; i < num_layers_; ++ i) {
-                int output_size = num_hidden_units_;
-                //if (i == num_layers_ - 1) {
-                //    output_size = num_classes_;
-                //}
+#ifdef RES_GCN_PLUS
+            t = graph_conv(t);
+            next_layer(0);
+
+            for (int i = 1; i < num_layers_; ++ i) {
                 Tensor * shortcut = t;
 
-                //// RES
-                //// process the embeddings
-                //Tensor * t_0 = fc(t, output_size, "None", true);
-                //t = aggregation(t, MEAN);
-                //t = fc(t, output_size, "None", true);
-                //// added the transformed aggregated results with the transformed embeddings
-                //t = add(t_0, t, 1., 1., enable_recomputation_);
-
-                t = fc(t, output_size);
-                t = aggregation(t, NORM_SUM);
-
-                t = relu(t, enable_recomputation_);
-                t = add(t, shortcut, 1., 1., enable_recomputation_); // residual connection
-                t = dropout(t, dropout_rate_, enable_recomputation_);
-
-                //// RES+
-                //t = layer_norm(t, false);
-                //t = relu(t, enable_recomputation_);
-                //t = dropout(t, dropout_rate_, enable_recomputation_);
-
-                //// GCN
-                //t = fc(t, output_size);
-                //t = aggregation(t, NORM_SUM);
-
-                //// graph convolution
-                //Tensor * t_0 = fc(t, output_size, "None", true);
-                //t = fc(t, output_size, "None", true);
-                //t = aggregation(t, MEAN);
-                //t = add(t_0, t, 1., 1., enable_recomputation_);
-
-                // residual connection
-                t = add(t, shortcut, 1., 1., enable_recomputation_); // residual connection
-                                                                     
+                // ResGCN+
+                // order: LN => ReLU => GraphConv => Res
                 t = layer_norm(t, false);
+                t = relu(t, enable_recomputation_);
+                t = dropout(t, dropout_rate_, enable_recomputation_);
+                t = graph_conv(t);
+                t = add(t, shortcut, 1., 1., enable_recomputation_);
 
-                if (i == 0) {
-                    next_layer(0);
-                } else if (i < num_layers_ - 1) {
+                if (i < num_layers_ - 1) {
                     next_layer(1);
                 } 
             }
+
+            t = layer_norm(t, false);
+            t = relu(t, enable_recomputation_);
+            t = dropout(t, dropout_rate_, enable_recomputation_);
+#else
+            t = graph_conv(t);
+            t = layer_norm(t, false);
+            t = relu(t, enable_recomputation_);
+            t = dropout(t, dropout_rate_, enable_recomputation_);
+            next_layer(0);
+
+            for (int i = 1; i < num_layers_; ++ i) {
+                Tensor * shortcut = t;
+
+                // ResGCN
+                t = graph_conv(t);
+                t = layer_norm(t, false);
+                t = relu(t, enable_recomputation_);
+                t = add(t, shortcut, 1., 1., enable_recomputation_);
+                t = dropout(t, dropout_rate_, enable_recomputation_);
+
+                if (i < num_layers_ - 1) {
+                    next_layer(1);
+                } 
+            }
+#endif
 
             t = fc(t, num_classes_);
             if (! multi_label_) {
