@@ -17,9 +17,9 @@ dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_parti
 
 num_gpus=4
 num_layers=32
-hunits=1000
+hunits=100
 lr=1e-3
-graph=squirrel
+graph=ogbn_arxiv
 epoch=1000
 decay=0
 dropout=0.5

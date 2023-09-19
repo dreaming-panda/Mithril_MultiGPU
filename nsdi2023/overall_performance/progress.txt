@@ -77,3 +77,12 @@ Run the experiments
 
 Running Graph Parallel: graph squirrel, model resgcn, seed 1
 COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/squirrel/resgcn/1.txt 2>&1'
+
+Running Pipeline Parallel: graph squirrel, model resgcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/squirrel/resgcn/1.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph squirrel, model resgcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/squirrel/resgcn/1.txt 2>&1'
+
+Running Graph Parallel: graph flickr, model resgcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/flickr/resgcn/1.txt 2>&1'

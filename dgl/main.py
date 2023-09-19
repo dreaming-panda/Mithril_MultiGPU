@@ -21,6 +21,7 @@ full_graph_in_gpu = False
 use_uva = True
 eval_frequency = 1
 dataset = "flickr"
+model = "gcn"
 save_dir = "/shared_hdd_storage/shared/gnn_datasets/dgl_datasets"
 
 # some utility functions
@@ -75,6 +76,58 @@ class StochasticTwoLayerGCN(nn.Module):
         x = F.relu(self.conv1(blocks[0], x))
         x = F.dropout(x, self.dropout)
         x = F.relu(self.conv2(blocks[1], x))
+        return x
+
+class StochasticGCN(nn.Module):
+    def __init__(self, num_layers, in_features, hidden_features, out_features, dropout):
+        super().__init__()
+        self.dropout = dropout
+        self.num_layers = num_layers
+        self.convs = []
+
+        for i in range(num_layers):
+            in_size = hidden_features
+            out_size = hidden_features
+            if i == 0: # the first layer
+                in_size = in_features
+            if i == num_layers - 1: #the last layer
+                out_size = out_features
+            # create the conv layer
+            conv = dgl.nn.GraphConv(in_size, out_size)
+            self.convs.append(conv)
+
+    def forward(self, blocks, x):
+        for i in range(self.num_layers):
+            x = self.convs[i](blocks[i], x)
+            if i < num_layers - 1: # not the last layer
+                x = F.relu(x)
+                x = F.dropout(x)
+        return x
+
+class StochasticGraphSage(nn.Module):
+    def __init__(self, num_layers, in_features, hidden_features, out_features, dropout):
+        super().__init__()
+        self.dropout = dropout
+        self.num_layers = num_layers
+        self.convs = []
+
+        for i in range(num_layers):
+            in_size = hidden_features
+            out_size = hidden_features
+            if i == 0: # the first layer
+                in_size = in_features
+            if i == num_layers - 1: #the last layer
+                out_size = out_features
+            # create the conv layer
+            conv = dgl.nn.SAGEConv(in_size, out_size, "mean")
+            self.convs.append(conv)
+
+    def forward(self, blocks, x):
+        for i in range(self.num_layers):
+            x = self.convs[i](blocks[i], x)
+            if i < num_layers - 1: # not the last layer
+                x = F.relu(x)
+                x = F.dropout(x)
         return x
 
 """ The actual entry point"""
@@ -202,8 +255,20 @@ def run(rank, size):
     out_features = n_labels
 
     model = StochasticTwoLayerGCN(in_features, hidden_features, out_features, dropout)
+    model = None
+    if model == "gcn":
+        model = StochasticGCN(
+                num_layers, in_features, hidden_features, out_features, dropout
+                )
+    elif model == "graphsage":
+        model = StochasticGraphSage(
+                num_layers, in_features, hidden_features, out_features, dropout
+                )
+    else:
+        print("Unrecognized model")
+        exit(-1)
     model.to(device)
-    #model = torch.nn.parallel.DistributedDataParallel(model) # wrap the model to support weight synchronization FIXME
+    model = torch.nn.parallel.DistributedDataParallel(model) # wrap the model to support weight synchronization 
 
     opt = torch.optim.Adam(model.parameters(), lr = lr)
 
