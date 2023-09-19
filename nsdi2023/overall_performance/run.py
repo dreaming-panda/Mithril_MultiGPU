@@ -2,14 +2,15 @@ import os
 import sys
 
 graphs = [
-        "squirrel",
-        "flickr",
+        #"squirrel",
+        #"flickr",
         #"reddit",
+        "ogbn_arxiv"
         ]
 models = [
-        #"gcn", 
-        #"graphsage",
-        #"gcnii",
+        "gcn", 
+        "graphsage",
+        "gcnii",
         "resgcn"
         ]
 configurations = {
@@ -40,14 +41,14 @@ configurations = {
             "dropout": 0.5,
             "multi_label": 0
             },
-        "yelp": {
+        "ogbn_arxiv": {
             "layers": 32,
             "hunits": 100,
             "epoch": 5000,
             "lr": 1e-3,
             "decay": 0.,
             "dropout": 0.5,
-            "multi_label": 1
+            "multi_label": 0
             }
         }
 
