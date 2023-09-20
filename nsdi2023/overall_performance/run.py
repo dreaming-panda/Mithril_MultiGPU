@@ -8,10 +8,10 @@ graphs = [
         #"ogbn_arxiv"
         ]
 models = [
+        "resgcn",
+        #"gcnii",
         #"gcn", 
         #"graphsage",
-        #"gcnii",
-        "resgcn"
         ]
 configurations = {
         "squirrel": {
@@ -208,8 +208,8 @@ def run_pipeline_parallel(
     os.system(command)
 
 if __name__ == "__main__":
-    #for seed in range(1, num_runs + 1): 
-    for seed in range(3, 4): #TODO
+    #for seed in range(3, 4): 
+    for seed in range(1, num_runs + 1): 
         for graph in graphs:
             for model in models:
                 # graph parallel

@@ -43,15 +43,22 @@ def get_flickr_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/
     return dataset
 
 def get_yelp_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
-    download_path += "yelp"
+    download_path += "/yelp"
     dataset = pyg.datasets.Yelp(
             root = download_path
             )
     return dataset
 
 def get_amazon_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
-    download_path += "amazon"
+    download_path += "/amazon"
     dataset = pyg.datasets.AmazonProducts(
+            root = download_path
+            )
+    return dataset
+
+def get_nell_dataset(download_path = "/shared_hdd_storage/shared/gnn_datasets/pygdatasets"):
+    download_path += "/nell"
+    dataset = pyg.datasets.NELL(
             root = download_path
             )
     return dataset
@@ -248,8 +255,11 @@ if __name__ == "__main__":
     #dataset = get_yelp_dataset()
     #name = "yelp"
 
-    dataset = get_amazon_dataset()
-    name = "amazon"
+    #dataset = get_amazon_dataset()
+    #name = "amazon"
+
+    dataset = get_nell_dataset()
+    name = "nell"
 
     exported_as_mithril_format(dataset, name)
 

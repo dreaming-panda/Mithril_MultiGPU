@@ -24,7 +24,8 @@ graphs = [
 models = [
         "gcn",
         "graphsage",
-        "gcnii"
+        "gcnii",
+        "resgcn"
         ]
 methods = [
         "graph",
@@ -117,7 +118,7 @@ def print_accuracies():
     print("Accuracy (%)")
     print(methods)
     for graph in graphs:
-        for model in ["gcnii"]:
+        for model in ["gcnii", "resgcn"]:
             accuracies = []
             for method in methods:
                 s = 0.
