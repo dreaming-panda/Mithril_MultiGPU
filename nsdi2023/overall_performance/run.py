@@ -54,7 +54,7 @@ configurations = {
 
 baseline_datasets = "/shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets"
 mithril_datasets = "/shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets"
-host_file = "./nsdi2023/overall_performance/hostfile" # TODO
+host_file = "./nsdi2023/overall_performance/hostfile3" # TODO
 num_gpus = 8
 #hosts = "gnerv2:4,gnerv3:4"
 application_dir = "./build/applications/async_multi_gpus"
