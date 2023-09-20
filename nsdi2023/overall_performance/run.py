@@ -4,13 +4,13 @@ import sys
 graphs = [
         #"squirrel",
         #"flickr",
-        #"reddit",
-        "ogbn_arxiv"
+        "reddit",
+        #"ogbn_arxiv"
         ]
 models = [
-        "gcn", 
-        "graphsage",
-        "gcnii",
+        #"gcn", 
+        #"graphsage",
+        #"gcnii",
         "resgcn"
         ]
 configurations = {
@@ -208,23 +208,24 @@ def run_pipeline_parallel(
     os.system(command)
 
 if __name__ == "__main__":
-    for seed in range(1, num_runs + 1):
+    #for seed in range(1, num_runs + 1): TODO
+    for seed in range(2, 3):
         for graph in graphs:
             for model in models:
-                # graph parallel
-                result_dir = "./nsdi2023/overall_performance/results/graph/%s/%s" % (
-                        graph, model
-                        )
-                os.system("mkdir -p %s" % (result_dir))
-                result_file = result_dir + "/%s.txt" % (seed)
-                run_graph_parallel(graph, model, seed, result_file)
-                # pipeline parallel
-                result_dir = "./nsdi2023/overall_performance/results/pipeline/%s/%s" % (
-                        graph, model
-                        )
-                os.system("mkdir -p %s" % (result_dir))
-                result_file = result_dir + "/%s.txt" % (seed)
-                run_pipeline_parallel(graph, model, seed, result_file)
+                ## graph parallel
+                #result_dir = "./nsdi2023/overall_performance/results/graph/%s/%s" % (
+                #        graph, model
+                #        )
+                #os.system("mkdir -p %s" % (result_dir))
+                #result_file = result_dir + "/%s.txt" % (seed)
+                #run_graph_parallel(graph, model, seed, result_file)
+                ## pipeline parallel
+                #result_dir = "./nsdi2023/overall_performance/results/pipeline/%s/%s" % (
+                #        graph, model
+                #        )
+                #os.system("mkdir -p %s" % (result_dir))
+                #result_file = result_dir + "/%s.txt" % (seed)
+                #run_pipeline_parallel(graph, model, seed, result_file)
                 # hybrid parallel
                 result_dir = "./nsdi2023/overall_performance/results/hybrid/%s/%s" % (
                         graph, model
