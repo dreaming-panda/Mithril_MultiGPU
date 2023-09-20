@@ -1,0 +1,197 @@
+Tue Sep 19 23:07:38 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
+| 38%   54C    P8    20W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
+| 30%   36C    P8    18W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
+| 30%   34C    P8    13W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
+| 30%   32C    P8    17W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+[ 22%] Built target context
+[ 32%] Built target core
+[ 70%] Built target cudahelp
+[ 75%] Built target OSDI2023_MULTI_NODES_resgcn_plus
+[ 90%] Built target OSDI2023_MULTI_NODES_graphsage
+[ 90%] Built target estimate_comm_volume
+[ 90%] Built target OSDI2023_MULTI_NODES_gcn
+[ 90%] Built target OSDI2023_MULTI_NODES_gcnii
+[ 90%] Built target OSDI2023_MULTI_NODES_resgcn
+Running experiments...
+Starting GNN Training...
+Initializing the runtime environment
+Starting GNN Training...
+Initializing the runtime environment
+DONE MPI INIT
+Initialized node 0 on machine gnerv1
+DONE MPI INIT
+Initialized node 1 on machine gnerv1
+Building the CSR structure...
+Building the CSR structure...
+        It takes 2.384 seconds.
+Building the CSC structure...
+        It takes 2.585 seconds.
+Building the CSC structure...
+        It takes 2.338 seconds.
+        It takes 2.348 seconds.
+Building the Feature Vector...
+        It takes 0.233 seconds.
+Building the Label Vector...
+        It takes 0.036 seconds.
+Building the Feature Vector...
+        It takes 0.242 seconds.
+Building the Label Vector...
+        It takes 0.029 seconds.
+The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs/reddit/2_parts
+The number of GCNII layers: 16
+The number of hidden units: 100
+The number of training epoches: 100
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 1
+GCN hyper-parameter alpha: 0.100000
+GCN hyper-parameter lambda: 0.500000
+Number of classes: 41
+Number of feature dimensions: 602
+Number of vertices: 232965
+Number of GPUs: 2
+GPU 0, layer [0, 17)
+train nodes 153431, valid nodes 23831, test nodes 55703
+GPU 0, layer [0, 17)
+Chunks (number of global chunks: 2): 0-[0, 116483) 1-[116483, 232965)
+232965, 114848857, 114848857
+Number of vertices per chunk: 116483
+232965, 114848857, 114848857
+Number of vertices per chunk: 116483
+csr in-out ready !Start Cost Model Initialization...
+csr in-out ready !Start Cost Model Initialization...
+***** Start profiling the layer-level communication performance *******
+The layer-level communication performance: 168.921 Gbps (per GPU), 337.843 Gbps (aggregated)
+The layer-level communication performance: 168.921 Gbps (per GPU), 337.842 Gbps (aggregated)
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+The graph-level communication performance (supernode = 2): 155.910 Gbps (per GPU), 311.821 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 155.910 Gbps (per GPU), 311.821 Gbps (aggregated, cluster-wide)
+ LType   LT0   LT1   LT2 Ratio  VSum  ESum
+ chk_0  9.53ms 48.78ms 49.83ms  5.23116.48K 68.42M
+ chk_1  9.56ms 33.62ms 34.86ms  3.65116.48K 46.19M
+   Avg  9.54 41.20 42.34
+   Max  9.56 48.78 49.83
+   Min  9.53 33.62 34.86
+ Ratio  1.00  1.45  1.43
+   Var  0.00 57.44 56.01
+Profiling takes 2.175 s
+*** Node 0, starting model training...
+*** Node 1, starting model training...
+Num Stages: 1 / 1
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the model-level partition [0, 121)
+*** Node 0, constructing the helper classes...
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 116483
+Num Stages: 1 / 1
+Node 1, Pipeline Input Tensor: NULL
+Node 1, Pipeline Output Tensor: NULL
+*** Node 1 owns the model-level partition [0, 121)
+*** Node 1, constructing the helper classes...
+Node 1, Local Vertex Begin: 116483, Num Local Vertices: 116482
+*** Node 0, setting up some other necessary information...
+*** Node 1, setting up some other necessary information...
++++++++++ Node 0 initializing the weights for op[0, 121)...
++++++++++ Node 1 initializing the weights for op[0, 121)...
+Node 0, discovering the vertices that will be sent across graph boundary...
+Node 1, discovering the vertices that will be sent across graph boundary...
+The number of mirror vertices: 145956
+Node 0, discovering the vertices that will be received across the graph boundary.
+Node 1, discovering the vertices that will be received across the graph boundary.
+****** Start Scheduling the Tasks in a Pipelined Fashion ******
+****** Start Scheduling the Tasks in a Pipelined Fashion ******
+*** Node 0, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.001000000
+*** Node 1, starting task scheduling...
+The learning rate specified by the user: 0.001000000
+	Epoch 1:	Loss 3.8302	TrainAcc 0.0642	ValidAcc 0.0591	TestAcc 0.0609	BestValid 0.0591
+	Epoch 50:	Loss 1.6259	TrainAcc 0.6880	ValidAcc 0.7097	TestAcc 0.7027	BestValid 0.7097
+	Epoch 100:	Loss 1.0151	TrainAcc 0.8241	ValidAcc 0.8375	TestAcc 0.8321	BestValid 0.8375
+****** Epoch Time (Excluding Evaluation Cost): 0.675 s ******
+****** Breakdown Analysis ******
+Cluster-Wide Average, Bubble-Pipeline: 3.845 ms (Max: 7.659, Min: 0.031, Sum: 7.690)
+Cluster-Wide Average, Compute: 488.639 ms (Max: 600.515, Min: 376.762, Sum: 977.277)
+Cluster-Wide Average, Communication-Layer: 0.009 ms (Max: 0.010, Min: 0.009, Sum: 0.018)
+Cluster-Wide Average, Bubble-Imbalance: 0.015 ms (Max: 0.016, Min: 0.014, Sum: 0.029)
+Cluster-Wide Average, Communication-Graph: 180.236 ms (Max: 288.414, Min: 72.059, Sum: 360.472)
+Cluster-Wide Average, Optimization: 0.917 ms (Max: 0.943, Min: 0.892, Sum: 1.835)
+Cluster-Wide Average, Others: 1.303 ms (Max: 1.398, Min: 1.208, Sum: 2.607)
+****** Breakdown Sum: 674.964 ms ******
+Cluster-Wide Average, GPU Memory Consumption: 14.001 GB (Max: 14.186, Min: 13.815, Sum: 28.001)
+Cluster-Wide Average, Graph-Level Communication Throughput: 68.390 Gbps (Max: 107.368, Min: 29.412, Sum: 136.779)
+Cluster-Wide Average, Layer-Level Communication Throughput: 0.000 Gbps (Max: 0.000, Min: 0.000, Sum: 0.000)
+Layer-level communication (cluster-wide, per-epoch): 0.000 GB
+Graph-level communication (cluster-wide, per-epoch): 1.740 GB
+Weight-sync communication (cluster-wide, per-epoch): 0.002 GB
+Total communication (cluster-wide, per-epoch): 1.742 GB
+****** Accuracy Results ******
+Highest valid_acc: 0.8375
+Target test_acc: 0.8321
+Epoch to reach the target acc: 99
+[MPI Rank 0] Success 
+[MPI Rank 1] Success 
+Tue Sep 19 23:09:33 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
+| 46%   66C    P0   105W / 230W |      1MiB / 24564MiB |      3%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
+| 39%   61C    P0    92W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
+| 30%   32C    P8    14W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
+| 30%   31C    P8    17W / 230W |      1MiB / 24564MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
