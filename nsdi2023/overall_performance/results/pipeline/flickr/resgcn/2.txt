@@ -7,21 +7,21 @@ Initializing the runtime environment
 Initializing the runtime environment
 Initializing the runtime environment
 DONE MPI INIT
+DONE MPI INITDONE MPI INIT
+Initialized node 6 on machine gnerv3
+Initialized node 4 on machine gnerv3
 DONE MPI INIT
-Initialized node 5 on machine gnerv8
+Initialized node 7 on machine gnerv3
+
+Initialized node 5 on machine gnerv3
 DONE MPI INIT
-Initialized node 6 on machine gnerv8
+Initialized node 0 on machine gnerv2
 DONE MPI INIT
-Initialized node 7 on machine gnerv8
-Initialized node 4 on machine gnerv8
+Initialized node 1 on machine gnerv2
 DONE MPI INIT
+Initialized node 2 on machine gnerv2
 DONE MPI INIT
-Initialized node 2 on machine gnerv4
-DONE MPI INIT
-Initialized node 0 on machine gnerv4
-Initialized node 1 on machine gnerv4
-DONE MPI INIT
-Initialized node 3 on machine gnerv4
+Initialized node 3 on machine gnerv2
 Building the CSR structure...
 Building the CSR structure...
 Building the CSR structure...
@@ -30,45 +30,50 @@ Building the CSR structure...
 Building the CSR structure...
 Building the CSR structure...
 Building the CSR structure...
-        It takes 0.016 seconds.
-Building the CSC structure...
         It takes 0.019 seconds.
 Building the CSC structure...
-        It takes 0.022 seconds.
+        It takes 0.020 seconds.
 Building the CSC structure...
-        It takes 0.025 seconds.
+        It takes 0.026 seconds.
 Building the CSC structure...
-        It takes 0.025 seconds.
+        It takes 0.026 seconds.
 Building the CSC structure...
         It takes 0.026 seconds.
 Building the CSC structure...
         It takes 0.028 seconds.
 Building the CSC structure...
-        It takes 0.028 seconds.
+        It takes 0.029 seconds.
 Building the CSC structure...
-        It takes 0.018 seconds.
-        It takes 0.023 seconds.
-        It takes 0.021 seconds.
-Building the Feature Vector...
+        It takes 0.035 seconds.
+Building the CSC structure...
         It takes 0.019 seconds.
-        It takes 0.022 seconds.
+        It takes 0.020 seconds.
+        It takes 0.019 seconds.
+        It takes 0.020 seconds.
+        It takes 0.020 seconds.
+        It takes 0.017 seconds.
+Building the Feature Vector...
+Building the Feature Vector...
+        It takes 0.020 seconds.
+Building the Feature Vector...
+Building the Feature Vector...
+Building the Feature Vector...
+Building the Feature Vector...
+Building the Feature Vector...
         It takes 0.021 seconds.
-        It takes 0.020 seconds.
-        It takes 0.020 seconds.
 Building the Feature Vector...
-Building the Feature Vector...
-Building the Feature Vector...
-Building the Feature Vector...
-Building the Feature Vector...
-Building the Feature Vector...
-Building the Feature Vector...
+        It takes 0.099 seconds.
+Building the Label Vector...
+        It takes 0.007 seconds.
+        It takes 0.108 seconds.
+Building the Label Vector...
         It takes 0.106 seconds.
 Building the Label Vector...
-        It takes 0.101 seconds.
+        It takes 0.105 seconds.
 Building the Label Vector...
-        It takes 0.101 seconds.
+        It takes 0.104 seconds.
 Building the Label Vector...
-        It takes 0.101 seconds.
+        It takes 0.106 seconds.
 Building the Label Vector...
         It takes 0.007 seconds.
 The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/flickr/32_parts
@@ -86,18 +91,13 @@ Number of vertices: 89250
 Number of GPUs: 8
         It takes 0.007 seconds.
         It takes 0.007 seconds.
-        It takes 0.105 seconds.
         It takes 0.008 seconds.
-Building the Label Vector...
-        It takes 0.105 seconds.
-Building the Label Vector...
-        It takes 0.110 seconds.
+        It takes 0.007 seconds.
+        It takes 0.116 seconds.
 Building the Label Vector...
         It takes 0.111 seconds.
-        It takes 0.007 seconds.
 Building the Label Vector...
-        It takes 0.007 seconds.
-        It takes 0.007 seconds.
+        It takes 0.006 seconds.
         It takes 0.007 seconds.
 GPU 0, layer [0, 4)
 GPU 1, layer [4, 8)
@@ -132,7 +132,19 @@ GPU 7, layer [28, 32)
 WARNING: the current version only applies to linear GNN models!
 WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
 89250, 989006, 989006
+89250, 989006, 989006
 Number of vertices per chunk: 2790
+Number of vertices per chunk: 2790
+GPU 0, layer [0, 4)
+GPU 1, layer [4, 8)
+GPU 2, layer [8, 12)
+GPU 3, layer [12, 16)
+GPU 4, layer [16, 20)
+GPU 5, layer [20, 24)
+GPU 6, layer [24, 28)
+GPU 7, layer [28, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
 csr in-out ready !Start Cost Model Initialization...
 89250, 989006, 989006
 Number of vertices per chunk: 2790
@@ -146,6 +158,7 @@ GPU 6, layer [24, 28)
 GPU 7, layer [28, 32)
 WARNING: the current version only applies to linear GNN models!
 WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+csr in-out ready !Start Cost Model Initialization...
 csr in-out ready !Start Cost Model Initialization...
 89250, 989006, 989006
 Number of vertices per chunk: 2790
@@ -172,7 +185,11 @@ GPU 7, layer [28, 32)
 WARNING: the current version only applies to linear GNN models!
 WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
 Chunks (number of global chunks: 32): 0-[0, 2809) 1-[2809, 5626) 2-[5626, 8426) 3-[8426, 11230) 4-[11230, 14047) 5-[14047, 16800) 6-[16800, 19507) 7-[19507, 22266) 8-[22266, 25059) ... 31-[86469, 89250)
+89250, 989006, 989006
+Number of vertices per chunk: 2790
+89250, 989006, 989006
 csr in-out ready !Start Cost Model Initialization...
+Number of vertices per chunk: 2790
 GPU 0, layer [0, 4)
 GPU 1, layer [4, 8)
 GPU 2, layer [8, 12)
@@ -185,51 +202,34 @@ WARNING: the current version only applies to linear GNN models!
 WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
 89250, 989006, 989006
 Number of vertices per chunk: 2790
-89250, 989006, 989006
-Number of vertices per chunk: 2790
-89250, 989006, 989006
-Number of vertices per chunk: 2790
-GPU 0, layer [0, 4)
-GPU 1, layer [4, 8)
-GPU 2, layer [8, 12)
-GPU 3, layer [12, 16)
-GPU 4, layer [16, 20)
-GPU 5, layer [20, 24)
-GPU 6, layer [24, 28)
-GPU 7, layer [28, 32)
-WARNING: the current version only applies to linear GNN models!
-WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
 csr in-out ready !Start Cost Model Initialization...
-89250, 989006, 989006
 csr in-out ready !Start Cost Model Initialization...
 ***** Start profiling the layer-level communication performance *******
-Number of vertices per chunk: 2790
 csr in-out ready !Start Cost Model Initialization...
-csr in-out ready !Start Cost Model Initialization...
-The layer-level communication performance: 60.854 Gbps (per GPU), 486.832 Gbps (aggregated)
+The layer-level communication performance: 60.614 Gbps (per GPU), 484.913 Gbps (aggregated)
 ****** Start profiling the graph-level communication performance with supernodesize = 2 ******
-The layer-level communication performance: 60.565 Gbps (per GPU), 484.523 Gbps (aggregated)
-The layer-level communication performance: 60.562 Gbps (per GPU), 484.494 Gbps (aggregated)
-****** Start profiling the graph-level communication performance with supernodesize = 2 ******
-****** Start profiling the graph-level communication performance with supernodesize = 2 ******
-The layer-level communication performance: 60.313 Gbps (per GPU), 482.508 Gbps (aggregated)
-The layer-level communication performance: 60.281 Gbps (per GPU), 482.251 Gbps (aggregated)
+The layer-level communication performance: 60.322 Gbps (per GPU), 482.578 Gbps (aggregated)
+The layer-level communication performance: 60.308 Gbps (per GPU), 482.462 Gbps (aggregated)
 ****** Start profiling the graph-level communication performance with supernodesize = 2 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 2 ******
-The layer-level communication performance: 60.048 Gbps (per GPU), 480.388 Gbps (aggregated)
-The layer-level communication performance: 60.002 Gbps (per GPU), 480.018 Gbps (aggregated)
-The layer-level communication performance: 59.964 Gbps (per GPU), 479.714 Gbps (aggregated)
+The layer-level communication performance: 60.073 Gbps (per GPU), 480.588 Gbps (aggregated)
+The layer-level communication performance: 60.044 Gbps (per GPU), 480.349 Gbps (aggregated)
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+The layer-level communication performance: 59.835 Gbps (per GPU), 478.680 Gbps (aggregated)
+The layer-level communication performance: 59.784 Gbps (per GPU), 478.272 Gbps (aggregated)
+The layer-level communication performance: 59.753 Gbps (per GPU), 478.025 Gbps (aggregated)
 ****** Start profiling the graph-level communication performance with supernodesize = 2 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 2 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 2 ******
-The graph-level communication performance (supernode = 2): 157.462 Gbps (per GPU), 1259.693 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 2): 157.476 Gbps (per GPU), 1259.811 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 2): 157.447 Gbps (per GPU), 1259.575 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 2): 157.444 Gbps (per GPU), 1259.551 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 2): 157.438 Gbps (per GPU), 1259.503 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 2): 157.459 Gbps (per GPU), 1259.669 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 2): 157.462 Gbps (per GPU), 1259.693 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 2): 157.447 Gbps (per GPU), 1259.574 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.259 Gbps (per GPU), 1250.072 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.256 Gbps (per GPU), 1250.049 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.256 Gbps (per GPU), 1250.049 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.207 Gbps (per GPU), 1249.653 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.262 Gbps (per GPU), 1250.095 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.271 Gbps (per GPU), 1250.165 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.256 Gbps (per GPU), 1250.049 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.215 Gbps (per GPU), 1249.723 Gbps (aggregated, cluster-wide)
 ****** Start profiling the graph-level communication performance with supernodesize = 4 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 4 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 4 ******
@@ -238,14 +238,14 @@ The graph-level communication performance (supernode = 2): 157.447 Gbps (per GPU
 ****** Start profiling the graph-level communication performance with supernodesize = 4 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 4 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 4 ******
-The graph-level communication performance (supernode = 4): 104.285 Gbps (per GPU), 834.279 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 4): 104.293 Gbps (per GPU), 834.342 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 4): 104.291 Gbps (per GPU), 834.328 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 4): 104.292 Gbps (per GPU), 834.335 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 4): 104.291 Gbps (per GPU), 834.328 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 4): 104.295 Gbps (per GPU), 834.362 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 4): 104.288 Gbps (per GPU), 834.307 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 4): 104.293 Gbps (per GPU), 834.341 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 4): 101.707 Gbps (per GPU), 813.658 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 4): 101.708 Gbps (per GPU), 813.664 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 4): 101.708 Gbps (per GPU), 813.664 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 4): 101.706 Gbps (per GPU), 813.645 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 4): 101.697 Gbps (per GPU), 813.579 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 4): 101.706 Gbps (per GPU), 813.651 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 4): 101.706 Gbps (per GPU), 813.645 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 4): 101.708 Gbps (per GPU), 813.663 Gbps (aggregated, cluster-wide)
 ****** Start profiling the graph-level communication performance with supernodesize = 8 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 8 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 8 ******
@@ -254,139 +254,139 @@ The graph-level communication performance (supernode = 4): 104.293 Gbps (per GPU
 ****** Start profiling the graph-level communication performance with supernodesize = 8 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 8 ******
 ****** Start profiling the graph-level communication performance with supernodesize = 8 ******
-The graph-level communication performance (supernode = 8): 37.458 Gbps (per GPU), 299.667 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 8): 37.459 Gbps (per GPU), 299.669 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 8): 37.460 Gbps (per GPU), 299.679 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 8): 37.453 Gbps (per GPU), 299.622 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 8): 37.458 Gbps (per GPU), 299.666 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 8): 37.456 Gbps (per GPU), 299.645 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 8): 37.451 Gbps (per GPU), 299.607 Gbps (aggregated, cluster-wide)
-The graph-level communication performance (supernode = 8): 37.451 Gbps (per GPU), 299.607 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 8): 32.289 Gbps (per GPU), 258.312 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 8): 32.288 Gbps (per GPU), 258.307 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 8): 32.284 Gbps (per GPU), 258.273 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 8): 32.288 Gbps (per GPU), 258.302 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 8): 32.286 Gbps (per GPU), 258.290 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 8): 32.283 Gbps (per GPU), 258.265 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 8): 32.285 Gbps (per GPU), 258.284 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 8): 32.282 Gbps (per GPU), 258.258 Gbps (aggregated, cluster-wide)
  LType   LT0   LT1   LT2 Ratio  VSum  ESum
- chk_0  0.32ms  0.68ms  1.31ms  4.15  2.81K  0.03M
- chk_1  0.32ms  0.69ms  1.32ms  4.14  2.82K  0.03M
- chk_2  0.34ms  0.68ms  1.31ms  3.88  2.80K  0.03M
- chk_3  0.32ms  0.68ms  1.32ms  4.13  2.80K  0.03M
- chk_4  0.33ms  0.68ms  1.32ms  4.04  2.82K  0.03M
- chk_5  0.33ms  0.69ms  1.32ms  4.00  2.75K  0.03M
- chk_6  0.32ms  0.68ms  1.31ms  4.14  2.71K  0.03M
- chk_7  0.32ms  0.68ms  1.31ms  4.09  2.76K  0.03M
- chk_8  0.32ms  0.69ms  1.32ms  4.07  2.79K  0.03M
- chk_9  0.32ms  0.69ms  1.31ms  4.09  2.81K  0.03M
-chk_10  0.32ms  0.68ms  1.31ms  4.12  2.81K  0.03M
-chk_11  0.33ms  0.69ms  1.32ms  4.05  2.74K  0.03M
-chk_12  0.32ms  0.68ms  1.32ms  4.10  2.76K  0.03M
-chk_13  0.32ms  0.69ms  1.32ms  4.11  2.75K  0.03M
-chk_14  0.32ms  0.68ms  1.32ms  4.10  2.81K  0.03M
-chk_15  0.32ms  0.68ms  1.31ms  4.11  2.77K  0.03M
-chk_16  0.32ms  0.68ms  1.32ms  4.13  2.78K  0.03M
-chk_17  0.32ms  0.68ms  1.32ms  4.08  2.79K  0.03M
-chk_18  0.32ms  0.68ms  1.32ms  4.08  2.82K  0.03M
-chk_19  0.32ms  0.67ms  1.31ms  4.12  2.81K  0.03M
-chk_20  0.32ms  0.68ms  1.32ms  4.09  2.77K  0.03M
-chk_21  0.32ms  0.68ms  1.32ms  4.08  2.84K  0.02M
-chk_22  0.32ms  0.68ms  1.32ms  4.06  2.78K  0.03M
-chk_23  0.32ms  0.68ms  1.32ms  4.07  2.80K  0.03M
-chk_24  0.32ms  0.68ms  1.32ms  4.11  2.80K  0.03M
-chk_25  0.32ms  0.68ms  1.31ms  4.14  2.81K  0.03M
-chk_26  0.32ms  0.68ms  1.32ms  4.12  2.81K  0.03M
-chk_27  0.32ms  0.68ms  1.32ms  4.09  2.79K  0.03M
-chk_28  0.32ms  0.68ms  1.32ms  4.09  2.77K  0.03M
-chk_29  0.32ms  0.68ms  1.31ms  4.08  2.77K  0.03M
-chk_30  0.32ms  0.68ms  1.32ms  4.09  2.80K  0.03M
-chk_31  0.32ms  0.68ms  1.32ms  4.09  2.78K  0.03M
-   Avg  0.32  0.68  1.32
-   Max  0.34  0.69  1.32
-   Min  0.32  0.67  1.31
- Ratio  1.07  1.03  1.01
+ chk_0  0.45ms  0.86ms  1.53ms  3.42  2.81K  0.03M
+ chk_1  0.47ms  0.85ms  1.54ms  3.25  2.82K  0.03M
+ chk_2  0.45ms  0.85ms  1.53ms  3.40  2.80K  0.03M
+ chk_3  0.46ms  0.85ms  1.54ms  3.36  2.80K  0.03M
+ chk_4  0.46ms  0.85ms  1.53ms  3.35  2.82K  0.03M
+ chk_5  0.46ms  0.85ms  1.54ms  3.33  2.75K  0.03M
+ chk_6  0.45ms  0.84ms  1.52ms  3.38  2.71K  0.03M
+ chk_7  0.46ms  0.85ms  1.53ms  3.36  2.76K  0.03M
+ chk_8  0.45ms  0.85ms  1.53ms  3.36  2.79K  0.03M
+ chk_9  0.46ms  0.84ms  1.53ms  3.35  2.81K  0.03M
+chk_10  0.45ms  0.84ms  1.53ms  3.37  2.81K  0.03M
+chk_11  0.46ms  0.85ms  1.53ms  3.34  2.74K  0.03M
+chk_12  0.46ms  0.85ms  1.53ms  3.35  2.76K  0.03M
+chk_13  0.46ms  0.85ms  1.53ms  3.36  2.75K  0.03M
+chk_14  0.45ms  0.84ms  1.53ms  3.38  2.81K  0.03M
+chk_15  0.45ms  0.85ms  1.53ms  3.37  2.77K  0.03M
+chk_16  0.45ms  0.84ms  1.53ms  3.37  2.78K  0.03M
+chk_17  0.46ms  0.85ms  1.53ms  3.34  2.79K  0.03M
+chk_18  0.46ms  0.85ms  1.53ms  3.34  2.82K  0.03M
+chk_19  0.45ms  0.84ms  1.52ms  3.38  2.81K  0.03M
+chk_20  0.46ms  0.85ms  1.53ms  3.34  2.77K  0.03M
+chk_21  0.46ms  0.85ms  1.53ms  3.34  2.84K  0.02M
+chk_22  0.46ms  0.84ms  1.52ms  3.34  2.78K  0.03M
+chk_23  0.46ms  0.85ms  1.53ms  3.35  2.80K  0.03M
+chk_24  0.45ms  0.84ms  1.53ms  3.36  2.80K  0.03M
+chk_25  0.45ms  0.85ms  1.53ms  3.37  2.81K  0.03M
+chk_26  0.45ms  0.84ms  1.53ms  3.36  2.81K  0.03M
+chk_27  0.46ms  0.85ms  1.53ms  3.35  2.79K  0.03M
+chk_28  0.46ms  0.85ms  1.53ms  3.35  2.77K  0.03M
+chk_29  0.46ms  0.84ms  1.53ms  3.35  2.77K  0.03M
+chk_30  0.46ms  0.85ms  1.53ms  3.35  2.80K  0.03M
+chk_31  0.46ms  0.85ms  1.53ms  3.35  2.78K  0.03M
+   Avg  0.46  0.85  1.53
+   Max  0.47  0.86  1.54
+   Min  0.45  0.84  1.52
+ Ratio  1.06  1.02  1.01
    Var  0.00  0.00  0.00
-Profiling takes 0.956 s
+Profiling takes 1.139 s
+*** Node 4, starting model training...
+Num Stages: 8 / 8
+Node 4, Pipeline Input Tensor: OPERATOR_ADD
+Node 4, Pipeline Output Tensor: OPERATOR_ADD
+*** Node 4 owns the model-level partition [204, 256)
+*** Node 4, constructing the helper classes...
+Node 4, Local Vertex Begin: 0, Num Local Vertices: 89250
 *** Node 0, starting model training...
 Num Stages: 8 / 8
 Node 0, Pipeline Input Tensor: NULL
 Node 0, Pipeline Output Tensor: OPERATOR_ADD
-*** Node 0 owns the model-level partition [0, 27)
+*** Node 0 owns the model-level partition [0, 48)
 *** Node 0, constructing the helper classes...
-Node 0, Local Vertex Begin: 0, Num Local Vertices: 89250
-*** Node 4, starting model training...
-Num Stages: 8 / 8
-*** Node 1, starting model training...
-Num Stages: 8 / 8
-Node 1, Pipeline Input Tensor: OPERATOR_ADD
-Node 1, Pipeline Output Tensor: OPERATOR_ADD
-*** Node 1 owns the model-level partition [27, 55)
-*** Node 1, constructing the helper classes...
-Node 1, Local Vertex Begin: 0, Num Local Vertices: 89250
-*** Node 5, starting model training...
-Num Stages: 8 / 8
-Node 5, Pipeline Input Tensor: OPERATOR_ADD
-*** Node 3, starting model training...
-Num Stages: 8 / 8
-Node 3, Pipeline Input Tensor: OPERATOR_ADD
-Node 3, Pipeline Output Tensor: OPERATOR_ADD
-*** Node 3 owns the model-level partition [83, 111)
-*** Node 3, constructing the helper classes...
-Node 3, Local Vertex Begin: 0, Num Local Vertices: 89250
 *** Node 6, starting model training...
 Num Stages: 8 / 8
 Node 6, Pipeline Input Tensor: OPERATOR_ADD
 Node 6, Pipeline Output Tensor: OPERATOR_ADD
-*** Node 6 owns the model-level partition [167, 195)
+*** Node 6 owns the model-level partition [308, 360)
 *** Node 6, constructing the helper classes...
 Node 6, Local Vertex Begin: 0, Num Local Vertices: 89250
-*** Node 2, starting model training...
+*** Node 1, starting model training...
 Num Stages: 8 / 8
-Node 2, Pipeline Input Tensor: OPERATOR_ADD
-Node 2, Pipeline Output Tensor: OPERATOR_ADD
-*** Node 2 owns the model-level partition [55, 83)
-*** Node 2, constructing the helper classes...
-Node 2, Local Vertex Begin: 0, Num Local Vertices: 89250
+Node 1, Pipeline Input Tensor: OPERATOR_ADD
+Node 1, Pipeline Output Tensor: OPERATOR_ADD
+*** Node 1 owns the model-level partition [48, 100)
+*** Node 1, constructing the helper classes...
+Node 1, Local Vertex Begin: 0, Num Local Vertices: 89250
 *** Node 7, starting model training...
 Num Stages: 8 / 8
 Node 7, Pipeline Input Tensor: OPERATOR_ADD
 Node 7, Pipeline Output Tensor: NULL
-*** Node 7 owns the model-level partition [195, 229)
+*** Node 7 owns the model-level partition [360, 421)
 *** Node 7, constructing the helper classes...
 Node 7, Local Vertex Begin: 0, Num Local Vertices: 89250
-Node 4, Pipeline Input Tensor: OPERATOR_ADD
-Node 4, Pipeline Output Tensor: OPERATOR_ADD
-*** Node 4 owns the model-level partition [111, 139)
-*** Node 4, constructing the helper classes...
-Node 4, Local Vertex Begin: 0, Num Local Vertices: 89250
+*** Node 2, starting model training...
+Num Stages: 8 / 8
+Node 2, Pipeline Input Tensor: OPERATOR_ADD
+Node 2, Pipeline Output Tensor: OPERATOR_ADD
+*** Node 2 owns the model-level partition [100, 152)
+*** Node 2, constructing the helper classes...
+Node 2, Local Vertex Begin: 0, Num Local Vertices: 89250
+*** Node 5, starting model training...
+Num Stages: 8 / 8
+Node 5, Pipeline Input Tensor: OPERATOR_ADD
 Node 5, Pipeline Output Tensor: OPERATOR_ADD
-*** Node 5 owns the model-level partition [139, 167)
+*** Node 5 owns the model-level partition [256, 308)
 *** Node 5, constructing the helper classes...
 Node 5, Local Vertex Begin: 0, Num Local Vertices: 89250
+*** Node 3, starting model training...
+Num Stages: 8 / 8
+Node 3, Pipeline Input Tensor: OPERATOR_ADD
+Node 3, Pipeline Output Tensor: OPERATOR_ADD
+*** Node 3 owns the model-level partition [152, 204)
+*** Node 3, constructing the helper classes...
+Node 3, Local Vertex Begin: 0, Num Local Vertices: 89250
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 89250
+*** Node 7, setting up some other necessary information...
+*** Node 5, setting up some other necessary information...
 *** Node 4, setting up some other necessary information...
 *** Node 0, setting up some other necessary information...
-*** Node 5, setting up some other necessary information...
 *** Node 1, setting up some other necessary information...
+*** Node 3, setting up some other necessary information...
 *** Node 6, setting up some other necessary information...
 *** Node 2, setting up some other necessary information...
-*** Node 7, setting up some other necessary information...
-*** Node 3, setting up some other necessary information...
-+++++++++ Node 0 initializing the weights for op[0, 27)...
-+++++++++ Node 1 initializing the weights for op[27, 55)...
-+++++++++ Node 2 initializing the weights for op[55, 83)...
-+++++++++ Node 3 initializing the weights for op[83, 111)...
-+++++++++ Node 4 initializing the weights for op[111, 139)...
-+++++++++ Node 5 initializing the weights for op[139, 167)...
-+++++++++ Node 6 initializing the weights for op[167, 195)...
-+++++++++ Node 7 initializing the weights for op[195, 229)...
++++++++++ Node 0 initializing the weights for op[0, 48)...
++++++++++ Node 1 initializing the weights for op[48, 100)...
++++++++++ Node 3 initializing the weights for op[152, 204)...
++++++++++ Node 4 initializing the weights for op[204, 256)...
++++++++++ Node 5 initializing the weights for op[256, 308)...
++++++++++ Node 6 initializing the weights for op[308, 360)...
++++++++++ Node 7 initializing the weights for op[360, 421)...
++++++++++ Node 2 initializing the weights for op[100, 152)...
 Node 4, discovering the vertices that will be sent across graph boundary...
 Node 0, discovering the vertices that will be sent across graph boundary...
 Node 5, discovering the vertices that will be sent across graph boundary...
 Node 5, discovering the vertices that will be received across the graph boundary.
-The number of mirror vertices: 0
-Node 0, discovering the vertices that will be received across the graph boundary.
-Node 6, discovering the vertices that will be sent across graph boundary...
-Node 6, discovering the vertices that will be received across the graph boundary.
 Node 1, discovering the vertices that will be sent across graph boundary...
 Node 1, discovering the vertices that will be received across the graph boundary.
-Node 7, discovering the vertices that will be sent across graph boundary...
-Node 7, discovering the vertices that will be received across the graph boundary.
+Node 6, discovering the vertices that will be sent across graph boundary...
+Node 6, discovering the vertices that will be received across the graph boundary.
 Node 2, discovering the vertices that will be sent across graph boundary...
 Node 2, discovering the vertices that will be received across the graph boundary.
+Node 7, discovering the vertices that will be sent across graph boundary...
+Node 7, discovering the vertices that will be received across the graph boundary.
+The number of mirror vertices: 0
+Node 0, discovering the vertices that will be received across the graph boundary.
 Node 4, discovering the vertices that will be received across the graph boundary.
 Node 3, discovering the vertices that will be sent across graph boundary...
 Node 3, discovering the vertices that will be received across the graph boundary.
@@ -398,152 +398,29 @@ Node 3, discovering the vertices that will be received across the graph boundary
 ****** Start Scheduling the Tasks in a Pipelined Fashion ******
 ****** Start Scheduling the Tasks in a Pipelined Fashion ******
 ****** Start Scheduling the Tasks in a Pipelined Fashion ******
-*** Node 4, starting task scheduling...
-*** Node 0, starting task scheduling...
-
-
-
-*** Node 6, starting task scheduling...
-*** Node 1, starting task scheduling...
-The learning rate specified by the user: 0.001000000
-*** Node 7, starting task scheduling...
 *** Node 2, starting task scheduling...
+*** Node 0, starting task scheduling...
+*** Node 1, starting task scheduling...
+*** Node 3, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.001000000
+The learning rate specified by the user: 0.001000000
+The learning rate specified by the user: 0.001000000
+The learning rate specified by the user: 0.001000000
+*** Node 4, starting task scheduling...
 The learning rate specified by the user: 0.001000000
 *** Node 5, starting task scheduling...
-*** Node 3, starting task scheduling...
 The learning rate specified by the user: 0.001000000
+*** Node 6, starting task scheduling...
 The learning rate specified by the user: 0.001000000
+*** Node 7, starting task scheduling...
 The learning rate specified by the user: 0.001000000
-The learning rate specified by the user: 0.001000000
-The learning rate specified by the user: 0.001000000
-The learning rate specified by the user: 0.001000000
-	Epoch 1:	Loss 2.2507	TrainAcc 0.2904	ValidAcc 0.2903	TestAcc 0.2906	BestValid 0.2903
-	Epoch 50:	Loss 1.5761	TrainAcc 0.4522	ValidAcc 0.4549	TestAcc 0.4558	BestValid 0.4549
-	Epoch 100:	Loss 1.5074	TrainAcc 0.4814	ValidAcc 0.4832	TestAcc 0.4812	BestValid 0.4832
-	Epoch 150:	Loss 1.4633	TrainAcc 0.4789	ValidAcc 0.4784	TestAcc 0.4775	BestValid 0.4832
-	Epoch 200:	Loss 1.4461	TrainAcc 0.4890	ValidAcc 0.4854	TestAcc 0.4856	BestValid 0.4854
-	Epoch 250:	Loss 1.4306	TrainAcc 0.4858	ValidAcc 0.4809	TestAcc 0.4810	BestValid 0.4854
-	Epoch 300:	Loss 1.4238	TrainAcc 0.5052	ValidAcc 0.5002	TestAcc 0.5001	BestValid 0.5002
-	Epoch 350:	Loss 1.4182	TrainAcc 0.4881	ValidAcc 0.4850	TestAcc 0.4834	BestValid 0.5002
-	Epoch 400:	Loss 1.4064	TrainAcc 0.5113	ValidAcc 0.5030	TestAcc 0.5043	BestValid 0.5030
-	Epoch 450:	Loss 1.3983	TrainAcc 0.5135	ValidAcc 0.5041	TestAcc 0.5027	BestValid 0.5041
-	Epoch 500:	Loss 1.3950	TrainAcc 0.5049	ValidAcc 0.4964	TestAcc 0.4980	BestValid 0.5041
-	Epoch 550:	Loss 1.3886	TrainAcc 0.5169	ValidAcc 0.5063	TestAcc 0.5067	BestValid 0.5063
-	Epoch 600:	Loss 1.4016	TrainAcc 0.5207	ValidAcc 0.5087	TestAcc 0.5067	BestValid 0.5087
-	Epoch 650:	Loss 1.3829	TrainAcc 0.5003	ValidAcc 0.4910	TestAcc 0.4920	BestValid 0.5087
-	Epoch 700:	Loss 1.3730	TrainAcc 0.5238	ValidAcc 0.5111	TestAcc 0.5115	BestValid 0.5111
-	Epoch 750:	Loss 1.3738	TrainAcc 0.5150	ValidAcc 0.5009	TestAcc 0.4996	BestValid 0.5111
-	Epoch 800:	Loss 1.3701	TrainAcc 0.5248	ValidAcc 0.5104	TestAcc 0.5128	BestValid 0.5111
-	Epoch 850:	Loss 1.3625	TrainAcc 0.5293	ValidAcc 0.5127	TestAcc 0.5147	BestValid 0.5127
-	Epoch 900:	Loss 1.3661	TrainAcc 0.5282	ValidAcc 0.5104	TestAcc 0.5137	BestValid 0.5127
-	Epoch 950:	Loss 1.3584	TrainAcc 0.5151	ValidAcc 0.4991	TestAcc 0.5038	BestValid 0.5127
-	Epoch 1000:	Loss 1.3588	TrainAcc 0.5319	ValidAcc 0.5130	TestAcc 0.5163	BestValid 0.5130
-	Epoch 1050:	Loss 1.3526	TrainAcc 0.5137	ValidAcc 0.4996	TestAcc 0.5025	BestValid 0.5130
-	Epoch 1100:	Loss 1.3486	TrainAcc 0.5380	ValidAcc 0.5173	TestAcc 0.5172	BestValid 0.5173
-	Epoch 1150:	Loss 1.3456	TrainAcc 0.5362	ValidAcc 0.5148	TestAcc 0.5176	BestValid 0.5173
-	Epoch 1200:	Loss 1.3455	TrainAcc 0.5210	ValidAcc 0.5038	TestAcc 0.5076	BestValid 0.5173
-	Epoch 1250:	Loss 1.3393	TrainAcc 0.5369	ValidAcc 0.5140	TestAcc 0.5169	BestValid 0.5173
-	Epoch 1300:	Loss 1.3377	TrainAcc 0.5426	ValidAcc 0.5213	TestAcc 0.5194	BestValid 0.5213
-	Epoch 1350:	Loss 1.3360	TrainAcc 0.5435	ValidAcc 0.5195	TestAcc 0.5191	BestValid 0.5213
-	Epoch 1400:	Loss 1.3355	TrainAcc 0.5202	ValidAcc 0.5017	TestAcc 0.5058	BestValid 0.5213
-	Epoch 1450:	Loss 1.3294	TrainAcc 0.5426	ValidAcc 0.5173	TestAcc 0.5194	BestValid 0.5213
-	Epoch 1500:	Loss 1.3337	TrainAcc 0.5392	ValidAcc 0.5107	TestAcc 0.5150	BestValid 0.5213
-	Epoch 1550:	Loss 1.3288	TrainAcc 0.5476	ValidAcc 0.5199	TestAcc 0.5221	BestValid 0.5213
-	Epoch 1600:	Loss 1.3237	TrainAcc 0.5475	ValidAcc 0.5208	TestAcc 0.5207	BestValid 0.5213
-	Epoch 1650:	Loss 1.3189	TrainAcc 0.5508	ValidAcc 0.5222	TestAcc 0.5216	BestValid 0.5222
-	Epoch 1700:	Loss 1.3180	TrainAcc 0.5474	ValidAcc 0.5191	TestAcc 0.5201	BestValid 0.5222
-	Epoch 1750:	Loss 1.3204	TrainAcc 0.5444	ValidAcc 0.5189	TestAcc 0.5184	BestValid 0.5222
-	Epoch 1800:	Loss 1.3249	TrainAcc 0.5309	ValidAcc 0.5085	TestAcc 0.5109	BestValid 0.5222
-	Epoch 1850:	Loss 1.3137	TrainAcc 0.5020	ValidAcc 0.4805	TestAcc 0.4846	BestValid 0.5222
-	Epoch 1900:	Loss 1.3097	TrainAcc 0.5338	ValidAcc 0.5081	TestAcc 0.5119	BestValid 0.5222
-	Epoch 1950:	Loss 1.3117	TrainAcc 0.5194	ValidAcc 0.4970	TestAcc 0.4998	BestValid 0.5222
-	Epoch 2000:	Loss 1.3036	TrainAcc 0.5534	ValidAcc 0.5204	TestAcc 0.5220	BestValid 0.5222
-	Epoch 2050:	Loss 1.3024	TrainAcc 0.5560	ValidAcc 0.5262	TestAcc 0.5254	BestValid 0.5262
-	Epoch 2100:	Loss 1.3027	TrainAcc 0.5307	ValidAcc 0.5065	TestAcc 0.5086	BestValid 0.5262
-	Epoch 2150:	Loss 1.2984	TrainAcc 0.5500	ValidAcc 0.5201	TestAcc 0.5214	BestValid 0.5262
-	Epoch 2200:	Loss 1.2955	TrainAcc 0.5587	ValidAcc 0.5228	TestAcc 0.5250	BestValid 0.5262
-	Epoch 2250:	Loss 1.2963	TrainAcc 0.5432	ValidAcc 0.5137	TestAcc 0.5165	BestValid 0.5262
-	Epoch 2300:	Loss 1.2998	TrainAcc 0.5166	ValidAcc 0.4895	TestAcc 0.4905	BestValid 0.5262
-	Epoch 2350:	Loss 1.2931	TrainAcc 0.5282	ValidAcc 0.4983	TestAcc 0.5040	BestValid 0.5262
-	Epoch 2400:	Loss 1.2904	TrainAcc 0.5621	ValidAcc 0.5235	TestAcc 0.5277	BestValid 0.5262
-	Epoch 2450:	Loss 1.2886	TrainAcc 0.5560	ValidAcc 0.5173	TestAcc 0.5191	BestValid 0.5262
-	Epoch 2500:	Loss 1.2909	TrainAcc 0.5643	ValidAcc 0.5274	TestAcc 0.5287	BestValid 0.5274
-	Epoch 2550:	Loss 1.2908	TrainAcc 0.5645	ValidAcc 0.5274	TestAcc 0.5272	BestValid 0.5274
-	Epoch 2600:	Loss 1.2863	TrainAcc 0.5337	ValidAcc 0.4981	TestAcc 0.4979	BestValid 0.5274
-	Epoch 2650:	Loss 1.2931	TrainAcc 0.5104	ValidAcc 0.4841	TestAcc 0.4891	BestValid 0.5274
-	Epoch 2700:	Loss 1.2873	TrainAcc 0.4892	ValidAcc 0.4747	TestAcc 0.4771	BestValid 0.5274
-	Epoch 2750:	Loss 1.2836	TrainAcc 0.5631	ValidAcc 0.5265	TestAcc 0.5268	BestValid 0.5274
-	Epoch 2800:	Loss 1.2800	TrainAcc 0.5623	ValidAcc 0.5259	TestAcc 0.5272	BestValid 0.5274
-	Epoch 2850:	Loss 1.2753	TrainAcc 0.5684	ValidAcc 0.5239	TestAcc 0.5282	BestValid 0.5274
-	Epoch 2900:	Loss 1.2767	TrainAcc 0.5530	ValidAcc 0.5117	TestAcc 0.5129	BestValid 0.5274
-	Epoch 2950:	Loss 1.2726	TrainAcc 0.5614	ValidAcc 0.5239	TestAcc 0.5237	BestValid 0.5274
-	Epoch 3000:	Loss 1.2770	TrainAcc 0.5686	ValidAcc 0.5221	TestAcc 0.5266	BestValid 0.5274
-	Epoch 3050:	Loss 1.2734	TrainAcc 0.5554	ValidAcc 0.5208	TestAcc 0.5205	BestValid 0.5274
-	Epoch 3100:	Loss 1.2683	TrainAcc 0.5750	ValidAcc 0.5281	TestAcc 0.5306	BestValid 0.5281
-	Epoch 3150:	Loss 1.2670	TrainAcc 0.5379	ValidAcc 0.5025	TestAcc 0.5062	BestValid 0.5281
-	Epoch 3200:	Loss 1.2793	TrainAcc 0.5451	ValidAcc 0.5027	TestAcc 0.5074	BestValid 0.5281
-	Epoch 3250:	Loss 1.2710	TrainAcc 0.5349	ValidAcc 0.5058	TestAcc 0.5079	BestValid 0.5281
-	Epoch 3300:	Loss 1.2642	TrainAcc 0.5585	ValidAcc 0.5190	TestAcc 0.5216	BestValid 0.5281
-	Epoch 3350:	Loss 1.2603	TrainAcc 0.5678	ValidAcc 0.5193	TestAcc 0.5253	BestValid 0.5281
-	Epoch 3400:	Loss 1.2609	TrainAcc 0.5569	ValidAcc 0.5164	TestAcc 0.5227	BestValid 0.5281
-	Epoch 3450:	Loss 1.2632	TrainAcc 0.5439	ValidAcc 0.5072	TestAcc 0.5142	BestValid 0.5281
-	Epoch 3500:	Loss 1.2835	TrainAcc 0.5477	ValidAcc 0.5030	TestAcc 0.5071	BestValid 0.5281
-	Epoch 3550:	Loss 1.2574	TrainAcc 0.5782	ValidAcc 0.5264	TestAcc 0.5294	BestValid 0.5281
-	Epoch 3600:	Loss 1.2545	TrainAcc 0.5719	ValidAcc 0.5172	TestAcc 0.5213	BestValid 0.5281
-	Epoch 3650:	Loss 1.2567	TrainAcc 0.5775	ValidAcc 0.5289	TestAcc 0.5322	BestValid 0.5289
-	Epoch 3700:	Loss 1.2515	TrainAcc 0.5379	ValidAcc 0.5043	TestAcc 0.5074	BestValid 0.5289
-	Epoch 3750:	Loss 1.2526	TrainAcc 0.5695	ValidAcc 0.5268	TestAcc 0.5267	BestValid 0.5289
-	Epoch 3800:	Loss 1.2539	TrainAcc 0.5538	ValidAcc 0.5091	TestAcc 0.5145	BestValid 0.5289
-	Epoch 3850:	Loss 1.2525	TrainAcc 0.5610	ValidAcc 0.5192	TestAcc 0.5239	BestValid 0.5289
-	Epoch 3900:	Loss 1.2484	TrainAcc 0.5782	ValidAcc 0.5280	TestAcc 0.5331	BestValid 0.5289
-	Epoch 3950:	Loss 1.2509	TrainAcc 0.5694	ValidAcc 0.5272	TestAcc 0.5301	BestValid 0.5289
-	Epoch 4000:	Loss 1.2495	TrainAcc 0.5712	ValidAcc 0.5253	TestAcc 0.5283	BestValid 0.5289
-	Epoch 4050:	Loss 1.2454	TrainAcc 0.5748	ValidAcc 0.5236	TestAcc 0.5304	BestValid 0.5289
-	Epoch 4100:	Loss 1.2416	TrainAcc 0.5345	ValidAcc 0.5007	TestAcc 0.5055	BestValid 0.5289
-	Epoch 4150:	Loss 1.2444	TrainAcc 0.5620	ValidAcc 0.5136	TestAcc 0.5199	BestValid 0.5289
-	Epoch 4200:	Loss 1.2380	TrainAcc 0.5783	ValidAcc 0.5253	TestAcc 0.5289	BestValid 0.5289
-	Epoch 4250:	Loss 1.2437	TrainAcc 0.5558	ValidAcc 0.4983	TestAcc 0.5073	BestValid 0.5289
-	Epoch 4300:	Loss 1.2404	TrainAcc 0.5834	ValidAcc 0.5288	TestAcc 0.5321	BestValid 0.5289
-	Epoch 4350:	Loss 1.2386	TrainAcc 0.5727	ValidAcc 0.5205	TestAcc 0.5266	BestValid 0.5289
-	Epoch 4400:	Loss 1.2394	TrainAcc 0.5825	ValidAcc 0.5246	TestAcc 0.5281	BestValid 0.5289
-	Epoch 4450:	Loss 1.2347	TrainAcc 0.5853	ValidAcc 0.5280	TestAcc 0.5317	BestValid 0.5289
-	Epoch 4500:	Loss 1.2346	TrainAcc 0.5640	ValidAcc 0.5130	TestAcc 0.5196	BestValid 0.5289
-	Epoch 4550:	Loss 1.2282	TrainAcc 0.5696	ValidAcc 0.5181	TestAcc 0.5232	BestValid 0.5289
-	Epoch 4600:	Loss 1.2398	TrainAcc 0.5169	ValidAcc 0.4797	TestAcc 0.4861	BestValid 0.5289
-	Epoch 4650:	Loss 1.2347	TrainAcc 0.5758	ValidAcc 0.5181	TestAcc 0.5254	BestValid 0.5289
-	Epoch 4700:	Loss 1.2311	TrainAcc 0.5807	ValidAcc 0.5218	TestAcc 0.5275	BestValid 0.5289
-	Epoch 4750:	Loss 1.2244	TrainAcc 0.5814	ValidAcc 0.5187	TestAcc 0.5275	BestValid 0.5289
-	Epoch 4800:	Loss 1.2289	TrainAcc 0.5670	ValidAcc 0.5151	TestAcc 0.5241	BestValid 0.5289
-	Epoch 4850:	Loss 1.2241	TrainAcc 0.5282	ValidAcc 0.4890	TestAcc 0.4927	BestValid 0.5289
-	Epoch 4900:	Loss 1.2272	TrainAcc 0.5697	ValidAcc 0.5007	TestAcc 0.5054	BestValid 0.5289
-	Epoch 4950:	Loss 1.2333	TrainAcc 0.5754	ValidAcc 0.5105	TestAcc 0.5166	BestValid 0.5289
-	Epoch 5000:	Loss 1.2265	TrainAcc 0.5863	ValidAcc 0.5218	TestAcc 0.5257	BestValid 0.5289
-****** Epoch Time (Excluding Evaluation Cost): 0.131 s ******
-****** Breakdown Analysis ******
-Cluster-Wide Average, Bubble-Pipeline: 23.083 ms (Max: 25.147, Min: 19.004, Sum: 184.662)
-Cluster-Wide Average, Compute: 81.596 ms (Max: 98.746, Min: 75.588, Sum: 652.770)
-Cluster-Wide Average, Communication-Layer: 10.431 ms (Max: 12.190, Min: 7.530, Sum: 83.445)
-Cluster-Wide Average, Bubble-Imbalance: 14.317 ms (Max: 21.442, Min: 1.223, Sum: 114.539)
-Cluster-Wide Average, Communication-Graph: 0.525 ms (Max: 0.600, Min: 0.480, Sum: 4.201)
-Cluster-Wide Average, Optimization: 0.095 ms (Max: 0.117, Min: 0.088, Sum: 0.763)
-Cluster-Wide Average, Others: 1.194 ms (Max: 3.983, Min: 0.787, Sum: 9.554)
-****** Breakdown Sum: 131.242 ms ******
-Cluster-Wide Average, GPU Memory Consumption: 3.068 GB (Max: 3.684, Min: 2.922, Sum: 24.544)
-Cluster-Wide Average, Graph-Level Communication Throughput: -nan Gbps (Max: -nan, Min: -nan, Sum: -nan)
-Cluster-Wide Average, Layer-Level Communication Throughput: 47.283 Gbps (Max: 56.712, Min: 37.214, Sum: 378.262)
-Layer-level communication (cluster-wide, per-epoch): 0.465 GB
-Graph-level communication (cluster-wide, per-epoch): 0.000 GB
-Weight-sync communication (cluster-wide, per-epoch): 0.000 GB
-Total communication (cluster-wide, per-epoch): 0.465 GB
-****** Accuracy Results ******
-Highest valid_acc: 0.5289
-Target test_acc: 0.5322
-Epoch to reach the target acc: 3649
-[MPI Rank 0] Success 
-[MPI Rank 4] Success 
-[MPI Rank 5] Success 
-[MPI Rank 6] Success 
-[MPI Rank 7] Success 
-[MPI Rank 1] Success 
-[MPI Rank 2] Success 
-[MPI Rank 3] Success 
+	Epoch 1:	Loss 2.5483	TrainAcc 0.4212	ValidAcc 0.4232	TestAcc 0.4229	BestValid 0.4232
+	Epoch 50:	Loss 1.5717	TrainAcc 0.4525	ValidAcc 0.4507	TestAcc 0.4523	BestValid 0.4507
+	Epoch 100:	Loss 1.4789	TrainAcc 0.4989	ValidAcc 0.4970	TestAcc 0.4970	BestValid 0.4970
+	Epoch 150:	Loss 1.4146	TrainAcc 0.5211	ValidAcc 0.5166	TestAcc 0.5174	BestValid 0.5166
+	Epoch 200:	Loss 1.3871	TrainAcc 0.5280	ValidAcc 0.5198	TestAcc 0.5198	BestValid 0.5198
+	Epoch 250:	Loss 1.3728	TrainAcc 0.5336	ValidAcc 0.5223	TestAcc 0.5266	BestValid 0.5223
+	Epoch 300:	Loss 1.3606	TrainAcc 0.5284	ValidAcc 0.5163	TestAcc 0.5177	BestValid 0.5223
