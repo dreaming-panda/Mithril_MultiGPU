@@ -4,13 +4,13 @@ import sys
 graphs = [
         #"squirrel",
         #"flickr",
-        #"reddit",
-        "ogbn_arxiv"
+        "reddit",
+        #"ogbn_arxiv"
         ]
 models = [
-        "gcn", 
-        "graphsage",
-        "gcnii",
+        #"gcn", 
+        #"graphsage",
+        #"gcnii",
         "resgcn"
         ]
 configurations = {
@@ -54,7 +54,7 @@ configurations = {
 
 baseline_datasets = "/shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets"
 mithril_datasets = "/shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets"
-host_file = "./nsdi2023/overall_performance/hostfile" # TODO
+host_file = "./nsdi2023/overall_performance/hostfile2" # TODO
 num_gpus = 8
 #hosts = "gnerv2:4,gnerv3:4"
 application_dir = "./build/applications/async_multi_gpus"
@@ -208,8 +208,8 @@ def run_pipeline_parallel(
     os.system(command)
 
 if __name__ == "__main__":
-    #for seed in range(2, 3):
-    for seed in range(1, num_runs + 1): 
+    #for seed in range(1, num_runs + 1): 
+    for seed in range(3, 4): #TODO
         for graph in graphs:
             for model in models:
                 # graph parallel
