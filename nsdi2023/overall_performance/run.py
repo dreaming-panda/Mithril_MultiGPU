@@ -4,14 +4,15 @@ import sys
 graphs = [
         #"squirrel",
         #"flickr",
-        "reddit",
-        #"ogbn_arxiv"
+        #"reddit",
+        #"ogbn_arxiv",
+        "physics"
         ]
 models = [
         "resgcn",
-        #"gcnii",
-        #"gcn", 
-        #"graphsage",
+        "gcnii",
+        "gcn", 
+        "graphsage",
         ]
 configurations = {
         "squirrel": {
@@ -49,7 +50,16 @@ configurations = {
             "decay": 0.,
             "dropout": 0.5,
             "multi_label": 0
-            }
+            },
+        "physics": {
+            "layers": 32,
+            "hunits": 100,
+            "epoch": 300,
+            "lr": 1e-3,
+            "decay": 0.,
+            "dropout": 0.5,
+            "multi_label": 0
+            },
         }
 
 baseline_datasets = "/shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets"

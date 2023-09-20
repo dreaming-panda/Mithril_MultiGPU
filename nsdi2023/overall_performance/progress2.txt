@@ -1,5 +1,5 @@
 Configurating the hostfile
-Wed Sep 20 00:54:47 2023       
+Wed Sep 20 12:41:08 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
 |-------------------------------+----------------------+----------------------+
@@ -8,19 +8,19 @@ Wed Sep 20 00:54:47 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
-| 35%   51C    P8    17W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   46C    P0    61W / 230W |      3MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
-| 32%   50C    P8    27W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   45C    P0    82W / 230W |      3MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
-| 36%   53C    P8    24W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   46C    P0    76W / 230W |      3MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
-| 34%   52C    P8    16W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   47C    P0    65W / 230W |      3MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -31,7 +31,7 @@ Wed Sep 20 00:54:47 2023
 |=============================================================================|
 |  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
-Wed Sep 20 00:54:52 2023       
+Wed Sep 20 12:41:08 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
 |-------------------------------+----------------------+----------------------+
@@ -40,19 +40,19 @@ Wed Sep 20 00:54:52 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
-| 30%   47C    P8    32W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   44C    P5    68W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
-| 31%   49C    P8    24W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   46C    P0    83W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
-| 32%   50C    P8    26W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   47C    P0    82W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
-| 35%   53C    P8    26W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   52C    P0    95W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -64,22 +64,130 @@ Wed Sep 20 00:54:52 2023
 |  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
 Build the project
-[ 10%] Built target context
+[ 20%] Built target context
 [ 32%] Built target core
+Scanning dependencies of target cudahelp
+[ 35%] Building CXX object CMakeFiles/cudahelp.dir/core/src/cuda/cuda_hybrid_parallel.cc.o
+[ 37%] Linking CXX static library libcudahelp.a
 [ 70%] Built target cudahelp
-[ 75%] Built target OSDI2023_MULTI_NODES_resgcn_plus
-[ 82%] Built target OSDI2023_MULTI_NODES_graphsage
-[ 82%] Built target OSDI2023_MULTI_NODES_resgcn
-[ 82%] Built target OSDI2023_MULTI_NODES_gcn
+[ 72%] Linking CXX executable graphsage
+[ 77%] Linking CXX executable gcnii
+[ 77%] Linking CXX executable resgcn
+[ 77%] Linking CXX executable resgcn_plus
+[ 77%] Linking CXX executable gcn
+[ 77%] Linking CXX executable estimate_comm_volume
+[ 87%] Built target estimate_comm_volume
+[ 90%] Built target OSDI2023_MULTI_NODES_resgcn_plus
+[ 92%] Built target OSDI2023_MULTI_NODES_resgcn
 [ 95%] Built target OSDI2023_MULTI_NODES_gcnii
-[ 95%] Built target estimate_comm_volume
+[ 97%] Built target OSDI2023_MULTI_NODES_graphsage
+[100%] Built target OSDI2023_MULTI_NODES_gcn
 Run the experiments
 
-Running Graph Parallel: graph reddit, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/reddit --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/reddit/resgcn/3.txt 2>&1'
+Running Graph Parallel: graph physics, model resgcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/resgcn/1.txt 2>&1'
 
-Running Pipeline Parallel: graph reddit, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/reddit --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/reddit/resgcn/3.txt 2>&1'
+Running Pipeline Parallel: graph physics, model resgcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/resgcn/1.txt 2>&1'
 
-Running 2-Way Hybrid Parallel: graph reddit, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/reddit --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/reddit/resgcn/3.txt 2>&1'
+Running 2-Way Hybrid Parallel: graph physics, model resgcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/resgcn/1.txt 2>&1'
+
+Running Graph Parallel: graph physics, model gcnii, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/gcnii/1.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model gcnii, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/gcnii/1.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model gcnii, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/gcnii/1.txt 2>&1'
+
+Running Graph Parallel: graph physics, model gcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/gcn/1.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model gcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/gcn/1.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model gcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/gcn/1.txt 2>&1'
+
+Running Graph Parallel: graph physics, model graphsage, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/graphsage/1.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model graphsage, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/graphsage/1.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model graphsage, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/graphsage/1.txt 2>&1'
+
+Running Graph Parallel: graph physics, model resgcn, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/resgcn/2.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model resgcn, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/resgcn/2.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model resgcn, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/resgcn/2.txt 2>&1'
+
+Running Graph Parallel: graph physics, model gcnii, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/gcnii/2.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model gcnii, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/gcnii/2.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model gcnii, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/gcnii/2.txt 2>&1'
+
+Running Graph Parallel: graph physics, model gcn, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/gcn/2.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model gcn, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/gcn/2.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model gcn, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/gcn/2.txt 2>&1'
+
+Running Graph Parallel: graph physics, model graphsage, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/graphsage/2.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model graphsage, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/graphsage/2.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model graphsage, seed 2
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/graphsage/2.txt 2>&1'
+
+Running Graph Parallel: graph physics, model resgcn, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/resgcn/3.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model resgcn, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/resgcn/3.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model resgcn, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/resgcn/3.txt 2>&1'
+
+Running Graph Parallel: graph physics, model gcnii, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/gcnii/3.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model gcnii, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/gcnii/3.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model gcnii, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcnii --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/gcnii/3.txt 2>&1'
+
+Running Graph Parallel: graph physics, model gcn, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/gcn/3.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model gcn, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/gcn/3.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model gcn, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/gcn/3.txt 2>&1'
+
+Running Graph Parallel: graph physics, model graphsage, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/physics/graphsage/3.txt 2>&1'
+
+Running Pipeline Parallel: graph physics, model graphsage, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/physics/graphsage/3.txt 2>&1'
+
+Running 2-Way Hybrid Parallel: graph physics, model graphsage, seed 3
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile2 ./build/applications/async_multi_gpus/graphsage --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/physics --layer 32 --hunits 100 --epoch 300 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/physics/graphsage/3.txt 2>&1'
