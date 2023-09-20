@@ -1,5 +1,5 @@
 Configurating the hostfile
-Tue Sep 19 15:35:53 2023       
+Wed Sep 20 00:50:25 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
 |-------------------------------+----------------------+----------------------+
@@ -8,19 +8,19 @@ Tue Sep 19 15:35:53 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
-| 30%   30C    P8    16W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    21W / 230W |      3MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
-| 30%   30C    P8    23W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    18W / 230W |      3MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
-| 30%   32C    P8    20W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    14W / 230W |      3MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
-| 30%   30C    P8    13W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    16W / 230W |      3MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -31,7 +31,7 @@ Tue Sep 19 15:35:53 2023
 |=============================================================================|
 |  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
-Tue Sep 19 15:35:58 2023       
+Wed Sep 20 00:50:30 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
 |-------------------------------+----------------------+----------------------+
@@ -40,19 +40,19 @@ Tue Sep 19 15:35:58 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
-| 30%   30C    P8    27W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    25W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
-| 30%   30C    P8    20W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    24W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
-| 30%   31C    P8    23W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    23W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
-| 30%   32C    P8    23W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   34C    P8    26W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -64,67 +64,16 @@ Tue Sep 19 15:35:58 2023
 |  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
 Build the project
-[ 10%] Built target context
+[ 15%] Built target context
 [ 32%] Built target core
 [ 70%] Built target cudahelp
-[ 75%] Built target OSDI2023_MULTI_NODES_gcn
-[ 82%] Built target OSDI2023_MULTI_NODES_resgcn_plus
-[ 85%] Built target OSDI2023_MULTI_NODES_graphsage
-[ 85%] Built target OSDI2023_MULTI_NODES_gcnii
-[ 85%] Built target OSDI2023_MULTI_NODES_resgcn
-[ 85%] Built target estimate_comm_volume
+[ 75%] Built target OSDI2023_MULTI_NODES_resgcn_plus
+[ 92%] Built target OSDI2023_MULTI_NODES_gcn
+[ 92%] Built target estimate_comm_volume
+[ 92%] Built target OSDI2023_MULTI_NODES_graphsage
+[ 92%] Built target OSDI2023_MULTI_NODES_resgcn
+[ 92%] Built target OSDI2023_MULTI_NODES_gcnii
 Run the experiments
 
-Running Graph Parallel: graph squirrel, model resgcn, seed 1
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/squirrel/resgcn/1.txt 2>&1'
-
-Running Pipeline Parallel: graph squirrel, model resgcn, seed 1
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/squirrel/resgcn/1.txt 2>&1'
-
-Running 2-Way Hybrid Parallel: graph squirrel, model resgcn, seed 1
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/squirrel/resgcn/1.txt 2>&1'
-
-Running Graph Parallel: graph flickr, model resgcn, seed 1
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/flickr/resgcn/1.txt 2>&1'
-
-Running Pipeline Parallel: graph flickr, model resgcn, seed 1
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/flickr/resgcn/1.txt 2>&1'
-
-Running 2-Way Hybrid Parallel: graph flickr, model resgcn, seed 1
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/flickr/resgcn/1.txt 2>&1'
-
-Running Graph Parallel: graph squirrel, model resgcn, seed 2
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/squirrel/resgcn/2.txt 2>&1'
-
-Running Pipeline Parallel: graph squirrel, model resgcn, seed 2
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/squirrel/resgcn/2.txt 2>&1'
-
-Running 2-Way Hybrid Parallel: graph squirrel, model resgcn, seed 2
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/squirrel/resgcn/2.txt 2>&1'
-
-Running Graph Parallel: graph flickr, model resgcn, seed 2
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/flickr/resgcn/2.txt 2>&1'
-
-Running Pipeline Parallel: graph flickr, model resgcn, seed 2
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/flickr/resgcn/2.txt 2>&1'
-
-Running 2-Way Hybrid Parallel: graph flickr, model resgcn, seed 2
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 2 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/flickr/resgcn/2.txt 2>&1'
-
-Running Graph Parallel: graph squirrel, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/squirrel/resgcn/3.txt 2>&1'
-
-Running Pipeline Parallel: graph squirrel, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/squirrel/resgcn/3.txt 2>&1'
-
-Running 2-Way Hybrid Parallel: graph squirrel, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/squirrel --layer 32 --hunits 1000 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/squirrel/resgcn/3.txt 2>&1'
-
-Running Graph Parallel: graph flickr, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/flickr/resgcn/3.txt 2>&1'
-
-Running Pipeline Parallel: graph flickr, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 1 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/pipeline/flickr/resgcn/3.txt 2>&1'
-
-Running 2-Way Hybrid Parallel: graph flickr, model resgcn, seed 3
-COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/resgcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/flickr --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 32 --weight_file /tmp/saved_weights --dropout 0.5 --seed 3 --eval_freq -1 --exact_inference 1 --num_dp_ways 2 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/hybrid/flickr/resgcn/3.txt 2>&1'
+Running Graph Parallel: graph ogbn_arxiv, model gcn, seed 1
+COMMAND: 'mpirun -n 8 --map-by node:PE=8 --hostfile ./nsdi2023/overall_performance/hostfile ./build/applications/async_multi_gpus/gcn --graph /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/ogbn_arxiv --layer 32 --hunits 100 --epoch 5000 --lr 0.001 --decay 0.0 --part model --chunks 8 --weight_file /tmp/saved_weights --dropout 0.5 --seed 1 --eval_freq -1 --exact_inference 1 --num_dp_ways 8 --enable_compression 0 --multi_label 0 >./nsdi2023/overall_performance/results/graph/ogbn_arxiv/gcn/1.txt 2>&1'
