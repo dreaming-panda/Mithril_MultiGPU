@@ -196,10 +196,12 @@ def print_communication_time():
     print("Average / MAX improvement: %.2f / %.2f" % (avg_improv, max_improv))
 
 def plot_convergence_curves():
+    model_name = ["GCNII", "ResGCN+"]
     for graph in graphs:
-        for model in ["gcnii"]:
-            fig, ax = plt.subplots(figsize=(5, 2.5))
-            for method in ["graph", "pipeline", "hybrid"]:
+        model_idx = 0
+        for model in ["gcnii", "resgcn"]:
+            fig, ax = plt.subplots(figsize=(4.2, 2.5))
+            for method in ["graph", "pipeline"]:
                 result_file = "./results/%s/%s/%s/1.txt" % (
                         method, graph, model
                         )
@@ -217,23 +219,25 @@ def plot_convergence_curves():
                 #print(x)
                 #print(y)
                 plt.plot(x, y, label = method + "-parallel")
-                plt.title("%s-%s" % (graph, model))
+                plt.title("%s-%s" % (graph, model_name[model_idx]))
                 #plt.xlabel("Epoch")
                 #plt.ylabel("Test Accuracy")
             #max_y = max(y)
             #plt.ylim([max_y * 0.5, max_y * 1.1])
             if graph == "reddit":
-                plt.ylim([0.85, 0.96])
-            plt.legend()
+                plt.ylim([0.85, 0.98])
+            if graph == "squirrel" and model == "gcnii":
+                plt.legend()
             plt.savefig("convergence_%s_%s.pdf" % (graph, model))
             plt.show()
+            model_idx += 1
 
 if __name__ == "__main__":
     print_runtimes()
     print_communication_volume()
     print_communication_time();
     print_accuracies();
-    #plot_convergence_curves()
+    plot_convergence_curves()
 
 
 
