@@ -12,21 +12,23 @@ mpirun ./gen_hostfile.sh > ./hostfile
 cd build
 make -j
 
-#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
-dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
+dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
+#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
 num_gpus=8
 num_layers=8
-hunits=100
+hunits=1000
 lr=1e-3
 graph=physics
-epoch=200
+epoch=50
 decay=0
 dropout=0.5
 model=gcnii
 eval_freq=-1
 enable_compression=0
 multi_label=0
+exact_inference=1
+seed=1
 
 ## graph parallel
 #chunks=$num_gpus
@@ -36,8 +38,6 @@ multi_label=0
 chunks=$((num_gpus*4))
 num_dp_ways=1
 
-exact_inference=1
-seed=1
 
 echo "Running experiments..."
 
