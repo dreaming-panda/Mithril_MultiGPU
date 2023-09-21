@@ -33,11 +33,6 @@ markers = [
         "+",
         "*"
         ]
-colors = [
-        "orange",
-        "green",
-        "red",
-        ]
 
 def get_communication_volume(result_file, comm_type):
     with open(result_file, "r") as f:
@@ -76,23 +71,13 @@ if __name__ == "__main__":
                     )
             runtime = get_epoch_time(result_file)
             runtimes.append(runtime)
-        plt.plot(gpus, runtimes, "-" + markers[idx], color = colors[idx], label = graph + " (graph parallel)", markersize = ms)
-
-        runtimes = []
-        for i in gpus:
-            result_file = "./pipeline/%s/%s.txt" % (
-                    graph, i
-                    )
-            runtime = get_epoch_time(result_file)
-            runtimes.append(runtime)
-        plt.plot(gpus, runtimes, "--" + markers[idx], color = colors[idx], label = graph + " (our method)", markersize = ms)
+        plt.plot(gpus, runtimes, "-" + markers[idx], label = graph, markersize = ms)
         idx += 1
-
     plt.legend()
     plt.xscale("log")
     plt.xticks([], [])
     plt.savefig("runtime.pdf")
-    #plt.show()
+    plt.show()
 
     fig, ax = plt.subplots(figsize=(6, 2.5))
     idx = 0
@@ -105,24 +90,13 @@ if __name__ == "__main__":
             comm = get_communication_volume(result_file, "Total")
             comm /= float(i)
             communciations.append(comm)
-        plt.plot(gpus, communciations, "-" + markers[idx], color = colors[idx], label = graph + " (graph parallel)", markersize = ms)
-
-        communciations = []
-        for i in gpus:
-            result_file = "./pipeline/%s/%s.txt" % (
-                    graph, i
-                    )
-            comm = get_communication_volume(result_file, "Total")
-            comm /= float(i)
-            communciations.append(comm)
-        plt.plot(gpus, communciations, "--" + markers[idx], color = colors[idx], label = graph + " (our method)", markersize = ms)
-
+        plt.plot(gpus, communciations, "-" + markers[idx], label = graph, markersize = ms)
         idx += 1
     plt.legend()
     plt.xscale("log")
     plt.xticks([], [])
     plt.savefig("communciation.pdf")
-    #plt.show()
+    plt.show()
 
 
 
