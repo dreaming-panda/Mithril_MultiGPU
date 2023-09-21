@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --output=./nsdi2023/weak_scaling/pipeline/progress.txt
 #SBATCH --partition=gpu
-#SBATCH --gpus=16
+#SBATCH --gpus=8
 #SBATCH --gpus-per-task=4
 #SBATCH --exclusive
 
@@ -27,7 +27,7 @@ multi_label=0
 exact_inference=1
 seed=1
 
-for num_gpus in 16 8 4 2 1
+for num_gpus in 8
 do
     echo "Number of GPUs is $num_gpus"
     num_layers=$((num_gpus*8))
