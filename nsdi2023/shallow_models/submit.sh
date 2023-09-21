@@ -35,9 +35,9 @@ multi_label=0
 exact_inference=1
 seed=1
 
-for graph in flickr reddit
+for graph in reddit
 do
-    for model in gcn graphsage
+    for model in resgcn gcnii
     do
         echo "Running $model on $graph"
         result_dir=./nsdi2023/shallow_models/$graph/$model
