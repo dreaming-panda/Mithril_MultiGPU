@@ -19,8 +19,19 @@ models = [
         "gcnii",
         "graphsage"
         ]
+graphs = [
+        "reddit",
+        "flickr",
+        #"physics"
+        ]
 gpus = [
         1, 2, 4, 8, 16
+        ]
+markers = [
+        "o",
+        "^",
+        "+",
+        "*"
         ]
 
 def get_communication_volume(result_file, comm_type):
@@ -48,30 +59,44 @@ def get_epoch_time(result_file):
     assert(False)
 
 if __name__ == "__main__":
+    ms = 10
 
-    for model in models:
+    fig, ax = plt.subplots(figsize=(6, 2.5))
+    idx = 0
+    for graph in graphs:
         runtimes = []
         for i in gpus:
             result_file = "./%s/%s.txt" % (
-                    model, i
+                    graph, i
                     )
             runtime = get_epoch_time(result_file)
             runtimes.append(runtime)
-        plt.plot(gpus, runtimes, label = model)
+        plt.plot(gpus, runtimes, "-" + markers[idx], label = graph, markersize = ms)
+        idx += 1
     plt.legend()
+    plt.xscale("log")
+    plt.xticks([], [])
     plt.savefig("runtime.pdf")
-    #plt.show()
+    plt.show()
 
-    for model in models:
+    fig, ax = plt.subplots(figsize=(6, 2.5))
+    idx = 0
+    for graph in graphs:
         communciations = []
         for i in gpus:
+            result_file = "./%s/%s.txt" % (
+                    graph, i
+                    )
             comm = get_communication_volume(result_file, "Total")
             comm /= float(i)
             communciations.append(comm)
-        plt.plot(gpus, communciations, label = model)
+        plt.plot(gpus, communciations, "-" + markers[idx], label = graph, markersize = ms)
+        idx += 1
     plt.legend()
+    plt.xscale("log")
+    plt.xticks([], [])
     plt.savefig("communciation.pdf")
-    #plt.show()
+    plt.show()
 
 
 
