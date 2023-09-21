@@ -1,0 +1,85 @@
+Initializing the runtime environment
+Initializing the runtime environment
+DONE MPI INIT
+DONE MPI INITInitialized node 0 on machine gnerv8
+
+Initialized node 1 on machine gnerv8
+Building the CSR structure...
+Building the CSR structure...
+        It takes 2.351 seconds.
+Building the CSC structure...
+        It takes 2.585 seconds.
+Building the CSC structure...
+        It takes 2.399 seconds.
+        It takes 2.362 seconds.
+Building the Feature Vector...
+        It takes 0.245 seconds.
+Building the Label Vector...
+        It takes 0.041 seconds.
+Building the Feature Vector...
+        It takes 0.259 seconds.
+Building the Label Vector...
+        It takes 0.032 seconds.
+The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/reddit/2_parts
+The number of GCNII layers: 32
+The number of hidden units: 100
+The number of training epoches: 50
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 1
+Number of classes: 41
+Number of feature dimensions: 602
+Number of vertices: 232965
+Number of GPUs: 2
+GPU 0, layer [0, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+232965, 114848857, 114848857
+Number of vertices per chunk: 116483
+train nodes 153431, valid nodes 23831, test nodes 55703
+GPU 0, layer [0, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+Chunks (number of global chunks: 2): 0-[0, 116483) 1-[116483, 232965)
+232965, 114848857, 114848857
+Number of vertices per chunk: 116483
+csr in-out ready !Start Cost Model Initialization...
+csr in-out ready !Start Cost Model Initialization...
+***** Start profiling the layer-level communication performance *******
+The layer-level communication performance: 168.923 Gbps (per GPU), 337.845 Gbps (aggregated)
+The layer-level communication performance: 168.938 Gbps (per GPU), 337.876 Gbps (aggregated)
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+The graph-level communication performance (supernode = 2): 156.096 Gbps (per GPU), 312.193 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 156.096 Gbps (per GPU), 312.192 Gbps (aggregated, cluster-wide)
+ LType   LT0   LT1   LT2 Ratio  VSum  ESum
+ chk_0 51.71ms 55.68ms 64.09ms  1.24116.48K 68.42M
+ chk_1 36.70ms 40.42ms 48.90ms  1.33116.48K 46.19M
+   Avg 44.21 48.05 56.49
+   Max 51.71 55.68 64.09
+   Min 36.70 40.42 48.90
+ Ratio  1.41  1.38  1.31
+   Var 56.31 58.24 57.62
+Profiling takes 3.413 s
+*** Node 0, starting model training...
+*** Node 1, starting model training...
+Num Stages: 1 / 1
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the model-level partition [0, 421)
+*** Node 0, constructing the helper classes...
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 116483
+Num Stages: 1 / 1
+Node 1, Pipeline Input Tensor: NULL
+Node 1, Pipeline Output Tensor: NULL
+*** Node 1 owns the model-level partition [0, 421)
+*** Node 1, constructing the helper classes...
+Node 1, Local Vertex Begin: 116483, Num Local Vertices: 116482
+Cuda failure: 2
+/shared_ssd_storage/jingjichen/Mithril_MultiGPU/core/include/cuda/cuda_utils.h:57
+Aborting...
+Cuda failure: 2
+/shared_ssd_storage/jingjichen/Mithril_MultiGPU/core/include/cuda/cuda_utils.h:57
+Aborting...

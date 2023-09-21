@@ -1,0 +1,55 @@
+Initializing the runtime environment
+DONE MPI INIT
+Initialized node 0 on machine gnerv2
+Building the CSR structure...
+        It takes 2.574 seconds.
+Building the CSC structure...
+        It takes 2.365 seconds.
+Building the Feature Vector...
+        It takes 0.248 seconds.
+Building the Label Vector...
+        It takes 0.030 seconds.
+The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/reddit/4_parts
+The number of GCNII layers: 32
+The number of hidden units: 100
+The number of training epoches: 50
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 1
+Number of classes: 41
+Number of feature dimensions: 602
+Number of vertices: 232965
+Number of GPUs: 1
+train nodes 153431, valid nodes 23831, test nodes 55703
+GPU 0, layer [0, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+Chunks (number of global chunks: 4): 0-[0, 44702) 1-[44702, 89473) 2-[89473, 171527) 3-[171527, 232965)
+232965, 114848857, 114848857
+Number of vertices per chunk: 58242
+csr in-out ready !Start Cost Model Initialization...
+***** Start profiling the layer-level communication performance *******
+The layer-level communication performance: 1084587.712 Gbps (per GPU), 1084587.712 Gbps (aggregated)
+ LType   LT0   LT1   LT2 Ratio  VSum  ESum
+ chk_0 21.34ms 23.08ms 26.66ms  1.25 44.70K 29.34M
+ chk_1 20.97ms 22.82ms 26.36ms  1.26 44.77K 28.89M
+ chk_2 21.89ms 24.72ms 30.70ms  1.40 82.05K 27.48M
+ chk_3 22.15ms 24.72ms 29.02ms  1.31 61.44K 28.91M
+   Avg 21.59 23.84 28.19
+   Max 22.15 24.72 30.70
+   Min 20.97 22.82 26.36
+ Ratio  1.06  1.08  1.16
+   Var  0.21  0.79  3.17
+Profiling takes 3.375 s
+*** Node 0, starting model training...
+Num Stages: 1 / 1
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the model-level partition [0, 421)
+*** Node 0, constructing the helper classes...
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 232965
+Cuda failure: 2
+/shared_ssd_storage/jingjichen/Mithril_MultiGPU/core/include/cuda/cuda_utils.h:57
+Aborting...

@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --partition=gpu
-#SBATCH --gpus=16
+#SBATCH --gpus=4
 #SBATCH --gpus-per-task=4
 #SBATCH --exclusive
 
-hostfile=./nsdi2023/strong_scaling/hostfile
+hostfile=./nsdi2023/strong_scaling/hostfile4
 mpirun nvidia-smi
 mpirun ./gen_hostfile.sh > $hostfile
 
@@ -15,7 +15,7 @@ cd ..
 graph_dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets
 pipeline_dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets
 
-num_gpus=16
+num_gpus=1
 
 model=gcn
 hunits=100

@@ -1,0 +1,130 @@
+Initializing the runtime environment
+Initializing the runtime environment
+DONE MPI INIT
+Initialized node 0 on machine gnerv8
+DONE MPI INIT
+Initialized node 1 on machine gnerv8
+Building the CSR structure...
+Building the CSR structure...
+        It takes 2.272 seconds.
+Building the CSC structure...
+        It takes 2.545 seconds.
+Building the CSC structure...
+        It takes 2.232 seconds.
+        It takes 2.320 seconds.
+Building the Feature Vector...
+        It takes 0.228 seconds.
+Building the Label Vector...
+        It takes 0.032 seconds.
+Building the Feature Vector...
+        It takes 0.235 seconds.
+Building the Label Vector...
+        It takes 0.029 seconds.
+The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/reddit/8_parts
+The number of GCNII layers: 32
+The number of hidden units: 100
+The number of training epoches: 50
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 1
+Number of classes: 41
+Number of feature dimensions: 602
+Number of vertices: 232965
+Number of GPUs: 2
+GPU 0, layer [0, 16)
+GPU 1, layer [16, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+232965, 114848857, 114848857
+Number of vertices per chunk: 29121
+train nodes 153431, valid nodes 23831, test nodes 55703
+GPU 0, layer [0, 16)
+GPU 1, layer [16, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+Chunks (number of global chunks: 8): 0-[0, 31876) 1-[31876, 56041) 2-[56041, 86963) 3-[86963, 111539) 4-[111539, 150873) 5-[150873, 175023) 6-[175023, 206335) 7-[206335, 232965)
+232965, 114848857, 114848857
+Number of vertices per chunk: 29121
+csr in-out ready !Start Cost Model Initialization...
+csr in-out ready !Start Cost Model Initialization...
+***** Start profiling the layer-level communication performance *******
+The layer-level communication performance: 170.231 Gbps (per GPU), 340.462 Gbps (aggregated)
+The layer-level communication performance: 170.272 Gbps (per GPU), 340.543 Gbps (aggregated)
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+The graph-level communication performance (supernode = 2): 159.576 Gbps (per GPU), 319.153 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 159.570 Gbps (per GPU), 319.140 Gbps (aggregated, cluster-wide)
+ LType   LT0   LT1   LT2 Ratio  VSum  ESum
+ chk_0 12.87ms 10.11ms  9.49ms  1.36 31.88K 14.26M
+ chk_1 12.29ms 10.22ms  9.79ms  1.26 24.16K 14.58M
+ chk_2 13.32ms 10.56ms 10.04ms  1.33 30.92K 14.38M
+ chk_3 12.57ms 10.50ms 10.04ms  1.25 24.58K 14.59M
+ chk_4 13.81ms 10.44ms  9.87ms  1.40 39.33K 13.77M
+ chk_5 12.55ms 10.44ms  9.97ms  1.26 24.15K 14.35M
+ chk_6 14.29ms 11.42ms 10.77ms  1.33 31.31K 14.22M
+ chk_7 13.12ms 11.06ms 10.35ms  1.27 26.63K 14.46M
+   Avg 13.10 10.59 10.04
+   Max 14.29 11.42 10.77
+   Min 12.29 10.11  9.49
+ Ratio  1.16  1.13  1.13
+   Var  0.41  0.17  0.13
+Profiling takes 3.083 s
+*** Node 0, starting model training...
+Num Stages: 2 / 2
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: OPERATOR_DROPOUT
+*** Node 0 owns the model-level partition [0, 130)
+*** Node 0, constructing the helper classes...
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 232965
+*** Node 1, starting model training...
+Num Stages: 2 / 2
+Node 1, Pipeline Input Tensor: OPERATOR_DROPOUT
+Node 1, Pipeline Output Tensor: NULL
+*** Node 1 owns the model-level partition [130, 257)
+*** Node 1, constructing the helper classes...
+Node 1, Local Vertex Begin: 0, Num Local Vertices: 232965
+*** Node 0, setting up some other necessary information...
+*** Node 1, setting up some other necessary information...
++++++++++ Node 1 initializing the weights for op[130, 257)...
++++++++++ Node 0 initializing the weights for op[0, 130)...
+Node 0, discovering the vertices that will be sent across graph boundary...
+Node 1, discovering the vertices that will be sent across graph boundary...
+Node 1, discovering the vertices that will be received across the graph boundary.
+The number of mirror vertices: 0
+Node 0, discovering the vertices that will be received across the graph boundary.
+****** Start Scheduling the Tasks in a Pipelined Fashion ******
+****** Start Scheduling the Tasks in a Pipelined Fashion ******
+*** Node 0, starting task scheduling...
+
+
+
+The learning rate specified by the user: 0.001000000
+*** Node 1, starting task scheduling...
+The learning rate specified by the user: 0.001000000
+	Epoch 1:	Loss 6.4714	TrainAcc 0.0183	ValidAcc 0.0169	TestAcc 0.0158	BestValid 0.0169
+	Epoch 50:	Loss 3.2939	TrainAcc 0.0690	ValidAcc 0.0584	TestAcc 0.0574	BestValid 0.0584
+****** Epoch Time (Excluding Evaluation Cost): 1.234 s ******
+****** Breakdown Analysis ******
+Cluster-Wide Average, Bubble-Pipeline: 132.488 ms (Max: 135.360, Min: 129.616, Sum: 264.975)
+Cluster-Wide Average, Compute: 1054.585 ms (Max: 1074.866, Min: 1034.303, Sum: 2109.169)
+Cluster-Wide Average, Communication-Layer: 16.397 ms (Max: 17.988, Min: 14.806, Sum: 32.795)
+Cluster-Wide Average, Bubble-Imbalance: 20.899 ms (Max: 35.830, Min: 5.967, Sum: 41.797)
+Cluster-Wide Average, Communication-Graph: 0.619 ms (Max: 0.696, Min: 0.543, Sum: 1.238)
+Cluster-Wide Average, Optimization: 0.802 ms (Max: 0.895, Min: 0.709, Sum: 1.604)
+Cluster-Wide Average, Others: 9.695 ms (Max: 12.401, Min: 6.989, Sum: 19.389)
+****** Breakdown Sum: 1235.484 ms ******
+Cluster-Wide Average, GPU Memory Consumption: 12.497 GB (Max: 13.251, Min: 11.743, Sum: 24.993)
+Cluster-Wide Average, Graph-Level Communication Throughput: -nan Gbps (Max: -nan, Min: -nan, Sum: -nan)
+Cluster-Wide Average, Layer-Level Communication Throughput: 45.896 Gbps (Max: 50.349, Min: 41.444, Sum: 91.792)
+Layer-level communication (cluster-wide, per-epoch): 0.174 GB
+Graph-level communication (cluster-wide, per-epoch): 0.000 GB
+Weight-sync communication (cluster-wide, per-epoch): 0.000 GB
+Total communication (cluster-wide, per-epoch): 0.174 GB
+****** Accuracy Results ******
+Highest valid_acc: 0.0584
+Target test_acc: 0.0574
+Epoch to reach the target acc: 49
+[MPI Rank 0] Success 
+[MPI Rank 1] Success 
