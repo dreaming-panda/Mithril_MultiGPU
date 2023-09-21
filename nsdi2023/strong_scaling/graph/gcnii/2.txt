@@ -1,0 +1,104 @@
+Starting GNN Training...
+Initializing the runtime environment
+Starting GNN Training...
+Initializing the runtime environment
+DONE MPI INIT
+DONE MPI INIT
+Initialized node 1 on machine gnerv8
+Initialized node 0 on machine gnerv8
+Building the CSR structure...
+Building the CSR structure...
+        It takes 2.349 seconds.
+Building the CSC structure...
+        It takes 2.570 seconds.
+Building the CSC structure...
+        It takes 2.345 seconds.
+        It takes 2.353 seconds.
+Building the Feature Vector...
+        It takes 0.242 seconds.
+Building the Label Vector...
+        It takes 0.035 seconds.
+Building the Feature Vector...
+        It takes 0.257 seconds.
+Building the Label Vector...
+        It takes 0.030 seconds.
+The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/reddit/2_parts
+The number of GCNII layers: 32
+The number of hidden units: 100
+The number of training epoches: 50
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 1
+GCN hyper-parameter alpha: 0.100000
+GCN hyper-parameter lambda: 0.500000
+Number of classes: 41
+Number of feature dimensions: 602
+Number of vertices: 232965
+Number of GPUs: 2
+GPU 0, layer [0, 33)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+232965, 114848857, 114848857
+Number of vertices per chunk: 116483
+train nodes 153431, valid nodes 23831, test nodes 55703
+GPU 0, layer [0, 33)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+Chunks (number of global chunks: 2): 0-[0, 116483) 1-[116483, 232965)
+232965, 114848857, 114848857
+Number of vertices per chunk: 116483
+csr in-out ready !Start Cost Model Initialization...
+csr in-out ready !Start Cost Model Initialization...
+***** Start profiling the layer-level communication performance *******
+The layer-level communication performance: 167.879 Gbps (per GPU), 335.758 Gbps (aggregated)
+The layer-level communication performance: 169.659 Gbps (per GPU), 339.318 Gbps (aggregated)
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+The graph-level communication performance (supernode = 2): 159.080 Gbps (per GPU), 318.160 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 159.077 Gbps (per GPU), 318.154 Gbps (aggregated, cluster-wide)
+ LType   LT0   LT1   LT2 Ratio  VSum  ESum
+ chk_0  9.59ms 48.94ms 50.15ms  5.23116.48K 68.42M
+ chk_1  9.61ms 33.87ms 34.86ms  3.63116.48K 46.19M
+   Avg  9.60 41.41 42.51
+   Max  9.61 48.94 50.15
+   Min  9.59 33.87 34.86
+ Ratio  1.00  1.44  1.44
+   Var  0.00 56.74 58.49
+Profiling takes 2.182 s
+*** Node 0, starting model training...
+*** Node 1, starting model training...
+Num Stages: 1 / 1
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the model-level partition [0, 233)
+*** Node 0, constructing the helper classes...
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 116483
+Num Stages: 1 / 1
+Node 1, Pipeline Input Tensor: NULL
+Node 1, Pipeline Output Tensor: NULL
+*** Node 1 owns the model-level partition [0, 233)
+*** Node 1, constructing the helper classes...
+Node 1, Local Vertex Begin: 116483, Num Local Vertices: 116482
+*** Node 0, setting up some other necessary information...
+*** Node 1, setting up some other necessary information...
++++++++++ Node 0 initializing the weights for op[0, 233)...
++++++++++ Node 1 initializing the weights for op[0, 233)...
+Node 0, discovering the vertices that will be sent across graph boundary...
+Node 1, discovering the vertices that will be sent across graph boundary...
+The number of mirror vertices: 145956
+Node 0, discovering the vertices that will be received across the graph boundary.
+Node 1, discovering the vertices that will be received across the graph boundary.
+****** Start Scheduling the Tasks in a Pipelined Fashion ******
+****** Start Scheduling the Tasks in a Pipelined Fashion ******
+*** Node 0, starting task scheduling...
+
+
+
+*** Node 1, starting task scheduling...
+The learning rate specified by the user: 0.001000000
+The learning rate specified by the user: 0.001000000
+Cuda failure: 2
+/shared_ssd_storage/jingjichen/Mithril_MultiGPU/core/src/cuda/cuda_hybrid_parallel.cc:4724
+Aborting...

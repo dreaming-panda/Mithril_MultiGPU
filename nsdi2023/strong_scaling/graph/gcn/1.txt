@@ -1,0 +1,52 @@
+Initializing the runtime environment
+DONE MPI INIT
+Initialized node 0 on machine gnerv2
+Building the CSR structure...
+        It takes 2.612 seconds.
+Building the CSC structure...
+        It takes 2.365 seconds.
+Building the Feature Vector...
+        It takes 0.261 seconds.
+Building the Label Vector...
+        It takes 0.031 seconds.
+The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/reddit/1_parts
+The number of GCN layers: 32
+The number of hidden units: 100
+The number of training epoches: 50
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 1
+Number of classes: 41
+Number of feature dimensions: 602
+Number of vertices: 232965
+Number of GPUs: 1
+train nodes 153431, valid nodes 23831, test nodes 55703
+GPU 0, layer [0, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+Chunks (number of global chunks: 1): 0-[0, 232965)
+232965, 114848857, 114848857
+Number of vertices per chunk: 232965
+csr in-out ready !Start Cost Model Initialization...
+***** Start profiling the layer-level communication performance *******
+The layer-level communication performance: 1102404.286 Gbps (per GPU), 1102404.286 Gbps (aggregated)
+ LType   LT0   LT1   LT2 Ratio  VSum  ESum
+ chk_0 80.70ms 76.08ms 74.08ms  1.09232.97K114.62M
+   Avg 80.70 76.08 74.08
+   Max 80.70 76.08 74.08
+   Min 80.70 76.08 74.08
+ Ratio  1.00  1.00  1.00
+   Var  0.00  0.00  0.00
+Profiling takes 2.638 s
+*** Node 0, starting model training...
+Num Stages: 1 / 1
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the model-level partition [0, 160)
+*** Node 0, constructing the helper classes...
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 232965
+Cuda failure: 2
+/shared_ssd_storage/jingjichen/Mithril_MultiGPU/core/include/cuda/cuda_utils.h:57
+Aborting...

@@ -1,5 +1,5 @@
 Configurating the hostfile
-Wed Sep 20 22:33:28 2023       
+Wed Sep 20 22:41:01 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
 |-------------------------------+----------------------+----------------------+
@@ -8,19 +8,19 @@ Wed Sep 20 22:33:28 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
-| 30%   30C    P8    20W / 230W |      3MiB / 24564MiB |      0%      Default |
+| 30%   30C    P8    16W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
-| 30%   30C    P8    17W / 230W |      3MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    24W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
-| 30%   30C    P8    13W / 230W |      3MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    21W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
-| 30%   30C    P8    16W / 230W |      3MiB / 24564MiB |      0%      Default |
+| 30%   31C    P8    13W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -31,7 +31,7 @@ Wed Sep 20 22:33:28 2023
 |=============================================================================|
 |  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
-Wed Sep 20 22:33:38 2023       
+Wed Sep 20 22:41:01 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 515.43.04    Driver Version: 515.43.04    CUDA Version: 11.7     |
 |-------------------------------+----------------------+----------------------+
@@ -40,19 +40,19 @@ Wed Sep 20 22:33:38 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  NVIDIA RTX A5000    On   | 00000000:01:00.0 Off |                  Off |
-| 30%   31C    P8    25W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   29C    P8    27W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   1  NVIDIA RTX A5000    On   | 00000000:25:00.0 Off |                  Off |
-| 30%   31C    P8    24W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   30C    P8    20W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   2  NVIDIA RTX A5000    On   | 00000000:81:00.0 Off |                  Off |
-| 30%   31C    P8    23W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   30C    P8    23W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
 |   3  NVIDIA RTX A5000    On   | 00000000:C1:00.0 Off |                  Off |
-| 30%   33C    P8    26W / 230W |      1MiB / 24564MiB |      0%      Default |
+| 30%   32C    P8    23W / 230W |      1MiB / 24564MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -64,25 +64,19 @@ Wed Sep 20 22:33:38 2023
 |  No running processes found                                                 |
 +-----------------------------------------------------------------------------+
 Build the project
-[ 20%] Built target context
-[ 50%] Built target core
+[ 10%] Built target context
+[ 40%] Built target core
 [ 70%] Built target cudahelp
-[ 80%] Built target estimate_comm_volume
-[ 80%] Built target OSDI2023_MULTI_NODES_graphsage
-[ 80%] Built target OSDI2023_MULTI_NODES_gcn
-[100%] Built target OSDI2023_MULTI_NODES_resgcn
-[100%] Built target OSDI2023_MULTI_NODES_resgcn_plus
-[100%] Built target OSDI2023_MULTI_NODES_gcnii
+[ 75%] Built target OSDI2023_MULTI_NODES_resgcn_plus
+[ 85%] Built target OSDI2023_MULTI_NODES_resgcn
+[ 85%] Built target estimate_comm_volume
+[ 90%] Built target OSDI2023_MULTI_NODES_gcnii
+[100%] Built target OSDI2023_MULTI_NODES_graphsage
+[100%] Built target OSDI2023_MULTI_NODES_gcn
 Run the experiments
-Running gcn on flickr
+Running resgcn on reddit
     Running graph parallel
     Running hybrid parallel
-Running graphsage on flickr
-    Running graph parallel
-    Running hybrid parallel
-Running gcn on reddit
-    Running graph parallel
-    Running hybrid parallel
-Running graphsage on reddit
+Running gcnii on reddit
     Running graph parallel
     Running hybrid parallel

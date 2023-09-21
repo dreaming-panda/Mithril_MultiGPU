@@ -1,0 +1,122 @@
+Initializing the runtime environment
+Initializing the runtime environment
+DONE MPI INIT
+Initialized node 0 on machine gnerv8
+DONE MPI INIT
+Initialized node 1 on machine gnerv8
+Building the CSR structure...
+Building the CSR structure...
+        It takes 2.338 seconds.
+Building the CSC structure...
+        It takes 2.360 seconds.
+Building the CSC structure...
+        It takes 2.367 seconds.
+        It takes 2.359 seconds.
+Building the Feature Vector...
+        It takes 0.246 seconds.
+Building the Label Vector...
+        It takes 0.038 seconds.
+Building the Feature Vector...
+        It takes 0.261 seconds.
+Building the Label Vector...
+        It takes 0.031 seconds.
+The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/graph_parallel_datasets/reddit/2_parts
+The number of GCNII layers: 32
+The number of hidden units: 100
+The number of training epoches: 50
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 1
+Number of classes: 41
+Number of feature dimensions: 602
+Number of vertices: 232965
+Number of GPUs: 2
+GPU 0, layer [0, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+232965, 114848857, 114848857
+Number of vertices per chunk: 116483
+train nodes 153431, valid nodes 23831, test nodes 55703
+GPU 0, layer [0, 32)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+Chunks (number of global chunks: 2): 0-[0, 116483) 1-[116483, 232965)
+232965, 114848857, 114848857
+Number of vertices per chunk: 116483
+csr in-out ready !Start Cost Model Initialization...
+csr in-out ready !Start Cost Model Initialization...
+***** Start profiling the layer-level communication performance *******
+The layer-level communication performance: 167.448 Gbps (per GPU), 334.895 Gbps (aggregated)
+The layer-level communication performance: 167.487 Gbps (per GPU), 334.974 Gbps (aggregated)
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+****** Start profiling the graph-level communication performance with supernodesize = 2 ******
+The graph-level communication performance (supernode = 2): 157.796 Gbps (per GPU), 315.593 Gbps (aggregated, cluster-wide)
+The graph-level communication performance (supernode = 2): 157.796 Gbps (per GPU), 315.593 Gbps (aggregated, cluster-wide)
+ LType   LT0   LT1   LT2 Ratio  VSum  ESum
+ chk_0 59.16ms 48.91ms 47.19ms  1.25116.48K 68.42M
+ chk_1 44.56ms 33.95ms 31.52ms  1.41116.48K 46.19M
+   Avg 51.86 41.43 39.35
+   Max 59.16 48.91 47.19
+   Min 44.56 33.95 31.52
+ Ratio  1.33  1.44  1.50
+   Var 53.29 55.95 61.38
+Profiling takes 3.032 s
+*** Node 0, starting model training...
+*** Node 1, starting model training...
+Num Stages: 1 / 1
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the model-level partition [0, 257)
+*** Node 0, constructing the helper classes...
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 116483
+Num Stages: 1 / 1
+Node 1, Pipeline Input Tensor: NULL
+Node 1, Pipeline Output Tensor: NULL
+*** Node 1 owns the model-level partition [0, 257)
+*** Node 1, constructing the helper classes...
+Node 1, Local Vertex Begin: 116483, Num Local Vertices: 116482
+*** Node 0, setting up some other necessary information...
+*** Node 1, setting up some other necessary information...
++++++++++ Node 1 initializing the weights for op[0, 257)...
++++++++++ Node 0 initializing the weights for op[0, 257)...
+Node 0, discovering the vertices that will be sent across graph boundary...
+Node 1, discovering the vertices that will be sent across graph boundary...
+The number of mirror vertices: 145956
+Node 0, discovering the vertices that will be received across the graph boundary.
+Node 1, discovering the vertices that will be received across the graph boundary.
+****** Start Scheduling the Tasks in a Pipelined Fashion ******
+****** Start Scheduling the Tasks in a Pipelined Fashion ******
+*** Node 0, starting task scheduling...
+
+
+
+*** Node 1, starting task scheduling...
+The learning rate specified by the user: 0.001000000
+The learning rate specified by the user: 0.001000000
+	Epoch 1:	Loss 14.8338	TrainAcc 0.0182	ValidAcc 0.0166	TestAcc 0.0157	BestValid 0.0166
+	Epoch 50:	Loss 3.2706	TrainAcc 0.0690	ValidAcc 0.0584	TestAcc 0.0574	BestValid 0.0584
+****** Epoch Time (Excluding Evaluation Cost): 1.338 s ******
+****** Breakdown Analysis ******
+Cluster-Wide Average, Bubble-Pipeline: 3.997 ms (Max: 7.961, Min: 0.033, Sum: 7.994)
+Cluster-Wide Average, Compute: 965.077 ms (Max: 1187.036, Min: 743.118, Sum: 1930.154)
+Cluster-Wide Average, Communication-Layer: 0.009 ms (Max: 0.010, Min: 0.009, Sum: 0.019)
+Cluster-Wide Average, Bubble-Imbalance: 0.016 ms (Max: 0.017, Min: 0.016, Sum: 0.033)
+Cluster-Wide Average, Communication-Graph: 363.594 ms (Max: 581.780, Min: 145.408, Sum: 727.188)
+Cluster-Wide Average, Optimization: 3.196 ms (Max: 3.281, Min: 3.110, Sum: 6.391)
+Cluster-Wide Average, Others: 1.825 ms (Max: 1.932, Min: 1.717, Sum: 3.649)
+****** Breakdown Sum: 1337.714 ms ******
+Cluster-Wide Average, GPU Memory Consumption: 22.217 GB (Max: 22.487, Min: 21.948, Sum: 44.435)
+Cluster-Wide Average, Graph-Level Communication Throughput: 67.748 Gbps (Max: 106.314, Min: 29.182, Sum: 135.496)
+Cluster-Wide Average, Layer-Level Communication Throughput: 0.000 Gbps (Max: 0.000, Min: 0.000, Sum: 0.000)
+Layer-level communication (cluster-wide, per-epoch): 0.000 GB
+Graph-level communication (cluster-wide, per-epoch): 3.480 GB
+Weight-sync communication (cluster-wide, per-epoch): 0.005 GB
+Total communication (cluster-wide, per-epoch): 3.485 GB
+****** Accuracy Results ******
+Highest valid_acc: 0.0584
+Target test_acc: 0.0574
+Epoch to reach the target acc: 49
+[MPI Rank 0] Success 
+[MPI Rank 1] Success 

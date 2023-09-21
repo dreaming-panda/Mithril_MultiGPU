@@ -1,0 +1,58 @@
+Starting GNN Training...
+Initializing the runtime environment
+DONE MPI INIT
+Initialized node 0 on machine gnerv2
+Building the CSR structure...
+        It takes 2.537 seconds.
+Building the CSC structure...
+        It takes 2.319 seconds.
+Building the Feature Vector...
+        It takes 0.247 seconds.
+Building the Label Vector...
+        It takes 0.030 seconds.
+The graph dataset locates at /shared_hdd_storage/jingjichen/gnn_datasets/pipeline_parallel_datasets/reddit/4_parts
+The number of GCNII layers: 32
+The number of hidden units: 100
+The number of training epoches: 50
+Learning rate: 0.001000
+The partition strategy: model
+The dropout rate: 0.500
+The checkpointed weight file: /tmp/saved_weights_pipe
+The random seed: 1
+GCN hyper-parameter alpha: 0.100000
+GCN hyper-parameter lambda: 0.500000
+Number of classes: 41
+Number of feature dimensions: 602
+Number of vertices: 232965
+Number of GPUs: 1
+train nodes 153431, valid nodes 23831, test nodes 55703
+GPU 0, layer [0, 33)
+WARNING: the current version only applies to linear GNN models!
+WARNING: currently, exact inference during the whole training process will enforce the evaluation frequency to every 25 epoches.
+Chunks (number of global chunks: 4): 0-[0, 44702) 1-[44702, 89473) 2-[89473, 171527) 3-[171527, 232965)
+232965, 114848857, 114848857
+Number of vertices per chunk: 58242
+csr in-out ready !Start Cost Model Initialization...
+***** Start profiling the layer-level communication performance *******
+The layer-level communication performance: 1167110.618 Gbps (per GPU), 1167110.618 Gbps (aggregated)
+ LType   LT0   LT1   LT2 Ratio  VSum  ESum
+ chk_0  3.77ms 20.49ms 20.99ms  5.57 44.70K 29.34M
+ chk_1  3.77ms 20.07ms 20.61ms  5.47 44.77K 28.89M
+ chk_2  6.80ms 20.04ms 20.84ms  3.07 82.05K 27.48M
+ chk_3  5.07ms 20.90ms 21.69ms  4.28 61.44K 28.91M
+   Avg  4.85 20.38 21.03
+   Max  6.80 20.90 21.69
+   Min  3.77 20.04 20.61
+ Ratio  1.80  1.04  1.05
+   Var  1.55  0.12  0.16
+Profiling takes 2.164 s
+*** Node 0, starting model training...
+Num Stages: 1 / 1
+Node 0, Pipeline Input Tensor: NULL
+Node 0, Pipeline Output Tensor: NULL
+*** Node 0 owns the model-level partition [0, 233)
+*** Node 0, constructing the helper classes...
+Node 0, Local Vertex Begin: 0, Num Local Vertices: 232965
+Cuda failure: 2
+/shared_ssd_storage/jingjichen/Mithril_MultiGPU/core/include/cuda/cuda_utils.h:57
+Aborting...

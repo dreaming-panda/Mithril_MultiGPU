@@ -9,10 +9,10 @@ import dgl.nn as dglnn
 import torch.nn as nn
 import torch.nn.functional as F
 
-num_gpus_per_node = 1
-num_layers = 2
-batch_size = 1024
-hidden_units = 100
+num_gpus_per_node = 4
+num_layers = 32
+batch_size = 1000
+hidden_units = 1000
 num_epoches = 10
 lr = 1e-3
 dropout = 0.5
@@ -20,8 +20,8 @@ seed = 1
 full_graph_in_gpu = False
 use_uva = True
 eval_frequency = 1
-dataset = "flickr"
-model = "gcn"
+dataset = "squirrel"
+model_name = "graphsage"
 save_dir = "/shared_hdd_storage/shared/gnn_datasets/dgl_datasets"
 
 # some utility functions
@@ -38,6 +38,9 @@ def get_graph(graph_name):
         return dataset[0]
     elif graph_name == "flickr":
         dataset = dgl.data.FlickrDataset(raw_dir = save_dir)
+        return dataset[0]
+    elif graph_name == "squirrel":
+        dataset = dgl.data.SquirrelDataset(raw_dir = save_dir)
         return dataset[0]
     else:
         print("Unknown dataset %s" % (citeseer))
@@ -83,7 +86,7 @@ class StochasticGCN(nn.Module):
         super().__init__()
         self.dropout = dropout
         self.num_layers = num_layers
-        self.convs = []
+        convs = []
 
         for i in range(num_layers):
             in_size = hidden_features
@@ -94,7 +97,9 @@ class StochasticGCN(nn.Module):
                 out_size = out_features
             # create the conv layer
             conv = dgl.nn.GraphConv(in_size, out_size)
-            self.convs.append(conv)
+            convs.append(conv)
+        self.convs = nn.ModuleList(convs)
+
 
     def forward(self, blocks, x):
         for i in range(self.num_layers):
@@ -109,7 +114,7 @@ class StochasticGraphSage(nn.Module):
         super().__init__()
         self.dropout = dropout
         self.num_layers = num_layers
-        self.convs = []
+        convs = []
 
         for i in range(num_layers):
             in_size = hidden_features
@@ -120,7 +125,8 @@ class StochasticGraphSage(nn.Module):
                 out_size = out_features
             # create the conv layer
             conv = dgl.nn.SAGEConv(in_size, out_size, "mean")
-            self.convs.append(conv)
+            convs.append(conv)
+        self.convs = nn.ModuleList(convs)
 
     def forward(self, blocks, x):
         for i in range(self.num_layers):
@@ -254,19 +260,20 @@ def run(rank, size):
     n_labels = int(g.ndata['label'].max().item() + 1)
     out_features = n_labels
 
-    model = StochasticTwoLayerGCN(in_features, hidden_features, out_features, dropout)
-    model = None
-    if model == "gcn":
+    #model = StochasticTwoLayerGCN(in_features, hidden_features, out_features, dropout)
+    model = None 
+    if model_name == "gcn":
         model = StochasticGCN(
                 num_layers, in_features, hidden_features, out_features, dropout
                 )
-    elif model == "graphsage":
+    elif model_name == "graphsage":
         model = StochasticGraphSage(
                 num_layers, in_features, hidden_features, out_features, dropout
                 )
     else:
         print("Unrecognized model")
         exit(-1)
+    print(model)
     model.to(device)
     model = torch.nn.parallel.DistributedDataParallel(model) # wrap the model to support weight synchronization 
 
