@@ -9,20 +9,23 @@ import dgl.nn as dglnn
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ogb.nodeproppred import DglNodePropPredDataset
+
 num_gpus_per_node = 4
 num_layers = 32
-batch_size = 1000
-hidden_units = 1000
-num_epoches = 10
+batch_size = 256
+num_epoches = 50
 lr = 1e-3
 dropout = 0.5
 seed = 1
-full_graph_in_gpu = False
-use_uva = True
+full_graph_in_gpu = True
+use_uva = False
 eval_frequency = 1
-dataset = "squirrel"
-model_name = "graphsage"
 save_dir = "/shared_hdd_storage/shared/gnn_datasets/dgl_datasets"
+
+hidden_units = 100
+dataset = "flickr"
+model_name = "graphsage"
 
 # some utility functions
 
@@ -41,6 +44,9 @@ def get_graph(graph_name):
         return dataset[0]
     elif graph_name == "squirrel":
         dataset = dgl.data.SquirrelDataset(raw_dir = save_dir)
+        return dataset[0]
+    elif graph_name == "physics":
+        dataset = dgl.data.CoauthorPhysicsDataset(raw_dir = save_dir)
         return dataset[0]
     else:
         print("Unknown dataset %s" % (citeseer))
@@ -172,8 +178,12 @@ def run(rank, size):
     mask_cpu = train_mask.cpu().numpy()
     train_ids = []
     for i in range(len(mask_cpu)):
-        if mask_cpu[i]:
-            train_ids.append(i)
+        if len(mask_cpu.shape) == 2:
+            if mask_cpu[i][0]:
+                train_ids.append(i)
+        else:
+            if mask_cpu[i]:
+                train_ids.append(i)
     num_global_training_samples = len(train_ids)
     # split the train ID equally to each GPU
     splitted_train_ids = []
@@ -190,8 +200,14 @@ def run(rank, size):
     mask_cpu = val_mask.cpu().numpy()
     val_ids = []
     for i in range(len(mask_cpu)):
-        if mask_cpu[i]:
-            val_ids.append(i)
+        if len(mask_cpu.shape) == 2:
+            if mask_cpu[i][0]:
+                val_ids.append(i)
+        else:
+            if mask_cpu[i]:
+                val_ids.append(i)
+        #if mask_cpu[i]:
+        #    val_ids.append(i)
     num_global_val_samples = len(val_ids)
     # split the val ID equally to each GPU
     splitted_val_ids = []
@@ -208,8 +224,14 @@ def run(rank, size):
     mask_cpu = test_mask.cpu().numpy()
     test_ids = []
     for i in range(len(mask_cpu)):
-        if mask_cpu[i]:
-            test_ids.append(i)
+        if len(mask_cpu.shape) == 2:
+            if mask_cpu[i][0]:
+                test_ids.append(i)
+        else:
+            if mask_cpu[i]:
+                test_ids.append(i)
+        #if mask_cpu[i]:
+        #    test_ids.append(i)
     num_global_testing_samples = len(test_ids)
     # split the test ID equally to each GPU
     splitted_test_ids = []
@@ -301,6 +323,7 @@ def run(rank, size):
                 blocks = [b.to(torch.device(device)) for b in blocks]
             input_features = blocks[0].srcdata['feat']
             output_labels = blocks[-1].dstdata['label']
+            out_nodes = output_labels.shape[0]
             assert(output_labels.shape[0] == output_nodes.shape[0])
             output_predictions = model(blocks, input_features)
             loss = F.cross_entropy(output_predictions, output_labels)
@@ -309,8 +332,8 @@ def run(rank, size):
             opt.step() 
             accum_loss += loss.item() * output_nodes.shape[0]
             if rank == 0:
-                print("\tRank %s, Iteration %s, Loss %.4f" % (
-                    rank, it, loss.item()
+                print("\tRank %s, True Batch Size %s, Iteration %s, Loss %.4f" % (
+                    rank, out_nodes, it, loss.item()
                     ))
             it += 1
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --output=./output.txt
-#SBATCH --time=00:30:00
+#SBATCH --time=02:00:00
 #SBATCH --partition=gpu
 #SBATCH --gpus=8
 #SBATCH --gpus-per-task=4
@@ -12,15 +12,15 @@ mpirun ./gen_hostfile.sh > ./hostfile
 cd build
 make -j
 
-dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
-#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
+#dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
+dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
 num_gpus=8
-num_layers=8
-hunits=1000
+num_layers=32
+hunits=100
 lr=1e-3
-graph=physics
-epoch=50
+graph=ogbn_mag
+epoch=5000
 decay=0
 dropout=0.5
 model=gcnii
@@ -30,14 +30,13 @@ multi_label=0
 exact_inference=1
 seed=1
 
-## graph parallel
-#chunks=$num_gpus
-#num_dp_ways=$num_gpus
+# graph parallel
+chunks=$num_gpus
+num_dp_ways=$num_gpus
 
-# pipeline parallel
-chunks=$((num_gpus*4))
-num_dp_ways=1
-
+## pipeline parallel
+#chunks=$((num_gpus*4))
+#num_dp_ways=1
 
 echo "Running experiments..."
 
