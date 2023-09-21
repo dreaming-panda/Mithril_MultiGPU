@@ -19,7 +19,8 @@ plt.rcParams['axes.linewidth'] = 2
 graphs = [
         "squirrel",
         "flickr",
-        "reddit"
+        "reddit",
+        "physics"
         ]
 models = [
         "gcn",
