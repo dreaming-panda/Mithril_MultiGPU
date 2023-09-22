@@ -6,7 +6,8 @@ graphs = [
         #"flickr",
         #"reddit",
         #"ogbn_arxiv",
-        "physics"
+        #"physics",
+        "pubmed"
         ]
 models = [
         "resgcn",
@@ -19,6 +20,15 @@ configurations = {
             "layers": 32,
             "hunits": 1000,
             "epoch": 5000,
+            "lr": 1e-3,
+            "decay": 0.,
+            "dropout": 0.5,
+            "multi_label": 0
+            },
+        "pubmed": {
+            "layers": 32,
+            "hunits": 1000,
+            "epoch": 500,
             "lr": 1e-3,
             "decay": 0.,
             "dropout": 0.5,
