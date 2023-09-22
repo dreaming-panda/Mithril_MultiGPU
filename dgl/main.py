@@ -12,9 +12,9 @@ import torch.nn.functional as F
 from ogb.nodeproppred import DglNodePropPredDataset
 
 num_gpus_per_node = 4
-num_layers = 32
-batch_size = 256
-num_epoches = 50
+num_layers = 7
+batch_size = 1
+num_epoches = 1
 lr = 1e-3
 dropout = 0.5
 seed = 1
@@ -323,6 +323,7 @@ def run(rank, size):
                 blocks = [b.to(torch.device(device)) for b in blocks]
             input_features = blocks[0].srcdata['feat']
             output_labels = blocks[-1].dstdata['label']
+            in_nodes = input_features.shape[0]
             out_nodes = output_labels.shape[0]
             assert(output_labels.shape[0] == output_nodes.shape[0])
             output_predictions = model(blocks, input_features)
@@ -332,8 +333,8 @@ def run(rank, size):
             opt.step() 
             accum_loss += loss.item() * output_nodes.shape[0]
             if rank == 0:
-                print("\tRank %s, True Batch Size %s, Iteration %s, Loss %.4f" % (
-                    rank, out_nodes, it, loss.item()
+                print("\tRank %s, True Batch Size %s, K-hop subgraph size %s, Iteration %s, Loss %.4f" % (
+                    rank, out_nodes, in_nodes, it, loss.item()
                     ))
             it += 1
 

@@ -53,12 +53,12 @@ seed=1
 #    mpirun -n $num_gpus --map-by node:PE=4 --hostfile $hostfile ./build/applications/async_multi_gpus/$model --graph $pipeline_dataset_path/$graph --layers $num_layers --hunits $hunits --epoch $epoch --lr $lr --decay $decay --part model --chunks $chunks --weight_file /tmp/saved_weights_pipe --dropout $dropout --seed $seed --eval_freq $eval_freq --exact_inference $exact_inference --num_dp_ways $num_dp_ways --enable_compression $enable_compression --multi_label $multi_label > $result_dir/$num_layers.txt 2>&1
 #done
 
-graph=flickr
+graph=physics
 hunits=100
 
-echo "Running on $squirrel dataset"
+echo "Running on $graph dataset"
 
-for num_layers in 32
+for num_layers in 8 16 32 64 128
 do
     echo "Number of layers: $num_layers"
 
