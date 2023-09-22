@@ -41,7 +41,7 @@ def plot_breakdown(method, show_legend = True):
 
     print("****** Method: %s *******" % (method))
 
-    fig, ax = plt.subplots(figsize=(10, 2))
+    fig, ax = plt.subplots(figsize=(10, 1))
 
     n_groups = 3
     index = np.arange(n_groups)
@@ -184,8 +184,8 @@ def plot_breakdown(method, show_legend = True):
 
     plt.xlim([-0.25, 3.9])
     plt.xticks(index + bar_width, ("", "", ""))
-    if show_legend:
-        plt.legend()
+    #if show_legend:
+    #    plt.legend()
     plt.savefig("%s_breakdown.pdf" % (method))
     plt.show()
 
