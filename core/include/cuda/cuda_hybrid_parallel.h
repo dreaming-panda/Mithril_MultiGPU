@@ -1245,25 +1245,31 @@ class DistributedPIPHybridParallelExecutionEngineGPU: public SingleNodeExecution
                     max_vector_size = std::max(max_vector_size, tensor->dims[1]);
                 }
             }
-            assert(max_vector_size > 0);
-            VertexId num_vertices = graph_structure_->get_num_global_vertices();
-            int num_elements = num_vertices * max_vector_size;
-            checkCUDA(
-                    cudaMalloc(
-                        &aggregation_buffer_, 
-                        sizeof(DataType) * num_elements
-                        )
-                    );
-            assert(aggregation_buffer_);
+            if (max_vector_size) {
+                assert(max_vector_size > 0);
+                VertexId num_vertices = graph_structure_->get_num_global_vertices();
+                int num_elements = num_vertices * max_vector_size;
+                checkCUDA(
+                        cudaMalloc(
+                            &aggregation_buffer_, 
+                            sizeof(DataType) * num_elements
+                            )
+                        );
+                assert(aggregation_buffer_);
+            } else {
+                aggregation_buffer_ = NULL;
+            }
         }
         void swap_in_aggregation_buffer_act(Tensor * tensor);
         void swap_out_aggregation_buffer_act(Tensor * tensor);
         void swap_in_aggregation_buffer_grad(Tensor * tensor);
         void swap_out_aggregation_buffer_grad(Tensor * tensor);
         inline void dealloc_aggregation_buffer() {
-            assert(aggregation_buffer_);
-            checkCUDA(cudaFree(aggregation_buffer_));
-            aggregation_buffer_ = NULL;
+            if (aggregation_buffer_) {
+                assert(aggregation_buffer_);
+                checkCUDA(cudaFree(aggregation_buffer_));
+                aggregation_buffer_ = NULL;
+            }
         }
 
         inline int get_num_epoch() {

@@ -2,7 +2,7 @@
 #SBATCH --output=./output.txt
 #SBATCH --time=02:00:00
 #SBATCH --partition=gpu
-#SBATCH --gpus=8
+#SBATCH --gpus=4
 #SBATCH --gpus-per-task=4
 #SBATCH --exclusive
 
@@ -15,15 +15,15 @@ make -j
 #dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/weighted_shuffled_partitioned_graphs
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
-num_gpus=8
-num_layers=32
-hunits=100
+num_gpus=1
+num_layers=1
+hunits=32
 lr=1e-3
-graph=ogbn_mag
-epoch=5000
+graph=cora
+epoch=500
 decay=0
-dropout=0.5
-model=gcnii
+dropout=0.0
+model=lr
 eval_freq=-1
 enable_compression=0
 multi_label=0
