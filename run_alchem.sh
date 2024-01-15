@@ -11,7 +11,7 @@ make -j
 dataset_path=/shared_hdd_storage/jingjichen/gnn_datasets/partitioned_graphs
 
 num_gpus=4
-num_layers=32
+num_layers=8
 hunits=128
 lr=1e-3
 graph=yelp
