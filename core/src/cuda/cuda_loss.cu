@@ -2,7 +2,9 @@
 #include<assert.h>
 #include<cuda_runtime.h>
 #include<math.h>
+
 #include "thrust/reduce.h"
+#include <thrust/execution_policy.h>
 
 __global__ void kernelx()
 {

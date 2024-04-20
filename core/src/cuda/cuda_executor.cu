@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include <thrust/reduce.h>
+#include <thrust/execution_policy.h>
 
 __global__ void cuda_vector_add_kernel(
     DataType * src_0, DataType * src_1, DataType * dst, int num_elements

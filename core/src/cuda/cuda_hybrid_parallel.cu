@@ -3,6 +3,7 @@
 #include <cuda_runtime.h>
 
 #include <thrust/reduce.h>
+#include <thrust/execution_policy.h>
 
 #include "cuda/cuda_hybrid_parallel.h"
 #include "cuda/cuda_utils.h"
